@@ -122,16 +122,16 @@ export function pricePerThousand(tier: TierName, h: Assumptions): number {
 }
 
 /**
- * La accuracy d'un étage sur un item donné.
+ * A tier's accuracy on a given item.
  *
- * Les trois premiers étages rendent leur chiffre mesuré. L'human rend l'hypothèse — et
- * c'est la seule ligne de tout le projet où une valeur affichée ne vient pas d'une mesure.
+ * The three machine tiers return their measured figure. The human returns the assumption —
+ * and this is the only line in the project where a displayed value is not a measurement.
  */
 export function accuracy(tier: TierName, mesuree: number, h: Assumptions): number {
   return tier === "human" ? h.humanAccuracy : mesuree;
 }
 
-/** Millisecondes par item : mesurées pour les modèles, postulées pour l'human. */
+/** Milliseconds per item: measured for the models, assumed for the human. */
 export function latency(tier: TierName, mesuree: number, h: Assumptions): number {
   return tier === "human" ? h.humanSeconds * 1000 : mesuree;
 }

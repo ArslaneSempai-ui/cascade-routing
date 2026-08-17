@@ -20,18 +20,18 @@ import type { Field } from "./corpus.ts";
 const FICHIER = new URL("../data/profiles.json", import.meta.url).pathname;
 
 export type Profile = {
-  /** Split des items que cet tier traite correctement. Mesurée. */
+  /** Share of items this tier gets right. Measured. */
   accuracy: number;
-  /** Millisecondes par item, hors loadTime du modèle. Mesurée. */
+  /** Milliseconds per item, excluding model load time. Measured. */
   latency: number;
   items: number;
 };
 
 export type Profiles = {
   measuredAt: string;
-  /** Chaîne A : un profil par tier ET par champ — c'est là que se joue le routing. */
+  /** Chain A: one profile per tier AND per field — this is where the routing is decided. */
   extraction: Record<TierName, Record<Field, Profile>>;
-  /** Chaîne B : un profil par tier, une seule décision par dossier. */
+  /** Chain B: one profile per tier, a single decision per file. */
   classification: Record<TierName, Profile>;
   loadTime: Record<TierName, number>;
 };
@@ -42,11 +42,11 @@ export function readProfiles(): Profiles | null {
 
 export async function measure(howMany = 120): Promise<Profiles> {
   /*
-   * On mesure sur l'épreuve, jamais sur l'training.
+   * Measured on the held-out half, never on the training half.
    *
-   * La première campagne donnait 100 % aux règles sur les cinq champs : elles avaient
-   * été écrites contre les gabarits qui servaient à les noter. Le paramètre est explicite
-   * pour que se tromper demande de l'écrire.
+   * The first run gave the rules 100 % on all five fields: they had been written against
+   * the very templates used to score them. The parameter is explicit so that getting this
+   * wrong takes typing it.
    */
   const dossiers = generateRecords(howMany, "heldout");
   const alertes = generateAlerts(howMany, "heldout");

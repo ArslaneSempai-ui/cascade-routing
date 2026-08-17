@@ -1,16 +1,16 @@
 /**
- * Les deux corpus, et leur vérité terrain.
+ * The two corpora, and their ground truth.
  *
- * Chaîne A — extract cinq champs d'un dossier d'entrée en relation.
- * Chaîne B — classify une alerte de surveillance dans une typologie.
+ * Chain A — extract five fields from an onboarding file.
+ * Chain B — classify a monitoring alert into a typology.
  *
- * Les deux sont là pour une raison précise : leur routing optimal n'est pas le même, et
- * c'est le seul enseignement qu'un outil de routing puisse vraiment apporter. La chaîne A
- * contient des champs de difficulté très inégale — un numéro de pièce en format fixe se
- * prend au regex, une address en text libre ne se prend qu'au modèle. La chaîne B n'a
- * qu'une décision par dossier : un seul étage la traite, ou aucun.
+ * Both are here for a precise reason: their optimal routing is not the same, and that is
+ * the only lesson a routing tool can genuinely teach. Chain A holds fields of wildly
+ * unequal difficulty — a document number in a fixed format yields to a regex, a free-text
+ * address yields only to a model. Chain B has one decision per file: a single tier handles
+ * it, or none does.
  *
- * Tout est synthétique et assumé. Un dossier réel ne quitte pas une banque.
+ * Everything is synthetic and says so. A real file does not leave a bank.
  */
 
 /*
@@ -70,18 +70,18 @@ const MONTHS = ["January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December"];
 
 /**
- * Les formulations, séparées en deux moitiés qui ne se mélangent jamais.
+ * The phrasings, split into two halves that never mix.
  *
- * La première mesure a donné 100 % aux règles sur les cinq champs. Ce n'était pas un
- * résultat : j'avais écrit les gabarits, puis les expressions régulières contre ces
- * gabarits. Je mesurais mon propre modèle contre lui-même.
+ * The first measurement gave the rules 100 % on all five fields. That was not a result:
+ * I had written the templates, then written the regexes against those templates. I was
+ * measuring my own model against itself.
  *
  * C'est l'erreur que j'avais pourtant interdite dans l'agent de triage — « l'agent ne
- * doit pas être une copie de la vérité terrain » — et dans laquelle je suis retombé deux
+ * must not be a copy of the ground truth" — and which I walked into twice more
  * projets plus tard. Elle ne se corrige pas par la vigilance : elle se corrige par une
- * séparation que le code rend impossible à franchir.
+ * a separation the code makes impossible to cross.
  *
- * TRAINING : les formes que j'ai eu le droit de regarder en écrivant les règles.
+ * TRAINING: the shapes I was allowed to look at while writing the rules.
  * ÉPREUVE      : les formes que je n'avais jamais vues. C'est sur elles qu'on mesure.
  */
 const TRAINING = [
@@ -98,12 +98,12 @@ const TRAINING = [
 ];
 
 /**
- * L'épreuve.
+ * The test half.
  *
- * Les mêmes informations, écrites comme les écrit un human pressé : ponctuation
- * absente, ordre bousculé, mentions parasites, identifiant collé à un autre mot,
- * formulations qu'aucune de mes expressions régulières n'anticipe. Rien ici n'est
- * gratuit — chaque écart correspond à une saisie qu'on rencontre vraiment.
+ * The same information, written the way somebody in a hurry writes it: punctuation gone,
+ * order shuffled, stray words, an identifier run into the next one, phrasings none of my
+ * regexes anticipate. Nothing here is gratuitous — every deviation matches something
+ * people genuinely type.
  */
 const HELDOUT = [
   (c: Record<string, string>) =>
@@ -119,10 +119,10 @@ const HELDOUT = [
 ];
 
 /**
- * `part` décide de quel côté de la séparation on tire.
+ * `part` decides which side of the split to draw from.
  *
- * Les règles se développent sur "training" et se mesurent sur "heldout". Passer
- * l'un pour l'autre est le seul moyen de se tromper, et il faut l'écrire pour le faire.
+ * Rules are developed on "training" and measured on "heldout". Passing one for the other
+ * is the only way to get this wrong, and you have to type it to do it.
  */
 export type Split = "training" | "heldout";
 
@@ -133,7 +133,7 @@ export function generateRecords(howMany = 120, part: Split = "heldout", seed = 2
     const name = `${pick(r, FIRST_NAMES)} ${pick(r, SURNAMES)}`;
     const jour = 1 + Math.floor(r() * 28);
     const annee = 1955 + Math.floor(r() * 50);
-    // Deux écritures de date : le regex en attrape une, pas l'autre.
+    // Two date spellings: the regex catches one and not the other.
     const birth = r() < 0.5
       ? `${jour} ${pick(r, MONTHS)} ${annee}`
       : `${String(jour).padStart(2, "0")}/${String(1 + Math.floor(r() * 12)).padStart(2, "0")}/${annee}`;
@@ -152,12 +152,11 @@ export function generateRecords(howMany = 120, part: Split = "heldout", seed = 2
 }
 
 /**
- * Les récits d'alerte.
+ * The alert narratives.
  *
  * Chaque typologie a son vocabulaire propre — mais les gabarits se chevauchent
- * volontairement : un récit d'espèces mentionne des montants, un récit de fractionnement
- * aussi. Sans ce chevauchement, les mots-clés atteindraient 100 % et il n'y aurait rien
- * à arbitrer.
+ * deliberately: a cash narrative mentions amounts, and so does a structuring one. Without
+ * that overlap the keywords would reach 100 % and there would be nothing to arbitrate.
  */
 const NARRATIVES: Record<Typology, ((r: () => number) => string)[]> = {
   fractionnement: [
@@ -188,11 +187,11 @@ const NARRATIVES: Record<Typology, ((r: () => number) => string)[]> = {
 };
 
 /**
- * Les récits de l'épreuve.
+ * The held-out narratives.
  *
- * Même chose que pour les dossiers : les mots-clés ont été écrits contre les gabarits
- * d'training, et les measure dessus donnait 100 %. Ceux-ci décrivent les mêmes
- * typologies avec un autre vocabulaire — celui d'un analyste qui rédige à sa manière,
+ * Same story as the files: the keywords were written against the training templates, and
+ * measuring on those gave 100 %. These describe the same typologies in different words —
+ * an analyst writing the way they write,
  * sans reprendre les termes du manuel.
  */
 const NARRATIVES_HELDOUT: Record<Typology, ((r: () => number) => string)[]> = {

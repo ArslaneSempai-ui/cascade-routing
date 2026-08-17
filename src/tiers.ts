@@ -1,12 +1,12 @@
 /**
- * Les étages de la cascade.
+ * The tiers of the cascade.
  *
- * Quatre par chaîne, du moins cher au plus cher : des règles, un small modèle, un gros,
- * un human. C'est le gradin qu'on trouve dans toute chaîne de traitement réelle, et la
- * question que personne ne pose est : **faut-il vraiment le même étage partout ?**
+ * Four per chain, cheapest to dearest: rules, a small model, a large one, a human. That is
+ * the ladder found in every real processing chain, and the question nobody asks is:
+ * **does it really have to be the same tier everywhere?**
  *
- * Les modèles tournent en local. Aucune clé d'API, aucun appel réseau, et le dépôt reste
- * exécutable par quiconque le clone sans payer.
+ * The models run locally. No API key, no network call, and the repository stays runnable
+ * by anyone who clones it without paying.
  */
 
 import { pipeline } from "@huggingface/transformers";
@@ -16,7 +16,7 @@ import type { Field, ClientFile, Alert, Typology } from "./corpus.ts";
 export type TierName = "rules" | "small" | "large" | "human";
 export const TIERS: TierName[] = ["rules", "small", "large", "human"];
 
-/* ══════════════════ Chaîne A — extract ══════════════════ */
+/* ══════════════════ Chain A — extract ══════════════════ */
 
 const QUESTIONS: Record<Field, string> = {
   name: "What is the name of the client?",
@@ -27,11 +27,11 @@ const QUESTIONS: Record<Field, string> = {
 };
 
 /**
- * Les règles.
+ * The rules.
  *
- * Elles sont excellentes là où la forme est contrainte et lamentables ailleurs — c'est
- * exactement pour ça qu'un routing par champ a un sens. Un numéro de pièce en
- * `XX-9999-Y` ne demande pas de modèle ; une address en text libre, si.
+ * Excellent where the format is constrained and dismal everywhere else — which is exactly
+ * why routing per field makes sense. A document number shaped `XX-9999-Y` needs no model;
+ * a free-text address does.
  */
 const RULES: Record<Field, (t: string) => string> = {
   document: (t) => t.match(/\b[A-Z]{2}-\d{4}-[A-Z]\b/)?.[0] ?? "",
@@ -40,8 +40,8 @@ const RULES: Record<Field, (t: string) => string> = {
     ?? t.match(/\b\d{2}\/\d{2}\/\d{4}\b/)?.[0] ?? "",
   country: (t) => {
     const country = ["France", "Greece", "Portugal", "Poland", "Italy", "Netherlands", "Spain", "Germany"];
-    // Le dernier country cité : dans plusieurs formulations, le country de délivrance suit
-    // l'address. La règle a donc tort dès que l'ordre change.
+    // The last country mentioned: in several phrasings the issuing country follows the
+    // address. So the rule is wrong the moment the order changes.
     let trouve = "";
     for (const p of country) if (t.includes(p)) trouve = p;
     return trouve;
@@ -79,11 +79,11 @@ export async function loadExtractors(): Promise<void> {
 export async function extract(tier: TierName, d: ClientFile, champ: Field): Promise<string> {
   if (tier === "rules") return RULES[champ](d.text);
   /*
-   * L'human rend la vérité terrain ICI, et seulement ici.
+   * The human returns ground truth HERE, and only here.
    *
-   * C'est une commodité de mesure, pas un modèle : elle sert à faire tourner la boucle
-   * sur les quatre étages. La accuracy humaine réellement utilisée par l'optimiseur ne
-   * vient PAS de cette ligne — elle vient des hypothèses, où elle est posée sous 100 %
+   * It is a measurement convenience, not a model: it exists so the loop can run over all
+   * four tiers. The human accuracy the optimiser actually uses does NOT come from this
+   * line — it comes from the assumptions, where it is set below 100 %
    * et discutable. Confondre les deux ferait croire l'human infaillible.
    */
   if (tier === "human") return d.truth[champ];
@@ -96,8 +96,8 @@ export async function extract(tier: TierName, d: ClientFile, champ: Field): Prom
  * Un champ est correct ou faux, sans demi-mesure.
  *
  * La comparaison ignore la casse, la ponctuation de bord et les espaces multiples : un
- * modèle qui rend « 26 ulica Nowy Świat, Lisbon » plutôt que le même sans virgule a
- * trouvé la bonne réponse, et compter cela comme une erreur mesurerait la mise en forme.
+ * model returning "26 ulica Nowy Świat, Lisbon" rather than the same without the comma
+ * has found the right answer, and counting that as a failure would measure formatting.
  */
 export function correct(got: string, expected: string): boolean {
   /*
@@ -121,9 +121,9 @@ export function correct(got: string, expected: string): boolean {
 }
 
 
-/* ══════════════════ Chaîne B — classify ══════════════════ */
+/* ══════════════════ Chain B — classify ══════════════════ */
 
-/** Ce à quoi chaque typologie ressemble, pour une comparaison par le sens. */
+/** What each typology looks like, for a comparison by meaning. */
 const DESCRIPTIONS: Record<Typology, string> = {
   fractionnement: "many small deposits kept below the reporting threshold, split across days or branches",
   "mouvement rapide": "funds arrive and leave the account almost immediately, leaving no balance",
@@ -156,15 +156,15 @@ export async function loadClassifiers(): Promise<void> {
   embSmall ??= await pipeline("feature-extraction", "Xenova/all-MiniLM-L6-v2", { revision: REVISIONS.embSmall });
   embLarge ??= await pipeline("feature-extraction", "Xenova/multilingual-e5-small", { revision: REVISIONS.embLarge });
   vectorsSmall ??= await Promise.all(TYPOLOGIES.map(async (t) => mean(await embSmall(DESCRIPTIONS[t]))));
-  // e5 attend ses préfixes : les omettre dégrade sans rien casser, donc sans se voir.
+  // e5 expects its prefixes: omitting them degrades quality without breaking anything, so invisibly.
   vectorsLarge ??= await Promise.all(TYPOLOGIES.map(async (t) => mean(await embLarge(`passage: ${DESCRIPTIONS[t]}`))));
 }
 
 export async function classify(tier: TierName, a: Alert): Promise<Typology | ""> {
   if (tier === "human") return a.truth;
   if (tier === "rules") {
-    // Le premier motif qui répond l'emporte : c'est ce que fait une vraie liste de
-    // mots-clés, et c'est pour ça qu'elle se trompe sur les récits qui en citent deux.
+    // First pattern to match wins: that is what a real keyword list does, and it is why
+    // it gets narratives mentioning two of them wrong.
     for (const t of TYPOLOGIES) if (KEYWORDS[t].test(a.narrative)) return t;
     return "";
   }
