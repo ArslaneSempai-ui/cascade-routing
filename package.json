@@ -5,11 +5,10 @@
   "type": "module",
   "description": "Where should the next euro go? A measured cascade: rules, a small model, a large one, a human.",
   "scripts": {
-    "start": "node src/serveur.ts",
-    "mesurer": "node src/mesurer.ts",
-    "optimiser": "node src/optimiser.ts",
-    "test": "tsc --noEmit && node --test src/*.test.ts",
-    "typage": "tsc --noEmit"
+    "measure": "node src/measure.ts",
+    "optimise": "node src/optimise.ts",
+    "typage": "tsc --noEmit",
+    "test": "tsc --noEmit && node --test src/*.test.ts"
   },
   "dependencies": {
     "@huggingface/transformers": "^3.0.0"

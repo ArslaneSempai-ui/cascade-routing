@@ -1,53 +1,53 @@
 /**
  * Les deux corpus, et leur vérité terrain.
  *
- * Chaîne A — extraire cinq champs d'un dossier d'entrée en relation.
- * Chaîne B — classer une alerte de surveillance dans une typologie.
+ * Chaîne A — extract cinq champs d'un dossier d'entrée en relation.
+ * Chaîne B — classify une alerte de surveillance dans une typologie.
  *
- * Les deux sont là pour une raison précise : leur routage optimal n'est pas le même, et
- * c'est le seul enseignement qu'un outil de routage puisse vraiment apporter. La chaîne A
+ * Les deux sont là pour une raison précise : leur routing optimal n'est pas le même, et
+ * c'est le seul enseignement qu'un outil de routing puisse vraiment apporter. La chaîne A
  * contient des champs de difficulté très inégale — un numéro de pièce en format fixe se
- * prend au regex, une adresse en texte libre ne se prend qu'au modèle. La chaîne B n'a
+ * prend au regex, une address en text libre ne se prend qu'au modèle. La chaîne B n'a
  * qu'une décision par dossier : un seul étage la traite, ou aucun.
  *
  * Tout est synthétique et assumé. Un dossier réel ne quitte pas une banque.
  */
 
-export type Champ = "nom" | "naissance" | "piece" | "pays" | "adresse";
-export const CHAMPS: Champ[] = ["nom", "naissance", "piece", "pays", "adresse"];
+export type Field = "name" | "birth" | "document" | "country" | "address";
+export const FIELDS: Field[] = ["name", "birth", "document", "country", "address"];
 
-export type Dossier = {
+export type ClientFile = {
   id: string;
-  texte: string;
-  verite: Record<Champ, string>;
+  text: string;
+  truth: Record<Field, string>;
 };
 
-export type Typologie =
+export type Typology =
   | "fractionnement" | "mouvement rapide" | "lien sanctions"
   | "contrepartie inhabituelle" | "intensite especes";
 
-export const TYPOLOGIES: Typologie[] = [
+export const TYPOLOGIES: Typology[] = [
   "fractionnement", "mouvement rapide", "lien sanctions",
   "contrepartie inhabituelle", "intensite especes",
 ];
 
-export type Alerte = { id: string; recit: string; verite: Typologie };
+export type Alert = { id: string; narrative: string; truth: Typology };
 
-function tirage(graine: number) {
-  let etat = graine >>> 0;
+function draw(seed: number) {
+  let etat = seed >>> 0;
   return () => {
     etat = (etat * 1_664_525 + 1_013_904_223) >>> 0;
     return etat / 4_294_967_296;
   };
 }
-const parmi = <T,>(r: () => number, l: T[]): T => l[Math.floor(r() * l.length)];
+const pick = <T,>(r: () => number, l: T[]): T => l[Math.floor(r() * l.length)];
 
-const PRENOMS = ["Amina", "Viktor", "Sofia", "Marcus", "Leila", "Tomas", "Nadia", "Piotr", "Ines", "Karim"];
-const NOMS = ["Haddad", "Morozov", "Vasquez", "Lindqvist", "Okonkwo", "Novak", "Ferreira", "Mbeki", "Rossi", "Chen"];
-const VILLES = ["Paris", "Lyon", "Athens", "Lisbon", "Warsaw", "Milan", "Rotterdam", "Valencia"];
-const RUES = ["rue Victor Hugo", "avenue des Fleurs", "Odos Ermou", "Rua da Prata", "ulica Nowy Świat", "via Garibaldi"];
-const PAYS = ["France", "Greece", "Portugal", "Poland", "Italy", "Netherlands", "Spain", "Germany"];
-const MOIS = ["January", "February", "March", "April", "May", "June",
+const FIRST_NAMES = ["Amina", "Viktor", "Sofia", "Marcus", "Leila", "Tomas", "Nadia", "Piotr", "Ines", "Karim"];
+const SURNAMES = ["Haddad", "Morozov", "Vasquez", "Lindqvist", "Okonkwo", "Novak", "Ferreira", "Mbeki", "Rossi", "Chen"];
+const CITIES = ["Paris", "Lyon", "Athens", "Lisbon", "Warsaw", "Milan", "Rotterdam", "Valencia"];
+const STREETS = ["rue Victor Hugo", "avenue des Fleurs", "Odos Ermou", "Rua da Prata", "ulica Nowy Świat", "via Garibaldi"];
+const COUNTRIES = ["France", "Greece", "Portugal", "Poland", "Italy", "Netherlands", "Spain", "Germany"];
+const MONTHS = ["January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December"];
 
 /**
@@ -62,72 +62,72 @@ const MOIS = ["January", "February", "March", "April", "May", "June",
  * projets plus tard. Elle ne se corrige pas par la vigilance : elle se corrige par une
  * séparation que le code rend impossible à franchir.
  *
- * APPRENTISSAGE : les formes que j'ai eu le droit de regarder en écrivant les règles.
+ * TRAINING : les formes que j'ai eu le droit de regarder en écrivant les règles.
  * ÉPREUVE      : les formes que je n'avais jamais vues. C'est sur elles qu'on mesure.
  */
-const APPRENTISSAGE = [
+const TRAINING = [
   (c: Record<string, string>) =>
-    `Client: ${c.nom}, born ${c.naissance} in ${c.villeNaissance}, residing at ${c.adresse}. Identity document ${c.piece}, issued in ${c.pays}.`,
+    `Client: ${c.name}, born ${c.birth} in ${c.birthCity}, residing at ${c.address}. Identity document ${c.document}, issued in ${c.country}.`,
   (c: Record<string, string>) =>
-    `Onboarding file — name ${c.nom} / DOB ${c.naissance} / ID ${c.piece} / nationality ${c.pays}. Correspondence address: ${c.adresse}.`,
+    `Onboarding file — name ${c.name} / DOB ${c.birth} / ID ${c.document} / nationality ${c.country}. Correspondence address: ${c.address}.`,
   (c: Record<string, string>) =>
-    `The applicant, ${c.nom}, was born on ${c.naissance}. They hold document number ${c.piece} delivered by the authorities of ${c.pays} and live at ${c.adresse}.`,
+    `The applicant, ${c.name}, was born on ${c.birth}. They hold document number ${c.document} delivered by the authorities of ${c.country} and live at ${c.address}.`,
   (c: Record<string, string>) =>
-    `${c.nom} (${c.pays}), d.o.b. ${c.naissance}. Address on file: ${c.adresse}. Document reference ${c.piece}.`,
+    `${c.name} (${c.country}), d.o.b. ${c.birth}. Address on file: ${c.address}. Document reference ${c.document}.`,
   (c: Record<string, string>) =>
-    `Received today: an application from ${c.nom}. Date of birth is ${c.naissance} and the identity document presented carries the number ${c.piece}. Nationality: ${c.pays}. The declared address is ${c.adresse}.`,
+    `Received today: an application from ${c.name}. Date of birth is ${c.birth} and the identity document presented carries the number ${c.document}. Nationality: ${c.country}. The declared address is ${c.address}.`,
 ];
 
 /**
  * L'épreuve.
  *
- * Les mêmes informations, écrites comme les écrit un humain pressé : ponctuation
+ * Les mêmes informations, écrites comme les écrit un human pressé : ponctuation
  * absente, ordre bousculé, mentions parasites, identifiant collé à un autre mot,
  * formulations qu'aucune de mes expressions régulières n'anticipe. Rien ici n'est
  * gratuit — chaque écart correspond à une saisie qu'on rencontre vraiment.
  */
-const EPREUVE = [
+const HELDOUT = [
   (c: Record<string, string>) =>
-    `${c.nom} — dob ${c.naissance} — doc no ${c.piece} — ${c.pays} — lives ${c.adresse} (updated by branch staff, no further checks)`,
+    `${c.name} — dob ${c.birth} — doc no ${c.document} — ${c.country} — lives ${c.address} (updated by branch staff, no further checks)`,
   (c: Record<string, string>) =>
-    `Further to our call: the person concerned is ${c.nom}. We hold ${c.piece} on file. Born ${c.naissance}. Their postal address reads ${c.adresse} and they present themselves as a national of ${c.pays}.`,
+    `Further to our call: the person concerned is ${c.name}. We hold ${c.document} on file. Born ${c.birth}. Their postal address reads ${c.address} and they present themselves as a national of ${c.country}.`,
   (c: Record<string, string>) =>
-    `KYC REVIEW\nSubject ......... ${c.nom}\nBirth ........... ${c.naissance}\nDocument ........ ${c.piece}\nCitizenship ..... ${c.pays}\nPostal .......... ${c.adresse}`,
+    `KYC REVIEW\nSubject ......... ${c.name}\nBirth ........... ${c.birth}\nDocument ........ ${c.document}\nCitizenship ..... ${c.country}\nPostal .......... ${c.address}`,
   (c: Record<string, string>) =>
-    `Application received from ${c.nom} of ${c.adresse}; the identity reference supplied was ${c.piece} and the stated country ${c.pays}. Birth date given as ${c.naissance}.`,
+    `Application received from ${c.name} of ${c.address}; the identity reference supplied was ${c.document} and the stated country ${c.country}. Birth date given as ${c.birth}.`,
   (c: Record<string, string>) =>
-    `re ${c.nom} / ${c.pays} — address ${c.adresse} — id${c.piece} — born ${c.naissance} — file opened pending review`,
+    `re ${c.name} / ${c.country} — address ${c.address} — id${c.document} — born ${c.birth} — file opened pending review`,
 ];
 
 /**
  * `part` décide de quel côté de la séparation on tire.
  *
- * Les règles se développent sur "apprentissage" et se mesurent sur "epreuve". Passer
+ * Les règles se développent sur "training" et se mesurent sur "heldout". Passer
  * l'un pour l'autre est le seul moyen de se tromper, et il faut l'écrire pour le faire.
  */
-export type Part = "apprentissage" | "epreuve";
+export type Split = "training" | "heldout";
 
-export function genererDossiers(combien = 120, part: Part = "epreuve", graine = 20260817): Dossier[] {
-  const r = tirage(graine + (part === "epreuve" ? 7717 : 0));
-  const FORMES = part === "epreuve" ? EPREUVE : APPRENTISSAGE;
-  return Array.from({ length: combien }, (_, i) => {
-    const nom = `${parmi(r, PRENOMS)} ${parmi(r, NOMS)}`;
+export function generateRecords(howMany = 120, part: Split = "heldout", seed = 20260817): ClientFile[] {
+  const r = draw(seed + (part === "heldout" ? 7717 : 0));
+  const SHAPES = part === "heldout" ? HELDOUT : TRAINING;
+  return Array.from({ length: howMany }, (_, i) => {
+    const name = `${pick(r, FIRST_NAMES)} ${pick(r, SURNAMES)}`;
     const jour = 1 + Math.floor(r() * 28);
     const annee = 1955 + Math.floor(r() * 50);
     // Deux écritures de date : le regex en attrape une, pas l'autre.
-    const naissance = r() < 0.5
-      ? `${jour} ${parmi(r, MOIS)} ${annee}`
+    const birth = r() < 0.5
+      ? `${jour} ${pick(r, MONTHS)} ${annee}`
       : `${String(jour).padStart(2, "0")}/${String(1 + Math.floor(r() * 12)).padStart(2, "0")}/${annee}`;
-    const piece = `${parmi(r, ["FR", "GR", "PT", "PL", "IT"])}-${1000 + Math.floor(r() * 9000)}-${parmi(r, ["K", "M", "T", "X"])}`;
-    const pays = parmi(r, PAYS);
-    const adresse = `${1 + Math.floor(r() * 200)} ${parmi(r, RUES)}, ${parmi(r, VILLES)}`;
-    const villeNaissance = parmi(r, VILLES);
+    const document = `${pick(r, ["FR", "GR", "PT", "PL", "IT"])}-${1000 + Math.floor(r() * 9000)}-${pick(r, ["K", "M", "T", "X"])}`;
+    const country = pick(r, COUNTRIES);
+    const address = `${1 + Math.floor(r() * 200)} ${pick(r, STREETS)}, ${pick(r, CITIES)}`;
+    const birthCity = pick(r, CITIES);
 
-    const c = { nom, naissance, piece, pays, adresse, villeNaissance };
+    const c = { name, birth, document, country, address, birthCity };
     return {
       id: `D-${String(i + 1).padStart(4, "0")}`,
-      texte: parmi(r, FORMES)(c),
-      verite: { nom, naissance, piece, pays, adresse },
+      text: pick(r, SHAPES)(c),
+      truth: { name, birth, document, country, address },
     };
   });
 }
@@ -140,7 +140,7 @@ export function genererDossiers(combien = 120, part: Part = "epreuve", graine = 
  * aussi. Sans ce chevauchement, les mots-clés atteindraient 100 % et il n'y aurait rien
  * à arbitrer.
  */
-const RECITS: Record<Typologie, ((r: () => number) => string)[]> = {
+const NARRATIVES: Record<Typology, ((r: () => number) => string)[]> = {
   fractionnement: [
     (r) => `Eleven cash deposits of between 8,400 and 9,600 booked over ${4 + Math.floor(r() * 6)} days across three branches, each below the declaration ceiling.`,
     () => `A sequence of transfers just under the reporting limit, repeated on consecutive mornings from the same terminal.`,
@@ -172,11 +172,11 @@ const RECITS: Record<Typologie, ((r: () => number) => string)[]> = {
  * Les récits de l'épreuve.
  *
  * Même chose que pour les dossiers : les mots-clés ont été écrits contre les gabarits
- * d'apprentissage, et les mesurer dessus donnait 100 %. Ceux-ci décrivent les mêmes
+ * d'training, et les measure dessus donnait 100 %. Ceux-ci décrivent les mêmes
  * typologies avec un autre vocabulaire — celui d'un analyste qui rédige à sa manière,
  * sans reprendre les termes du manuel.
  */
-const RECITS_EPREUVE: Record<Typologie, ((r: () => number) => string)[]> = {
+const NARRATIVES_HELDOUT: Record<Typology, ((r: () => number) => string)[]> = {
   fractionnement: [
     (r) => `Client paid in ${9 + Math.floor(r() * 5)} separate lodgements this fortnight, every one a shade under the level that would have triggered paperwork.`,
     () => `Money arrived in slices rather than in one movement, spread over several counters, with no explanation offered for the pattern.`,
@@ -204,11 +204,11 @@ const RECITS_EPREUVE: Record<Typologie, ((r: () => number) => string)[]> = {
   ],
 };
 
-export function genererAlertes(combien = 120, part: Part = "epreuve", graine = 20260818): Alerte[] {
-  const r = tirage(graine + (part === "epreuve" ? 7717 : 0));
-  const jeu = part === "epreuve" ? RECITS_EPREUVE : RECITS;
-  return Array.from({ length: combien }, (_, i) => {
-    const verite = parmi(r, TYPOLOGIES);
-    return { id: `A-${String(i + 1).padStart(4, "0")}`, recit: parmi(r, jeu[verite])(r), verite };
+export function generateAlerts(howMany = 120, part: Split = "heldout", seed = 20260818): Alert[] {
+  const r = draw(seed + (part === "heldout" ? 7717 : 0));
+  const jeu = part === "heldout" ? NARRATIVES_HELDOUT : NARRATIVES;
+  return Array.from({ length: howMany }, (_, i) => {
+    const truth = pick(r, TYPOLOGIES);
+    return { id: `A-${String(i + 1).padStart(4, "0")}`, narrative: pick(r, jeu[truth])(r), truth };
   });
 }
