@@ -15,6 +15,7 @@
  */
 
 import { generateRecords, FIELDS } from "./corpus.ts";
+import { isMain } from "./cli.ts";
 import { TIERS, loadExtractors, extract, correct } from "./tiers.ts";
 import type { TierName } from "./tiers.ts";
 import type { Field } from "./corpus.ts";
@@ -80,7 +81,7 @@ export function shape(failures: Failure[]) {
   return Object.entries(counts).sort((a, b) => b[1] - a[1]);
 }
 
-if (import.meta.filename === process.argv[1]) {
+if (isMain(import.meta)) {
   const failures = await collect();
   console.log(`\n${failures.length} failures across the machine tiers\n`);
 

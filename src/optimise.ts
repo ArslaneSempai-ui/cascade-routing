@@ -12,6 +12,7 @@
  */
 
 import { TIERS } from "./tiers.ts";
+import { isMain } from "./cli.ts";
 import { FIELDS } from "./corpus.ts";
 import { pricePerThousand, accuracy, latency, ASSUMPTIONS } from "./assumptions.ts";
 import { readProfiles } from "./measure.ts";
@@ -154,7 +155,7 @@ export function budgetShadowPrice(p: Profiles, h: Assumptions) {
   };
 }
 
-if (import.meta.filename === process.argv[1]) {
+if (isMain(import.meta)) {
   const p = readProfiles();
   if (!p) { console.error("No profile measured — start with: npm run measure"); process.exit(1); }
   const h = ASSUMPTIONS;

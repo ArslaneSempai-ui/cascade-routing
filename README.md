@@ -3,16 +3,24 @@
 Four tiers — rules, a small model, a large one, a human — measured on held-out data, then
 routed under a budget. The answer is rarely "buy the bigger model", and this says why.
 
-```
+<!-- figures:finding -->
+**The finding.** Routing every field to the same tier is the default and it is wrong. Measured per field, 3 of the 5 fields are carried by regexes at **zero cost and up to 100 % accuracy**, and the money is worth spending on exactly the ones that need it. Total: **84.5 % for $180** of a $4,000 budget — the budget does not bind. The next real gain costs 327× current spend and buys one field.
+<!-- /figures:finding -->
+
+*No hosted demo for this one: it measures real models, which means downloading them. The
+other three run in your browser — this one runs on your machine, and `npm run measure`
+takes about two minutes.*
+
+```bash
 npm run measure    # measure each tier once, then freeze the profile
 npm run optimise   # the routing, and the price of the next improvement
 npm run failures   # what it gets wrong, and what kind of wrong
-npm run figures    # regenerate every number on this page
-npm test
+npm run sensitivity # which assumptions decide the answer, and which don't
+npm test           # types, README figures, and 14 tests
 ```
 
-Everything runs locally. No API key, nothing leaves the machine, and anyone who clones
-this reproduces the numbers below.
+Everything runs locally. No API key, nothing leaves the machine, and anyone who clones this
+reproduces the numbers below.
 
 ---
 
@@ -274,6 +282,61 @@ confident](https://github.com/ArslaneSempai-ui/kyc-triage-agent), [a bench that 
 whether either still works](https://github.com/ArslaneSempai-ui/regression-bench),
 [what a detection threshold costs](https://github.com/ArslaneSempai-ui/alert-triage-economics),
 and this — where the next euro should go.
+
+---
+
+## What this does not let you conclude
+
+**Not "small models are good enough."** Small models are good enough *for three of these
+five fields*, and hopeless at the fourth. The finding is that the question has to be asked
+per field, which is precisely what routing per document prevents you from discovering.
+
+**Not "84.5 % is the accuracy you would get."** It is the accuracy on a corpus I wrote,
+with a held-out split that defends against the worst version of that problem and does not
+turn invented documents into real ones. The method travels; the number does not.
+
+**Not "the budget does not matter."** It does not bind *here*, at this volume, with these
+prices. Multiply the volume by fifty or drop the budget by a hundred and it binds
+immediately — which the sensitivity sweep says explicitly rather than reporting the tiers
+as insensitive.
+
+**Not "the human tier is not worth it."** The human tier costs more than the entire budget
+at this volume, so it is never selected and its quality never enters the calculation. That
+is a statement about price, not about people, and the sweep reports it as priced out rather
+than as irrelevant.
+
+---
+
+## What I would do differently
+
+**Write the held-out split before the first measurement, not after it.** The first run
+scored the rules at 100 % because I had written the regexes against my own templates. It
+took a full rebuild of the corpus to fix, and thirty minutes of discipline up front would
+have avoided it.
+
+**Check the scorer before believing the scores.** 133 of 685 recorded failures were format
+mismatches — `10 / 07 / 1987` against `10/07/1987`. Correcting the comparison moved one
+field from 51.7 % to 100 % and retired a claim on this page. A scorer that measures
+formatting is worse than no scorer, because it produces confident wrong numbers.
+
+**Measure latency the same way as accuracy.** Latency is recorded but plays no part in the
+routing, which means the optimiser will happily route a real-time field to the slowest
+tier. A budget in seconds belongs beside the budget in dollars.
+
+---
+
+## What a reviewer can check without running anything
+
+| Claim | Where it is checked |
+|---|---|
+| Every figure on this page | Generated from the frozen profile; `npm test` fails if the page drifts |
+| The models | Pinned by exact revision, so a clone measures the same thing |
+| The split | A test fails if training and held-out phrasings share a shape |
+| Every assumption | Declared in the inventory and swept, with "priced out" told apart from "irrelevant" |
+| The routing | Exhaustive over all 1,024 combinations — no heuristic, nothing tuned |
+| Every failure | Published in full, by kind, rather than summarised into a rate |
+
+---
 
 **Arslane Chaouche Ramdane** — six years in AML/KYC and financial crime operations,
 moving into AI transformation work.

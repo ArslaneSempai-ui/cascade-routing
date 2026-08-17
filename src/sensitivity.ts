@@ -21,6 +21,7 @@
  */
 
 import { optimiseExtraction, optimiseClassification } from "./optimise.ts";
+import { isMain } from "./cli.ts";
 import { ASSUMPTIONS } from "./assumptions.ts";
 import { FIELDS } from "./corpus.ts";
 import { readProfiles } from "./measure.ts";
@@ -137,7 +138,7 @@ export function advise(b: Band, plausible: [number, number], format = (x: number
   return `decides the routing. Same answer from ${format(b.stableFrom)} to ${format(b.stableTo)}; outside that it changes. Worth measuring.`;
 }
 
-if (import.meta.filename === process.argv[1]) {
+if (isMain(import.meta)) {
   const p = readProfiles();
   if (!p) { console.error("No profile measured — start with: npm run measure"); process.exit(1); }
 

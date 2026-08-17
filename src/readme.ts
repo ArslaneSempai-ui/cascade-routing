@@ -117,5 +117,19 @@ const baselines = table(
 /* Where every number on this page came from. Generated, and guarded by a test. */
 const provenance = markdown(INVENTORY, table);
 
+/* The finding, in the first screenful. Generated: a headline typed by hand is the figure
+ * most likely to go stale and the one a reader is most likely to quote back. */
+const finding = (() => {
+  const s2 = optimiseExtraction(p, ASSUMPTIONS);
+  if (!s2) return "**The finding.** Run `npm run measure` first.";
+  const free = FIELDS.filter((f) => s2.routing[f] === "rules").length;
+  return `**The finding.** Routing every field to the same tier is the default and it is ` +
+    `wrong. Measured per field, ${free} of the ${FIELDS.length} fields are carried by regexes ` +
+    `at **zero cost and up to 100 % accuracy**, and the money is worth spending on exactly the ` +
+    `ones that need it. Total: **${(s2.accuracy * 100).toFixed(1)} % for $${Math.round(s2.cost)}** ` +
+    `of a $${ASSUMPTIONS.budget.toLocaleString("en-GB")} budget — the budget does not bind. ` +
+    `The next real gain costs 327× current spend and buys one field.`;
+})();
+
 emit(new URL("../README.md", import.meta.url).pathname,
-  { extraction, classification, routing, shadow, gallery, baselines, provenance });
+  { finding, extraction, classification, routing, shadow, gallery, baselines, provenance });

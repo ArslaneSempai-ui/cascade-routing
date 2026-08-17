@@ -11,6 +11,7 @@
  */
 
 import { mkdirSync, writeFileSync, readFileSync, existsSync } from "node:fs";
+import { isMain } from "./cli.ts";
 import { dirname } from "node:path";
 import { generateRecords, generateAlerts, FIELDS, TYPOLOGIES } from "./corpus.ts";
 import { TIERS, loadExtractors, loadClassifiers, extract, classify, correct } from "./tiers.ts";
@@ -100,7 +101,7 @@ export async function measure(howMany = 120): Promise<Profiles> {
   return profils;
 }
 
-if (import.meta.filename === process.argv[1]) {
+if (isMain(import.meta)) {
   console.log("\nMeasuring — models download on the first run, allow a few minutes.\n");
   const p = await measure();
   const pc = (x: number) => (x * 100).toFixed(1).padStart(5) + " %";
