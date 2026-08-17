@@ -13,6 +13,9 @@ import { FIELDS } from "./corpus.ts";
 import { TIERS } from "./tiers.ts";
 import { run as emit, table } from "./figures.ts";
 import { rate } from "./interval.ts";
+import { majorityClass, uniformGuess, verdict } from "./baselines.ts";
+import { generateAlerts } from "./corpus.ts";
+import { TYPOLOGIES } from "./corpus.ts";
 
 const p = readProfiles();
 if (!p) { console.error("No profile measured — start with: npm run measure"); process.exit(1); }
@@ -85,5 +88,29 @@ const gallery = (() => {
   return `${f.length} failures across the machine tiers, grouped by what actually went wrong:\n\n${counts}\n\n${examples}`;
 })();
 
+/*
+ * A percentage without its baseline invites the one question you cannot answer.
+ *
+ * The keyword classifier scores 24.2 %. Whether that is bad was unanswerable until the
+ * trivial baseline was computed: always naming the most common typology scores 25.0 %.
+ * The rules are not "worse" in any measurable sense — they are indistinguishable from a
+ * constant, which is the more precise and more damning statement.
+ */
+const alerts = generateAlerts(120, "heldout");
+const majority = majorityClass(alerts.map((a) => a.truth));
+const uniform = uniformGuess(TYPOLOGIES.length);
+
+const baselines = table(
+  ["", "Accuracy", "Verdict"],
+  [
+    [`${majority.name}`, pc(majority.accuracy), `*${majority.what}*`],
+    [`${uniform.name}`, pc(uniform.accuracy), `*${uniform.what}*`],
+    ...TIERS.filter((t) => t !== "human").map((t) => [
+      `\`${t}\``, pc(p.classification[t].accuracy),
+      verdict(p.classification[t].accuracy, majority, p.classification[t].items),
+    ]),
+  ],
+);
+
 emit(new URL("../README.md", import.meta.url).pathname,
-  { extraction, classification, routing, shadow, gallery });
+  { extraction, classification, routing, shadow, gallery, baselines });

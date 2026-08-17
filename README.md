@@ -29,8 +29,8 @@ on another they never saw. Measured honestly, they collapse.
 | Tier | name | birth | document | country | address | Latency |
 |---|---|---|---|---|---|---|
 | `rules` | 0.0 % | 100.0 % | 83.3 % | 100.0 % | 0.0 % | 0.0 ms |
-| `small` | 49.2 % | 100.0 % | 62.5 % | 100.0 % | 42.5 % | 20.7 ms |
-| `large` | 96.7 % | 100.0 % | 67.5 % | 100.0 % | 38.3 % | 36.1 ms |
+| `small` | 49.2 % | 100.0 % | 62.5 % | 100.0 % | 42.5 % | 20.0 ms |
+| `large` | 96.7 % | 100.0 % | 67.5 % | 100.0 % | 38.3 % | 35.4 ms |
 <!-- /figures:extraction -->
 
 Two things fall out of that table, and neither is guessable:
@@ -53,12 +53,34 @@ The second chain, classifying alert narratives, is where the keyword collapse is
 | Tier | Accuracy | 95 % interval | Latency |
 |---|---|---|---|
 | `rules` | 24.2 % | [17–33] | 0.01 ms |
-| `small` | 67.5 % | [59–75] | 3.06 ms |
-| `large` | 44.2 % | [36–53] | 7.84 ms |
+| `small` | 67.5 % | [59–75] | 3.10 ms |
+| `large` | 44.2 % | [36–53] | 6.86 ms |
 <!-- /figures:classification -->
 
 Those keywords scored **100 %** against the templates they were written from. On
 narratives phrased by someone else, three quarters of that performance was never there.
+
+---
+
+## Against doing no work at all
+
+A percentage without its baseline invites the one question you cannot answer. The keyword
+classifier scores 24.2 % — is that bad? It was unanswerable until the trivial baseline was
+computed.
+
+<!-- figures:baselines -->
+|  | Accuracy | Verdict |
+|---|---|---|
+| always the most common label | 25.0 % | *answers "fractionnement" every time, ignoring the input entirely* |
+| uniform guess | 20.0 % | *picks one of 5 labels at random* |
+| `rules` | 24.2 % | indistinguishable from "always the most common label" on 120 cases — this measurement does not show the system doing anything |
+| `small` | 67.5 % | beats "always the most common label" by 42.5 points |
+| `large` | 44.2 % | beats "always the most common label" by 19.2 points |
+<!-- /figures:baselines -->
+
+Hand-written keyword rules, refined over an afternoon, carry no information that a
+constant does not. That is not a claim I would have made from the accuracy alone, and the
+baseline took four minutes to write.
 
 ---
 
