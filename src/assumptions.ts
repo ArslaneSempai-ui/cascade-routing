@@ -1,59 +1,69 @@
 /**
- * Ce qui n'est pas mesuré.
+ * What is not measured.
  *
- * Le fichier des profils ne contient que ce qu'on a fait tourner : la accuracy et la
- * latency des règles, du small modèle et du gros. Tout le reste vit ici, et la séparation
- * est le point le plus important de ce projet.
+ * The profile file holds only what was actually run: the accuracy and latency of the
+ * rules, the small model and the large one. Everything else lives here, and that
+ * separation is the most important thing in this project.
  *
- * ─── L'human ───
+ * ─── The human ───
  *
- * La première version faisait rendre la vérité terrain à l'étage human : 100 % de
- * accuracy, par construction. C'était un mensonge aux conséquences directes — un
- * optimiseur qui croit l'human infaillible lui envoie tout, et la conclusion devient
- * fausse dans le sens qui coûte le plus cher.
+ * The first version had the human tier return ground truth: 100 % accuracy, by
+ * construction. That was a lie with direct consequences — an optimiser that believes the
+ * human is infallible routes everything to them, and the conclusion goes wrong in the
+ * direction that costs the most.
  *
- * Je n'ai pas d'humains sous la main. Leur accuracy n'est donc pas mesurable ici et ne
- * peut pas figurer dans un relevé de mesures : c'est une **hypothèse**, elle se discute,
- * et elle est posée en dessous de 100 % parce qu'un analyste à sa quarantième alerte de
- * la journée n'est pas à 100 %.
+ * I have no humans to hand. Their accuracy is therefore not measurable here and cannot
+ * appear in a table of measurements: it is an **assumption**, it is arguable, and it is
+ * set below 100 % because an analyst on their fortieth alert of the day is not at 100 %.
  *
- * ─── Les prix ───
+ * ─── The prices ───
  *
- * Aucun prix n'est mesuré non plus. Le coût d'un appel de modèle dépend de qui l'héberge,
- * le coût d'une minute d'analyste dépend du country. Ce sont des hypothèses, elles sont
- * modifiables à l'écran, et les confondre avec les mesures ferait passer un tarif pour
- * un fait.
+ * No price is measured either. What a model call costs depends on who hosts it; what a
+ * minute of analyst time costs depends on the country. Those are assumptions, they are
+ * editable, and mixing them into the measurements would pass a tariff off as a fact.
  */
 
 import type { TierName } from "./tiers.ts";
 
-/** D'où vient un chiffre. Rien à l'écran ne doit apparaître sans son statut. */
-export type Status = "mesure" | "convention" | "postule" | "choisi";
+/*
+ * The four words for where a number came from now live in `provenance.ts`, shared across
+ * every repository here.
+ *
+ * This file had its own set — `mesure`, `convention`, `postule`, `choisi` — declared and
+ * never used anywhere. Four repositories inventing four vocabularies for the same idea is
+ * how a portfolio stops reading as one body of work, and an unused vocabulary is worse
+ * than none: it looks like a discipline that is being applied.
+ *
+ * `convention` is folded into `assumed` deliberately. A market convention is still a
+ * number the reader has to supply or accept, and the distinction between "a figure people
+ * commonly use" and "a figure nobody can know" was doing no work on any page.
+ */
+export type { Provenance } from "./provenance.ts";
+import type { Provenance } from "./provenance.ts";
 
 export type Assumptions = {
   /**
-   * Justesse d'un examen human, par item.
+   * How often a human review of one item is right.
    *
-   * POSTULÉ. Les études d'accord inter-évaluateurs sur de la revue documentaire situent
-   * ce chiffre entre 0,85 et 0,95 selon la fatigue et la complexité ; je retiens le low
-   * de la fourchette, parce qu'un jeu envoyé à un human est par construction celui que
-   * les étages précédents ont trouvé difficile.
+   * Assumed. Inter-rater agreement studies on document review put this between 0.85 and
+   * 0.95 depending on fatigue and complexity; I take the low end, because a batch sent to
+   * a human is by construction the one the earlier tiers found difficult.
    */
   humanAccuracy: number;
-  /** Secondes qu'un human passe sur un item. POSTULÉ. */
+  /** Seconds a human spends on one item. Assumed. */
   humanSeconds: number;
-  /** Coût annuel chargé d'un analyste. CONVENTION de place, ajustable. */
+  /** Loaded annual cost of an analyst. Assumed — yours will differ. */
   analystAnnualCost: number;
-  /** Heures réellement productives par jour. CONVENTION — jamais huit. */
+  /** Hours genuinely productive per day. Assumed, and never eight. */
   productiveHoursPerDay: number;
   workingDaysPerYear: number;
-  /** Coût pour mille appels au small modèle, en euros. POSTULÉ. */
+  /** Cost per thousand calls to the small model. Assumed. */
   pricePerThousandSmall: number;
-  /** Coût pour mille appels au gros modèle. POSTULÉ. */
+  /** Cost per thousand calls to the large model. Assumed, and it moves fastest. */
   pricePerThousandLarge: number;
-  /** Volume d'items à traiter sur la période. CHOISI. */
+  /** Items to process over the period. Assumed — this is your scenario, not mine. */
   volume: number;
-  /** Budget disponible pour la période, en euros. CHOISI. */
+  /** Money available over the period. Assumed, and it decides which tiers are reachable. */
   budget: number;
 };
 
@@ -69,20 +79,27 @@ export const ASSUMPTIONS: Assumptions = {
   budget: 4_000,
 };
 
-/** Le statut de chaque hypothèse, affiché à côté d'elle. */
-export const STATUSES: Record<keyof Assumptions, Status> = {
-  humanAccuracy: "postule",
-  humanSeconds: "postule",
-  analystAnnualCost: "convention",
-  productiveHoursPerDay: "convention",
-  workingDaysPerYear: "convention",
-  pricePerThousandSmall: "postule",
-  pricePerThousandLarge: "postule",
-  volume: "choisi",
-  budget: "choisi",
+/**
+ * Where each assumption came from, in the shared vocabulary.
+ *
+ * All nine are `assumed`, and that is the honest answer: every one is an input a reader
+ * substitutes their own figure for, and every one is swept so the page can say whether
+ * their figure changes anything. `volume` and `budget` were labelled "chosen" here, which
+ * was wrong — they are the scenario, and the scenario belongs to whoever is reading.
+ */
+export const STATUSES: Record<keyof Assumptions, Provenance> = {
+  humanAccuracy: "assumed",
+  humanSeconds: "assumed",
+  analystAnnualCost: "assumed",
+  productiveHoursPerDay: "assumed",
+  workingDaysPerYear: "assumed",
+  pricePerThousandSmall: "assumed",
+  pricePerThousandLarge: "assumed",
+  volume: "assumed",
+  budget: "assumed",
 };
 
-/** Bornes de bon sens : un écran qui accepte 100 % de accuracy humaine ment à son lecteur. */
+/** Sanity bounds: a screen that accepts 100 % human accuracy is lying to its reader. */
 export const BOUNDS: Record<keyof Assumptions, [number, number]> = {
   humanAccuracy: [0.5, 0.99],
   humanSeconds: [5, 1800],
@@ -95,7 +112,7 @@ export const BOUNDS: Record<keyof Assumptions, [number, number]> = {
   budget: [0, 10_000_000],
 };
 
-/** Le coût d'un millier d'items à cet étage, en euros. */
+/** What a thousand items cost at this tier. */
 export function pricePerThousand(tier: TierName, h: Assumptions): number {
   if (tier === "rules") return 0;
   if (tier === "small") return h.pricePerThousandSmall;

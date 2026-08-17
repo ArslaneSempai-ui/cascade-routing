@@ -6,6 +6,8 @@
  */
 
 import { readProfiles } from "./measure.ts";
+import { INVENTORY } from "./inventory.ts";
+import { markdown } from "./provenance.ts";
 import { optimiseExtraction, optimiseClassification, budgetShadowPrice } from "./optimise.ts";
 import { ASSUMPTIONS, pricePerThousand, accuracy } from "./assumptions.ts";
 import { collect, shape } from "./failures.ts";
@@ -21,7 +23,7 @@ const p = readProfiles();
 if (!p) { console.error("No profile measured — start with: npm run measure"); process.exit(1); }
 const h = ASSUMPTIONS;
 const pc = (x: number) => (x * 100).toFixed(1) + " %";
-const euro = (n: number) => "€" + Math.round(n).toLocaleString("en-GB");
+const euro = (n: number) => "$" + Math.round(n).toLocaleString("en-GB");
 
 const extraction = table(
   ["Tier", ...FIELDS, "Latency"],
@@ -112,5 +114,8 @@ const baselines = table(
   ],
 );
 
+/* Where every number on this page came from. Generated, and guarded by a test. */
+const provenance = markdown(INVENTORY, table);
+
 emit(new URL("../README.md", import.meta.url).pathname,
-  { extraction, classification, routing, shadow, gallery, baselines });
+  { extraction, classification, routing, shadow, gallery, baselines, provenance });

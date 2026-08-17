@@ -1,4 +1,4 @@
-# Where should the next euro go?
+# Where should the next dollar go?
 
 Four tiers — rules, a small model, a large one, a human — measured on held-out data, then
 routed under a budget. The answer is rarely "buy the bigger model", and this says why.
@@ -89,18 +89,18 @@ baseline took four minutes to write.
 <!-- figures:routing -->
 | Field | Tier chosen | Accuracy | Cost |
 |---|---|---|---|
-| name | `large` | 96.7 % | €160 |
-| birth | `rules` | 100.0 % | €0 |
-| document | `rules` | 83.3 % | €0 |
-| country | `rules` | 100.0 % | €0 |
-| address | `small` | 42.5 % | €20 |
-| **total** |  | **84.5 %** | **€180** |
+| name | `large` | 96.7 % | $160 |
+| birth | `rules` | 100.0 % | $0 |
+| document | `rules` | 83.3 % | $0 |
+| country | `rules` | 100.0 % | $0 |
+| address | `small` | 42.5 % | $20 |
+| **total** |  | **84.5 %** | **$180** |
 <!-- /figures:routing -->
 
 <!-- figures:shadow -->
-Budget used: **€180 of €4,000** — 4.5 %. The constraint **does not bind**.
+Budget used: **$180 of $4,000** — 4.5 %. The constraint **does not bind**.
 
-The next real gain is **+8.5 points of accuracy**, it costs **€58,692 more** — 327× current spend — and it buys exactly one field: `address`.
+The next real gain is **+8.5 points of accuracy**, it costs **$58,692 more** — 327× current spend — and it buys exactly one field: `address`.
 <!-- /figures:shadow -->
 
 That last sentence is the one worth carrying into a budget meeting. The instinct in the
@@ -174,24 +174,55 @@ tier-and-field pair, in order, and shows what came back.
 
 ---
 
-## Measured, assumed, chosen
+## Where every number comes from
 
-The separation is the most important thing in this repository.
+The separation is the most important thing in this repository, and it used to be a
+paragraph I wrote by hand — which is the one form it must not take. A page that classifies
+its own figures, typed out, goes stale the first time somebody adds one, and it goes stale
+in the flattering direction: the figure you forget to declare is the one you were least
+comfortable declaring. It is generated from the code now, and a test fails if anything the
+tool runs on is missing from it.
 
-**Measured** — accuracy and latency for the three machine tiers, run on held-out data and
-frozen to `data/profiles.json`. Nothing else goes in that file.
+<!-- figures:provenance -->
+**4 measured**, **9 assumed**, **4 chosen**. What each kind means, and what you are entitled to ask of it:
 
-**Assumed** — human accuracy sits at 85 %, below certainty, because an analyst on their
-fortieth alert of the day is not perfect. It is *not* measurable here: there are no humans
-in this repository. An earlier version had the human tier return ground truth, which made
-it infallible by construction — an optimiser that believes that routes everything to
-humans, and the conclusion goes wrong in the direction that costs the most.
+- **measured** — running the code in this repository produces it. *run it yourself — the draws are seeded.*
+- **assumed** — an input nobody here can know; yours to supply. *put your own figure in, and read the band around it.*
+- **chosen** — my judgement and nothing else. *check whether the sweep says it decides anything.*
 
-**Assumed** — every price. What a model call costs depends on who hosts it; what a minute
-of analyst time costs depends on the country. Both are editable, and mixing them into the
-measurement file would pass a tariff off as a fact.
+| Kind | Name | What it is | Note |
+|---|---|---|---|
+| measured | `profiles` | per-field accuracy and latency for each tier | real models pinned by revision, scored on a held-out split, on the chosen corpus below |
+| measured | `routing` | the cheapest assignment of tiers to fields that fits the budget | exhaustive over all 1,024 combinations — no heuristic, nothing to tune |
+| measured | `shadowPrice` | the smallest budget increase that actually buys a better routing | a step, not a slope: differentiating a staircase says the next euro buys nothing |
+| measured | `REVISIONS` | the exact model revisions the figures were produced with | pinned, so a stranger reproduces the table rather than a different one |
+| assumed | `humanAccuracy` | how often a human reviewing their fortieth file of the day gets it right | moved here from being infallible by construction, which made the human tier unbeatable |
+| assumed | `humanSeconds` | seconds a human spends on one item | your own handling times |
+| assumed | `analystAnnualCost` | loaded annual cost of an analyst | your finance team knows this exactly |
+| assumed | `productiveHoursPerDay` | hours genuinely productive per day | never eight; weeks of work to establish |
+| assumed | `workingDaysPerYear` | working days in your calendar | your HR calendar knows this exactly |
+| assumed | `pricePerThousandSmall` | cost per thousand calls to the small model | your provider's price list, on your traffic |
+| assumed | `pricePerThousandLarge` | cost per thousand calls to the large model | same, and it moves faster than any other figure here |
+| assumed | `volume` | items to process over the period | your scenario, not mine |
+| assumed | `budget` | money available over the period | your scenario; it decides which tiers are reachable at all |
+| chosen | `corpus` | the synthetic documents the models are scored on, and their ground truth | the first measurement scored rules at 100 % because I wrote the regexes against my own templates |
+| chosen | `TRAINING / HELDOUT` | which phrasings the rules may see and which they are scored on | the defence against marking my own homework; a test fails if the two share a shape |
+| chosen | `FIELDS` | the 5 fields extracted from each document | a real onboarding form has more, and more of them ambiguous |
+| chosen | `TIERS` | the 4 tiers a field may be routed to | more tiers make the routing finer and the optimisation no harder |
+<!-- /figures:provenance -->
 
-**Chosen** — volume and budget. Someone decided those.
+The load-bearing chosen thing is the corpus. The accuracies above are real measurements —
+real models, pinned by revision, scored on a held-out split — taken on documents I wrote.
+The split defends against the worst version of that problem, which this repository already
+walked into once: the first measurement scored the rules at 100 % because I had written the
+regexes against my own templates. A held-out split stops you marking your own homework. It
+does not turn an invented corpus into documents a bank would send.
+
+What survives is exact: **the method is the finding, the accuracies are illustration.**
+That a cheap model carries some fields and not others, that its ceiling is a property of
+the field rather than of the budget, that routing per field beats routing per document —
+that holds for any corpus with this structure. That birth dates reach 100 % on the small
+model holds for mine.
 
 ---
 

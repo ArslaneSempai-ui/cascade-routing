@@ -158,7 +158,7 @@ if (import.meta.filename === process.argv[1]) {
   const p = readProfiles();
   if (!p) { console.error("No profile measured — start with: npm run measure"); process.exit(1); }
   const h = ASSUMPTIONS;
-  const euro = (n: number) => "€" + Math.round(n).toLocaleString("en-GB");
+  const euro = (n: number) => "$" + Math.round(n).toLocaleString("en-GB");
   const pc = (x: number) => (x * 100).toFixed(1) + " %";
 
   console.log(`\n${h.volume.toLocaleString("en-GB")} records · budget ${euro(h.budget)}`);
