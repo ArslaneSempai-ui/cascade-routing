@@ -83,10 +83,27 @@ export async function extract(tier: TierName, d: ClientFile, champ: Field): Prom
  * modèle qui rend « 26 ulica Nowy Świat, Lisbon » plutôt que le même sans virgule a
  * trouvé la bonne réponse, et compter cela comme une erreur mesurerait la mise en forme.
  */
-export function correct(obtenu: string, attendu: string): boolean {
-  const n = (x: string) => x.toLowerCase().replace(/[.,;:]+$/g, "").replace(/\s+/g, " ").trim();
-  return n(obtenu) === n(attendu) && n(obtenu).length > 0;
+export function correct(got: string, expected: string): boolean {
+  /*
+   * Formatting is not an error, and counting it as one measures the wrong thing.
+   *
+   * The failure gallery caught this immediately: the small model returned
+   * "10 / 07 / 1987" for "10/07/1987" and was scored wrong. That is a tokeniser putting
+   * spaces around punctuation, not a model failing to find the date — and 58 of its
+   * recorded failures on that field were this and nothing else.
+   *
+   * So separators are normalised on both sides. What is NOT normalised is content: a
+   * missing word, a wrong span or an empty answer stays wrong, which is the whole point.
+   */
+  const n = (x: string) => x
+    .toLowerCase()
+    .replace(/\s*([\/\-.,;:])\s*/g, "$1")   // spaces the tokeniser added around separators
+    .replace(/[.,;:]+$/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  return n(got) === n(expected) && n(got).length > 0;
 }
+
 
 /* ══════════════════ Chaîne B — classify ══════════════════ */
 

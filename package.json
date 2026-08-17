@@ -8,7 +8,9 @@
     "measure": "node src/measure.ts",
     "optimise": "node src/optimise.ts",
     "typage": "tsc --noEmit",
-    "test": "tsc --noEmit && node --test src/*.test.ts"
+    "test": "tsc --noEmit && node src/readme.ts --check && node --test src/*.test.ts",
+    "failures": "node src/failures.ts",
+    "figures": "node src/readme.ts"
   },
   "dependencies": {
     "@huggingface/transformers": "^3.0.0"
