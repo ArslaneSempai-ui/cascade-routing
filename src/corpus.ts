@@ -13,6 +13,17 @@
  * Tout est synthétique et assumé. Un dossier réel ne quitte pas une banque.
  */
 
+/*
+ * The five fields, and why these five.
+ *
+ * They are the identifying particulars a bank collects before an account is opened —
+ * `31 CFR 1010.230(a)` requires the identification to happen at that moment, not
+ * afterwards, which is what makes extraction from unstructured intake documents a real
+ * operational problem rather than a convenience.
+ *
+ * The chain that consumes them is the onboarding agent in kyc-triage-agent, which until
+ * now received files already structured, as if by magic. This is what produces them.
+ */
 export type Field = "name" | "birth" | "document" | "country" | "address";
 export const FIELDS: Field[] = ["name", "birth", "document", "country", "address"];
 
@@ -26,6 +37,14 @@ export type Typology =
   | "fractionnement" | "mouvement rapide" | "lien sanctions"
   | "contrepartie inhabituelle" | "intensite especes";
 
+/*
+ * The alert typologies.
+ *
+ * These are internal classifications, not legal categories: no regulation names them. The
+ * obligation they feed does have a citation — a suspicious transaction of $5,000 or more
+ * must be reported, `31 CFR 1020.320(a)(2)` — but how a bank sorts its alerts on the way
+ * there is its own affair, and this set is invented for the demonstration.
+ */
 export const TYPOLOGIES: Typology[] = [
   "fractionnement", "mouvement rapide", "lien sanctions",
   "contrepartie inhabituelle", "intensite especes",
