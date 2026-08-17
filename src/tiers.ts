@@ -53,11 +53,27 @@ const RULES: Record<Field, (t: string) => string> = {
     t.match(/(?:residing at|address(?: on file)?:?|live at|declared address is)\s*([^.]+?)\./i)?.[1]?.trim() ?? "",
 };
 
+/*
+ * The exact revision of each model, not just its name.
+ *
+ * A name on a public hub points at whatever was uploaded last. Someone cloning this in
+ * six months would download a different set of weights and get different numbers from the
+ * ones this README publishes — and would have no way to tell that is what happened.
+ *
+ * These hashes are what was actually measured.
+ */
+export const REVISIONS = {
+  small: "bdbb0a5e9c61",
+  large: "6d1aeed784b6",
+  embSmall: "751bff37182d",
+  embLarge: "761b726dd34f",
+} as const;
+
 let qaSmall: any = null, qaLarge: any = null;
 
 export async function loadExtractors(): Promise<void> {
-  qaSmall ??= await pipeline("question-answering", "Xenova/distilbert-base-cased-distilled-squad");
-  qaLarge ??= await pipeline("question-answering", "onnx-community/roberta-base-squad2-ONNX");
+  qaSmall ??= await pipeline("question-answering", "Xenova/distilbert-base-cased-distilled-squad", { revision: REVISIONS.small });
+  qaLarge ??= await pipeline("question-answering", "onnx-community/roberta-base-squad2-ONNX", { revision: REVISIONS.large });
 }
 
 export async function extract(tier: TierName, d: ClientFile, champ: Field): Promise<string> {
@@ -137,8 +153,8 @@ const mean = (t: any): number[] => {
 const cos = (a: number[], b: number[]) => a.reduce((s, x, i) => s + x * b[i], 0);
 
 export async function loadClassifiers(): Promise<void> {
-  embSmall ??= await pipeline("feature-extraction", "Xenova/all-MiniLM-L6-v2");
-  embLarge ??= await pipeline("feature-extraction", "Xenova/multilingual-e5-small");
+  embSmall ??= await pipeline("feature-extraction", "Xenova/all-MiniLM-L6-v2", { revision: REVISIONS.embSmall });
+  embLarge ??= await pipeline("feature-extraction", "Xenova/multilingual-e5-small", { revision: REVISIONS.embLarge });
   vectorsSmall ??= await Promise.all(TYPOLOGIES.map(async (t) => mean(await embSmall(DESCRIPTIONS[t]))));
   // e5 attend ses préfixes : les omettre dégrade sans rien casser, donc sans se voir.
   vectorsLarge ??= await Promise.all(TYPOLOGIES.map(async (t) => mean(await embLarge(`passage: ${DESCRIPTIONS[t]}`))));
