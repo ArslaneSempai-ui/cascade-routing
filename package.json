@@ -10,7 +10,8 @@
     "typage": "tsc --noEmit",
     "test": "tsc --noEmit && node src/readme.ts --check && node --test src/*.test.ts",
     "failures": "node src/failures.ts",
-    "figures": "node src/readme.ts"
+    "figures": "node src/readme.ts",
+    "sensitivity": "node src/sensitivity.ts"
   },
   "dependencies": {
     "@huggingface/transformers": "^3.0.0"
