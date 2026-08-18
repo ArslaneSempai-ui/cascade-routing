@@ -21,7 +21,7 @@ npm run optimise   # the routing, and the price of the next improvement
 npm run failures   # what it gets wrong, and what kind of wrong
 npm run sensitivity # which assumptions decide the answer, and which don't
 npm start          # the screen, on localhost:4670
-npm test           # types, README figures, and 19 tests
+npm test           # types, README figures, and <!--p:portfolio.parDepot.cascade-->22<!--/p--> tests
 ```
 
 Everything runs locally. No API key, nothing leaves the machine, and anyone who clones this
