@@ -23,7 +23,7 @@
  * editable, and mixing them into the measurements would pass a tariff off as a fact.
  */
 
-import type { TierName } from "./tiers.ts";
+import type { TierName } from "./paliers.ts";
 
 /*
  * The four words for where a number came from now live in `provenance.ts`, shared across

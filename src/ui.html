@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Where should the next dollar go</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%23fbfaf7'/%3E%3Crect x='2' y='3' width='12' height='2' fill='%23141618'/%3E%3Crect x='2' y='7' width='7' height='2' fill='%23141618'/%3E%3Crect x='2' y='11' width='4' height='2' fill='%23141618'/%3E%3C/svg%3E" />
+<link rel="stylesheet" href="/registre.css" />
+</head>
+<body>
+<main>
+  <div class="haut">
+    <div><h1 id="h1"></h1><p class="lede" id="lede"></p></div>
+  </div>
+
+  <div class="chiffres" id="releve"></div>
+  <div id="verdict"></div>
+
+  <h2 id="titreRoutage"></h2>
+  <div id="routage"></div>
+
+  <h2 id="titreReflexe"></h2>
+  <div id="reflexe"></div>
+
+  <h2 id="titreHyp"></h2>
+  <div id="hypotheses"></div>
+
+  <p class="renvoi" id="provenanceLegende"></p>
+</main>
+
+<script type="module">
+import { affectation, barres, choisir, brancher } from "/graphes.js";
+const $ = (s) => document.querySelector(s);
+const esc = (t) => String(t ?? "").replace(/[&<>"]/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
+
+/*
+ * Attendre que le shim soit posé, quand il y en a un.
+ *
+ * Sur l'hôte statique le shim est un module ; s'il tarde, l'écran part avant lui, `api()`
+ * tombe sur un `fetch` que personne n'écoute, et le lecteur reçoit la page 404 de GitHub
+ * analysée comme du JSON. Une balise classique crée la promesse avant tout module.
+ */
+const pret = async () => { if (!window.LOCAL && window.LOCAL_PRET) await window.LOCAL_PRET; };
+
+const api = async (chemin, corps) => {
+  await pret();
+  if (window.LOCAL) return window.LOCAL(chemin, corps);
+  const r = await fetch(chemin, corps
+    ? { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(corps) }
+    : {});
+  return r.json();
+};
+
+/* Le moteur ne fabrique pas de phrases : il rend des structures, l'écran les formule. */
+const T = {
+  h1: "Where should the next dollar go?",
+  lede: "Four tiers — rules, a small model, a large one, a human — measured on held-out data. Route each field to a tier and read what your routing costs.",
+
+  releve: "Your routing, priced",
+  justesse: "mean accuracy over the five fields",
+  cout: "a year, at this volume",
+  duree: "processing time for the volume",
+  budget: "share of the budget",
+
+  mieux: (j, d, f) => `<b>The model would route it differently.</b> Its assignment reaches ${j} for ${d} — ${f}. Take its cells, or press the button, and see which three fields it moves.`,
+  optimal: "<b>This is the assignment the model would choose.</b> Nothing here buys accuracy for less.",
+  prendreOptimum: "Take the model's assignment",
+
+  titreRoutage: "One field, one tier",
+  routageQuoi: "Every cell is a measured pair: how often that tier gets that field right. The bar is the accuracy, the outline is what the optimiser would take. Take a cell to move the field.",
+  figRoutageTitre: (n) => `Accuracy of each tier on each field, measured on ${n} held-out records`,
+  figRoutageAria: "A grid of five fields by four tiers. Each cell carries the measured accuracy of that tier on that field, as a bar and a number. The cell taken for each field is filled; the one the optimiser would take carries a dashed outline.",
+  motOptimum: "what the optimiser would take",
+  paliers: { rules: "Rules", small: "Small model", large: "Large model", human: "Human" },
+  champs: { name: "name", birth: "date of birth", document: "document no.", country: "country", address: "address" },
+  prixNote: (p) => (p === 0 ? "free" : `$${p.toFixed(2)} / 1,000`),
+
+  titreReflexe: "What one tier for everything costs",
+  reflexeQuoi: "The ordinary move is to pick one tier and send everything through it. All four of those routings are here, and every one of them is beaten by mixing.",
+  figReflexeTitre: "Accuracy if every field goes to the same tier",
+  figReflexeAria: "Four bars, one per tier, of the mean accuracy when every field is routed to that tier; the cost of each is noted underneath.",
+  coutSous: (d) => `${d} a year`,
+  reflexeSuite: (meilleurUniforme, jUniforme, dUniforme, jOpt, dOpt) =>
+    `The best single tier is <b>${meilleurUniforme}</b> at ${jUniforme} for ${dUniforme}. Mixing reaches <b>${jOpt}</b> for <b>${dOpt}</b> — more accurate and cheaper, because three of the five fields are carried by regexes that cost nothing.`,
+
+  titreHyp: "The assumptions",
+  hypQuoi: "The accuracies and the latencies are measured. Everything below is not: no human was available to measure, and no price is a fact. Change them and the answer may change — that is what they are for.",
+  humanAccuracy: "Human accuracy", humanSeconds: "Human seconds per field",
+  analystAnnualCost: "Loaded cost per analyst ($/yr)", productiveHoursPerDay: "Productive hours per day",
+  workingDaysPerYear: "Working days per year", pricePerThousandSmall: "Small model, $ / 1,000",
+  pricePerThousandLarge: "Large model, $ / 1,000", volume: "Records a year", budget: "Budget ($/yr)",
+  defaut: "Reset the assumptions",
+  prochain: (d, f) => `The next real improvement needs a budget of <b>${d}</b> — ${f} what this routing spends — and it buys one field.`,
+  prochainRien: "No further improvement is reachable at any budget with these four tiers.",
+
+  provenance: "The accuracy and latency of each tier are <b>measured</b> on held-out records, once, and frozen. The human tier, the prices, the volume and the budget are <b>assumed</b> — none of them is observable here. The README says which is which, one by one.",
+};
+const t = () => T;
+
+let etat = null, occupe = false, enAttente = null;
+
+const nb = (n) => Math.round(n).toLocaleString("en-GB");
+const dollars = (n) => "$" + nb(n);
+const pc = (x) => (x * 100).toFixed(1) + " %";
+const pcCourt = (x) => Math.round(x * 100) + " %";
+const lire = (v) => Number(String(v).replace(/\s/g, "").replace(",", "."));
+
+function blocReleve() {
+  const L = t(), m = etat.mien;
+  const ligne = (k, v) => `<div class="ligne"><span class="intitule">${esc(k)}</span><span class="valeur">${v}</span></div>`;
+  $("#releve").innerHTML = `<section class="feuillet">
+    <div class="titre">${esc(L.releve)}</div>
+    ${ligne(L.cout, dollars(m.cost))}
+    ${ligne(L.duree, nb(m.seconds / 3600) + " h")}
+    ${ligne(L.budget, m.budgetShare === Infinity ? "—" : pcCourt(m.budgetShare))}
+    <div class="ligne total"><span class="intitule">${esc(L.justesse)}</span>
+      <span class="valeur">${pc(m.accuracy)}</span></div>
+  </section>`;
+}
+
+function blocVerdict() {
+  const L = t(), m = etat.mien, o = etat.optimum;
+  if (!o) { $("#verdict").innerHTML = ""; return; }
+  /* L'égalité se juge sur ce qui est affiché, pas sur les flottants : deux routages qui
+   * s'affichent tous deux « 84.5 % pour 180 $ » ne doivent pas se contredire. */
+  const pareil = pc(m.accuracy) === pc(o.accuracy) && Math.round(m.cost) === Math.round(o.cost);
+  const facteur = o.cost > 0 && m.cost > o.cost
+    ? `${(m.cost / o.cost).toFixed(1)}× cheaper`
+    : m.cost > o.cost ? "for nothing" : "at the same price";
+  $("#verdict").innerHTML = pareil
+    ? `<div class="renvoi favorable">${L.optimal}</div>`
+    : `<div class="renvoi attention">${L.mieux(pc(o.accuracy), dollars(o.cost), facteur)}
+        <div style="margin-top:10px"><button class="b primaire" id="prendre" type="button">${esc(L.prendreOptimum)}</button></div></div>`;
+  const b = $("#prendre");
+  if (b) b.onclick = () => envoyer("/api/optimum", {});
+}
+
+function blocRoutage() {
+  const L = t();
+  $("#titreRoutage").textContent = L.titreRoutage;
+
+  /*
+   * La figure est la commande.
+   *
+   * Cinq champs, quatre paliers : mille vingt-quatre routages, et l'outil dit que celui du
+   * réflexe — un seul palier pour tout — est mauvais. Une phrase ne le fait pas sentir. Ici
+   * le lecteur pose son affectation case par case et lit ce qu'elle coûte au-dessus.
+   */
+  const fig = affectation({
+    colonnes: etat.paliers.map((e) => ({ nom: L.paliers[e] ?? e, note: L.prixNote(etat.prix[e]) })),
+    lignes: etat.champs.map((c) => ({
+      nom: L.champs[c] ?? c,
+      cle: c,
+      choix: etat.routage[c],
+      optimum: etat.optimum?.routing[c],
+      cases: etat.paliers.map((e) => ({ cle: e, valeur: etat.justesse[c][e] })),
+    })),
+    fmt: pcCourt,
+    motOptimum: L.motOptimum,
+    aria: L.figRoutageAria,
+  });
+
+  $("#routage").innerHTML = `<section class="feuillet"><div class="corps">
+    <div class="quoi">${esc(L.routageQuoi)}</div>
+    <div class="titre-fig">${esc(L.figRoutageTitre(nb(120)))}</div>${fig}
+  </div></section>`;
+
+  brancher($("#routage"));
+  /* La figure renvoie la clé du modèle, pas l'intitulé affiché : « date of birth » contient
+   * des espaces, et le retraduire ici serait une occasion de se tromper pour rien. */
+  choisir($("#routage"), (v) => {
+    const [champ, palier] = v.split("~");
+    envoyer("/api/routage", { champ, palier });
+  }, null);
+}
+
+function blocReflexe() {
+  const L = t(), o = etat.optimum;
+  $("#titreReflexe").textContent = L.titreReflexe;
+  const meilleur = [...etat.uniformes].sort((a, b) => b.accuracy - a.accuracy || a.cost - b.cost)[0];
+
+  const fig = barres({
+    items: etat.uniformes.map((u) => ({
+      nom: L.paliers[u.palier] ?? u.palier,
+      valeur: u.accuracy,
+      ton: u === meilleur ? "accent" : "neutre",
+      note: L.coutSous(dollars(u.cost)),
+    })),
+    fmt: pc,
+    max: 1,
+    aria: L.figReflexeAria,
+  });
+
+  $("#reflexe").innerHTML = `<div class="feuillet">
+    <div class="quoi">${esc(L.reflexeQuoi)}</div>
+    <div class="titre-fig">${esc(L.figReflexeTitre)}</div>${fig}
+    ${o ? `<div class="suite">${L.reflexeSuite(
+      esc(L.paliers[meilleur.palier] ?? meilleur.palier), pc(meilleur.accuracy), dollars(meilleur.cost),
+      pc(o.accuracy), dollars(o.cost))}</div>` : ""}
+  </div>`;
+  brancher($("#reflexe"));
+}
+
+function blocHypotheses() {
+  const L = t();
+  $("#titreHyp").textContent = L.titreHyp;
+  const champs = Object.keys(etat.bornes).map((cle) => {
+    const [min, max] = etat.bornes[cle];
+    return `<div><label for="${cle}">${esc(L[cle] ?? cle)}</label>
+      <input type="text" inputmode="decimal" id="${cle}" value="${etat.hypotheses[cle]}"
+        data-min="${min}" data-max="${max}" /></div>`;
+  }).join("");
+
+  const g = etat.prochainGain;
+  const phrase = g && g.step
+    ? L.prochain(dollars(g.step.budgetNeeded), `${Math.round(g.step.budgetNeeded / Math.max(1, etat.optimum?.cost ?? 1))}×`)
+    : L.prochainRien;
+
+  $("#hypotheses").innerHTML = `<div class="feuillet">
+    <div class="quoi">${esc(L.hypQuoi)}</div>
+    <div class="grille">${champs}</div>
+    <div class="renvoi">${phrase}</div>
+    <button class="b remise" id="defaut" type="button">${esc(L.defaut)}</button>
+  </div>`;
+
+  for (const cle of Object.keys(etat.bornes)) {
+    $(`#${cle}`).onchange = (e) => envoyer("/api/hypotheses", { [cle]: lire(e.target.value) });
+  }
+  $("#defaut").onclick = () => envoyer("/api/hypotheses", { remise: true });
+}
+
+function dessiner() {
+  const L = t();
+  $("#h1").textContent = L.h1;
+  $("#lede").textContent = L.lede;
+  $("#provenanceLegende").innerHTML = L.provenance;
+  blocReleve(); blocVerdict(); blocRoutage(); blocReflexe(); blocHypotheses();
+}
+
+/* Un envoi à la fois, et le dernier demandé n'est pas jeté : passer la main sur les cases
+ * enchaîne les affectations, et l'écran ne doit pas rester en arrière de la main. */
+async function envoyer(chemin, corps) {
+  if (occupe) { enAttente = [chemin, corps]; return; }
+  occupe = true;
+  try { etat = await api(chemin, corps ?? {}); dessiner(); }
+  finally {
+    occupe = false;
+    if (enAttente) { const suite = enAttente; enAttente = null; envoyer(...suite); }
+  }
+}
+
+etat = await api("/api/etat");
+dessiner();
+</script>
+</body>
+</html>

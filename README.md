@@ -7,16 +7,21 @@ routed under a budget. The answer is rarely "buy the bigger model", and this say
 **The finding.** Routing every field to the same tier is the default and it is wrong. Measured per field, 3 of the 5 fields are carried by regexes at **zero cost and up to 100 % accuracy**, and the money is worth spending on exactly the ones that need it. Total: **84.5 % for $180** of a $4,000 budget — the budget does not bind. The next real gain costs 327× current spend and buys one field.
 <!-- /figures:finding -->
 
-*No hosted demo for this one: it measures real models, which means downloading them. The
-other three run in your browser — this one runs on your machine, and `npm run measure`
-takes about two minutes.*
+**[Try it in your browser →](https://arslanesempai-ui.github.io/cascade-routing/)** — take a
+cell to send a field to another tier and read what your routing costs. No model is called:
+the accuracy of each tier was measured once on held-out records and frozen, and the page
+replays the arithmetic on those measurements. Measuring them yourself is `npm run measure`,
+about two minutes.
+
+![Taking four cells: 80.5 % for $800 becomes 84.5 % for $180](images/routage.gif)
 
 ```bash
 npm run measure    # measure each tier once, then freeze the profile
 npm run optimise   # the routing, and the price of the next improvement
 npm run failures   # what it gets wrong, and what kind of wrong
 npm run sensitivity # which assumptions decide the answer, and which don't
-npm test           # types, README figures, and 14 tests
+npm start          # the screen, on localhost:4670
+npm test           # types, README figures, and 19 tests
 ```
 
 Everything runs locally. No API key, nothing leaves the machine, and anyone who clones this

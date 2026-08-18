@@ -11,12 +11,12 @@
  * est du gaspillage, et c'est ailleurs qu'il faut regarder.
  */
 
-import { TIERS } from "./tiers.ts";
+import { TIERS } from "./paliers.ts";
 import { isMain } from "./cli.ts";
 import { FIELDS } from "./corpus.ts";
 import { pricePerThousand, accuracy, latency, ASSUMPTIONS } from "./assumptions.ts";
-import { readProfiles } from "./measure.ts";
-import type { TierName } from "./tiers.ts";
+
+import type { TierName } from "./paliers.ts";
 import type { Field } from "./corpus.ts";
 import type { Assumptions } from "./assumptions.ts";
 import type { Profiles } from "./measure.ts";
@@ -42,25 +42,34 @@ export type Solution = {
  * heuristic applied — at this size exhaustive search is instant and it guarantees
  * l'optimum, ce qu'aucune heuristique ne fait.
  */
+/**
+ * Ce que vaut *une* affectation, celle du modèle ou celle du lecteur.
+ *
+ * L'optimiseur l'appelait mille vingt-quatre fois sans jamais la rendre. L'écran, lui,
+ * demande le contraire : le lecteur pose son propre routage et veut savoir ce qu'il coûte
+ * — c'est la même arithmétique, et il n'y en aura donc qu'une.
+ */
+export function evaluer(p: Profiles, h: Assumptions, routing: Routing): Solution {
+  let sommeJustesse = 0, cost = 0, seconds = 0;
+  for (const c of FIELDS) {
+    const e = routing[c];
+    const profil = p.extraction[e][c];
+    sommeJustesse += accuracy(e, profil.accuracy, h);
+    cost += (h.volume / 1000) * pricePerThousand(e, h);
+    seconds += (h.volume * latency(e, profil.latency, h)) / 1000;
+  }
+  return {
+    routing,
+    accuracy: sommeJustesse / FIELDS.length,
+    cost, seconds,
+    budgetShare: h.budget === 0 ? Infinity : cost / h.budget,
+  };
+}
+
 export function optimiseExtraction(p: Profiles, h: Assumptions): Solution | null {
   let best: Solution | null = null;
 
-  const evaluate = (routing: Routing): Solution => {
-    let sommeJustesse = 0, cost = 0, seconds = 0;
-    for (const c of FIELDS) {
-      const e = routing[c];
-      const profil = p.extraction[e][c];
-      sommeJustesse += accuracy(e, profil.accuracy, h);
-      cost += (h.volume / 1000) * pricePerThousand(e, h);
-      seconds += (h.volume * latency(e, profil.latency, h)) / 1000;
-    }
-    return {
-      routing,
-      accuracy: sommeJustesse / FIELDS.length,
-      cost, seconds,
-      budgetShare: h.budget === 0 ? Infinity : cost / h.budget,
-    };
-  };
+  const evaluate = (routing: Routing): Solution => evaluer(p, h, routing);
 
   const walk = (i: number, current: Partial<Routing>) => {
     if (i === FIELDS.length) {
@@ -156,6 +165,9 @@ export function budgetShadowPrice(p: Profiles, h: Assumptions) {
 }
 
 if (isMain(import.meta)) {
+  /* Chargé ici et pas en tête : `measure.ts` ouvre des fichiers et tire le runtime des
+   * modèles. L'écran importe ce module dans un navigateur, où ni l'un ni l'autre n'existe. */
+  const { readProfiles } = await import("./measure.ts");
   const p = readProfiles();
   if (!p) { console.error("No profile measured — start with: npm run measure"); process.exit(1); }
   const h = ASSUMPTIONS;

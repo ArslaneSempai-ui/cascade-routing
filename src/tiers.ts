@@ -13,8 +13,9 @@ import { pipeline } from "@huggingface/transformers";
 import { FIELDS, TYPOLOGIES } from "./corpus.ts";
 import type { Field, ClientFile, Alert, Typology } from "./corpus.ts";
 
-export type TierName = "rules" | "small" | "large" | "human";
-export const TIERS: TierName[] = ["rules", "small", "large", "human"];
+import type { TierName } from "./paliers.ts";
+export type { TierName };
+export { TIERS } from "./paliers.ts";
 
 /* ══════════════════ Chain A — extract ══════════════════ */
 

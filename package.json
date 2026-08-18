@@ -11,7 +11,10 @@
     "test": "tsc --noEmit && node src/readme.ts --check && node --test src/*.test.ts",
     "failures": "node src/failures.ts",
     "figures": "node src/readme.ts",
-    "sensitivity": "node src/sensitivity.ts"
+    "sensitivity": "node src/sensitivity.ts",
+    "start": "node src/server.ts",
+    "pages": "tsc -p tsconfig.web.json && node src/pages.ts && node src/verifier-ecran.mjs . 2",
+    "captures": "node src/capturer.mjs ."
   },
   "dependencies": {
     "@huggingface/transformers": "^3.0.0"

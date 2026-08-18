@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "target": "ES2023",
+    "lib": ["ES2023", "DOM"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "allowImportingTsExtensions": true,
+    "rewriteRelativeImportExtensions": true,
+    "outDir": "docs/js",
+    "noEmit": false,
+    "strict": true,
+    "skipLibCheck": true,
+    "types": []
+  },
+  "files": ["src/optimise.ts", "src/paliers.ts", "src/corpus.ts", "src/assumptions.ts", "src/provenance.ts", "src/cli.ts"]
+}
