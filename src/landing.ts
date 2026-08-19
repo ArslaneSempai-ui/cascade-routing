@@ -206,9 +206,19 @@ export function construire(p: Profiles): unknown {
     $comment: "Généré par `npm run landing` depuis data/profiles.json. Ne pas éditer à la main : "
       + "`npm test` échoue si ce fichier ne correspond plus au relevé.",
     generatedFrom: {
+      /* Le fichier entier — la date de sa dernière écriture, et le code de la dernière passe. */
       measuredAt: p.measuredAt,
       commit: p.code?.commit ?? null,
       treeDirty: p.code?.sale ?? null,
+      /*
+       * Et la provenance réelle, palier par palier.
+       *
+       * Les clés ci-dessus décrivent une passe ; le fichier est le produit de plusieurs. Un
+       * palier mesuré avant que cette provenance existe vaut `null` — on ne reconstitue pas
+       * ce qui n'a jamais été écrit, et un `null` visible vaut mieux qu'une date empruntée
+       * au voisin.
+       */
+      perTier: Object.fromEntries(paliersMesures(p).map((t) => [t, p.provenance?.[t] ?? null])),
     },
     confidence: { level: CONFIANCE.niveau, method: "Wilson" },
     fields: FIELDS,

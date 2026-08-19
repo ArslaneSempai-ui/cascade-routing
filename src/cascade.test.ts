@@ -712,3 +712,53 @@ test("chaque hypothèse porte son unité, dénominateur compris", () => {
       + ` omission-là qui a déjà fait publier un coût faux d'un facteur cinq.`);
   }
 });
+
+test("un petit échantillon est le préfixe exact d'un grand", () => {
+  /*
+   * C'est ce qui rend le `n` par palier propre plutôt que seulement possible.
+   *
+   * Les paliers ne sont plus mesurés sur la même quantité de cas : les encodeurs à mille, les
+   * génératifs à cent vingt. Comparer deux paliers de tailles différentes n'a de sens que si
+   * le petit a vu **les mêmes cas** que les premiers du grand — sinon le test apparié compare
+   * des réponses données à des questions différentes, et le fait en silence.
+   *
+   * Le tirage est déterministe et séquentiel, donc la propriété tient ; ce test la rend
+   * obligatoire. Le jour où le générateur mélangerait ou rééchantillonnerait, il tombe.
+   */
+  for (const n of [20, 120, 300]) {
+    const petit = generateRecords(n, "heldout");
+    const grand = generateRecords(1000, "heldout");
+    assert.equal(petit.length, n);
+    for (let i = 0; i < n; i++) {
+      assert.equal(petit[i]!.text, grand[i]!.text,
+        `le cas ${i} d'un tirage de ${n} diffère du même rang dans un tirage de 1000 — `
+        + `un palier mesuré sur ${n} cas ne serait plus comparable à un palier mesuré sur 1000`);
+    }
+    const petitesAlertes = generateAlerts(n, "heldout");
+    const grandesAlertes = generateAlerts(1000, "heldout");
+    for (let i = 0; i < n; i++) {
+      assert.equal(petitesAlertes[i]!.narrative, grandesAlertes[i]!.narrative,
+        `l'alerte ${i} diffère entre un tirage de ${n} et un tirage de 1000`);
+    }
+  }
+});
+
+test("un palier mesuré porte sa propre provenance", () => {
+  /*
+   * `code` décrivait une passe en prétendant décrire un fichier que `sauver` fusionne. Le
+   * relevé a ainsi porté `sale: true` pour sept paliers dont trois venaient d'une passe sur
+   * arbre propre. La provenance est maintenant écrite avec le palier ; ce test interdit qu'un
+   * palier mesuré après ce changement reparte sans elle.
+   */
+  const p = readProfiles();
+  if (!p) return;
+  if (p.measuredAt === RELEVE_HISTORIQUE) return;
+
+  for (const t of paliersMesures(p)) {
+    const v: { commit: string | null; sale: boolean | null; measuredAt: string } | undefined = p.provenance?.[t];
+    if (v === undefined) continue;   // palier antérieur au champ : `null` assumé, pas inventé
+    assert.equal(typeof v.measuredAt, "string", `${t} a une provenance sans date`);
+    assert.ok(v.commit === null || typeof v.commit === "string", `${t} a un commit mal formé`);
+    assert.ok(v.sale === null || typeof v.sale === "boolean", `${t} a un état d'arbre mal formé`);
+  }
+});

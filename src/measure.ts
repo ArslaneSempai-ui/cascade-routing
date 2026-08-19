@@ -54,6 +54,20 @@ export type Profile = {
    * lieu d'un fichier JSON de plusieurs kilooctets par palier et par champ.
    */
   reussites?: string;
+  /**
+   * Ce que le palier a répondu, cas par cas, avant tout jugement.
+   *
+   * `reussites` dit « bon » ou « faux » **sous le scoreur du jour**, ce qui suffit à un test
+   * apparié et à rien d'autre. Deux questions qu'on veut poser en dépendaient et étaient
+   * impossibles : que devient l'exactitude si l'on serre la définition de « correct », et
+   * un échec est-il une valeur fausse ou une valeur absente. Les deux exigent la réponse,
+   * pas son verdict.
+   *
+   * Les conserver rend tout re-scorage futur gratuit — hier il a fallu refaire tourner
+   * l'extraction pendant dix minutes pour produire une bande de sévérité que ces chaînes
+   * auraient donnée en une seconde.
+   */
+  sorties?: string[];
 };
 
 export type Profiles = {
@@ -72,6 +86,22 @@ export type Profiles = {
    * minimum.
    */
   code?: { commit: string; sale: boolean };
+  /**
+   * D'où vient **chaque palier**, et pas seulement le fichier.
+   *
+   * `code` décrit une passe ; le fichier, lui, est le produit de plusieurs. `sauver` fusionne
+   * les paliers non mesurés avec ceux qui viennent d'être refaits, si bien qu'une clé globale
+   * finit par attribuer à tous l'état d'arbre du dernier passage. C'est arrivé : le relevé a
+   * porté `sale: true` pour sept paliers dont trois venaient d'une passe antérieure sur arbre
+   * propre — l'inverse de la vérité, dans le sens qui accuse plutôt que dans celui qui
+   * rassure, mais faux quand même.
+   *
+   * Écrite au moment où le palier est mesuré, elle rend le fichier exact sans re-mesurer quoi
+   * que ce soit d'autre, et permet de rafraîchir une échelle sans mentir sur l'autre. Un
+   * palier antérieur à ce champ vaut `undefined` : on n'invente pas une provenance qui n'a
+   * jamais été écrite.
+   */
+  provenance?: Record<TierName, { commit: string | null; sale: boolean | null; measuredAt: string }>;
   /** Les paliers que ce fichier contient réellement — l'échelle générative est optionnelle. */
   tiers?: TierName[];
   /** Chain A: one profile per tier AND per field — this is where the routing is decided. */
@@ -93,7 +123,10 @@ function quantile(xs: number[], q: number): number {
   return tri[i]!;
 }
 
-export async function measure(howMany = 120, options: { llm?: boolean; tiers?: TierName[] } = {}): Promise<Profiles> {
+export async function measure(
+  howMany = 120,
+  options: { llm?: boolean; tiers?: TierName[]; cases?: Partial<Record<TierName, number>> } = {},
+): Promise<Profiles> {
   /*
    * Measured on the held-out half, never on the training half.
    *
@@ -101,8 +134,23 @@ export async function measure(howMany = 120, options: { llm?: boolean; tiers?: T
    * the very templates used to score them. The parameter is explicit so that getting this
    * wrong takes typing it.
    */
-  const dossiers = generateRecords(howMany, "heldout");
-  const alertes = generateAlerts(howMany, "heldout");
+  /*
+   * Un `n` par palier, et le tirage reste le même pour tous.
+   *
+   * Une seule taille pour toute l'échelle forçait un choix qui n'avait pas lieu d'être : les
+   * encodeurs à mille cas et les génératifs à cent vingt ne tiennent pas dans un seul
+   * `--cases`, donc la passe unique était impossible et le fichier finissait produit par deux
+   * passes — d'où une provenance qui ne pouvait pas être exacte.
+   *
+   * Le découpage est propre parce que le tirage est un préfixe : `generateRecords(120)` rend
+   * exactement les cent vingt premiers de `generateRecords(1000)`. Un palier à cent vingt lit
+   * donc les mêmes cas que les cent vingt premiers d'un palier à mille, et le test apparié
+   * garde son sens entre les deux. Un test tient cette propriété.
+   */
+  const combien = (t: TierName) => options.cases?.[t] ?? howMany;
+  const maxCas = Math.max(howMany, ...Object.values(options.cases ?? {}).map(Number).filter(Number.isFinite));
+  const tousDossiers = generateRecords(maxCas, "heldout");
+  const toutesAlertes = generateAlerts(maxCas, "heldout");
 
   /*
    * Quels paliers, et pourquoi c'est un choix et non un défaut.
@@ -146,11 +194,13 @@ export async function measure(howMany = 120, options: { llm?: boolean; tiers?: T
     } catch { return undefined; }   // dépôt cloné sans git, ou git absent : on n'invente rien
   })();
 
+  const provenance = {} as NonNullable<Profiles["provenance"]>;
   const sauver = (ex: Profiles["extraction"], cl: Record<TierName, Profile>, lt: Record<TierName, number>) => {
     const ancien = readProfiles();
     const partiel: Profiles = {
       measuredAt: new Date().toISOString(),
       code: version,
+      provenance: { ...(ancien?.provenance ?? {}), ...provenance } as NonNullable<Profiles["provenance"]>,
       extraction: { ...(ancien?.extraction ?? {}), ...ex } as Profiles["extraction"],
       classification: { ...(ancien?.classification ?? {}), ...cl } as Record<TierName, Profile>,
       loadTime: { ...(ancien?.loadTime ?? {}), ...lt } as Record<TierName, number>,
@@ -176,8 +226,22 @@ export async function measure(howMany = 120, options: { llm?: boolean; tiers?: T
     renameSync(provisoire, FICHIER);
   };
 
+  /*
+   * Un palier à la fois, ses deux chaînes d'affilée.
+   *
+   * L'ordre précédent faisait toute l'extraction puis toute la classification, donc traversait
+   * les trois modèles génératifs **deux fois**. Chaque bascule fait charger et décharger huit
+   * gigaoctets de poids par Ollama, hors de ce processus et hors de `loadTime`, qui ne
+   * chronomètre que les encodeurs. Regrouper les deux chaînes d'un même palier supprime la
+   * moitié de ces allers-retours sans rien changer aux chiffres — les cas, la graine et le
+   * scoreur sont identiques.
+   */
   const extraction = {} as Profiles["extraction"];
+  const classification = {} as Record<TierName, Profile>;
+
   for (const tier of paliers) {
+    const dossiers = tousDossiers.slice(0, combien(tier));
+    const alertes = toutesAlertes.slice(0, combien(tier));
     extraction[tier] = {} as Record<Field, Profile>;
     loadTime[tier] = tier === "rules" || tier === "human" ? 0 : chargeExtraction + chargeClassement;
 
@@ -185,16 +249,19 @@ export async function measure(howMany = 120, options: { llm?: boolean; tiers?: T
       let right = 0;
       const durees: number[] = [];
       const bits: string[] = [];
+      const sorties: string[] = [];
       for (const d of dossiers) {
         const t0 = performance.now();
         const got = await extract(tier, d, champ);
         durees.push(performance.now() - t0);
+        sorties.push(got);
         const bon = correct(got, d.truth[champ]);
         bits.push(bon ? "1" : "0");
         if (bon) right++;
       }
       extraction[tier][champ] = {
         reussites: bits.join(""),
+        sorties,
         accuracy: right / dossiers.length,
         latency: quantile(durees, 0.5),
         latencyP10: quantile(durees, 0.1),
@@ -202,29 +269,37 @@ export async function measure(howMany = 120, options: { llm?: boolean; tiers?: T
         items: dossiers.length,
       };
     }
-    sauver(extraction, {} as Record<TierName, Profile>, loadTime);
-  }
 
-  const classification = {} as Record<TierName, Profile>;
-  for (const tier of paliers) {
-    let right = 0;
-    const durees: number[] = [];
-    const bits: string[] = [];
-    for (const a of alertes) {
-      const t0 = performance.now();
-      const got = await classify(tier, a);
-      durees.push(performance.now() - t0);
-      const bon = got === a.truth;
-      bits.push(bon ? "1" : "0");
-      if (bon) right++;
+    {
+      let right = 0;
+      const durees: number[] = [];
+      const bits: string[] = [];
+      const sorties: string[] = [];
+      for (const a of alertes) {
+        const t0 = performance.now();
+        const got = await classify(tier, a);
+        durees.push(performance.now() - t0);
+        sorties.push(String(got));
+        const bon = got === a.truth;
+        bits.push(bon ? "1" : "0");
+        if (bon) right++;
+      }
+      classification[tier] = {
+        reussites: bits.join(""),
+        sorties,
+        accuracy: right / alertes.length,
+        latency: quantile(durees, 0.5),
+        latencyP10: quantile(durees, 0.1),
+        latencyP90: quantile(durees, 0.9),
+        items: alertes.length,
+      };
     }
-    classification[tier] = {
-      reussites: bits.join(""),
-      accuracy: right / alertes.length,
-      latency: quantile(durees, 0.5),
-      latencyP10: quantile(durees, 0.1),
-      latencyP90: quantile(durees, 0.9),
-      items: alertes.length,
+
+    /* La provenance est écrite avec le palier, pas avec le fichier. */
+    provenance[tier] = {
+      commit: version?.commit ?? null,
+      sale: version?.sale ?? null,
+      measuredAt: new Date().toISOString(),
     };
     sauver(extraction, classification, loadTime);
   }
@@ -252,6 +327,7 @@ export async function measure(howMany = 120, options: { llm?: boolean; tiers?: T
      * Trouvé par le test de provenance, sur la première re-mesure réelle qui l'ait exercé.
      */
     code: version,
+    provenance: { ...(ancien?.provenance ?? {}), ...provenance } as NonNullable<Profiles["provenance"]>,
     extraction: { ...(ancien?.extraction ?? {}), ...extraction } as Profiles["extraction"],
     classification: { ...(ancien?.classification ?? {}), ...classification } as Record<TierName, Profile>,
     loadTime: { ...(ancien?.loadTime ?? {}), ...loadTime } as Record<TierName, number>,
@@ -272,6 +348,19 @@ if (isMain(import.meta)) {
     console.error("--cases doit valoir au moins 20 : en dessous, un taux n'est pas rapportable.");
     process.exit(1);
   }
+  /*
+   * `--cases-gen=N` : l'échelle générative se mesure à sa propre taille.
+   *
+   * Sans ça, monter les encodeurs à mille cas emportait les génératifs avec eux — plusieurs
+   * heures pour un intervalle dont aucune décision ne dépend — et les laisser à cent vingt
+   * imposait de faire deux passes, donc deux états d'arbre dans un seul fichier.
+   */
+  const casesGen = Number(process.argv.find((a) => a.startsWith("--cases-gen="))?.split("=")[1] ?? cases);
+  if (!Number.isFinite(casesGen) || casesGen < 20) {
+    console.error("--cases-gen doit valoir au moins 20 : en dessous, un taux n'est pas rapportable.");
+    process.exit(1);
+  }
+
   /* `--tiers=a,b` remesure ces paliers-là seulement. La fusion garde les autres intacts,
      donc on peut refaire une latence sans refaire vingt minutes d'encodeurs. */
   const brut = process.argv.find((a) => a.startsWith("--tiers="))?.split("=")[1]?.split(",");
@@ -294,7 +383,8 @@ if (isMain(import.meta)) {
   else console.log("Encoders only. First run downloads 1.26 GB of model weights — allow several minutes\non a fast line, longer on a slow one. Add --llm for the generative tiers (eight gigabytes more).");
   console.log("Tiers not measured here keep their frozen figures.\n");
 
-  const p = await measure(cases, { llm, tiers: choisis });
+  const parPalier = Object.fromEntries(GENERATIFS.map((t) => [t, casesGen])) as Partial<Record<TierName, number>>;
+  const p = await measure(cases, { llm, tiers: choisis, cases: parPalier });
   const pc = (x: number) => (x * 100).toFixed(1).padStart(5) + " %";
 
   console.log("CHAIN A — extraction, accuracy per field\n");

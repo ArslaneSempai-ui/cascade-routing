@@ -67,6 +67,26 @@ export function dossier(p: Profiles, h: Assumptions): string {
   w(`produced from that same file: this document cannot disagree with the tables elsewhere in`);
   w(`the repository, because it is not written by hand.`);
   w(``);
+  /*
+   * D'où vient chaque palier, et pas seulement le fichier.
+   *
+   * Une seule date en tête d'un document signé par un comité laisse croire que tout a été
+   * mesuré ensemble. Le fichier est fusionné : deux échelles peuvent venir de deux passes, de
+   * deux états d'arbre, de deux jours. Un relecteur doit voir laquelle est laquelle, et un
+   * palier sans provenance enregistrée doit le dire plutôt que d'hériter de celle du voisin.
+   */
+  const prov = paliersMesures(p).map((t) => {
+    const v = p.provenance?.[t];
+    return [`\`${t}\``, v ? v.measuredAt : "—", v?.commit ? `\`${v.commit}\`` : "not recorded",
+      v ? (v.sale === null ? "—" : v.sale ? "**dirty**" : "clean") : "—"];
+  });
+  if (prov.some((r) => r[1] !== "—")) {
+    w(`Not every tier was measured in the same pass. Where a tier predates this record, its`);
+    w(`provenance says so rather than borrowing its neighbour's.`);
+    w(``);
+    w(table(["Tier", "Measured at", "Commit", "Working tree"], prov));
+    w(``);
+  }
   w(`**This file does not certify anything.** It assembles what a reviewer needs in order to`);
   w(`decide, and states what the evidence will not support. The decision is the committee's.`);
 

@@ -3,7 +3,16 @@
   "generatedFrom": {
     "measuredAt": "2026-08-19T18:52:47.557Z",
     "commit": "5f00df3",
-    "treeDirty": true
+    "treeDirty": true,
+    "perTier": {
+      "rules": null,
+      "small": null,
+      "large": null,
+      "gen-0.6b": null,
+      "gen-4b": null,
+      "gen-8b": null,
+      "human": null
+    }
   },
   "confidence": {
     "level": 0.95,
