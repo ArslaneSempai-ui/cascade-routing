@@ -130,6 +130,41 @@ export const STATUSES: Record<keyof Assumptions, Provenance> = {
   latencyBudgetMs: "assumed",
 };
 
+/**
+ * L'unité de chaque hypothèse, parce qu'un nombre nu se fait attribuer la mauvaise.
+ *
+ * `landing.json` publiait ces valeurs sans leur unité. La page qui les consomme a fait la
+ * seule chose qu'un rendu puisse faire dans ce cas : elle a deviné, et elle a mis un signe
+ * dollar partout — « humanSeconds $45.00 », « workingDaysPerYear $220.00 ». Un analyste
+ * coûtant quarante-cinq dollars la seconde est un chiffre inventé, arrivé par un chemin que
+ * personne ne surveillait, à partir de données exactes.
+ *
+ * C'est le même défaut que le repli d'affichage de `sensitivity.ts` : une donnée qui ne porte
+ * pas sa propre nature force son lecteur à la reconstituer, et une reconstitution est une
+ * supposition. Déduire l'unité du nom de la clé marche jusqu'au jour où une clé est renommée,
+ * et ce jour-là rien ne tombe — l'affichage se contente de mentir.
+ *
+ * Écrit ici plutôt qu'ailleurs pour la même raison que `BOUNDS` et `STATUSES` : à côté de la
+ * définition, dans un `Record` complet, donc une hypothèse ajoutée demain ne compilera pas
+ * tant que son unité n'aura pas été écrite.
+ *
+ * Les unités sont composées et non des jetons — « usd/1000 extractions » et non « usd ». Le
+ * dénominateur est la moitié qui a déjà fait publier un chiffre faux d'un facteur cinq.
+ */
+export const UNITS: Record<keyof Assumptions, string> = {
+  humanAccuracy: "fraction",
+  humanSeconds: "seconds/item",
+  analystAnnualCost: "usd/year",
+  productiveHoursPerDay: "hours/day",
+  workingDaysPerYear: "days/year",
+  pricePerThousandSmall: "usd/1000 extractions",
+  pricePerThousandLarge: "usd/1000 extractions",
+  machineHourlyCost: "usd/hour",
+  volume: "documents/period",
+  budget: "usd/period",
+  latencyBudgetMs: "ms/document",
+};
+
 /** Sanity bounds: a screen that accepts 100 % human accuracy is lying to its reader. */
 export const BOUNDS: Record<keyof Assumptions, [number, number]> = {
   humanAccuracy: [0.5, 0.99],

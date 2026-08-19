@@ -7,7 +7,7 @@ import type { TierName } from "./paliers.ts";
 import { classify } from "./failures.ts";
 import { readProfiles, type Profile } from "./measure.ts";
 import { optimiseExtraction, optimiseClassification, budgetShadowPrice, latenceRepresentative, paliersMesures, evaluer, pricePerThousandDocuments } from "./optimise.ts";
-import { ASSUMPTIONS, pricePerThousandExtractions, accuracy } from "./assumptions.ts";
+import { ASSUMPTIONS, UNITS, pricePerThousandExtractions, accuracy } from "./assumptions.ts";
 import { wilson, rate, distinguishable } from "./interval.ts";
 import { PLAUSIBLE, bands, ETIQUETTE, advise } from "./sensitivity.ts";
 
@@ -685,4 +685,30 @@ test("chaque verdict de sensibilité a son étiquette et sa phrase", () => {
     advise({ assumption: "volume", reason: r, current: 1, stableFrom: 0, stableTo: 2,
       currentInside: true, decides: false }, [0, 2]));
   assert.equal(new Set(phrases).size, phrases.length, "deux verdicts rendent la même phrase");
+});
+
+test("chaque hypothèse porte son unité, dénominateur compris", () => {
+  /*
+   * Un nombre publié sans son unité s'en fait attribuer une.
+   *
+   * `landing.json` a publié `humanSeconds: 45` sans dire « secondes », et la page qui le lit a
+   * deviné : elle a mis un signe dollar partout, et a affiché qu'un analyste coûte quarante-cinq
+   * dollars la seconde. Des données exactes, un rendu qui suppose, un chiffre faux — sans que
+   * rien n'échoue nulle part.
+   *
+   * Le `Record` complet garantit déjà la présence à la compilation. Ce test tient les deux
+   * choses que le type ne peut pas dire : que l'unité n'est pas vide, et qu'elle porte son
+   * **dénominateur**. « usd » ne suffit pas là où la vraie unité est « usd/1000 extractions » —
+   * c'est l'omission du dénominateur qui avait déjà fait publier un coût faux d'un facteur cinq.
+   */
+  for (const cle of Object.keys(ASSUMPTIONS) as (keyof typeof ASSUMPTIONS)[]) {
+    const u = UNITS[cle];
+    assert.ok(u && u.trim().length > 0, `« ${cle} » n'a pas d'unité`);
+    /* Une grandeur sans rapport est admissible — une fraction n'a pas de dénominateur. */
+    if (u === "fraction") continue;
+    assert.ok(u.includes("/"),
+      `l'unité de « ${cle} » est « ${u} », sans dénominateur.\n`
+      + `  → « usd » et « usd/1000 extractions » ne se lisent pas pareil, et c'est cette`
+      + ` omission-là qui a déjà fait publier un coût faux d'un facteur cinq.`);
+  }
 });

@@ -516,6 +516,7 @@
     "thresholds": {
       "humanSeconds": {
         "inUse": 45,
+        "unit": "seconds/item",
         "breaksAt": null,
         "factor": null,
         "moves": [],
@@ -523,6 +524,7 @@
       },
       "analystAnnualCost": {
         "inUse": 62000,
+        "unit": "usd/year",
         "breaksAt": null,
         "factor": null,
         "moves": [],
@@ -530,6 +532,7 @@
       },
       "productiveHoursPerDay": {
         "inUse": 6,
+        "unit": "hours/day",
         "breaksAt": null,
         "factor": null,
         "moves": [],
@@ -537,6 +540,7 @@
       },
       "workingDaysPerYear": {
         "inUse": 220,
+        "unit": "days/year",
         "breaksAt": null,
         "factor": null,
         "moves": [],
@@ -544,6 +548,7 @@
       },
       "pricePerThousandSmall": {
         "inUse": 0.2,
+        "unit": "usd/1000 extractions",
         "breaksAt": null,
         "factor": null,
         "moves": [],
@@ -551,6 +556,7 @@
       },
       "pricePerThousandLarge": {
         "inUse": 1.6,
+        "unit": "usd/1000 extractions",
         "breaksAt": 39.52,
         "factor": 24.7,
         "moves": [
@@ -564,6 +570,7 @@
       },
       "machineHourlyCost": {
         "inUse": 1.2,
+        "unit": "usd/hour",
         "breaksAt": 96.8,
         "factor": 80.7,
         "moves": [

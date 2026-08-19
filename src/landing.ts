@@ -25,7 +25,7 @@ import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { isMain } from "./cli.ts";
 import { FIELDS } from "./corpus.ts";
 import { readProfiles } from "./measure.ts";
-import { ASSUMPTIONS, pricePerThousandExtractions } from "./assumptions.ts";
+import { ASSUMPTIONS, UNITS, pricePerThousandExtractions } from "./assumptions.ts";
 import { optimiseExtraction, evaluer, paliersMesures, pricePerThousandDocuments } from "./optimise.ts";
 import { rate, CONFIANCE } from "./interval.ts";
 
@@ -117,6 +117,8 @@ function dispersion(p: Profiles, tier: TierName): Dispersion | null {
 type Deplacement = { field: Field; from: TierName; to: TierName };
 type Seuil = {
   inUse: number;
+  /** L'unité de `inUse` et de `breaksAt`. Publiée pour que la page n'ait jamais à la deviner. */
+  unit: string;
   breaksAt: number | null;
   factor: number | null;
   moves: Deplacement[];
@@ -174,7 +176,7 @@ function seuils(p: Profiles, h: Assumptions): Record<string, Seuil> {
       /* Aucun seuil : reste à dire laquelle des deux absences c'est. */
       const horsBudget = tarifes.every((t) =>
         (pricePerThousandDocuments(p, h, t) * h.volume) / 1000 > h.budget);
-      out[cle] = { inUse: v0, breaksAt: null, factor: null, moves: [],
+      out[cle] = { inUse: v0, unit: UNITS[cle], breaksAt: null, factor: null, moves: [],
         reason: horsBudget ? "tier priced out" : "tier not selected" };
       continue;
     }
@@ -185,6 +187,7 @@ function seuils(p: Profiles, h: Assumptions): Record<string, Seuil> {
     const apres = optimiseExtraction(p, { ...h, [cle]: haut })!;
     out[cle] = {
       inUse: v0,
+      unit: UNITS[cle],
       breaksAt: Number(haut.toPrecision(4)),
       factor: Number((haut / v0).toPrecision(3)),
       moves: FIELDS.filter((c) => apres.routing[c] !== base.routing[c])
