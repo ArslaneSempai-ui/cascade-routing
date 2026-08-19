@@ -85,6 +85,34 @@ function cout(p: Profiles, tier: TierName): Chiffre {
   return { value, provenance: "assumed", basis: "latence mesurée × tarif machine supposé, sommée sur les cinq champs" };
 }
 
+/** Les trois percentiles de latence d'un palier, sommés sur les cinq champs d'un document. */
+type Dispersion = { p10: number; median: number; p90: number };
+
+/**
+ * La dispersion de latence, parce qu'une médiane ne dit pas ce qui arrive les mauvais jours.
+ *
+ * Le plafond est par document, donc les percentiles sont sommés sur les cinq champs : c'est le
+ * niveau auquel la contrainte s'applique et le seul auquel la comparaison ait un sens.
+ *
+ * `null` dès que la valeur ne mesure pas ce que son nom prétend — qu'elle existe ou non. Le
+ * palier `human` en est le cas intéressant : son relevé **porte** des percentiles, de l'ordre du
+ * millième de milliseconde, mais ce sont ceux d'une lecture de la vérité terrain et non d'un
+ * travail. L'optimiseur ne s'en sert jamais : il substitue l'hypothèse `humanSeconds`. Publier
+ * ces trois nombres serait publier les percentiles d'une tautologie — pire qu'un trou, parce
+ * qu'un trou se voit et qu'un chiffre faux se cite.
+ */
+function dispersion(p: Profiles, tier: TierName): Dispersion | null {
+  if (tier === "human") return null;
+  const parChamp = p.extraction[tier];
+  if (!parChamp) return null;
+  const somme = (cle: "latencyP10" | "latency" | "latencyP90") =>
+    FIELDS.reduce((s, c) => s + (parChamp[c]?.[cle] ?? NaN), 0);
+  const [p10, median, p90] = [somme("latencyP10"), somme("latency"), somme("latencyP90")];
+  if (![p10, median, p90].every(Number.isFinite)) return null;   // percentiles absents du relevé
+  const r1 = (x: number) => Number(x.toFixed(1));
+  return { p10: r1(p10), median: r1(median), p90: r1(p90) };
+}
+
 export function construire(p: Profiles): unknown {
   const paliers = paliersMesures(p);
   const optimum = optimiseExtraction(p, ASSUMPTIONS);
@@ -151,6 +179,17 @@ export function construire(p: Profiles): unknown {
       };
     }),
 
+    latencySpread: {
+      perDoc: Object.fromEntries(paliers.map((t) => [t, dispersion(p, t)])),
+      routed: optimum === null ? null : (() => {
+        const somme = (cle: "latencyP10" | "latency" | "latencyP90") =>
+          FIELDS.reduce((s, c) => s + p.extraction[optimum.routing[c]][c][cle], 0);
+        const r1 = (x: number) => Number(x.toFixed(1));
+        return { p10: r1(somme("latencyP10")), median: r1(somme("latency")), p90: r1(somme("latencyP90")) };
+      })(),
+      ceilingMsPerDoc: ASSUMPTIONS.latencyBudgetMs,
+    },
+
     /* Les entrées que le lecteur remplace. Aucune n'est mesurée, et la page doit le dire. */
     assumptions: {
       humanAccuracy: ASSUMPTIONS.humanAccuracy,
@@ -180,8 +219,36 @@ export function construire(p: Profiles): unknown {
   };
 }
 
+/**
+ * Deux clés qui sortent du même relevé doivent dire la même chose.
+ *
+ * `routing.latencyMsPerDocument` vient de `optimiseExtraction` ; `latencySpread.routed.median`
+ * resomme les cinq champs à la main. Si les deux divergent, l'une des deux est fausse et le
+ * fichier ne doit pas exister — le générateur refuse d'écrire plutôt que de produire un fichier
+ * que la page citerait.
+ *
+ * La comparaison se fait **à l'arrondi près** et non à l'identique : la clé publiée passe par
+ * `toFixed(0)`, donc une égalité stricte tomberait en rouge sur du bruit de virgule. Un contrôle
+ * qui échoue pour une raison qui n'est pas celle qu'il surveille finit désactivé, et c'est
+ * comme ça qu'on perd un test.
+ */
+function verifierCoherence(vue: Record<string, unknown>): void {
+  const routing = vue.routing as { latencyMsPerDocument: number } | null;
+  const spread = (vue.latencySpread as { routed: { median: number } | null }).routed;
+  if (routing === null || spread === null) return;
+  if (Math.round(spread.median) !== Math.round(routing.latencyMsPerDocument)) {
+    throw new Error(
+      `landing.json serait incohérent : latencySpread.routed.median = ${spread.median} ms, `
+      + `mais routing.latencyMsPerDocument = ${routing.latencyMsPerDocument} ms.\n`
+      + `  → les deux somment les mêmes cinq champs du même relevé ; une divergence veut dire `
+      + `qu'un des deux calculs est faux, et aucun des deux ne doit être publié.`);
+  }
+}
+
 export function rendre(p: Profiles): string {
-  return JSON.stringify(construire(p), null, 2) + "\n";
+  const vue = construire(p) as Record<string, unknown>;
+  verifierCoherence(vue);
+  return JSON.stringify(vue, null, 2) + "\n";
 }
 
 if (isMain(import.meta)) {

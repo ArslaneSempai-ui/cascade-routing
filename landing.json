@@ -469,6 +469,47 @@
       "admissible": false
     }
   ],
+  "latencySpread": {
+    "perDoc": {
+      "rules": {
+        "p10": 0,
+        "median": 0,
+        "p90": 0
+      },
+      "small": {
+        "p10": 111.8,
+        "median": 137.4,
+        "p90": 222.3
+      },
+      "large": {
+        "p10": 285.1,
+        "median": 337.2,
+        "p90": 396.9
+      },
+      "gen-0.6b": {
+        "p10": 1810.4,
+        "median": 2098.1,
+        "p90": 2603.4
+      },
+      "gen-4b": {
+        "p10": 6025.4,
+        "median": 6368.2,
+        "p90": 6803.9
+      },
+      "gen-8b": {
+        "p10": 8585,
+        "median": 9929.2,
+        "p90": 11487
+      },
+      "human": null
+    },
+    "routed": {
+      "p10": 1401.7,
+      "median": 1497.9,
+      "p90": 1620.3
+    },
+    "ceilingMsPerDoc": 2000
+  },
   "assumptions": {
     "humanAccuracy": 0.85,
     "humanSeconds": 45,
