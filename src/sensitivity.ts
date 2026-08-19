@@ -20,9 +20,9 @@
  * Someone who does not reads the band and learns whether it was worth finding out.
  */
 
-import { optimiseExtraction, optimiseClassification } from "./optimise.ts";
+import { optimiseExtraction, optimiseClassification, paliersMesures, pricePerThousandDocuments } from "./optimise.ts";
 import { isMain } from "./cli.ts";
-import { ASSUMPTIONS } from "./assumptions.ts";
+import { ASSUMPTIONS, accuracy, latency } from "./assumptions.ts";
 import { FIELDS } from "./corpus.ts";
 import { readProfiles } from "./measure.ts";
 import type { Assumptions } from "./assumptions.ts";
@@ -66,8 +66,19 @@ export type Band = {
    * other says it does not matter *at this volume and budget*, and would matter a great
    * deal at another. Reporting the first when the second is true tells a reader to stop
    * looking exactly where they should look.
+   *
+   * A fourth case was missing, and it was reported as the comfortable one. The small
+   * model's price changes nothing — not because the answer is robust to it, and not
+   * because the tier is out of budget: it costs $100 against $4,000. It is simply in no
+   * field of the routing, because it is not accurate enough anywhere. Its price never
+   * enters the calculation for a reason that has nothing to do with price, and calling
+   * that "genuinely insensitive" is the same omission this comment was written to prevent.
+   *
+   * So the question is never "does the number move the answer" alone. It is: is the tier
+   * this assumption governs actually in use, and if not, is it excluded by the budget or
+   * on merit? Three different answers, three different things for a reader to do.
    */
-  reason: "affects the answer" | "tier priced out" | "genuinely insensitive";
+  reason: "affects the answer" | "tier priced out" | "tier not selected" | "genuinely insensitive";
   /** The value in use. */
   current: number;
   /** Where the recommendation stops being the one we report. */
@@ -114,22 +125,33 @@ export function band(p: Profiles, assumption: keyof Assumptions, a = ASSUMPTIONS
   const decides = stableFrom > low + 1e-9 || stableTo < high - 1e-9;
 
   /*
-   * Distinguish insensitivity from exclusion.
+   * Insensitivity, exclusion by budget, and exclusion on merit.
    *
-   * If pushing the assumption well past its plausible range does change the answer, then
-   * the tier it governs is simply out of reach at the current budget — not irrelevant.
+   * Which tiers this assumption governs is derived rather than listed: a tier is governed
+   * when perturbing the assumption changes what the optimiser pays for it, or what it
+   * believes about its accuracy or its speed. A list would drift; this cannot.
    */
-  const beyond = assumption === "humanAccuracy" ? 0.05
-    : assumption === "humanSeconds" ? 1
-    : current / 100;
-  const movesWhenPushed = routingOf(p, { ...a, [assumption]: beyond }) !== reference;
+  const perturbee = { ...a, [assumption]: current * 2 };
+  const gouvernes = paliersMesures(p).filter((t) => {
+    const champ = FIELDS[0]!;
+    const q = p.extraction[t][champ];
+    return pricePerThousandDocuments(p, perturbee, t) !== pricePerThousandDocuments(p, a, t)
+      || accuracy(t, q.accuracy, perturbee) !== accuracy(t, q.accuracy, a)
+      || latency(t, q.latency, perturbee) !== latency(t, q.latency, a);
+  });
 
-  return {
-    assumption, current, stableFrom, stableTo,
-    currentInside: true,
-    decides,
-    reason: decides ? "affects the answer" : movesWhenPushed ? "tier priced out" : "genuinely insensitive",
-  };
+  const retenus = new Set(optimiseExtraction(p, a) ? FIELDS.map((f) => optimiseExtraction(p, a)!.routing[f]) : []);
+  const enUsage = gouvernes.some((t) => retenus.has(t));
+  /* Hors budget : le palier coûterait plus que l'enveloppe entière à ce volume. */
+  const horsBudget = gouvernes.length > 0 && gouvernes.every((t) =>
+    (pricePerThousandDocuments(p, a, t) * a.volume) / 1000 > a.budget);
+
+  const reason: Band["reason"] = decides ? "affects the answer"
+    : enUsage ? "genuinely insensitive"
+    : horsBudget ? "tier priced out"
+    : "tier not selected";
+
+  return { assumption, current, stableFrom, stableTo, currentInside: true, decides, reason };
 }
 
 export function bands(p: Profiles, a = ASSUMPTIONS): Band[] {
@@ -143,14 +165,37 @@ export function bands(p: Profiles, a = ASSUMPTIONS): Band[] {
  * matter here, stop spending weeks measuring it.
  */
 export function advise(b: Band, plausible: [number, number], format = (x: number) => x.toFixed(2)): string {
-  if (b.reason === "tier priced out") {
-    return `changes nothing here, but only because the tier it governs is priced out of the budget. Raise the budget or drop the volume and it decides a great deal. Measure it before you do either.`;
+  /*
+   * Un `switch` exhaustif, et pas une suite de `if` finissant par un repli.
+   *
+   * La version précédente testait deux cas et rendait le troisième pour tout le reste. Quand
+   * une quatrième valeur est apparue, le calcul l'a produite correctement et l'affichage l'a
+   * écrasée en « genuinely insensitive » — la donnée était juste et la page mentait. Un repli
+   * implicite transforme une valeur inconnue en la valeur la plus rassurante, ce qui est la
+   * pire des directions par défaut.
+   *
+   * Écrit ainsi, l'ajout d'une cinquième valeur ne compilera plus tant que sa phrase n'aura
+   * pas été écrite.
+   */
+  switch (b.reason) {
+    case "affects the answer":
+      return `decides the routing. Same answer from ${format(b.stableFrom)} to ${format(b.stableTo)}; outside that it changes. Worth measuring.`;
+    case "tier priced out":
+      return `changes nothing here, but only because the tier it governs is priced out of the budget. Raise the budget or drop the volume and it decides a great deal. Measure it before you do either.`;
+    case "tier not selected":
+      return `changes nothing here, and not because the answer is robust to it: the tier it governs is in no field of the routing at all, so its price never enters the calculation. Measuring it would tell you nothing until that tier becomes accurate enough to be chosen somewhere.`;
+    case "genuinely insensitive":
+      return `does not decide anything across ${format(plausible[0])}–${format(plausible[1])}, and the tier it governs IS in use. This one is real robustness. Not worth measuring for this decision.`;
   }
-  if (b.reason === "genuinely insensitive") {
-    return `does not decide anything across ${format(plausible[0])}–${format(plausible[1])}. Not worth measuring for this decision.`;
-  }
-  return `decides the routing. Same answer from ${format(b.stableFrom)} to ${format(b.stableTo)}; outside that it changes. Worth measuring.`;
 }
+
+/** Une étiquette par verdict. `Record` complet : un verdict ajouté ne compile pas sans la sienne. */
+export const ETIQUETTE: Record<Band["reason"], string> = {
+  "affects the answer": "decides",
+  "tier priced out": "priced out — would decide if affordable",
+  "tier not selected": "tier never chosen — its price is irrelevant",
+  "genuinely insensitive": "genuinely insensitive",
+};
 
 if (isMain(import.meta)) {
   const p = readProfiles();
@@ -166,12 +211,14 @@ if (isMain(import.meta)) {
     console.log(
       `${b.assumption.padEnd(26)}${f(b.current).padStart(8)}` +
       `${(f(b.stableFrom) + " – " + f(b.stableTo)).padStart(26)}   ` +
-      (b.reason === "affects the answer" ? "decides"
-        : b.reason === "tier priced out" ? "priced out — would decide if affordable"
-        : "genuinely insensitive"),
+      ETIQUETTE[b.reason],
     );
   }
   console.log(
+    "\nThree ways of changing nothing, and only one of them is robustness. The human tier" +
+    "\ncosts more than the whole budget at this volume, so its quality never enters the" +
+    "\ncalculation — that is exclusion by price. The small model is affordable and simply" +
+    "\nnever chosen — that is exclusion on merit. Neither is a reason to stop looking.\n" +
     "\n\"Priced out\" is not the same as \"does not matter\". The human tier costs more than" +
     "\nthe whole budget at this volume, so its quality never enters the calculation — and it" +
     "\nwould dominate it at a smaller volume. Reporting those two the same way would send a" +

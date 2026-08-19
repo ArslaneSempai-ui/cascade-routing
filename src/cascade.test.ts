@@ -9,7 +9,7 @@ import { readProfiles, type Profile } from "./measure.ts";
 import { optimiseExtraction, optimiseClassification, budgetShadowPrice, latenceRepresentative, paliersMesures, evaluer, pricePerThousandDocuments } from "./optimise.ts";
 import { ASSUMPTIONS, pricePerThousandExtractions, accuracy } from "./assumptions.ts";
 import { wilson, rate, distinguishable } from "./interval.ts";
-import { PLAUSIBLE } from "./sensitivity.ts";
+import { PLAUSIBLE, bands, ETIQUETTE, advise } from "./sensitivity.ts";
 
 /* ── the split, which is the whole reason the measurement means anything ── */
 
@@ -627,4 +627,62 @@ test("toute hypothèse qui tarife un palier sélectionnable est balayée", () =>
       `« ${cle} » tarife ${touches.join(", ")} et n'est pas dans PLAUSIBLE.\n`
       + `  → \`npm run sensitivity\` conclurait sans elle, en donnant une assurance qu'il n'a pas vérifiée.`);
   }
+});
+
+test("les deux balayages de prix ne peuvent pas se contredire", () => {
+  /*
+   * Deux fichiers répondent à la même question, et ils ont divergé.
+   *
+   * `sensitivity.ts` rendait « genuinely insensitive » pour le prix du petit modèle pendant
+   * que `landing.json` disait « tier not selected » — le même dépôt affirmait deux choses
+   * incompatibles sur le même chiffre, l'une rassurante et fausse. La cause n'était pas le
+   * calcul mais l'affichage : deux `if` suivis d'un repli qui écrasait toute valeur inconnue
+   * en la plus confortable.
+   *
+   * Ce test tient l'accord entre les deux, sur le seul point qui compte : un palier absent du
+   * routage ne doit jamais être rapporté comme une robustesse, quel que soit le fichier qui
+   * le dit.
+   */
+  const p = readProfiles();
+  if (!p) return;
+
+  const optimum = optimiseExtraction(p, ASSUMPTIONS);
+  if (!optimum) return;
+  const retenus = new Set(FIELDS.map((c) => optimum.routing[c]));
+
+  for (const b of bands(p)) {
+    if (b.reason !== "genuinely insensitive") continue;
+
+    /* « Robuste » n'est légitime que si le palier gouverné est réellement en usage. */
+    const perturbee = { ...ASSUMPTIONS, [b.assumption]: (ASSUMPTIONS[b.assumption] as number) * 2 };
+    const gouvernes: TierName[] = paliersMesures(p).filter((t: TierName) =>
+      pricePerThousandDocuments(p, perturbee, t) !== pricePerThousandDocuments(p, ASSUMPTIONS, t));
+    if (gouvernes.length === 0) continue;   // n'est pas un prix : hors sujet ici
+
+    assert.ok(gouvernes.some((t: TierName) => retenus.has(t)),
+      `« ${b.assumption} » est rapportée « genuinely insensitive », mais elle ne tarife que `
+      + `${gouvernes.join(", ")}, qu'aucun champ du routage n'utilise.\n`
+      + `  → ce n'est pas de la robustesse, c'est une non-sélection, et les deux ne se disent`
+      + ` pas de la même façon à un lecteur.`);
+  }
+});
+
+test("chaque verdict de sensibilité a son étiquette et sa phrase", () => {
+  /*
+   * Le calcul était juste et l'affichage mentait : une quatrième valeur est apparue dans le
+   * type, et deux sites de rendu l'ont écrasée en la troisième par un repli implicite. Un
+   * `Record` complet et un `switch` exhaustif rendent ça impossible à la compilation ; ce test
+   * ferme le dernier trou, celui d'une étiquette présente mais vide.
+   */
+  for (const raison of Object.keys(ETIQUETTE) as (keyof typeof ETIQUETTE)[]) {
+    assert.ok(ETIQUETTE[raison].trim().length > 0, `le verdict « ${raison} » n'a pas d'étiquette`);
+    const phrase = advise({ assumption: "volume", reason: raison, current: 1, stableFrom: 0,
+      stableTo: 2, currentInside: true, decides: false }, [0, 2]);
+    assert.ok(phrase && phrase.trim().length > 0, `le verdict « ${raison} » n'a pas de conseil`);
+  }
+  /* Et les quatre phrases doivent différer : deux verdicts qui disent la même chose n'en font qu'un. */
+  const phrases = (Object.keys(ETIQUETTE) as (keyof typeof ETIQUETTE)[]).map((r) =>
+    advise({ assumption: "volume", reason: r, current: 1, stableFrom: 0, stableTo: 2,
+      currentInside: true, decides: false }, [0, 2]));
+  assert.equal(new Set(phrases).size, phrases.length, "deux verdicts rendent la même phrase");
 });
