@@ -13,7 +13,7 @@
 import { TIERS } from "./paliers.js";
 import { isMain } from "./cli.js";
 import { FIELDS } from "./corpus.js";
-import { pricePerThousand, accuracy, latency, ASSUMPTIONS } from "./assumptions.js";
+import { pricePerThousandExtractions, accuracy, latency, ASSUMPTIONS } from "./assumptions.js";
 import { rate, distinguishable, pairedVerdict } from "./interval.js";
 /**
  * La best affectation field par field sous contrainte de budget.
@@ -45,13 +45,31 @@ export function latenceRepresentative(p, tier) {
     const l = FIELDS.map((c) => parChamp[c]?.latency ?? 0);
     return l.reduce((s, x) => s + x, 0) / l.length;
 }
+/**
+ * Ce que mille **documents** coûtent à ce palier, s'il les traite entièrement seul.
+ *
+ * C'est le chiffre qu'une page affiche, et il n'est pas cinq fois celui de
+ * `pricePerThousandExtractions`. Sur un palier local le tarif est du temps machine, et le
+ * temps dépend du champ : l'adresse ne coûte pas la date de naissance. Le prix d'un
+ * document est donc la **somme** des cinq champs mesurés, et la multiplication par cinq ne
+ * tombe juste que sur les paliers facturés à l'appel.
+ *
+ * La distinction a déjà coûté un chiffre faux sur une page publiée. Elle est tenue par un
+ * test plutôt que par ce commentaire.
+ */
+export function pricePerThousandDocuments(p, h, tier) {
+    const parChamp = p.extraction[tier];
+    if (!parChamp)
+        return 0;
+    return FIELDS.reduce((s, c) => s + pricePerThousandExtractions(tier, h, parChamp[c].latency), 0);
+}
 export function evaluer(p, h, routing) {
     let sommeJustesse = 0, cost = 0, seconds = 0;
     for (const c of FIELDS) {
         const e = routing[c];
         const profil = p.extraction[e][c];
         sommeJustesse += accuracy(e, profil.accuracy, h);
-        cost += (h.volume / 1000) * pricePerThousand(e, h, profil.latency);
+        cost += (h.volume / 1000) * pricePerThousandExtractions(e, h, profil.latency);
         seconds += (h.volume * latency(e, profil.latency, h)) / 1000;
     }
     const latencyPerItem = (seconds * 1000) / h.volume;
@@ -202,7 +220,7 @@ export function optimiseExtraction(p, h) {
 export function optimiseClassification(p, h) {
     const options = paliersMesures(p).map((e) => {
         const profil = p.classification[e];
-        const cost = (h.volume / 1000) * pricePerThousand(e, h, p.classification[e].latency);
+        const cost = (h.volume / 1000) * pricePerThousandExtractions(e, h, p.classification[e].latency);
         return {
             tier: e,
             accuracy: accuracy(e, profil.accuracy, h),
@@ -306,7 +324,7 @@ if (isMain(import.meta)) {
     for (const c of FIELDS) {
         const e = a.routing[c];
         const j = accuracy(e, p.extraction[e][c].accuracy, h);
-        console.log(`${c.padEnd(13)}${e.padEnd(15)}${pc(j).padStart(7)}   ${euro((h.volume / 1000) * pricePerThousand(e, h, p.extraction[e][c].latency)).padStart(8)}`);
+        console.log(`${c.padEnd(13)}${e.padEnd(15)}${pc(j).padStart(7)}   ${euro((h.volume / 1000) * pricePerThousandExtractions(e, h, p.extraction[e][c].latency)).padStart(8)}`);
     }
     console.log("─".repeat(52));
     console.log(`${"".padEnd(13)}${"total".padEnd(15)}${pc(a.accuracy).padStart(7)}   ${euro(a.cost).padStart(8)}`);

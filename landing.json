@@ -1,9 +1,9 @@
 {
   "$comment": "Généré par `npm run landing` depuis data/profiles.json. Ne pas éditer à la main : `npm test` échoue si ce fichier ne correspond plus au relevé.",
   "generatedFrom": {
-    "measuredAt": "2026-08-19T09:51:25.978Z",
-    "commit": null,
-    "treeDirty": null
+    "measuredAt": "2026-08-19T18:52:47.557Z",
+    "commit": "5f00df3",
+    "treeDirty": true
   },
   "confidence": {
     "level": 0.95,
@@ -175,12 +175,12 @@
       "id": "gen-0.6b",
       "n": 120,
       "costPerThousandDocuments": {
-        "value": 0.6647,
+        "value": 0.6994,
         "provenance": "assumed",
         "basis": "latence mesurée × tarif machine supposé, sommée sur les cinq champs"
       },
       "costPerThousandExtractions": {
-        "value": 0.0924,
+        "value": 0.1504,
         "provenance": "assumed",
         "basis": "un cinquième d'un document — ne jamais afficher ce nombre sous « par document »"
       },
@@ -226,12 +226,12 @@
       "id": "gen-4b",
       "n": 120,
       "costPerThousandDocuments": {
-        "value": 1.8088,
+        "value": 2.1227,
         "provenance": "assumed",
         "basis": "latence mesurée × tarif machine supposé, sommée sur les cinq champs"
       },
       "costPerThousandExtractions": {
-        "value": 0.3553,
+        "value": 0.3976,
         "provenance": "assumed",
         "basis": "un cinquième d'un document — ne jamais afficher ce nombre sous « par document »"
       },
@@ -277,12 +277,12 @@
       "id": "gen-8b",
       "n": 120,
       "costPerThousandDocuments": {
-        "value": 2.4818,
+        "value": 3.3097,
         "provenance": "assumed",
         "basis": "latence mesurée × tarif machine supposé, sommée sur les cinq champs"
       },
       "costPerThousandExtractions": {
-        "value": 0.4389,
+        "value": 0.5999,
         "provenance": "assumed",
         "basis": "un cinquième d'un document — ne jamais afficher ce nombre sous « par document »"
       },
@@ -390,10 +390,10 @@
       "address": "gen-4b"
     },
     "accuracy": 94.4,
-    "costPerThousandDocuments": 1.9301,
-    "latencyMsPerDocument": 1059,
-    "budgetShare": 0.0483,
-    "latencyShare": 0.5296,
+    "costPerThousandDocuments": 2.076,
+    "latencyMsPerDocument": 1498,
+    "budgetShare": 0.0519,
+    "latencyShare": 0.749,
     "provenance": "measured",
     "basis": "routage calculé par `optimiseExtraction` sur le relevé gelé, sous le budget et le plafond de latence supposés ci-dessous"
   },
@@ -413,9 +413,9 @@
       "accuracy": 69,
       "accuracyProvenance": "measured",
       "costPerThousandDocuments": 1,
-      "latencyMsPerDocument": 193,
+      "latencyMsPerDocument": 137,
       "budgetShare": 0.025,
-      "latencyShare": 0.0963,
+      "latencyShare": 0.0687,
       "admissible": true
     },
     {
@@ -425,37 +425,37 @@
       "costPerThousandDocuments": 8,
       "latencyMsPerDocument": 337,
       "budgetShare": 0.2,
-      "latencyShare": 0.1687,
+      "latencyShare": 0.1686,
       "admissible": true
     },
     {
       "id": "gen-0.6b",
       "accuracy": 79.3,
       "accuracyProvenance": "measured",
-      "costPerThousandDocuments": 0.6647,
-      "latencyMsPerDocument": 1994,
-      "budgetShare": 0.0166,
-      "latencyShare": 0.997,
-      "admissible": true
+      "costPerThousandDocuments": 0.6994,
+      "latencyMsPerDocument": 2098,
+      "budgetShare": 0.0175,
+      "latencyShare": 1.049,
+      "admissible": false
     },
     {
       "id": "gen-4b",
       "accuracy": 92.7,
       "accuracyProvenance": "measured",
-      "costPerThousandDocuments": 1.8088,
-      "latencyMsPerDocument": 5427,
-      "budgetShare": 0.0452,
-      "latencyShare": 2.7133,
+      "costPerThousandDocuments": 2.1227,
+      "latencyMsPerDocument": 6368,
+      "budgetShare": 0.0531,
+      "latencyShare": 3.1841,
       "admissible": false
     },
     {
       "id": "gen-8b",
       "accuracy": 91.5,
       "accuracyProvenance": "measured",
-      "costPerThousandDocuments": 2.4818,
-      "latencyMsPerDocument": 7445,
-      "budgetShare": 0.062,
-      "latencyShare": 3.7227,
+      "costPerThousandDocuments": 3.3097,
+      "latencyMsPerDocument": 9929,
+      "budgetShare": 0.0827,
+      "latencyShare": 4.9646,
       "admissible": false
     },
     {

@@ -170,6 +170,18 @@ export async function measure(howMany = 120, options = {}) {
     const ancien = readProfiles();
     const profils = {
         measuredAt: new Date().toISOString(),
+        /*
+         * Le commit, que cette écriture-ci oubliait.
+         *
+         * `sauver` l'inscrit à chaque palier terminé, mais cette écriture finale reconstruit
+         * l'objet de zéro et n'en reprenait pas la clé : toute mesure **complète** perdait donc
+         * son commit, alors qu'une mesure interrompue le gardait. L'anomalie est exactement à
+         * l'envers de l'intuition, et invisible tant qu'on ne regarde que des mesures menées à
+         * leur terme — c'est-à-dire toutes celles qu'on publie.
+         *
+         * Trouvé par le test de provenance, sur la première re-mesure réelle qui l'ait exercé.
+         */
+        code: version,
         extraction: { ...(ancien?.extraction ?? {}), ...extraction },
         classification: { ...(ancien?.classification ?? {}), ...classification },
         loadTime: { ...(ancien?.loadTime ?? {}), ...loadTime },

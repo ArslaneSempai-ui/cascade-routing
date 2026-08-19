@@ -1,6 +1,6 @@
 # Validation file — task-level model routing
 
-Generated from the frozen measurement of `2026-08-19T09:51:25.978Z`. Every figure below is
+Generated from the frozen measurement of `2026-08-19T18:52:47.557Z`, produced by commit `5f00df3` **with uncommitted changes in the working tree — this run is not reproducible by anyone, including its author**. Every figure below is
 produced from that same file: this document cannot disagree with the tables elsewhere in
 the repository, because it is not written by hand.
 
@@ -19,11 +19,11 @@ available one. Where two tiers cannot be told apart on this sample, the cheaper 
 | `birth` | `rules` | 100.0 % | [100–100] | n=1000 | $0 |
 | `document` | `rules` | 79.7 % | [77–82] | n=1000 | $0 |
 | `country` | `rules` | 100.0 % | [100–100] | n=1000 | $0 |
-| `address` | `gen-4b` | 95.8 % | [91–98] | n=120 | $33 |
+| `address` | `gen-4b` | 95.8 % | [91–98] | n=120 | $48 |
 
-Overall: **94.4 %** for **$193** against a budget of $4,000
-(4.8 % consumed), at **1059 ms** per document
-against a ceiling of 2000 ms (53.0 % consumed).
+Overall: **94.4 %** for **$208** against a budget of $4,000
+(5.2 % consumed), at **1498 ms** per document
+against a ceiling of 2000 ms (74.9 % consumed).
 
 ## 2. Where the sample cannot decide
 

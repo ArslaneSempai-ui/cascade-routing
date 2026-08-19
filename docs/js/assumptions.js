@@ -72,7 +72,17 @@ export const BOUNDS = {
     latencyBudgetMs: [10, 600_000],
 };
 /**
- * Ce que mille éléments coûtent à ce palier.
+ * Ce que mille **extractions de champ** coûtent à ce palier — jamais mille documents.
+ *
+ * L'unité est dans le nom parce qu'elle a déjà fait publier un chiffre faux. Un document
+ * porte cinq champs : le lire coûte cinq appels à cette fonction, et une page qui affiche
+ * ce résultat sous l'étiquette « par millier de documents » se trompe d'un facteur cinq,
+ * dans le sens qui fait paraître la chaîne moins chère qu'elle n'est.
+ *
+ * Le prix d'un document est `pricePerThousandDocuments` dans `optimise.ts`, et il vit
+ * là-bas parce qu'il ne peut pas se calculer ici : sur un palier local le tarif dépend de
+ * la latence du champ, donc le coût d'un document est une somme sur les cinq champs
+ * mesurés, pas une multiplication par cinq.
  *
  * Trois régimes de facturation différents, et c'est le fond du sujet. Les règles ne coûtent
  * rien. Les modèles hébergés coûtent un tarif à l'appel, indépendant du temps qu'ils
@@ -84,7 +94,7 @@ export const BOUNDS = {
  * palier local est une erreur et non un défaut à zéro : facturer gratuitement un modèle qui
  * occupe la machine est exactement le biais que cet outil existe pour retirer.
  */
-export function pricePerThousand(tier, h, latenceMesuree) {
+export function pricePerThousandExtractions(tier, h, latenceMesuree) {
     if (tier === "rules")
         return 0;
     if (tier === "small")
