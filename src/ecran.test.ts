@@ -81,3 +81,38 @@ test("aucun nom importé n'est redéclaré dans l'écran", () => {
     );
   }
 });
+
+/*
+ * LE GABARIT QUE LE TYPAGE NE VOIT PAS
+ *
+ * `pages.ts` construit le script du navigateur dans un gabarit — une chaîne de caractères.
+ * Ses `import { … } from "./js/…"` ressemblent à du code et n'en sont pas : `tsc` les lit
+ * comme du texte, et un symbole renommé dans `src/` y reste au vieux nom sans qu'une seule
+ * erreur ne se lève. La page publiée tombe alors à l'exécution, dans le navigateur, chez le
+ * lecteur.
+ *
+ * C'est arrivé en renommant `pricePerThousand` en `pricePerThousandExtractions` : sept
+ * fichiers ont suivi automatiquement, le gabarit non. Ce test ferme le trou en demandant à
+ * Node ce que chaque module exporte vraiment.
+ */
+test("chaque symbole importé par le gabarit de pages.ts existe vraiment", async () => {
+  const source = readFileSync(new URL("./pages.ts", import.meta.url).pathname, "utf8");
+  const imports = [...source.matchAll(/import\s*\{([^}]+)\}\s*from\s*"\.\/js\/([A-Za-z0-9_-]+)\.js"/g)];
+
+  assert.ok(imports.length > 0,
+    "aucun import ./js/ trouvé dans pages.ts — le gabarit a changé de forme et ce test ne garde plus rien");
+
+  for (const [, liste, module] of imports) {
+    const mod = await import(new URL(`./${module}.ts`, import.meta.url).pathname) as Record<string, unknown>;
+    const noms = liste!.split(",")
+      .map((n) => n.trim().replace(/^type\s+/, "").split(/\s+as\s+/)[0]!.trim())
+      .filter(Boolean);
+
+    for (const nom of noms) {
+      assert.ok(nom in mod,
+        `le gabarit de pages.ts importe « ${nom} » depuis ${module}.js, que src/${module}.ts n'exporte pas.\n`
+        + `  → un renommage a laissé le gabarit derrière lui ; le typage ne peut pas le voir,\n`
+        + `    et l'écran publié tombera dans le navigateur, pas ici.`);
+    }
+  }
+});

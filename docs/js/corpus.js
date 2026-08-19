@@ -77,9 +77,32 @@ const HELDOUT = [
     (c) => `Application received from ${c.name} of ${c.address}; the identity reference supplied was ${c.document} and the stated country ${c.country}. Birth date given as ${c.birth}.`,
     (c) => `re ${c.name} / ${c.country} — address ${c.address} — id${c.document} — born ${c.birth} — file opened pending review`,
 ];
+/**
+ * La moitié de réglage — et pourquoi il en fallait une troisième.
+ *
+ * Deux moitiés suffisaient tant que le seul objet réglé à la main était les expressions
+ * régulières : elles se développaient sur `training` et se notaient sur `heldout`.
+ *
+ * L'échelle générative a ajouté un second objet réglé à la main, et personne ne l'a vu
+ * venir : **l'invite**. Elle a été mise au point le 19 août 2026 en lançant la mesure sur
+ * `heldout`, en lisant 0 %, en changeant le prompt, en relançant sur le même jeu et en
+ * lisant 95,8 %. C'est exactement la fuite que le découpage existe pour empêcher, commise
+ * par la personne qui l'avait écrit deux mois plus tôt contre elle-même.
+ *
+ * `dev` est donc la moitié sur laquelle on a le droit de regarder les scores en travaillant.
+ * `heldout` ne se lit qu'une fois, à la fin, et ne décide de rien d'autre que du chiffre
+ * publié. Un test échoue si les trois partagent une forme.
+ */
+const DEV = [
+    (c) => `Intake summary >> ${c.name} >> born ${c.birth} >> holds ${c.document} >> ${c.country} >> mail to ${c.address}`,
+    (c) => `Please action: we have ${c.name} on the line, address given as ${c.address}. Document ref is ${c.document}; born ${c.birth}; passport country ${c.country}.`,
+    (c) => `[case note] subject=${c.name}; dob=${c.birth}; idref=${c.document}; ctry=${c.country}; addr=${c.address}; status=open`,
+    (c) => `Branch transcript — the customer gave their name as ${c.name} and their date of birth as ${c.birth}. They live at ${c.address}. Identity papers numbered ${c.document} from ${c.country} were sighted.`,
+    (c) => `${c.country} national ${c.name}, papers ${c.document}, whereabouts ${c.address}, birthdate ${c.birth}. Reviewed, nothing adverse.`,
+];
 export function generateRecords(howMany = 120, part = "heldout", seed = 20260817) {
-    const r = draw(seed + (part === "heldout" ? 7717 : 0));
-    const SHAPES = part === "heldout" ? HELDOUT : TRAINING;
+    const r = draw(seed + (part === "heldout" ? 7717 : part === "dev" ? 3313 : 0));
+    const SHAPES = part === "heldout" ? HELDOUT : part === "dev" ? DEV : TRAINING;
     return Array.from({ length: howMany }, (_, i) => {
         const name = `${pick(r, FIRST_NAMES)} ${pick(r, SURNAMES)}`;
         const jour = 1 + Math.floor(r() * 28);
@@ -170,7 +193,7 @@ const NARRATIVES_HELDOUT = {
     ],
 };
 export function generateAlerts(howMany = 120, part = "heldout", seed = 20260818) {
-    const r = draw(seed + (part === "heldout" ? 7717 : 0));
+    const r = draw(seed + (part === "heldout" ? 7717 : part === "dev" ? 3313 : 0));
     const jeu = part === "heldout" ? NARRATIVES_HELDOUT : NARRATIVES;
     return Array.from({ length: howMany }, (_, i) => {
         const truth = pick(r, TYPOLOGIES);

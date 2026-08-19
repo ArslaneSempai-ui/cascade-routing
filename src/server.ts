@@ -12,8 +12,8 @@ import { readFileSync } from "node:fs";
 import { FIELDS } from "./corpus.ts";
 import { TIERS, type TierName } from "./paliers.ts";
 import { readProfiles } from "./measure.ts";
-import { evaluer, optimiseExtraction, budgetShadowPrice, type Routing } from "./optimise.ts";
-import { ASSUMPTIONS, BOUNDS, pricePerThousand, accuracy, type Assumptions } from "./assumptions.ts";
+import { evaluer, optimiseExtraction, budgetShadowPrice, type Routing, latenceRepresentative } from "./optimise.ts";
+import { ASSUMPTIONS, BOUNDS, pricePerThousandExtractions, accuracy, type Assumptions } from "./assumptions.ts";
 import { isMain } from "./cli.ts";
 
 const PORT = Number(process.env.PORT ?? 4670);
@@ -71,7 +71,7 @@ export function etat() {
       c,
       Object.fromEntries(TIERS.map((e) => [e, accuracy(e, profils.extraction[e][c].accuracy, hypotheses)])),
     ])),
-    prix: Object.fromEntries(TIERS.map((e) => [e, pricePerThousand(e, hypotheses)])),
+    prix: Object.fromEntries(TIERS.map((e) => [e, pricePerThousandExtractions(e, hypotheses, latenceRepresentative(profils, e))])),
     mien,
     optimum,
     /* Le tout-au-même-palier, pour dire ce que le réflexe coûte. */

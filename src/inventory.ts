@@ -26,6 +26,14 @@ import { TIERS, REVISIONS } from "./tiers.ts";
 import type { Inventory } from "./provenance.ts";
 
 const WHAT: Record<keyof typeof ASSUMPTIONS, { what: string; note: string }> = {
+  latencyBudgetMs: {
+    what: "milliseconds allowed for one whole document, end to end",
+    note: "your service level agreement knows this exactly; it binds independently of the money",
+  },
+  machineHourlyCost: {
+    what: "what an hour of the machine running a local model costs you",
+    note: "a local model has no tariff — it occupies a box, and your infrastructure bill knows what that costs",
+  },
   humanAccuracy: {
     what: "how often a human reviewing their fortieth file of the day gets it right",
     note: "moved here from being infallible by construction, which made the human tier unbeatable",
@@ -41,6 +49,12 @@ const WHAT: Record<keyof typeof ASSUMPTIONS, { what: string; note: string }> = {
 };
 
 export const INVENTORY: Inventory = [
+  {
+    name: "CONFIANCE",
+    provenance: "chosen",
+    what: "the confidence level every interval and every tie is decided at",
+    note: "95 % because that is wilson()'s default, not because anyone weighed it — and it decides which findings survive",
+  },
   /* ── measured ── */
   {
     name: "profiles",

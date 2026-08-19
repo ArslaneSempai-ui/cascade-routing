@@ -8,13 +8,20 @@
     "measure": "node src/measure.ts",
     "optimise": "node src/optimise.ts",
     "typage": "tsc --noEmit",
-    "test": "tsc --noEmit && node src/readme.ts --check && node --test src/*.test.ts",
+    "test": "tsc --noEmit && node src/readme.ts --check && node src/landing.ts --check && node --test src/*.test.ts",
     "failures": "node src/failures.ts",
-    "figures": "node src/readme.ts",
+    "figures": "node src/readme.ts && node src/landing.ts",
+    "landing": "node src/landing.ts",
     "sensitivity": "node src/sensitivity.ts",
     "start": "node src/server.ts",
     "pages": "tsc -p tsconfig.web.json && node src/pages.ts && node src/verifier-ecran.mjs . 2",
-    "captures": "node src/capturer.mjs ."
+    "captures": "node src/capturer.mjs .",
+    "dossier": "node src/dossier.ts",
+    "measure:yours": "node src/your-cases.ts",
+    "fuite": "node src/fuite.ts",
+    "benchmark": "node src/benchmark.ts",
+    "egress": "node src/egress.ts",
+    "intake": "node src/intake.ts"
   },
   "dependencies": {
     "@huggingface/transformers": "^3.0.0"

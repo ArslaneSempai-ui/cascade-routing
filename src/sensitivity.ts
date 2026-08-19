@@ -34,8 +34,22 @@ export const PLAUSIBLE: Partial<Record<keyof Assumptions, [number, number]>> = {
   humanSeconds: [15, 300],
   analystAnnualCost: [40_000, 160_000],
   productiveHoursPerDay: [4, 7],
+  workingDaysPerYear: [200, 250],
   pricePerThousandSmall: [0.02, 2],
   pricePerThousandLarge: [0.20, 20],
+  /*
+   * Le tarif horaire machine, qui manquait — et son absence était le pire des cas.
+   *
+   * Il tarife les trois paliers génératifs, dont `gen-4b`, que le routage retenu **utilise**
+   * sur l'adresse. Un balayage qui saute une hypothèse dont dépend un palier sélectionné ne
+   * se contente pas d'être incomplet : il rend un verdict rassurant sur un jeu amputé, ce qui
+   * est pire que pas de balayage du tout.
+   *
+   * La plage va du portable à la machine louée, un facteur dix de part et d'autre. Le routage
+   * tient sur toute cette plage — il ne bascule qu'à 139,60 $ l'heure, cent seize fois la
+   * valeur en usage — mais ça, il fallait le mesurer pour le dire.
+   */
+  machineHourlyCost: [0.10, 12],
 };
 
 export type Band = {

@@ -1,24 +1,39 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync, existsSync } from "node:fs";
 import { generateRecords, generateAlerts, FIELDS, TYPOLOGIES } from "./corpus.ts";
 import { correct, TIERS } from "./tiers.ts";
+import type { TierName } from "./paliers.ts";
 import { classify } from "./failures.ts";
-import { readProfiles } from "./measure.ts";
-import { optimiseExtraction, optimiseClassification, budgetShadowPrice } from "./optimise.ts";
-import { ASSUMPTIONS, pricePerThousand, accuracy } from "./assumptions.ts";
-import { wilson, rate } from "./interval.ts";
+import { readProfiles, type Profile } from "./measure.ts";
+import { optimiseExtraction, optimiseClassification, budgetShadowPrice, latenceRepresentative, paliersMesures, evaluer, pricePerThousandDocuments } from "./optimise.ts";
+import { ASSUMPTIONS, pricePerThousandExtractions, accuracy } from "./assumptions.ts";
+import { wilson, rate, distinguishable } from "./interval.ts";
+import { PLAUSIBLE } from "./sensitivity.ts";
 
 /* ── the split, which is the whole reason the measurement means anything ── */
 
-test("the training and held-out halves share no phrasing", () => {
-  const a = generateRecords(40, "training").map((r) => r.text);
-  const b = generateRecords(40, "heldout").map((r) => r.text);
-  // Not a single record may appear on both sides.
-  assert.equal(a.filter((t) => b.includes(t)).length, 0);
-  // And the shapes differ, not merely the values drawn into them.
-  const shape = (t: string) => t.replace(/[A-Z][a-zà-ÿ]+|\d+/g, "·");
-  assert.equal(a.map(shape).filter((s) => b.map(shape).includes(s)).length, 0,
-    "a held-out phrasing also appears in training — the rules would be marking their own homework");
+test("les trois moitiés du corpus ne partagent aucune formulation", () => {
+  /*
+   * Trois moitiés, parce qu'il y a trois choses réglées à la main.
+   *
+   * `training` sert à écrire les expressions régulières, `dev` à mettre au point les invites
+   * génératives, `heldout` ne sert qu'à publier un chiffre. Le test valait pour deux ; il a
+   * fallu l'étendre le jour où une invite a été réglée en lisant des scores held-out, ce qui
+   * est la même faute que noter ses règles sur ses propres gabarits.
+   */
+  const parts = ["training", "dev", "heldout"] as const;
+  const shape = (x: string) => x.replace(/[A-Z][a-zà-ÿ]+|\d+/g, "·");
+  const tirages = Object.fromEntries(parts.map((p) => [p, generateRecords(40, p).map((r) => r.text)]));
+  for (let i = 0; i < parts.length; i++) {
+    for (let j = i + 1; j < parts.length; j++) {
+      const a = tirages[parts[i]!]!, b = tirages[parts[j]!]!;
+      assert.equal(a.filter((x) => b.includes(x)).length, 0,
+        `${parts[i]} et ${parts[j]} partagent un document entier`);
+      assert.equal(a.map(shape).filter((s) => b.map(shape).includes(s)).length, 0,
+        `${parts[i]} et ${parts[j]} partagent une formulation — on noterait sa propre copie`);
+    }
+  }
 });
 
 test("both corpora are reproducible", () => {
@@ -66,10 +81,87 @@ test("the human tier is an assumption, never a certainty", () => {
   assert.equal(accuracy("large", 0.967, ASSUMPTIONS), 0.967);
 });
 
-test("rules cost nothing and humans cost the most", () => {
-  const prices = TIERS.map((t) => pricePerThousand(t, ASSUMPTIONS));
-  assert.equal(prices[0], 0, "rules are free");
-  assert.ok(prices.at(-1)! > prices[2]!, "a human costs more than the large model");
+test("rules cost nothing, a human costs the most, a local tier is billed by the clock", () => {
+  /*
+   * Trois régimes de facturation, et le troisième est celui qui se trompe tout seul.
+   *
+   * Un modèle hébergé a un tarif à l'appel. Un modèle local n'en a aucun : il occupe une
+   * machine, et sa seule dépense est le temps qu'il prend. Facturer zéro un palier qui
+   * monopolise un GPU pendant une seconde et demie est précisément le biais que cet outil
+   * existe pour retirer — donc une latence manquante lève, elle ne vaut pas gratuit.
+   */
+  const p = readProfiles();
+  const lat = (t: TierName) => (p && p.extraction[t] ? latenceRepresentative(p, t) : 1_000);
+  const prix = (t: TierName) => pricePerThousandExtractions(t, ASSUMPTIONS, lat(t));
+
+  assert.equal(prix("rules"), 0, "les règles sont gratuites");
+  for (const t of TIERS) {
+    if (t === "human") continue;
+    assert.ok(prix("human") > prix(t), `un humain devrait coûter plus cher que ${t}`);
+  }
+
+  assert.equal(
+    pricePerThousandExtractions("gen-8b", ASSUMPTIONS, 2_000),
+    2 * pricePerThousandExtractions("gen-8b", ASSUMPTIONS, 1_000),
+    "deux fois plus lent doit coûter exactement deux fois plus cher",
+  );
+
+  assert.throws(() => pricePerThousandExtractions("gen-4b", ASSUMPTIONS),
+    /temps machine/,
+    "un palier local sans sa latence doit lever, pas être facturé gratuitement");
+});
+
+test("un document coûte cinq champs, et ce n'est pas cinq fois le prix d'un champ", () => {
+  /*
+   * L'erreur que ce test existe pour rendre impossible.
+   *
+   * `pricePerThousandExtractions` rend un prix par millier d'**extractions de champ**. Une
+   * page de vente a lu « par millier de documents », a publié le chiffre tel quel, et s'est
+   * trompée d'un facteur cinq — dans le sens qui fait paraître la chaîne moins chère.
+   *
+   * Deux propriétés, et la seconde est celle qui surprend. Sur un palier facturé à l'appel,
+   * un document vaut bien cinq fois un champ. Sur un palier local facturé au temps machine,
+   * non : le tarif suit la latence, la latence dépend du champ, et le prix d'un document est
+   * une somme sur les cinq champs mesurés. Quiconque remplace la somme par une multiplication
+   * fait tomber ce test.
+   */
+  const p = readProfiles();
+  if (!p) return;   // pas de profil gelé : rien à comparer, et ce n'est pas une faute
+
+  for (const t of paliersMesures(p)) {
+    const parChamp: number[] = FIELDS.map((c) => pricePerThousandExtractions(t, ASSUMPTIONS, p.extraction[t][c].latency));
+    const parDocument: number = pricePerThousandDocuments(p, ASSUMPTIONS, t);
+
+    assert.ok(Math.abs(parDocument - parChamp.reduce((a: number, b: number) => a + b, 0)) < 1e-9,
+      `le prix d'un document en ${t} doit être la somme de ses cinq champs`);
+
+    /* Le facteur cinq ne tient que si les cinq champs coûtent pareil — ce qui est vrai des
+       paliers à l'appel et faux des paliers au temps machine. On vérifie les deux sens. */
+    const uniforme = parChamp.every((x: number) => Math.abs(x - parChamp[0]!) < 1e-9);
+    const cinqFois = Math.abs(parDocument - 5 * parChamp[0]!) < 1e-9;
+    assert.equal(cinqFois, uniforme,
+      `en ${t}, « cinq fois le prix d'un champ » ne vaut que si les cinq champs coûtent le même prix`);
+  }
+});
+
+test("aucun palier local ne coûte le même prix sur tous les champs", () => {
+  /*
+   * Le test précédent ne mord que si un palier au temps machine existe réellement dans le
+   * profil avec des latences inégales. Sans celui-ci, un jour où toutes les latences
+   * deviendraient égales, « cinq fois » redeviendrait vrai partout et l'erreur repasserait
+   * sans que rien ne tombe.
+   */
+  const p = readProfiles();
+  if (!p) return;
+
+  const locaux = paliersMesures(p).filter((t) => t.startsWith("gen-"));
+  if (locaux.length === 0) return;   // échelle générative non mesurée : rien à tenir ici
+
+  for (const t of locaux) {
+    const prix: number[] = FIELDS.map((c) => pricePerThousandExtractions(t, ASSUMPTIONS, p.extraction[t][c].latency));
+    assert.ok(Math.max(...prix) - Math.min(...prix) > 1e-9,
+      `${t} est facturé au temps machine : ses cinq champs ne peuvent pas coûter le même prix`);
+  }
 });
 
 /* ── the optimiser ── */
@@ -131,4 +223,408 @@ test("Wilson does not invent certainty from four observations", () => {
   const [low, high] = wilson(4, 4);
   assert.ok(low < 0.6, `four out of four should not read as ${(low * 100).toFixed(0)} % at the low end`);
   assert.equal(high, 1);
+});
+
+/* ── ce que l'échelle générative a appris, et qui doit le rester ── */
+
+test("le routage optimal traverse plusieurs familles de paliers", () => {
+  /*
+   * C'est la trouvaille centrale, et elle serait invisible sans le test.
+   *
+   * Un encodeur spécialisé garde le nom, des règles gratuites gardent trois champs, un
+   * modèle génératif prend l'adresse. Si un jour une seule famille rafle tout, ce n'est pas
+   * un progrès : c'est le signe qu'un palier a disparu du profil ou qu'une mesure a viré, et
+   * la page dirait alors le contraire de ce qu'elle démontre.
+   */
+  const p = readProfiles();
+  if (!p || !p.extraction["gen-4b"]) return;   // profil encodeurs seuls : rien à tenir ici
+  const s = optimiseExtraction(p, ASSUMPTIONS);
+  assert.ok(s, "aucun routage sous ces budgets");
+  const familles = new Set(FIELDS.map((c) => {
+    const e = s!.routing[c];
+    if (e === "rules") return "règles";
+    return (["gen-0.6b", "gen-4b", "gen-8b"] as string[]).includes(e) ? "génératif" : "encodeur";
+  }));
+  assert.ok(familles.size >= 3,
+    `le routage n'utilise que ${[...familles].join(" et ")} — la démonstration repose sur le mélange`);
+});
+
+test("les règles gratuites gardent au moins trois champs sur cinq", () => {
+  /*
+   * La phrase du titre et de la première ligne du README. Elle a déjà été fausse une fois —
+   * « le grand modèle est pire que le petit sur deux champs sur cinq » — et publiée nulle
+   * part uniquement parce qu'un contrôle l'a rattrapée à temps. Celle-ci est tenue.
+   */
+  const p = readProfiles();
+  if (!p) return;
+  /*
+   * « égalent ou battent » se juge sur les intervalles, pas sur les points.
+   *
+   * Sur le document, gen-8b affiche 83,3 % contre 79,7 % pour les règles — et les
+   * intervalles se recouvrent, donc l'échantillon ne les départage pas. Compter ce champ
+   * comme perdu ferait mentir le titre dans le sens pessimiste, ce qui est une faute
+   * symétrique de celle qui a failli le faire mentir dans l'autre sens.
+   */
+  const q = (e: TierName, c: (typeof FIELDS)[number]) => {
+    const x = p.extraction[e][c];
+    return rate(Math.round(x.accuracy * x.items), x.items);
+  };
+  const gratuits = FIELDS.filter((c) =>
+    TIERS.filter((e) => e !== "human" && e !== "rules" && p.extraction[e])
+      .every((e) => p.extraction["rules"][c].accuracy >= p.extraction[e][c].accuracy
+        || !distinguishable(q(e, c), q("rules", c))));
+  assert.ok(gratuits.length >= 3,
+    `les règles n'égalent ou ne battent tout le monde que sur ${gratuits.length} champs`);
+});
+
+test("un palier plus gros n'est pas supposé meilleur", () => {
+  /*
+   * Sur l'adresse, gen-8b est sous gen-4b — et sur les encodeurs à 1 000 cas, `large` est
+   * sous `small`. Un test qui ne tiendrait que « l'ordre monte » aurait empêché de voir la
+   * seule chose intéressante de ce projet.
+   */
+  const p = readProfiles();
+  if (!p || !p.extraction["gen-8b"]) return;
+  const inversions = FIELDS.filter((c) =>
+    p.extraction["gen-8b"][c].accuracy < p.extraction["gen-4b"][c].accuracy
+    || p.extraction["large"][c].accuracy < p.extraction["small"][c].accuracy);
+  assert.ok(inversions.length > 0,
+    "plus aucune inversion : soit la mesure a changé, soit la page raconte autre chose");
+});
+
+test("l'optimiseur ne route jamais vers un palier absent du profil", () => {
+  /*
+   * L'échelle est passée de quatre paliers à sept et l'optimiseur a lu `undefined` sur un
+   * profil qui n'en contenait que quatre. Quiconque clone ce dépôt et lance `npm run measure`
+   * sans Ollama est exactement dans ce cas.
+   */
+  const p = readProfiles();
+  if (!p) return;
+  const dispo = new Set(paliersMesures(p));
+  const s = optimiseExtraction(p, ASSUMPTIONS);
+  for (const c of FIELDS) assert.ok(dispo.has(s!.routing[c]),
+    `${c} est routé vers ${s!.routing[c]}, absent du profil gelé`);
+});
+
+test("le budget de temps mord avant le budget d'argent", () => {
+  /*
+   * La latence était mesurée et ne jouait aucun rôle : l'optimiseur envoyait volontiers un
+   * champ temps réel sur le palier le plus lent. Serrer le plafond doit maintenant changer
+   * le routage, sinon la contrainte est décorative et le README ment.
+   */
+  const p = readProfiles();
+  if (!p) return;
+  const large = optimiseExtraction(p, { ...ASSUMPTIONS, latencyBudgetMs: 100_000 });
+  const serre = optimiseExtraction(p, { ...ASSUMPTIONS, latencyBudgetMs: 40 });
+  assert.ok(large && serre, "un des deux plafonds ne laisse aucune solution");
+  assert.ok(serre!.latencyPerItem <= 40, "le routage serré dépasse son propre plafond");
+  assert.ok(serre!.accuracy < large!.accuracy,
+    "serrer le temps ne coûte rien en justesse : la contrainte ne mord pas");
+});
+
+test("à écart non significatif, le moins cher est retenu", () => {
+  /*
+   * La règle qui a rattrapé une affirmation fausse. Deux paliers indiscernables sur un
+   * champ : payer le plus cher, c'est acheter du bruit — et c'est la première chose qu'un
+   * validateur de modèles demandera.
+   */
+  const p = readProfiles();
+  if (!p) return;
+  const s = optimiseExtraction(p, ASSUMPTIONS);
+  for (const c of FIELDS) {
+    const choisi = s!.routing[c];
+    const q = p.extraction[choisi][c];
+    const rc = rate(Math.round(q.accuracy * q.items), q.items);
+    for (const e of paliersMesures(p)) {
+      if (e === choisi || e === "human" || choisi === "human") continue;
+      const qe = p.extraction[e][c];
+      const re = rate(Math.round(qe.accuracy * qe.items), qe.items);
+      if (distinguishable(rc, re)) continue;
+      const prixChoisi = pricePerThousandExtractions(choisi, ASSUMPTIONS, q.latency);
+      const prixAutre = pricePerThousandExtractions(e, ASSUMPTIONS, qe.latency);
+      if (prixChoisi <= prixAutre) continue;
+
+      /*
+       * Un palier moins cher et indiscernable peut légitimement être écarté : s'il est plus
+       * lent, il fait sauter le plafond de temps. C'est arrivé dès la première exécution —
+       * gen-8b sur le nom coûte 116 $ de moins et prend 2 307 ms contre un plafond à 2 000.
+       * Le test doit donc exiger une raison, pas une obéissance aveugle au prix.
+       */
+      const variante = evaluer(p, ASSUMPTIONS, { ...s!.routing, [c]: e });
+      assert.ok(variante.latencyPerItem > ASSUMPTIONS.latencyBudgetMs,
+        `${c} : ${choisi} coûte plus que ${e} sans être mesurablement meilleur, `
+        + `et ${e} tient pourtant dans le budget de temps`);
+    }
+  }
+});
+
+test("aucun chiffre n'est tapé à la main dans la prose du README", () => {
+  /*
+   * Le contrôle qui ferme la vérification.
+   *
+   * Trois nombres publiés étaient faux le 19 août 2026 — « 83 % contre 68 % et 63 % » sur le
+   * numéro de document, « 24,2 % » sur le classifieur, et la légende du GIF. Aucun n'était
+   * faux le jour où il a été écrit : ils sont devenus faux à la remesure, sur la page en
+   * ligne, sans que rien ne le signale.
+   *
+   * Un chiffre dans une phrase est une promesse que la phrase sera relue à chaque mesure. On
+   * ne relit pas. Donc soit il vient d'un bloc généré, soit il est déclaré ici avec sa raison
+   * d'être immuable — et toute nouveauté fait tomber la suite.
+   */
+  const readme = readFileSync(new URL("../README.md", import.meta.url).pathname, "utf8");
+  const prose = readme
+    .replace(/<!-- figures:(\w+) -->[\s\S]*?<!-- \/figures:\1 -->/g, "")
+    .replace(/```[\s\S]*?```/g, "")
+    .replace(/^\s*\|.*\|\s*$/gm, "");
+
+  /** Ce qu'on s'autorise à écrire en clair, et pourquoi ça ne bougera pas. */
+  const permis = new Map<string, string>([
+    ["100 %", "une borne, pas une mesure : « jusqu'à 100 % » reste vrai quoi qu'il arrive"],
+    ["0 %", "idem, la borne basse"],
+    ["10 %", "décrit une ancienne version de l'outil, dans un récit au passé"],
+    ["51.7 %", "un chiffre historique : ce que valait un champ avant que l'évaluateur soit corrigé"],
+    ["25 %", "la référence triviale à cinq classes, fixée par le nombre de classes"],
+    ["20 %", "idem, le tirage uniforme à cinq classes"],
+  ]);
+
+  const trouves = [...prose.matchAll(/(\d+(?:[.,]\d+)?\s*%|\$\s?\d[\d,]*(?:,\d{3})*)/g)]
+    .map((m) => m[1]!.replace(/\s+/g, " ").trim());
+  const inconnus = [...new Set(trouves)].filter((x) => !permis.has(x));
+
+  assert.deepEqual(inconnus, [],
+    `chiffre(s) écrit(s) à la main dans la prose : ${inconnus.join(", ")}\n`
+    + `  → soit le générer dans un bloc <!-- figures:... -->, soit l'ajouter à la liste\n`
+    + `    des permis dans ce test avec la raison pour laquelle il ne bougera jamais.`);
+});
+
+test("le routage est exhaustif, pas heuristique", () => {
+  /*
+   * La page l'affirme en gras : « The routing is exhaustive, not heuristic. » C'est une
+   * promesse forte — elle garantit l'optimum, ce qu'aucune heuristique ne fait — et rien ne
+   * la tenait. Elle se vérifie en comptant : le nombre d'affectations examinées doit valoir
+   * exactement paliers^champs, sans quoi une branche est élaguée quelque part.
+   */
+  const p = readProfiles();
+  if (!p) return;
+  const paliers = paliersMesures(p);
+  const attendu = Math.pow(paliers.length, FIELDS.length);
+
+  /* Budget et plafond de temps hors de portée : aucune solution ne doit être écartée, donc
+     tout ce qui est énumérable doit être énuméré. */
+  const large = { ...ASSUMPTIONS, budget: Number.MAX_SAFE_INTEGER, latencyBudgetMs: Number.MAX_SAFE_INTEGER };
+  let vues = 0;
+  const compter = (i: number, courant: Record<string, string>) => {
+    if (i === FIELDS.length) { vues++; return; }
+    for (const e of paliers) compter(i + 1, { ...courant, [FIELDS[i]!]: e });
+  };
+  compter(0, {});
+  assert.equal(vues, attendu,
+    `l'énumération couvre ${vues} affectations sur ${attendu} possibles`);
+  assert.ok(optimiseExtraction(p, large), "aucune solution sans contrainte : l'énumération est cassée");
+});
+
+test("le budget d'argent mord dès que le volume monte", () => {
+  /*
+   * La page dit : « Not "the budget does not matter." It does not bind *here*, at this
+   * volume, with these prices. Multiply the volume by fifty and it binds immediately. »
+   * C'est une affirmation vérifiable, et elle ne l'était pas.
+   */
+  const p = readProfiles();
+  if (!p) return;
+  const ici = optimiseExtraction(p, ASSUMPTIONS);
+  const gros = optimiseExtraction(p, { ...ASSUMPTIONS, volume: ASSUMPTIONS.volume * 50 });
+  assert.ok(ici, "aucun routage au volume de référence");
+  assert.ok(ici!.budgetShare < 1, "le budget mord déjà au volume de référence");
+  assert.ok(!gros || gros.accuracy < ici!.accuracy || gros.budgetShare >= ici!.budgetShare,
+    "multiplier le volume par cinquante ne change rien : la phrase de la page est fausse");
+});
+
+test("les gestes du pilote de capture mènent à l'optimum courant", () => {
+  /*
+   * Le pilote de capture est du code que rien ne compilait et que rien ne testait, et il
+   * décrit un état du produit : la suite de gestes qui, partie de l'écran au démarrage,
+   * arrive au routage optimal. C'est ce que le GIF de la première page montre.
+   *
+   * Il pointait vers `address~small`. C'était juste jusqu'au matin où l'échelle générative a
+   * déplacé l'optimum vers `gen-4b` — et rien ne l'a signalé. La capture aurait tourné, aurait
+   * produit une image parfaitement plausible, et aurait publié en première page une
+   * démonstration qui s'arrête sur une réponse sous-optimale.
+   *
+   * Même famille que les chiffres écrits à la main : vrai le jour où c'est écrit, faux dès la
+   * mesure suivante, et invisible entre les deux.
+   */
+  const p = readProfiles();
+  if (!p) return;
+  type Script = { images: { sortie: string; scenes?: string[][] }[] };
+  const script: Script = JSON.parse(readFileSync(new URL("../captures.json", import.meta.url).pathname, "utf8"));
+  const gif = script.images.find((i) => i.sortie.endsWith(".gif"));
+  if (!gif?.scenes) return;   // pas de GIF piloté : rien à tenir
+
+  /* L'écran démarre avec tous les champs sur `large` — voir pages.ts. */
+  const etat: Record<string, string> = Object.fromEntries(FIELDS.map((c) => [c, "large"]));
+  const paliers = paliersMesures(p);
+
+  for (const scene of gif.scenes) {
+    for (const geste of scene) {
+      const m = geste.match(/data-choix="([^"~]+)~([^"]+)"/);
+      assert.ok(m, `geste illisible dans captures.json : ${geste}`);
+      const [, champ, palier] = m!;
+      assert.ok((FIELDS as string[]).includes(champ!),
+        `le pilote vise le champ « ${champ} », qui n'existe pas`);
+      assert.ok(paliers.includes(palier as never),
+        `le pilote vise le palier « ${palier} », absent du profil gelé`);
+      etat[champ!] = palier!;
+    }
+  }
+
+  const vise = optimiseExtraction(p, ASSUMPTIONS);
+  assert.ok(vise, "aucun routage optimal : le GIF n'a rien à montrer");
+  for (const c of FIELDS) {
+    assert.equal(etat[c], vise!.routing[c],
+      `le pilote termine avec ${c} sur ${etat[c]} alors que l'optimum est ${vise!.routing[c]} — `
+      + `le GIF publierait une démonstration qui s'arrête au mauvais endroit`);
+  }
+});
+
+test("chaque rétractation nomme un test qui existe vraiment", () => {
+  /*
+   * Le journal des rétractations est un instrument anti-péremption, et il est lui-même
+   * périssable : il est écrit à la main, et rien ne le relie au code. Le jour où un test est
+   * renommé, une entrée pointe vers un contrôle imaginaire — et la page affirme qu'une erreur
+   * est tenue alors que plus rien ne la tient.
+   *
+   * Ce test ferme la boucle dans le seul sens qui soit mécanisable : chaque `tenu` doit
+   * désigner un test réel du dépôt.
+   */
+  const f = new URL("../data/retractations.json", import.meta.url).pathname;
+  if (!existsSync(f)) return;
+  const journal = JSON.parse(readFileSync(f, "utf8")) as {
+    entrees: { affirmait: string; tenu: string | null; nonTenue?: string }[] };
+
+  const sources = ["cascade.test.ts", "your-cases.test.ts", "demo.test.ts", "ecran.test.ts", "registre.test.ts"]
+    .map((n) => new URL(`./${n}`, import.meta.url).pathname)
+    .filter((p) => existsSync(p))
+    .map((p) => readFileSync(p, "utf8")).join("\n");
+  const noms = new Set([...sources.matchAll(/test\("([^"]+)"/g)].map((m) => m[1]!));
+
+  for (const e of journal.entrees) {
+    /*
+     * Un `tenu` vide n'est plus une sortie silencieuse.
+     *
+     * Une entrée sur sept n'était tenue par rien, et le `continue` d'origine la laissait
+     * passer sans un mot : le journal affichait sept rétractations dont six seulement
+     * étaient vérifiées par quelque chose, sans que la différence se voie. Ne rien avoir qui
+     * tienne une erreur est une réponse admissible — certaines portent sur d'autres dépôts —
+     * mais c'est une réponse qui doit être **écrite**, pas déduite d'un champ absent.
+     */
+    if (!e.tenu) {
+      assert.ok(e.nonTenue && e.nonTenue.trim().length > 0,
+        `la rétractation « ${e.affirmait} » n'est tenue par aucun test et ne dit pas pourquoi.\n`
+        + `  → soit elle nomme le test qui la tient dans « tenu »,\n`
+        + `    soit elle explique dans « nonTenue » ce qui l'empêche d'en avoir un.`);
+      continue;
+    }
+    assert.ok(noms.has(e.tenu),
+      `une rétractation dit être tenue par le test « ${e.tenu} », qui n'existe pas.\n`
+      + `  → soit le test a été renommé et l'entrée doit suivre,\n`
+      + `    soit le contrôle a disparu et l'erreur peut revenir sans que rien ne tombe.`);
+  }
+});
+
+/* ── la provenance du relevé lui-même ── */
+
+/**
+ * Le seul relevé à qui l'on pardonne de ne pas s'identifier.
+ *
+ * `measure.ts` écrit le commit et les réussites par cas depuis qu'ils existent. Ce profil-là
+ * a été gelé avant, et rien ne peut le réparer après coup : y écrire un hash aujourd'hui
+ * inventerait une provenance, ce que ce dépôt existe pour empêcher. Il est donc toléré
+ * **nommément**, par sa date, et lui seul.
+ *
+ * La conséquence est celle qu'on veut : la tolérance porte sur l'histoire, jamais sur le
+ * prochain passage. Dès qu'une mesure tourne, `measuredAt` change, la constante ne
+ * correspond plus, et les deux tests ci-dessous deviennent durs sans que personne ait à
+ * s'en souvenir.
+ */
+const RELEVE_HISTORIQUE = "2026-08-19T09:51:25.978Z";
+
+test("un relevé régénéré porte le commit qui l'a produit", () => {
+  const p = readProfiles();
+  if (!p) return;   // pas de profil : un clone frais n'a pas encore mesuré
+
+  if (p.measuredAt === RELEVE_HISTORIQUE) {
+    console.warn(`  ⚠ le profil gelé du ${RELEVE_HISTORIQUE} est antérieur à l'enregistrement du commit.\n`
+      + `    Il est toléré par sa date, et par elle seule. \`npm run measure\` le rendra dur.`);
+    return;
+  }
+
+  assert.ok(p.code && typeof p.code.commit === "string" && p.code.commit.length > 0,
+    `le relevé du ${p.measuredAt} ne porte pas de commit.\n`
+    + `  → un relevé qu'on ne peut pas rattacher à une révision n'est pas un relevé :\n`
+    + `    rien ne dit quel code a produit ces chiffres, ni s'il est encore là.`);
+  assert.equal(typeof p.code!.sale, "boolean",
+    "le relevé doit dire si l'arbre était sale au moment de la mesure — un chiffre produit "
+    + "sur des modifications non committées n'est pas reproductible");
+});
+
+test("un relevé régénéré garde les réussites par cas, pour que McNemar puisse tourner", () => {
+  /*
+   * Sans ces bits, `memeChamp` retombe sur le recouvrement d'intervalles de Wilson — un test
+   * qui traite deux paliers notés sur les *mêmes* cas comme deux échantillons indépendants.
+   * Il est valable mais trop prudent : il déclare « indiscernables » des paires qu'un test
+   * apparié sépare, et le routage retient alors le moins cher sur une égalité qui n'en est
+   * pas une. `pairedVerdict` attend ces bits et existait, inutilisé, depuis le premier jour.
+   */
+  const p = readProfiles();
+  if (!p) return;
+
+  if (p.measuredAt === RELEVE_HISTORIQUE) {
+    console.warn(`  ⚠ le profil gelé du ${RELEVE_HISTORIQUE} ne conserve pas les réussites par cas :\n`
+      + `    toutes ses égalités viennent du recouvrement d'intervalles, pas de McNemar.`);
+    return;
+  }
+
+  for (const t of paliersMesures(p)) {
+    for (const c of FIELDS) {
+      const profil: Profile = p.extraction[t][c];
+      assert.equal(typeof profil.reussites, "string",
+        `${t}/${c} ne conserve pas ses réussites par cas — le test apparié ne peut pas tourner`);
+      assert.equal(profil.reussites!.length, profil.items,
+        `${t}/${c} a ${profil.reussites!.length} bits pour ${profil.items} cas : `
+        + `les deux doivent coïncider, sinon McNemar apparie des cas qui ne se correspondent pas`);
+      assert.match(profil.reussites!, /^[01]+$/,
+        `${t}/${c} : les réussites doivent être une suite de 0 et de 1`);
+    }
+  }
+});
+
+test("toute hypothèse qui tarife un palier sélectionnable est balayée", () => {
+  /*
+   * Un balayage incomplet est pire qu'un balayage absent.
+   *
+   * `machineHourlyCost` manquait à `PLAUSIBLE`. Il tarife les trois paliers génératifs, dont
+   * `gen-4b`, que le routage retenu utilise sur l'adresse — donc `npm run sensitivity`
+   * rendait un verdict rassurant en sautant en silence une hypothèse dont la recommandation
+   * dépend. `workingDaysPerYear` manquait aussi, et il entre dans le coût horaire de
+   * l'analyste. Aucun des deux ne se voyait : l'outil ne liste que ce qu'il balaie.
+   *
+   * La règle est mécanisable, donc elle n'a pas à rester dans une note : si perturber une
+   * hypothèse change le prix d'un palier que l'optimiseur peut retenir, cette hypothèse doit
+   * figurer dans le balayage. Le test la vérifie par le calcul et non par une liste écrite en
+   * double, qui se serait désynchronisée exactement comme celle qu'elle remplace.
+   */
+  const p = readProfiles();
+  if (!p) return;
+
+  const paliers = paliersMesures(p);
+  for (const cle of Object.keys(ASSUMPTIONS) as (keyof typeof ASSUMPTIONS)[]) {
+    const perturbee = { ...ASSUMPTIONS, [cle]: (ASSUMPTIONS[cle] as number) * 2 };
+    const touches: string[] = paliers.filter((t: TierName) =>
+      pricePerThousandDocuments(p, perturbee, t) !== pricePerThousandDocuments(p, ASSUMPTIONS, t));
+    if (touches.length === 0) continue;
+
+    assert.ok(cle in PLAUSIBLE,
+      `« ${cle} » tarife ${touches.join(", ")} et n'est pas dans PLAUSIBLE.\n`
+      + `  → \`npm run sensitivity\` conclurait sans elle, en donnant une assurance qu'il n'a pas vérifiée.`);
+  }
 });

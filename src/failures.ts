@@ -16,7 +16,7 @@
 
 import { generateRecords, FIELDS } from "./corpus.ts";
 import { isMain } from "./cli.ts";
-import { TIERS, loadExtractors, extract, correct } from "./tiers.ts";
+import { ENCODEURS, GENERATIFS, TIERS, loadExtractors, extract, correct } from "./tiers.ts";
 import type { TierName } from "./tiers.ts";
 import type { Field } from "./corpus.ts";
 
@@ -47,12 +47,24 @@ export function classify(got: string, expected: string): Failure["mode"] {
   return g.split(/\s+/).some((w) => w.length > 3 && !e.includes(w)) ? "wrong span" : "other";
 }
 
-export async function collect(howMany = 120): Promise<Failure[]> {
+/**
+ * Les échecs, palier par palier.
+ *
+ * Par défaut l'échelle des encodeurs seulement, et c'est un choix de proportion : inclure
+ * les paliers génératifs coûte dix-huit cents appels à un serveur local pour composer une
+ * galerie de README. Un `npm run failures -- --llm` les ajoute quand on les veut vraiment.
+ *
+ * Ce n'est pas une optimisation cosmétique. La première version itérait tous les paliers
+ * déclarés, et comme la liste est passée de quatre à sept elle s'est mise à taper sur Ollama
+ * pendant qu'une mesure y tournait — deux travaux se disputant le même GPU, tous deux
+ * ralentis, aucun des deux en erreur.
+ */
+export async function collect(howMany = 120, paliers: TierName[] = ENCODEURS): Promise<Failure[]> {
   const records = generateRecords(howMany, "heldout");
   await loadExtractors();
   const failures: Failure[] = [];
 
-  for (const tier of TIERS) {
+  for (const tier of paliers) {
     if (tier === "human") continue;   // the human tier is an assumption, not a measurement
     for (const field of FIELDS) {
       for (const r of records) {
@@ -82,8 +94,11 @@ export function shape(failures: Failure[]) {
 }
 
 if (isMain(import.meta)) {
-  const failures = await collect();
-  console.log(`\n${failures.length} failures across the machine tiers\n`);
+  const avecLlm = process.argv.includes("--llm");
+  const paliers = avecLlm ? [...ENCODEURS, ...GENERATIFS] : ENCODEURS;
+  const failures = await collect(120, paliers);
+  console.log(`\n${failures.length} failures across ${paliers.filter((x) => x !== "human").length} tiers`
+    + `${avecLlm ? "" : " — add --llm for the generative ladder (needs Ollama)"}\n`);
 
   console.log("WHAT KIND OF WRONG\n");
   for (const [key, n] of shape(failures).slice(0, 12)) {

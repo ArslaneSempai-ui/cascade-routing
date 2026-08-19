@@ -1,3 +1,8 @@
 node_modules/
 data/
 .DS_Store
+
+# Les jeux publics ne sont pas revendiqués ici : benchmarks/<nom>.json
+# garde l'adresse, l'empreinte et le relevé, ce qui suffit à refaire le calcul.
+benchmarks/data/
+.build-source

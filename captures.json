@@ -1,12 +1,45 @@
-{ "images": [
-  { "sortie": "images/screen.png", "type": "png", "taille": [1100, 2200], "echelle": 2,
-    "depart": 120, "hauteurUtile": 820 },
-  { "sortie": "images/routage.gif", "type": "gif", "taille": [900, 620], "echelle": 2,
-    "duree": 1200, "fenetre": [1100, 2400], "depart": 300, "hauteurUtile": 760,
-    "scenes": [
-      ["#routage .affect-zone[data-choix=\"birth~rules\"]!"],
-      ["#routage .affect-zone[data-choix=\"country~rules\"]!"],
-      ["#routage .affect-zone[data-choix=\"document~rules\"]!"],
-      ["#routage .affect-zone[data-choix=\"address~small\"]!"]
-    ] }
-] }
+{
+  "images": [
+    {
+      "sortie": "images/screen.png",
+      "type": "png",
+      "taille": [
+        1100,
+        2200
+      ],
+      "echelle": 2,
+      "depart": 120,
+      "hauteurUtile": 820
+    },
+    {
+      "sortie": "images/routage.gif",
+      "type": "gif",
+      "taille": [
+        900,
+        620
+      ],
+      "echelle": 2,
+      "duree": 1200,
+      "fenetre": [
+        1100,
+        2400
+      ],
+      "depart": 300,
+      "hauteurUtile": 760,
+      "scenes": [
+        [
+          "#routage .affect-zone[data-choix=\"birth~rules\"]!"
+        ],
+        [
+          "#routage .affect-zone[data-choix=\"country~rules\"]!"
+        ],
+        [
+          "#routage .affect-zone[data-choix=\"document~rules\"]!"
+        ],
+        [
+          "#routage .affect-zone[data-choix=\"address~gen-4b\"]!"
+        ]
+      ]
+    }
+  ]
+}

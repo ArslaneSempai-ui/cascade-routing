@@ -22,6 +22,7 @@
  * minute of analyst time costs depends on the country. Those are assumptions, they are
  * editable, and mixing them into the measurements would pass a tariff off as a fact.
  */
+import { estGeneratif } from "./paliers.js";
 export const ASSUMPTIONS = {
     humanAccuracy: 0.85,
     humanSeconds: 45,
@@ -30,8 +31,10 @@ export const ASSUMPTIONS = {
     workingDaysPerYear: 220,
     pricePerThousandSmall: 0.20,
     pricePerThousandLarge: 1.60,
+    machineHourlyCost: 1.20,
     volume: 100_000,
     budget: 4_000,
+    latencyBudgetMs: 2_000,
 };
 /**
  * Where each assumption came from, in the shared vocabulary.
@@ -49,8 +52,10 @@ export const STATUSES = {
     workingDaysPerYear: "assumed",
     pricePerThousandSmall: "assumed",
     pricePerThousandLarge: "assumed",
+    machineHourlyCost: "assumed",
     volume: "assumed",
     budget: "assumed",
+    latencyBudgetMs: "assumed",
 };
 /** Sanity bounds: a screen that accepts 100 % human accuracy is lying to its reader. */
 export const BOUNDS = {
@@ -61,17 +66,37 @@ export const BOUNDS = {
     workingDaysPerYear: [180, 260],
     pricePerThousandSmall: [0, 50],
     pricePerThousandLarge: [0, 200],
+    machineHourlyCost: [0, 100],
     volume: [1_000, 10_000_000],
     budget: [0, 10_000_000],
+    latencyBudgetMs: [10, 600_000],
 };
-/** What a thousand items cost at this tier. */
-export function pricePerThousand(tier, h) {
+/**
+ * Ce que mille éléments coûtent à ce palier.
+ *
+ * Trois régimes de facturation différents, et c'est le fond du sujet. Les règles ne coûtent
+ * rien. Les modèles hébergés coûtent un tarif à l'appel, indépendant du temps qu'ils
+ * prennent. Les modèles locaux et l'humain coûtent du **temps** : leur prix est leur durée
+ * multipliée par ce que vaut l'heure de qui la passe — une machine ou une personne.
+ *
+ * Un palier local a donc besoin de sa latence mesurée pour être facturé, ce qu'aucun des
+ * autres n'exigeait. C'est la raison de l'argument `latenceMesuree`, et son absence sur un
+ * palier local est une erreur et non un défaut à zéro : facturer gratuitement un modèle qui
+ * occupe la machine est exactement le biais que cet outil existe pour retirer.
+ */
+export function pricePerThousand(tier, h, latenceMesuree) {
     if (tier === "rules")
         return 0;
     if (tier === "small")
         return h.pricePerThousandSmall;
     if (tier === "large")
         return h.pricePerThousandLarge;
+    if (estGeneratif(tier)) {
+        if (latenceMesuree === undefined) {
+            throw new Error(`le palier ${tier} se facture au temps machine : sa latence mesurée est requise`);
+        }
+        return (latenceMesuree / 3_600_000) * h.machineHourlyCost * 1000;
+    }
     const coutHeure = h.analystAnnualCost / (h.productiveHoursPerDay * h.workingDaysPerYear);
     return (h.humanSeconds / 3600) * coutHeure * 1000;
 }

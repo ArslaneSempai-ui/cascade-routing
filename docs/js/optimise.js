@@ -14,6 +14,7 @@ import { TIERS } from "./paliers.js";
 import { isMain } from "./cli.js";
 import { FIELDS } from "./corpus.js";
 import { pricePerThousand, accuracy, latency, ASSUMPTIONS } from "./assumptions.js";
+import { rate, distinguishable, pairedVerdict } from "./interval.js";
 /**
  * La best affectation field par field sous contrainte de budget.
  *
@@ -28,47 +29,180 @@ import { pricePerThousand, accuracy, latency, ASSUMPTIONS } from "./assumptions.
  * demande le contraire : le lecteur pose son propre routage et veut savoir ce qu'il coûte
  * — c'est la même arithmétique, et il n'y en aura donc qu'une.
  */
+/**
+ * La latence représentative d'un palier, pour l'afficher.
+ *
+ * Un palier local se facture au temps, et son temps dépend du champ : le prix « du palier »
+ * n'existe donc pas vraiment pour lui. Cette moyenne sur les cinq champs sert à remplir une
+ * colonne d'écran, jamais à décider un routage — le routage, lui, utilise la latence du
+ * champ concerné, ce qui est toute la différence entre montrer un ordre de grandeur et
+ * calculer une réponse.
+ */
+export function latenceRepresentative(p, tier) {
+    const parChamp = p.extraction[tier];
+    if (!parChamp)
+        return 0;
+    const l = FIELDS.map((c) => parChamp[c]?.latency ?? 0);
+    return l.reduce((s, x) => s + x, 0) / l.length;
+}
 export function evaluer(p, h, routing) {
     let sommeJustesse = 0, cost = 0, seconds = 0;
     for (const c of FIELDS) {
         const e = routing[c];
         const profil = p.extraction[e][c];
         sommeJustesse += accuracy(e, profil.accuracy, h);
-        cost += (h.volume / 1000) * pricePerThousand(e, h);
+        cost += (h.volume / 1000) * pricePerThousand(e, h, profil.latency);
         seconds += (h.volume * latency(e, profil.latency, h)) / 1000;
     }
+    const latencyPerItem = (seconds * 1000) / h.volume;
     return {
         routing,
         accuracy: sommeJustesse / FIELDS.length,
         cost, seconds,
         budgetShare: h.budget === 0 ? Infinity : cost / h.budget,
+        latencyPerItem,
+        latencyShare: h.latencyBudgetMs === 0 ? Infinity : latencyPerItem / h.latencyBudgetMs,
     };
+}
+/**
+ * Les paliers réellement mesurés, et eux seuls.
+ *
+ * Le profil gelé ne contient pas forcément toute l'échelle. Les paliers génératifs
+ * demandent un serveur Ollama et huit gigaoctets de modèles : quelqu'un qui clone ce dépôt
+ * et lance `npm run measure` obtient un profil à quatre paliers, et l'outil doit continuer
+ * de fonctionner exactement comme avant.
+ *
+ * Router vers un palier absent du profil n'est pas une possibilité dégradée, c'est une
+ * lecture de `undefined` — ce que ce fichier faisait la première fois que l'échelle est
+ * passée de quatre à sept. Un test tient maintenant cette propriété.
+ */
+export function paliersMesures(p) {
+    const complets = TIERS.filter((e) => p.extraction[e] !== undefined && p.classification[e] !== undefined);
+    /*
+     * Un palier mesuré sur une seule chaîne disparaissait des deux, sans un mot.
+     *
+     * C'est arrivable dès qu'une mesure est interrompue entre l'extraction et la
+     * classification : le profil garde la moitié du travail, l'outil route comme si le palier
+     * n'existait pas, et la page publie un optimum calculé sur un jeu de paliers amputé sans
+     * que rien ne le dise. Un profil incomplet doit se voir.
+     */
+    const partiels = TIERS.filter((e) => !complets.includes(e)
+        && (p.extraction[e] !== undefined || p.classification[e] !== undefined));
+    if (partiels.length) {
+        console.warn(`profil incomplet : ${partiels.join(", ")} n'est mesuré que sur une chaîne `
+            + `et sera ignoré — relancer \`npm run measure --tiers=${partiels.join(",")}\``);
+    }
+    return complets;
+}
+/**
+ * Deux affectations que l'échantillon ne sait pas départager.
+ *
+ * L'optimiseur maximisait une estimation ponctuelle. Sur 120 cas, 96,7 % et 91,7 % ont des
+ * intervalles qui se touchent : préférer le premier n'est peut-être que du bruit, et un
+ * client se verrait facturer un changement qui n'améliore rien de mesurable. C'est aussi la
+ * première chose qu'un validateur de modèles demandera.
+ *
+ * Le test se fait champ par champ, sur les seuls champs où les deux affectations diffèrent.
+ * `distinguishable` vit déjà dans `interval.ts` — il compare deux intervalles de Wilson, ce
+ * qui est conservateur : il conclut « on ne peut pas les départager » plus souvent qu'un
+ * test apparié, et l'erreur va donc du côté prudent, qui est le moins cher.
+ *
+ * L'humain est exclu du test, et pour une raison de fond : sa justesse est une hypothèse et
+ * non une mesure. Une hypothèse n'a pas d'échantillon, donc pas d'intervalle, et la traiter
+ * comme mesurée ferait entrer une opinion dans un calcul de significativité.
+ */
+/**
+ * Deux paliers que l'échantillon ne sait pas départager, sur un champ.
+ *
+ * Deux tests, et le bon dépend de ce qu'on a sous la main.
+ *
+ * **Apparié quand on peut.** Les deux paliers sont notés sur les mêmes cas : ce ne sont pas
+ * deux échantillons indépendants, c'est un échantillon jugé deux fois. La question n'est donc
+ * pas « les deux taux se recouvrent-ils » mais « parmi les cas où ils divergent, la
+ * répartition se distingue-t-elle d'une pièce lancée ». C'est McNemar, et `pairedVerdict` le
+ * fait exactement.
+ *
+ * **Intervalles sinon.** Un profil mesuré avant que les réussites par cas soient enregistrées
+ * n'a que des taux. Le test par recouvrement reste valable, il est simplement plus prudent —
+ * il conclut « indiscernables » plus souvent qu'il ne devrait, ce qui pousse vers le palier le
+ * moins cher. L'erreur va du bon côté, et un profil ancien continue de fonctionner.
+ */
+function memeChamp(p, a, b, c) {
+    const qa = p.extraction[a][c], qb = p.extraction[b][c];
+    if (qa.reussites && qb.reussites && qa.reussites.length === qb.reussites.length) {
+        let gains = 0, pertes = 0;
+        for (let i = 0; i < qa.reussites.length; i++) {
+            const ra = qa.reussites[i] === "1", rb = qb.reussites[i] === "1";
+            if (ra && !rb)
+                gains++;
+            else if (rb && !ra)
+                pertes++;
+        }
+        return !pairedVerdict(gains, pertes).decidable;
+    }
+    const ra = rate(Math.round(qa.accuracy * qa.items), qa.items);
+    const rb = rate(Math.round(qb.accuracy * qb.items), qb.items);
+    return !distinguishable(ra, rb);
+}
+function indiscernables(p, a, b) {
+    for (const c of FIELDS) {
+        if (a[c] === b[c])
+            continue;
+        if (a[c] === "human" || b[c] === "human")
+            return false;
+        if (!memeChamp(p, a[c], b[c], c))
+            return false;
+    }
+    return true;
 }
 export function optimiseExtraction(p, h) {
     let best = null;
     const evaluate = (routing) => evaluer(p, h, routing);
+    const paliers = paliersMesures(p);
+    /*
+     * Deux passes, et non une, parce que « indiscernable » n'est pas transitif.
+     *
+     * A peut être indiscernable de B, B de C, et A distinguable de C. Une comparaison au fil
+     * de l'énumération rendrait donc le résultat dépendant de l'ordre de parcours — un
+     * optimiseur qui répond autrement selon la façon dont on l'a écrit, ce qui est
+     * exactement ce qu'un « exhaustif, pas heuristique » promet de ne jamais faire.
+     *
+     * Passe 1 : la meilleure justesse atteignable dans le budget.
+     * Passe 2 : parmi tout ce que l'échantillon ne distingue pas d'elle, la moins chère.
+     */
+    const tenables = [];
     const walk = (i, current) => {
         if (i === FIELDS.length) {
             const s = evaluate(current);
             if (s.cost > h.budget)
                 return; // hors budget : la solution n'existe pas
-            // At equal accuracy the cheaper one wins — otherwise you pay for nothing.
+            if (s.latencyPerItem > h.latencyBudgetMs)
+                return; // trop lente : elle n'existe pas non plus
+            tenables.push(s);
             if (!best || s.accuracy > best.accuracy
                 || (s.accuracy === best.accuracy && s.cost < best.cost))
                 best = s;
             return;
         }
-        for (const e of TIERS)
+        for (const e of paliers)
             walk(i + 1, { ...current, [FIELDS[i]]: e });
     };
     walk(0, {});
-    return best;
+    if (!best)
+        return null;
+    const sommet = best;
+    let retenue = sommet;
+    for (const s of tenables) {
+        if (s.cost < retenue.cost && indiscernables(p, s.routing, sommet.routing))
+            retenue = s;
+    }
+    return retenue;
 }
-/** Chain B: one tier for everything, so four possibilities. */
+/** Chain B: one tier for everything, so as many possibilities as measured tiers. */
 export function optimiseClassification(p, h) {
-    const options = TIERS.map((e) => {
+    const options = paliersMesures(p).map((e) => {
         const profil = p.classification[e];
-        const cost = (h.volume / 1000) * pricePerThousand(e, h);
+        const cost = (h.volume / 1000) * pricePerThousand(e, h, p.classification[e].latency);
         return {
             tier: e,
             accuracy: accuracy(e, profil.accuracy, h),
@@ -172,7 +306,7 @@ if (isMain(import.meta)) {
     for (const c of FIELDS) {
         const e = a.routing[c];
         const j = accuracy(e, p.extraction[e][c].accuracy, h);
-        console.log(`${c.padEnd(13)}${e.padEnd(15)}${pc(j).padStart(7)}   ${euro((h.volume / 1000) * pricePerThousand(e, h)).padStart(8)}`);
+        console.log(`${c.padEnd(13)}${e.padEnd(15)}${pc(j).padStart(7)}   ${euro((h.volume / 1000) * pricePerThousand(e, h, p.extraction[e][c].latency)).padStart(8)}`);
     }
     console.log("─".repeat(52));
     console.log(`${"".padEnd(13)}${"total".padEnd(15)}${pc(a.accuracy).padStart(7)}   ${euro(a.cost).padStart(8)}`);

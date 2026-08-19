@@ -24,8 +24,8 @@ const SHIM = `<script>window.LOCAL_PRET = new Promise((r) => { window.LOCAL_POSE
 <script type="module">
 import { FIELDS } from "./js/corpus.js";
 import { TIERS } from "./js/paliers.js";
-import { evaluer, optimiseExtraction, budgetShadowPrice } from "./js/optimise.js";
-import { ASSUMPTIONS, BOUNDS, pricePerThousand, accuracy } from "./js/assumptions.js";
+import { evaluer, optimiseExtraction, budgetShadowPrice, latenceRepresentative } from "./js/optimise.js";
+import { ASSUMPTIONS, BOUNDS, pricePerThousandExtractions, accuracy } from "./js/assumptions.js";
 
 /* Le profil mesuré, embarqué tel quel : la page ne mesure rien, elle rejoue. */
 const profils = ${PROFILS};
@@ -43,7 +43,7 @@ const etat = () => {
     justesse: Object.fromEntries(FIELDS.map((c) => [
       c, Object.fromEntries(TIERS.map((e) => [e, accuracy(e, profils.extraction[e][c].accuracy, hypotheses)])),
     ])),
-    prix: Object.fromEntries(TIERS.map((e) => [e, pricePerThousand(e, hypotheses)])),
+    prix: Object.fromEntries(TIERS.map((e) => [e, pricePerThousandExtractions(e, hypotheses, latenceRepresentative(profils, e))])),
     mien,
     optimum,
     uniformes: TIERS.map((e) => ({
