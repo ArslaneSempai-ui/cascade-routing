@@ -33,6 +33,7 @@ import type { Field } from "./corpus.ts";
 import type { TierName } from "./paliers.ts";
 import type { Profiles } from "./measure.ts";
 import type { Provenance } from "./provenance.ts";
+import type { Assumptions } from "./assumptions.ts";
 
 const SORTIE = new URL("../landing.json", import.meta.url).pathname;
 
@@ -113,6 +114,87 @@ function dispersion(p: Profiles, tier: TierName): Dispersion | null {
   return { p10: r1(p10), median: r1(median), p90: r1(p90) };
 }
 
+type Deplacement = { field: Field; from: TierName; to: TierName };
+type Seuil = {
+  inUse: number;
+  breaksAt: number | null;
+  factor: number | null;
+  moves: Deplacement[];
+  reason: "moves the routing" | "tier not selected" | "tier priced out";
+};
+
+/**
+ * Jusqu'où chaque prix peut bouger avant que la recommandation change.
+ *
+ * « Nos prix sont des hypothèses » est une phrase honnête et inutilisable : elle ne dit pas si
+ * la conclusion y survit. Ce bloc répond par un nombre — le grand modèle peut coûter vingt-cinq
+ * fois son tarif supposé avant que le routage bouge — et un lecteur peut confronter ce nombre à
+ * sa propre facture, ce qu'aucune bande de plausibilité ne permet.
+ *
+ * Le seuil est cherché par dichotomie plutôt que lu dans une table : une table se fige, et on a
+ * mesuré qu'un de ces seuils perd un tiers de sa valeur en une journée sans qu'aucun prix ni
+ * aucun modèle ne change — seulement les latences, dont dépend le prix des paliers locaux.
+ *
+ * ─── Les trois raisons de n'avoir aucun seuil, et pourquoi elles ne se confondent pas ───
+ *
+ * Un `null` sans sa raison se lit « robuste », et c'est faux deux fois sur trois.
+ *
+ *   moves the routing — un seuil existe, il est chiffré.
+ *   tier not selected — le palier tarifé n'est dans aucun champ du routage, donc son prix
+ *                       n'entre jamais dans le calcul. Ce n'est pas de la robustesse, c'est
+ *                       une absence.
+ *   tier priced out   — le palier est retenu nulle part parce qu'il dépasse le budget à ce
+ *                       volume. Il dominerait à un volume dix fois moindre, et un lecteur dont
+ *                       le volume diffère doit aller regarder là.
+ */
+function seuils(p: Profiles, h: Assumptions): Record<string, Seuil> {
+  const paliers = paliersMesures(p);
+  const base = optimiseExtraction(p, h);
+  const out: Record<string, Seuil> = {};
+  if (base === null) return out;
+  const reference = FIELDS.map((c) => base.routing[c]);
+
+  const identique = (essai: Assumptions) => {
+    const s = optimiseExtraction(p, essai);
+    return s !== null && FIELDS.every((c, i) => s.routing[c] === reference[i]);
+  };
+
+  for (const cle of Object.keys(h) as (keyof Assumptions)[]) {
+    const v0 = h[cle] as number;
+    /* Seules les hypothèses qui tarifent un palier sélectionnable sont balayées — la règle est
+       calculée et non recopiée, pour qu'une hypothèse ajoutée demain soit prise sans rien faire. */
+    const double = { ...h, [cle]: v0 * 2 };
+    const tarifes = paliers.filter((t) =>
+      pricePerThousandDocuments(p, double, t) !== pricePerThousandDocuments(p, h, t));
+    if (tarifes.length === 0) continue;
+
+    let bas = v0 === 0 ? 1e-9 : v0;
+    let haut = v0 * 1e7;
+    if (identique({ ...h, [cle]: haut })) {
+      /* Aucun seuil : reste à dire laquelle des deux absences c'est. */
+      const horsBudget = tarifes.every((t) =>
+        (pricePerThousandDocuments(p, h, t) * h.volume) / 1000 > h.budget);
+      out[cle] = { inUse: v0, breaksAt: null, factor: null, moves: [],
+        reason: horsBudget ? "tier priced out" : "tier not selected" };
+      continue;
+    }
+    for (let i = 0; i < 200; i++) {
+      const m = (bas + haut) / 2;
+      if (identique({ ...h, [cle]: m })) bas = m; else haut = m;
+    }
+    const apres = optimiseExtraction(p, { ...h, [cle]: haut })!;
+    out[cle] = {
+      inUse: v0,
+      breaksAt: Number(haut.toPrecision(4)),
+      factor: Number((haut / v0).toPrecision(3)),
+      moves: FIELDS.filter((c) => apres.routing[c] !== base.routing[c])
+        .map((c) => ({ field: c, from: base.routing[c], to: apres.routing[c] })),
+      reason: "moves the routing",
+    };
+  }
+  return out;
+}
+
 export function construire(p: Profiles): unknown {
   const paliers = paliersMesures(p);
   const optimum = optimiseExtraction(p, ASSUMPTIONS);
@@ -190,6 +272,17 @@ export function construire(p: Profiles): unknown {
       ceilingMsPerDoc: ASSUMPTIONS.latencyBudgetMs,
     },
 
+    sensitivity: {
+      measuredAt: p.measuredAt,
+      method: "bisection",
+      thresholds: seuils(p, ASSUMPTIONS),
+      note: "Chaque hypothèse est balayée seule, les autres restant à leur valeur en usage : "
+        + "deux prix qui bougent ensemble peuvent basculer le routage plus tôt qu'aucun des "
+        + "deux séparément. Le balayage ne couvre que les entrées qui tarifent un palier — le "
+        + "plafond de latence et le volume ne sont pas des prix et changent la réponse par "
+        + "d'autres chemins.",
+    },
+
     /* Les entrées que le lecteur remplace. Aucune n'est mesurée, et la page doit le dire. */
     assumptions: {
       humanAccuracy: ASSUMPTIONS.humanAccuracy,
@@ -245,9 +338,71 @@ function verifierCoherence(vue: Record<string, unknown>): void {
   }
 }
 
+/**
+ * Un seuil est une affirmation vérifiable, donc il se vérifie avant d'être publié.
+ *
+ * Deux bornes et non une. Qu'au seuil le routage change ne suffit pas : il faut aussi qu'en
+ * dessous il soit encore celui de référence. Un seuil qui n'**encadre** pas la bascule est faux
+ * même quand il tombe du bon côté — il annoncerait « ça tient jusqu'à ce prix » alors que ça a
+ * cédé avant, ce qui est l'erreur exactement dans le sens qui rassure.
+ *
+ * ─── Pourquoi une tolérance, et pourquoi celle-là ───
+ *
+ * La première version comparait à la virgule près et refusait d'écrire un fichier pourtant
+ * juste. `breaksAt` est publié à quatre chiffres significatifs : la valeur affichée tombe donc
+ * à un cheveu au-dessus ou au-dessous du seuil réel, et exiger que ce décimal-là produise
+ * exactement la bascule revient à contrôler l'arrondi et non le calcul.
+ *
+ * On vérifie donc ce que le lecteur peut vérifier : le nombre publié encadre une vraie bascule
+ * **à sa propre précision**. Un pour mille de part et d'autre, soit dix fois le pas d'arrondi.
+ * C'est la même leçon que la comparaison de `routed.median` : un contrôle qui échoue pour une
+ * raison qui n'est pas celle qu'il surveille finit par être désactivé, et on perd alors ce
+ * qu'il surveillait vraiment.
+ *
+ * Et le déplacement annoncé doit être celui qui se produit. `moves` est un tableau parce qu'un
+ * seuil peut en déplacer plusieurs ; un format qui ne saurait représenter que le cas observé
+ * forcerait un jour le générateur à mentir ou à refuser d'écrire pour une raison étrangère à ce
+ * qu'il surveille.
+ */
+const MARGE = 1e-3;   // dix fois le pas d'arrondi de `toPrecision(4)`
+
+function verifierSeuils(p: Profiles, vue: Record<string, unknown>): void {
+  const bloc = vue.sensitivity as { thresholds: Record<string, {
+    breaksAt: number | null; moves: { field: Field; from: TierName; to: TierName }[] }> };
+  const base = optimiseExtraction(p, ASSUMPTIONS);
+  if (base === null) return;
+
+  for (const [cle, s] of Object.entries(bloc.thresholds)) {
+    if (s.breaksAt === null) continue;
+    const routageA = (v: number) => optimiseExtraction(p, { ...ASSUMPTIONS, [cle]: v });
+
+    const au_dessus = routageA(s.breaksAt * (1 + MARGE));
+    const change = au_dessus !== null && FIELDS.some((c) => au_dessus.routing[c] !== base.routing[c]);
+    if (!change) {
+      throw new Error(`seuil faux pour ${cle} : au-dessus de ${s.breaksAt} le routage ne change pas.\n`
+        + `  → un seuil qui n'annonce aucune bascule ne devrait pas être publié.`);
+    }
+
+    const au_dessous = routageA(s.breaksAt * (1 - MARGE));
+    const intact = au_dessous !== null && FIELDS.every((c) => au_dessous.routing[c] === base.routing[c]);
+    if (!intact) {
+      throw new Error(`seuil faux pour ${cle} : le routage a déjà changé avant ${s.breaksAt}.\n`
+        + `  → le seuil n'encadre pas la bascule, donc il annonce une marge qui n'existe pas.`);
+    }
+
+    for (const m of s.moves) {
+      if (au_dessus.routing[m.field] !== m.to || base.routing[m.field] !== m.from) {
+        throw new Error(`seuil faux pour ${cle} : il annonce ${m.field} ${m.from}→${m.to}, `
+          + `mais la bascule donne ${base.routing[m.field]}→${au_dessus.routing[m.field]}.`);
+      }
+    }
+  }
+}
+
 export function rendre(p: Profiles): string {
   const vue = construire(p) as Record<string, unknown>;
   verifierCoherence(vue);
+  verifierSeuils(p, vue);
   return JSON.stringify(vue, null, 2) + "\n";
 }
 

@@ -510,6 +510,74 @@
     },
     "ceilingMsPerDoc": 2000
   },
+  "sensitivity": {
+    "measuredAt": "2026-08-19T18:52:47.557Z",
+    "method": "bisection",
+    "thresholds": {
+      "humanSeconds": {
+        "inUse": 45,
+        "breaksAt": null,
+        "factor": null,
+        "moves": [],
+        "reason": "tier priced out"
+      },
+      "analystAnnualCost": {
+        "inUse": 62000,
+        "breaksAt": null,
+        "factor": null,
+        "moves": [],
+        "reason": "tier priced out"
+      },
+      "productiveHoursPerDay": {
+        "inUse": 6,
+        "breaksAt": null,
+        "factor": null,
+        "moves": [],
+        "reason": "tier priced out"
+      },
+      "workingDaysPerYear": {
+        "inUse": 220,
+        "breaksAt": null,
+        "factor": null,
+        "moves": [],
+        "reason": "tier priced out"
+      },
+      "pricePerThousandSmall": {
+        "inUse": 0.2,
+        "breaksAt": null,
+        "factor": null,
+        "moves": [],
+        "reason": "tier not selected"
+      },
+      "pricePerThousandLarge": {
+        "inUse": 1.6,
+        "breaksAt": 39.52,
+        "factor": 24.7,
+        "moves": [
+          {
+            "field": "name",
+            "from": "large",
+            "to": "gen-0.6b"
+          }
+        ],
+        "reason": "moves the routing"
+      },
+      "machineHourlyCost": {
+        "inUse": 1.2,
+        "breaksAt": 96.8,
+        "factor": 80.7,
+        "moves": [
+          {
+            "field": "address",
+            "from": "gen-4b",
+            "to": "gen-0.6b"
+          }
+        ],
+        "reason": "moves the routing"
+      }
+    },
+    "note": "Chaque hypothèse est balayée seule, les autres restant à leur valeur en usage : deux prix qui bougent ensemble peuvent basculer le routage plus tôt qu'aucun des deux séparément. Le balayage ne couvre que les entrées qui tarifent un palier — le plafond de latence et le volume ne sont pas des prix et changent la réponse par d'autres chemins."
+  },
   "assumptions": {
     "humanAccuracy": 0.85,
     "humanSeconds": 45,
