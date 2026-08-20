@@ -13,6 +13,7 @@
 import { mkdirSync, writeFileSync, readFileSync, existsSync, renameSync } from "node:fs";
 import { isMain } from "./cli.ts";
 import { execFileSync } from "node:child_process";
+import { loadavg, cpus } from "node:os";
 import { dirname } from "node:path";
 import { generateRecords, generateAlerts, FIELDS, TYPOLOGIES } from "./corpus.ts";
 import { TIERS, ENCODEURS, GENERATIFS, loadExtractors, loadClassifiers, loadGeneratifs, extract, classify, correct, OLLAMA, estLocal } from "./tiers.ts";
@@ -70,6 +71,33 @@ export type Profile = {
   sorties?: string[];
 };
 
+/** D'où vient un résultat : quel code, quel arbre, quand, et sous quelle charge. */
+export type Provenance = {
+  commit: string | null;
+  sale: boolean | null;
+  measuredAt: string;
+  /** La raison donnée si l'on a mesuré sciemment sur un arbre modifié. */
+  malgreArbreSale?: string;
+  /** Charge moyenne de la machine pendant la mesure, et le nombre de cœurs pour la lire. */
+  charge?: { moyenne: number; coeurs: number };
+};
+
+/**
+ * Deux provenances par palier, parce qu'un relevé porte deux sortes de résultats.
+ *
+ * L'exactitude est déterministe : elle ne dépend que du code, des cas et du scoreur, et une
+ * machine chargée la rend à l'identique. La latence, elle, mesure la machine autant que le
+ * modèle — la même passe a rendu `gen-8b` à 7 920 ms sous une charge de 3,45 et à 10 445 ms
+ * sous 7,98, sans qu'une ligne ait changé.
+ *
+ * Une provenance unique forçait donc un choix impossible : garder des durées contaminées pour
+ * que le fichier reste cohérent, ou restaurer les bonnes en laissant la provenance affirmer
+ * qu'elles viennent d'une passe qui ne les a pas produites. Séparées, le fichier dit
+ * simplement la vérité — l'exactitude vient d'ici, la latence de là, et chacune sait sous
+ * quelle charge elle a été prise.
+ */
+export type ProvenanceDuPalier = { accuracy: Provenance; latency: Provenance };
+
 export type Profiles = {
   measuredAt: string;
   /**
@@ -101,7 +129,7 @@ export type Profiles = {
    * palier antérieur à ce champ vaut `undefined` : on n'invente pas une provenance qui n'a
    * jamais été écrite.
    */
-  provenance?: Record<TierName, { commit: string | null; sale: boolean | null; measuredAt: string; malgreArbreSale?: string }>;
+  provenance?: Record<TierName, ProvenanceDuPalier>;
   /** Les paliers que ce fichier contient réellement — l'échelle générative est optionnelle. */
   tiers?: TierName[];
   /** Chain A: one profile per tier AND per field — this is where the routing is decided. */
@@ -137,7 +165,7 @@ function etatDuDepot(): { commit: string; sale: boolean } | undefined {
 
 export async function measure(
   howMany = 120,
-  options: { llm?: boolean; tiers?: TierName[]; cases?: Partial<Record<TierName, number>>; malgreArbreSale?: string } = {},
+  options: { llm?: boolean; tiers?: TierName[]; cases?: Partial<Record<TierName, number>>; malgreArbreSale?: string; latenceValide?: boolean } = {},
 ): Promise<Profiles> {
   /*
    * Measured on the held-out half, never on the training half.
@@ -159,6 +187,15 @@ export async function measure(
    * donc les mêmes cas que les cent vingt premiers d'un palier à mille, et le test apparié
    * garde son sens entre les deux. Un test tient cette propriété.
    */
+  /*
+   * Enregistre-t-on les durées de cette passe, ou seulement ses exactitudes ?
+   *
+   * Par défaut oui ; la garde du bloc CLI met ce drapeau à faux quand la machine est trop
+   * chargée pour qu'une durée veuille dire quelque chose. Les exactitudes, elles, sont prises
+   * dans tous les cas — elles ne dépendent pas de la charge.
+   */
+  const latenceValide = options.latenceValide ?? true;
+
   const combien = (t: TierName) => options.cases?.[t] ?? howMany;
   const maxCas = Math.max(howMany, ...Object.values(options.cases ?? {}).map(Number).filter(Number.isFinite));
   const tousDossiers = generateRecords(maxCas, "heldout");
@@ -263,13 +300,15 @@ export async function measure(
         bits.push(bon ? "1" : "0");
         if (bon) right++;
       }
+      /* Durées conservées de la passe précédente quand la machine ne permettait pas de les prendre. */
+      const ancienChamp = latenceValide ? undefined : readProfiles()?.extraction?.[tier]?.[champ];
       extraction[tier][champ] = {
         reussites: bits.join(""),
         sorties,
         accuracy: right / dossiers.length,
-        latency: quantile(durees, 0.5),
-        latencyP10: quantile(durees, 0.1),
-        latencyP90: quantile(durees, 0.9),
+        latency: ancienChamp?.latency ?? quantile(durees, 0.5),
+        latencyP10: ancienChamp?.latencyP10 ?? quantile(durees, 0.1),
+        latencyP90: ancienChamp?.latencyP90 ?? quantile(durees, 0.9),
         items: dossiers.length,
       };
     }
@@ -300,11 +339,18 @@ export async function measure(
     }
 
     /* La provenance est écrite avec le palier, pas avec le fichier. */
-    provenance[tier] = {
+    const bloc: Provenance = {
       commit: version?.commit ?? null,
       sale: version?.sale ?? null,
       measuredAt: new Date().toISOString(),
       ...(options.malgreArbreSale ? { malgreArbreSale: options.malgreArbreSale } : {}),
+      charge: { moyenne: Number(loadavg()[0]!.toFixed(2)), coeurs: cpus().length },
+    };
+    /* L'exactitude est toujours la nôtre ; la latence ne l'est que si la machine le permettait. */
+    const avant = readProfiles()?.provenance?.[tier];
+    provenance[tier] = {
+      accuracy: bloc,
+      latency: latenceValide ? bloc : (avant?.latency ?? bloc),
     };
     sauver(extraction, classification, loadTime);
   }
@@ -384,6 +430,29 @@ if (isMain(import.meta)) {
   const aTourner = choisis ?? (llm ? [...ENCODEURS, ...GENERATIFS] : ENCODEURS);
   const generatifs = aTourner.filter((e) => (GENERATIFS as string[]).includes(e));
   /*
+   * Une durée mesurée sur une machine occupée mesure la machine, pas le modèle.
+   *
+   * La même passe a rendu `gen-8b` à 7 920 ms sous une charge de 3,45 et à 10 445 ms sous
+   * 7,98 — trente-deux pour cent d'écart sans qu'une ligne ait changé, parce que celui qui
+   * mesurait faisait tourner autre chose à côté. Le relevé n'en portait aucune trace, et la
+   * page publie ces durées contre un plafond de deux secondes.
+   *
+   * Le seuil est par cœur, pas absolu : une charge de 4 est confortable sur seize cœurs et
+   * étouffante sur deux. Au-delà, on mesure quand même l'exactitude — elle est déterministe —
+   * mais on **garde les durées précédentes** et on le dit dans la provenance, plutôt que de
+   * remplacer de bons chiffres par des moins bons sans que rien ne l'indique.
+   */
+  const coeurs = cpus().length;
+  const chargeParCoeur = loadavg()[0]! / coeurs;
+  const latenceValide = chargeParCoeur <= 0.5 || process.argv.includes("--allow-load");
+  if (!latenceValide) {
+    console.warn(`\n⚠ charge ${loadavg()[0]!.toFixed(2)} sur ${coeurs} cœurs `
+      + `(${(100 * chargeParCoeur).toFixed(0)} %) — trop pour chronométrer.`);
+    console.warn(`  Les exactitudes seront mesurées, les durées précédentes conservées.`);
+    console.warn(`  Fermez ce qui tourne, ou --allow-load pour enregistrer quand même.\n`);
+  }
+
+  /*
    * On ne mesure pas sur un arbre sale, et ça ne se rattrape pas après coup.
    *
    * Le relevé porte déjà `sale` : on pouvait donc mesurer, s'en apercevoir en lisant le
@@ -429,7 +498,7 @@ if (isMain(import.meta)) {
   console.log("Tiers not measured here keep their frozen figures.\n");
 
   const parPalier = Object.fromEntries(GENERATIFS.map((t) => [t, casesGen])) as Partial<Record<TierName, number>>;
-  const p = await measure(cases, { llm, tiers: choisis, cases: parPalier, malgreArbreSale });
+  const p = await measure(cases, { llm, tiers: choisis, cases: parPalier, malgreArbreSale, latenceValide });
   const pc = (x: number) => (x * 100).toFixed(1).padStart(5) + " %";
 
   console.log("CHAIN A — extraction, accuracy per field\n");

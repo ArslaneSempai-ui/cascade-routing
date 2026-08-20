@@ -88,12 +88,78 @@ export function pricePerThousandDocuments(p: Profiles, h: Assumptions, tier: Tie
   return FIELDS.reduce((s, c) => s + pricePerThousandExtractions(tier, h, parChamp[c]!.latency), 0);
 }
 
+/**
+ * L'exactitude d'un palier sur un champ, les deux erreurs pesées séparément.
+ *
+ * ─── Pourquoi la pondération entre ici et pas dans le coût ───
+ *
+ * On pourrait ajouter une pénalité d'erreur au prix et minimiser le total. Ce serait une
+ * **autre** forme d'objectif : elle échange continûment de l'argent contre de la justesse,
+ * alors que celle-ci traite le budget comme un mur et la justesse comme seul but. À poids
+ * égaux les deux ne coïncident pas par construction — elles coïncident sur ces données-ci,
+ * ce qui est un fait et non une garantie.
+ *
+ * Posée dans le terme d'exactitude, la neutralité devient un théorème. Chaque erreur compte
+ * pour sa part du **plus cher** des deux coûts : à `costWrongValue === costBlankField`, les
+ * deux valent 1, l'expression se réduit à `1 − tauxDErreur`, c'est-à-dire exactement
+ * l'exactitude d'avant. Introduire ces deux hypothèses ne peut donc rien déplacer tant que
+ * personne n'a choisi de les séparer.
+ *
+ * Un palier dont les sorties brutes ne sont pas conservées retombe sur son exactitude nue :
+ * on ne peut pas peser ce qu'on n'a pas décomposé, et supposer une répartition serait
+ * inventer le chiffre que cette fonction existe pour mesurer.
+ */
+export function justessePonderee(p: Profiles, h: Assumptions, tier: TierName, champ: Field): number {
+  const profil = p.extraction[tier][champ];
+  if (tier === "human") return accuracy(tier, profil.accuracy, h);
+
+  const pire = Math.max(h.costWrongValue, h.costBlankField);
+  if (!profil.sorties || pire <= 0) return profil.accuracy;
+
+  const part = decomposition(p, tier, champ);
+  if (!part) return profil.accuracy;
+  return 1 - part.faux * (h.costWrongValue / pire) - part.vide * (h.costBlankField / pire);
+}
+
+/**
+ * Les deux taux d'échec d'un palier sur un champ, comptés une seule fois.
+ *
+ * Sans ce cache, `justessePonderee` reparcourait mille caractères à **chaque** évaluation de
+ * routage : l'optimiseur en essaie 16 807, cinq champs chacun, ce qui faisait quatre-vingts
+ * millions d'opérations par appel et a fait dépasser dix minutes à un test qui en prenait
+ * deux secondes. Les comptes ne dépendent que du relevé, jamais des hypothèses — ils se
+ * calculent une fois et se relisent.
+ *
+ * La clé porte `measuredAt` : une re-mesure invalide le cache d'elle-même, sans que personne
+ * ait à s'en souvenir.
+ */
+const CACHE = new Map<string, { vide: number; faux: number } | null>();
+function decomposition(p: Profiles, tier: TierName, champ: Field): { vide: number; faux: number } | null {
+  const cle = `${p.measuredAt}|${tier}|${champ}`;
+  const connu = CACHE.get(cle);
+  if (connu !== undefined) return connu;
+
+  const profil = p.extraction[tier][champ];
+  let out: { vide: number; faux: number } | null = null;
+  if (profil.sorties && profil.reussites && profil.reussites.length === profil.sorties.length) {
+    let vide = 0, faux = 0;
+    for (let i = 0; i < profil.sorties.length; i++) {
+      if (profil.reussites[i] === "1") continue;
+      if ((profil.sorties[i] ?? "").trim() === "") vide++; else faux++;
+    }
+    const n = profil.sorties.length;
+    out = { vide: vide / n, faux: faux / n };
+  }
+  CACHE.set(cle, out);
+  return out;
+}
+
 export function evaluer(p: Profiles, h: Assumptions, routing: Routing): Solution {
   let sommeJustesse = 0, cost = 0, seconds = 0;
   for (const c of FIELDS) {
     const e = routing[c];
     const profil = p.extraction[e][c];
-    sommeJustesse += accuracy(e, profil.accuracy, h);
+    sommeJustesse += justessePonderee(p, h, e, c);
     cost += (h.volume / 1000) * pricePerThousandExtractions(e, h, profil.latency);
     seconds += (h.volume * latency(e, profil.latency, h)) / 1000;
   }

@@ -46,6 +46,8 @@ const WHAT: Record<keyof typeof ASSUMPTIONS, { what: string; note: string }> = {
   pricePerThousandLarge: { what: "cost per thousand calls to the large model", note: "same, and it moves faster than any other figure here" },
   volume: { what: "items to process over the period", note: "your scenario, not mine" },
   budget: { what: "money available over the period", note: "your scenario; it decides which tiers are reachable at all" },
+  costWrongValue: { what: "what a false value entering the record costs you", note: "your risk function knows this; it is the number a regulator asks about" },
+  costBlankField: { what: "what a blank field costs you", note: "one analyst review — the only one of the two anybody can price from a timesheet" },
 };
 
 export const INVENTORY: Inventory = [

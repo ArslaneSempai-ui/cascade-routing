@@ -25,8 +25,8 @@ import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { isMain } from "./cli.ts";
 import { FIELDS } from "./corpus.ts";
 import { readProfiles } from "./measure.ts";
-import { ASSUMPTIONS, UNITS, pricePerThousandExtractions } from "./assumptions.ts";
-import { optimiseExtraction, evaluer, paliersMesures, pricePerThousandDocuments } from "./optimise.ts";
+import { ASSUMPTIONS, UNITS, pricePerThousandExtractions, latency } from "./assumptions.ts";
+import { optimiseExtraction, evaluer, paliersMesures, pricePerThousandDocuments, justessePonderee } from "./optimise.ts";
 import { rate, CONFIANCE } from "./interval.ts";
 
 import type { Field } from "./corpus.ts";
@@ -122,7 +122,7 @@ type Seuil = {
   breaksAt: number | null;
   factor: number | null;
   moves: Deplacement[];
-  reason: "moves the routing" | "tier not selected" | "tier priced out";
+  reason: "moves the routing" | "tier not selected" | "tier priced out" | "genuinely insensitive";
 };
 
 /**
@@ -163,24 +163,53 @@ function seuils(p: Profiles, h: Assumptions): Record<string, Seuil> {
 
   for (const cle of Object.keys(h) as (keyof Assumptions)[]) {
     const v0 = h[cle] as number;
-    /* Seules les hypothèses qui tarifent un palier sélectionnable sont balayées — la règle est
-       calculée et non recopiée, pour qu'une hypothèse ajoutée demain soit prise sans rien faire. */
+    /*
+     * Ce qui mérite d'être balayé : tout ce qui change ce que l'optimiseur voit d'un palier.
+     *
+     * La règle ne dit plus « tarife un palier » mais « déplace une des trois entrées du
+     * routage » — prix, justesse pesée, latence. La première version ratait les deux coûts
+     * d'erreur : ils ne tarifent rien, ils pèsent les échecs, et ils décident pourtant. Une
+     * règle trop étroite ne se voit pas, elle produit simplement un balayage plus court que
+     * la réalité, avec le même air de complétude.
+     */
     const double = { ...h, [cle]: v0 * 2 };
     const tarifes = paliers.filter((t) =>
-      pricePerThousandDocuments(p, double, t) !== pricePerThousandDocuments(p, h, t));
+      pricePerThousandDocuments(p, double, t) !== pricePerThousandDocuments(p, h, t)
+      || FIELDS.some((c) => justessePonderee(p, double, t, c) !== justessePonderee(p, h, t, c))
+      || FIELDS.some((c) => latency(t, p.extraction[t][c].latency, double) !== latency(t, p.extraction[t][c].latency, h)));
     if (tarifes.length === 0) continue;
 
     let bas = v0 === 0 ? 1e-9 : v0;
     let haut = v0 * 1e7;
     if (identique({ ...h, [cle]: haut })) {
-      /* Aucun seuil : reste à dire laquelle des deux absences c'est. */
+      /*
+       * Aucun seuil : reste à dire laquelle des **trois** absences c'est.
+       *
+       * Cette classification n'en connaissait que deux, alors que `sensitivity.ts` en connaît
+       * trois depuis ce soir — et les deux fichiers ont aussitôt divergé sur le premier cas
+       * venu : le coût d'un champ vide, rapporté ici « palier jamais choisi » alors que
+       * `rules` produit les vides et se trouve dans trois champs du routage. Un palier
+       * gouverné qui est **en usage** et que le balayage ne déplace pas, c'est de la vraie
+       * robustesse, et c'est la seule des trois qui mérite d'être lue comme rassurante.
+       */
+      const retenus = new Set(FIELDS.map((c) => base.routing[c]));
+      const enUsage = tarifes.some((t) => retenus.has(t));
       const horsBudget = tarifes.every((t) =>
         (pricePerThousandDocuments(p, h, t) * h.volume) / 1000 > h.budget);
       out[cle] = { inUse: v0, unit: UNITS[cle], breaksAt: null, factor: null, moves: [],
-        reason: horsBudget ? "tier priced out" : "tier not selected" };
+        reason: enUsage ? "genuinely insensitive" : horsBudget ? "tier priced out" : "tier not selected" };
       continue;
     }
-    for (let i = 0; i < 200; i++) {
+    /*
+     * Quarante pas, pas deux cents.
+     *
+     * Chaque pas coûte une énumération complète des routages. Deux cents pas donnaient une
+     * précision de l'ordre du dix-millionième de ce qu'on publie à quatre chiffres — cent
+     * soixante pas dépensés sous le dernier chiffre affiché. Quarante suffisent largement à
+     * une valeur arrondie à `toPrecision(4)`, et l'invariant qui suit vérifie de toute façon
+     * que le nombre publié encadre une vraie bascule.
+     */
+    for (let i = 0; i < 40; i++) {
       const m = (bas + haut) / 2;
       if (identique({ ...h, [cle]: m })) bas = m; else haut = m;
     }

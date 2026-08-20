@@ -75,16 +75,26 @@ export function dossier(p: Profiles, h: Assumptions): string {
    * deux états d'arbre, de deux jours. Un relecteur doit voir laquelle est laquelle, et un
    * palier sans provenance enregistrée doit le dire plutôt que d'hériter de celle du voisin.
    */
-  const prov = paliersMesures(p).map((t) => {
+  const prov = paliersMesures(p).flatMap((t) => {
     const v = p.provenance?.[t];
-    return [`\`${t}\``, v ? v.measuredAt : "—", v?.commit ? `\`${v.commit}\`` : "not recorded",
-      v ? (v.sale === null ? "—" : v.sale ? "**dirty**" : "clean") : "—"];
+    if (!v) return [[`\`${t}\``, "—", "—", "not recorded", "—"]];
+    /* Relevé antérieur à la séparation par type : une seule ligne, et on ne prétend pas mieux. */
+    if ((v as { accuracy?: unknown }).accuracy === undefined) {
+      const plat = v as unknown as { measuredAt: string; commit: string | null; sale: boolean | null };
+      return [[`\`${t}\``, "both", plat.measuredAt, plat.commit ? `\`${plat.commit}\`` : "not recorded", "not recorded"]];
+    }
+    return (["accuracy", "latency"] as const).map((quoi) => {
+      const b = v[quoi];
+      return [`\`${t}\``, quoi, b.measuredAt, b.commit ? `\`${b.commit}\`` : "not recorded",
+        b.charge ? `${b.charge.moyenne} / ${b.charge.coeurs} cores` : "—"];
+    });
   });
-  if (prov.some((r) => r[1] !== "—")) {
-    w(`Not every tier was measured in the same pass. Where a tier predates this record, its`);
-    w(`provenance says so rather than borrowing its neighbour's.`);
+  if (prov.some((r) => r[2] !== "—")) {
+    w(`Accuracy and latency do not always come from the same pass, and they are not the same`);
+    w(`kind of number: accuracy is deterministic, latency measures the machine as much as the`);
+    w(`model. Each carries its own provenance rather than borrowing the other's.`);
     w(``);
-    w(table(["Tier", "Measured at", "Commit", "Working tree"], prov));
+    w(table(["Tier", "Measured", "At", "Commit", "Load during"], prov));
     w(``);
   }
   w(`**This file does not certify anything.** It assembles what a reviewer needs in order to`);

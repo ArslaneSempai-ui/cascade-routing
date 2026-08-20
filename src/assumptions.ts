@@ -92,6 +92,22 @@ export type Assumptions = {
    * a routing can be affordable and too slow, or fast and unaffordable.
    */
   latencyBudgetMs: number;
+  /**
+   * Ce que coûte une valeur fausse entrée au dossier sans que rien ne la signale.
+   *
+   * Un palier se trompe de deux façons et elles ne coûtent pas la même chose. Une expression
+   * régulière qui ne trouve pas rend le vide : l'échec est visible, il part en relecture, et
+   * il finit corrigé. Un modèle rend toujours une réponse : il ne s'abstient jamais, donc son
+   * échec entre au dossier avec l'apparence d'une donnée.
+   *
+   * L'optimiseur les comptait à l'identique, ce qui n'est pas neutre — c'est un arbitrage
+   * implicite en faveur des paliers qui répondent toujours. Le rendre explicite ne le tranche
+   * pas : la valeur en usage laisse les deux à égalité, donc le routage publié ne bouge pas,
+   * et le balayage dit à quel prix il basculerait.
+   */
+  costWrongValue: number;
+  /** Ce que coûte un champ rendu vide : une relecture d'analyste, et rien de plus. */
+  costBlankField: number;
 };
 
 export const ASSUMPTIONS: Assumptions = {
@@ -106,6 +122,14 @@ export const ASSUMPTIONS: Assumptions = {
   volume: 100_000,
   budget: 4_000,
   latencyBudgetMs: 2_000,
+  /*
+   * À égalité, et c'est le point : la valeur en usage reproduit exactement le comportement
+   * d'avant, donc introduire ces deux entrées ne déplace rien. Le chiffre lui-même est le
+   * coût d'une relecture — le seul des deux qu'on sache estimer — et l'autre lui est égalé
+   * plutôt que deviné.
+   */
+  costWrongValue: 0.587,
+  costBlankField: 0.587,
 };
 
 /**
@@ -128,6 +152,8 @@ export const STATUSES: Record<keyof Assumptions, Provenance> = {
   volume: "assumed",
   budget: "assumed",
   latencyBudgetMs: "assumed",
+  costWrongValue: "assumed",
+  costBlankField: "assumed",
 };
 
 /**
@@ -163,6 +189,8 @@ export const UNITS: Record<keyof Assumptions, string> = {
   volume: "documents/period",
   budget: "usd/period",
   latencyBudgetMs: "ms/document",
+  costWrongValue: "usd/wrong value",
+  costBlankField: "usd/blank field",
 };
 
 /** Sanity bounds: a screen that accepts 100 % human accuracy is lying to its reader. */
@@ -178,6 +206,8 @@ export const BOUNDS: Record<keyof Assumptions, [number, number]> = {
   volume: [1_000, 10_000_000],
   budget: [0, 10_000_000],
   latencyBudgetMs: [10, 600_000],
+  costWrongValue: [0, 10_000],
+  costBlankField: [0, 10_000],
 };
 
 /**

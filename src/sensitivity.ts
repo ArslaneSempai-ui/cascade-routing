@@ -20,7 +20,7 @@
  * Someone who does not reads the band and learns whether it was worth finding out.
  */
 
-import { optimiseExtraction, optimiseClassification, paliersMesures, pricePerThousandDocuments } from "./optimise.ts";
+import { optimiseExtraction, optimiseClassification, paliersMesures, pricePerThousandDocuments, justessePonderee } from "./optimise.ts";
 import { isMain } from "./cli.ts";
 import { ASSUMPTIONS, accuracy, latency } from "./assumptions.ts";
 import { FIELDS } from "./corpus.ts";
@@ -50,6 +50,14 @@ export const PLAUSIBLE: Partial<Record<keyof Assumptions, [number, number]>> = {
    * valeur en usage — mais ça, il fallait le mesurer pour le dire.
    */
   machineHourlyCost: [0.10, 12],
+  /*
+   * Les deux coûts d'erreur, balayés comme les prix — parce qu'ils décident comme eux.
+   *
+   * La plage va de l'égalité (un faux ne coûte pas plus qu'un vide) à cent fois, ce qui
+   * couvre largement ce qu'une conformité met derrière une donnée fausse entrée au dossier.
+   */
+  costWrongValue: [0.587, 60],
+  costBlankField: [0.05, 6],
 };
 
 export type Band = {
@@ -131,14 +139,23 @@ export function band(p: Profiles, assumption: keyof Assumptions, a = ASSUMPTIONS
    * when perturbing the assumption changes what the optimiser pays for it, or what it
    * believes about its accuracy or its speed. A list would drift; this cannot.
    */
+  /*
+   * « Gouverner » un palier, c'est déplacer n'importe laquelle de ses trois entrées.
+   *
+   * La règle a d'abord dit « tarifer », puis « tarifer ou changer l'exactitude nue ou la
+   * latence ». Les deux coûts d'erreur échappaient encore aux trois : ils ne tarifent rien et
+   * ne touchent pas l'exactitude *nue*, ils pèsent la **justesse pondérée**. `landing.ts` a
+   * reçu la règle élargie et ce fichier non, si bien que les deux ont classé le coût d'un
+   * champ vide de deux façons incompatibles — « palier jamais choisi » ici, « vraie
+   * robustesse » là-bas — alors que `rules` produit les vides et tient trois champs du
+   * routage. Le test d'accord entre les deux fichiers l'a vu ; c'est la deuxième fois que
+   * cette règle diverge, et la seconde fois de ma main.
+   */
   const perturbee = { ...a, [assumption]: current * 2 };
-  const gouvernes = paliersMesures(p).filter((t) => {
-    const champ = FIELDS[0]!;
-    const q = p.extraction[t][champ];
-    return pricePerThousandDocuments(p, perturbee, t) !== pricePerThousandDocuments(p, a, t)
-      || accuracy(t, q.accuracy, perturbee) !== accuracy(t, q.accuracy, a)
-      || latency(t, q.latency, perturbee) !== latency(t, q.latency, a);
-  });
+  const gouvernes = paliersMesures(p).filter((t) =>
+    pricePerThousandDocuments(p, perturbee, t) !== pricePerThousandDocuments(p, a, t)
+    || FIELDS.some((c) => justessePonderee(p, perturbee, t, c) !== justessePonderee(p, a, t, c))
+    || FIELDS.some((c) => latency(t, p.extraction[t][c].latency, perturbee) !== latency(t, p.extraction[t][c].latency, a)));
 
   const retenus = new Set(optimiseExtraction(p, a) ? FIELDS.map((f) => optimiseExtraction(p, a)!.routing[f]) : []);
   const enUsage = gouvernes.some((t) => retenus.has(t));
@@ -154,8 +171,8 @@ export function band(p: Profiles, assumption: keyof Assumptions, a = ASSUMPTIONS
   return { assumption, current, stableFrom, stableTo, currentInside: true, decides, reason };
 }
 
-export function bands(p: Profiles, a = ASSUMPTIONS): Band[] {
-  return (Object.keys(PLAUSIBLE) as (keyof Assumptions)[]).map((k) => band(p, k, a));
+export function bands(p: Profiles, a = ASSUMPTIONS, steps = 60): Band[] {
+  return (Object.keys(PLAUSIBLE) as (keyof Assumptions)[]).map((k) => band(p, k, a, steps));
 }
 
 /**

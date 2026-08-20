@@ -1,21 +1,22 @@
 # Validation file — task-level model routing
 
-Generated from the frozen measurement of `2026-08-19T23:44:39.862Z`, produced by commit `a6166c9` **with uncommitted changes in the working tree — this run is not reproducible by anyone, including its author**. Every figure below is
+Generated from the frozen measurement of `2026-08-20T07:49:53.789Z`, produced by commit `fffa112`. Every figure below is
 produced from that same file: this document cannot disagree with the tables elsewhere in
 the repository, because it is not written by hand.
 
-Not every tier was measured in the same pass. Where a tier predates this record, its
-provenance says so rather than borrowing its neighbour's.
+Accuracy and latency do not always come from the same pass, and they are not the same
+kind of number: accuracy is deterministic, latency measures the machine as much as the
+model. Each carries its own provenance rather than borrowing the other's.
 
-| Tier | Measured at | Commit | Working tree |
-|---|---|---|---|
-| `rules` | 2026-08-19T22:35:35.787Z | `a6166c9` | clean |
-| `small` | 2026-08-19T22:38:44.326Z | `a6166c9` | clean |
-| `large` | 2026-08-19T22:44:26.476Z | `a6166c9` | clean |
-| `gen-0.6b` | 2026-08-19T23:12:04.994Z | `a6166c9` | **dirty** |
-| `gen-4b` | 2026-08-19T23:26:11.006Z | `a6166c9` | **dirty** |
-| `gen-8b` | 2026-08-19T23:44:39.839Z | `a6166c9` | **dirty** |
-| `human` | 2026-08-19T22:44:26.506Z | `a6166c9` | clean |
+| Tier | Measured | At | Commit | Load during |
+|---|---|---|---|---|
+| `rules` | both | 2026-08-20T07:05:34.098Z | `fffa112` | not recorded |
+| `small` | both | 2026-08-19T22:38:44.326Z | `a6166c9` | not recorded |
+| `large` | both | 2026-08-19T22:44:26.476Z | `a6166c9` | not recorded |
+| `gen-0.6b` | both | 2026-08-20T07:10:50.345Z | `fffa112` | not recorded |
+| `gen-4b` | both | 2026-08-20T07:25:49.755Z | `fffa112` | not recorded |
+| `gen-8b` | both | 2026-08-20T07:49:53.747Z | `fffa112` | not recorded |
+| `human` | both | 2026-08-19T22:44:26.506Z | `a6166c9` | not recorded |
 
 **This file does not certify anything.** It assembles what a reviewer needs in order to
 decide, and states what the evidence will not support. The decision is the committee's.
@@ -32,11 +33,11 @@ available one. Where two tiers cannot be told apart on this sample, the cheaper 
 | `birth` | `rules` | 100.0 % | [100–100] | n=1000 | $0 |
 | `document` | `rules` | 79.7 % | [77–82] | n=1000 | $0 |
 | `country` | `rules` | 100.0 % | [100–100] | n=1000 | $0 |
-| `address` | `gen-4b` | 95.8 % | [91–98] | n=120 | $41 |
+| `address` | `gen-4b` | 95.8 % | [91–98] | n=120 | $48 |
 
-Overall: **94.4 %** for **$201** against a budget of $4,000
-(5.0 % consumed), at **1287 ms** per document
-against a ceiling of 2000 ms (64.4 % consumed).
+Overall: **94.4 %** for **$208** against a budget of $4,000
+(5.2 % consumed), at **1518 ms** per document
+against a ceiling of 2000 ms (75.9 % consumed).
 
 ## 2. Where the sample cannot decide
 
@@ -121,6 +122,8 @@ which of them change the answer and which do not.
 | `volume` | assumed | 100000 |
 | `budget` | assumed | 4000 |
 | `latencyBudgetMs` | assumed | 2000 |
+| `costWrongValue` | assumed | 0.587 |
+| `costBlankField` | assumed | 0.587 |
 
 The human tier's accuracy is an assumption and never a measurement. An optimiser that
 believes a human is infallible routes everything to them, and the conclusion goes wrong

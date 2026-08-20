@@ -6,7 +6,7 @@ import { generateRecords, generateAlerts, FIELDS, TYPOLOGIES } from "./corpus.ts
 import { correct, TIERS, estLocal, OLLAMA } from "./tiers.ts";
 import type { TierName } from "./paliers.ts";
 import { classify } from "./failures.ts";
-import { readProfiles, type Profile } from "./measure.ts";
+import { readProfiles, type Profile, type ProvenanceDuPalier, type Provenance } from "./measure.ts";
 import { optimiseExtraction, optimiseClassification, budgetShadowPrice, latenceRepresentative, paliersMesures, evaluer, pricePerThousandDocuments } from "./optimise.ts";
 import { ASSUMPTIONS, UNITS, pricePerThousandExtractions, accuracy } from "./assumptions.ts";
 import { wilson, rate, distinguishable } from "./interval.ts";
@@ -651,7 +651,8 @@ test("les deux balayages de prix ne peuvent pas se contredire", () => {
   if (!optimum) return;
   const retenus = new Set(FIELDS.map((c) => optimum.routing[c]));
 
-  for (const b of bands(p)) {
+  /* Balayage grossier : on vérifie une classification, pas la largeur d'une bande. */
+  for (const b of bands(p, ASSUMPTIONS, 8)) {
     if (b.reason !== "genuinely insensitive") continue;
 
     /* « Robuste » n'est légitime que si le palier gouverné est réellement en usage. */
@@ -756,11 +757,17 @@ test("un palier mesuré porte sa propre provenance", () => {
   if (p.measuredAt === RELEVE_HISTORIQUE) return;
 
   for (const t of paliersMesures(p)) {
-    const v: { commit: string | null; sale: boolean | null; measuredAt: string } | undefined = p.provenance?.[t];
+    const v: ProvenanceDuPalier | undefined = p.provenance?.[t];
     if (v === undefined) continue;   // palier antérieur au champ : `null` assumé, pas inventé
-    assert.equal(typeof v.measuredAt, "string", `${t} a une provenance sans date`);
-    assert.ok(v.commit === null || typeof v.commit === "string", `${t} a un commit mal formé`);
-    assert.ok(v.sale === null || typeof v.sale === "boolean", `${t} a un état d'arbre mal formé`);
+    /* Relevé antérieur à la séparation par type de mesure : sa forme plate n'est pas une faute. */
+    if (v.accuracy === undefined) continue;
+    for (const quoi of ["accuracy", "latency"] as const) {
+      const b: Provenance = v[quoi];
+      assert.ok(b, `${t} n'a pas de provenance pour ${quoi}`);
+      assert.equal(typeof b.measuredAt, "string", `${t}/${quoi} a une provenance sans date`);
+      assert.ok(b.commit === null || typeof b.commit === "string", `${t}/${quoi} a un commit mal formé`);
+      assert.ok(b.sale === null || typeof b.sale === "boolean", `${t}/${quoi} a un état d'arbre mal formé`);
+    }
   }
 });
 
@@ -836,4 +843,58 @@ test("l'écran n'écoute que la boucle locale", () => {
   const src = readFileSync(new URL("./server.ts", import.meta.url).pathname, "utf8");
   assert.match(src, /listen\(PORT,\s*"127\.0\.0\.1"/,
     "le serveur doit écouter 127.0.0.1 explicitement, jamais toutes les interfaces");
+});
+
+test("les deux fichiers classent une absence de seuil de la même façon", () => {
+  /*
+   * Ils ont divergé deux fois, et la seconde était de ma main.
+   *
+   * `sensitivity.ts` a gagné une quatrième valeur — un palier jamais choisi n'est pas de la
+   * robustesse — et `landing.ts` ne l'a pas reçue. Au premier cas venu, le coût d'un champ
+   * vide, les deux ont dit des choses incompatibles : « jamais choisi » d'un côté, alors que
+   * `rules` produit les vides et tient trois champs du routage.
+   *
+   * Le test précédent ne regardait qu'un des deux fichiers, donc il ne pouvait pas voir la
+   * divergence : il tenait une règle, pas l'accord. Celui-ci compare les verdicts sortis des
+   * deux générateurs sur les hypothèses qu'ils ont en commun.
+   */
+  const p = readProfiles();
+  if (!p) return;
+  const f = new URL("../landing.json", import.meta.url).pathname;
+  if (!existsSync(f)) return;
+
+  const publie = JSON.parse(readFileSync(f, "utf8")) as {
+    sensitivity: { thresholds: Record<string, { reason: string; breaksAt: number | null }> } };
+
+  /* Huit pas au lieu de soixante : on compare des verdicts, pas des bornes de bande,
+     et chaque pas coûte une énumération complète des routages. */
+  for (const b of bands(p, ASSUMPTIONS, 8)) {
+    const cote = publie.sensitivity.thresholds[b.assumption];
+    if (!cote) continue;   // pas balayée des deux côtés : hors sujet ici
+
+    /*
+     * Les deux ne posent pas la même question, et j'ai d'abord écrit qu'elles la posaient.
+     *
+     * `sensitivity.ts` demande « est-ce que ça change **dans la plage plausible** » ;
+     * `landing.ts` demande « où est-ce que ça change, où que ce soit ». Un seuil à 39,59 $
+     * hors d'une plage qui s'arrête à 20 $ n'est donc pas une contradiction : c'est la même
+     * réalité vue par deux fenêtres. Exiger l'équivalence faisait tomber le test sur un
+     * dépôt parfaitement cohérent — un contrôle faux qui accuse est pire qu'absent, parce
+     * qu'on finit par le désactiver et perdre ce qu'il gardait vraiment.
+     */
+    if (cote.breaksAt !== null) {
+      const [bas, haut] = PLAUSIBLE[b.assumption]!;
+      const dedans = cote.breaksAt >= bas && cote.breaksAt <= haut;
+      assert.equal(b.reason === "affects the answer", dedans,
+        `« ${b.assumption} » : landing.json place le seuil à ${cote.breaksAt}, `
+        + `${dedans ? "dans" : "hors de"} la plage plausible [${bas}, ${haut}], mais `
+        + `sensitivity.ts dit « ${b.reason} ».`);
+      continue;
+    }
+    assert.equal(b.reason, cote.reason,
+      `« ${b.assumption} » est classée « ${b.reason} » par sensitivity.ts et « ${cote.reason} » `
+      + `par landing.json.\n`
+      + `  → le même dépôt dirait deux choses incompatibles du même chiffre, et l'une des deux`
+      + ` se lit comme rassurante.`);
+  }
 });
