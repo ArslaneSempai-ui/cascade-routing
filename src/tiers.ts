@@ -216,7 +216,9 @@ export async function loadExtractors(): Promise<void> {
   qaLarge ??= await pipeline("question-answering", "onnx-community/roberta-base-squad2-ONNX", { revision: REVISIONS.large });
 }
 
-export async function extract(tier: TierName, d: ClientFile, champ: Field): Promise<string> {
+export async function extract(
+  tier: TierName, d: ClientFile, champ: Field, prompt: NomPrompt = "reference",
+): Promise<string> {
   if (tier === "rules") return RULES[champ](d.text);
   /*
    * The human returns ground truth HERE, and only here.
@@ -227,7 +229,7 @@ export async function extract(tier: TierName, d: ClientFile, champ: Field): Prom
    * et discutable. Confondre les deux ferait croire l'human infaillible.
    */
   if (tier === "human") return d.truth[champ];
-  if (estGeneratif(tier)) return extraireGeneratif(tier, d.text, champ);
+  if (estGeneratif(tier)) return extraireGeneratif(tier, d.text, champ, prompt);
   const qa = tier === "small" ? qaSmall : qaLarge;
   const r = await qa(QUESTIONS[champ], d.text);
   return String(r?.answer ?? "").trim();
@@ -246,18 +248,91 @@ export async function extract(tier: TierName, d: ClientFile, champ: Field): Prom
  * même faute que d'écrire les expressions régulières contre ses propres gabarits, qui a
  * déjà coûté un corpus entier à ce dépôt.
  */
-async function extraireGeneratif(tier: TierName, texte: string, champ: Field): Promise<string> {
-  const r = await ollama(tier,
+/**
+ * Les cinq formulations mises à l'épreuve, écrites avant qu'aucune ne tourne.
+ *
+ * La question que ce dépôt ne s'était jamais posée : si reformuler un prompt déplace
+ * l'exactitude autant que changer de palier, alors comparer des modèles revient à comparer
+ * des prompts, et tout le routage optimise le mauvais axe.
+ *
+ * Les quatre alternatives ont été écrites par quelqu'un qui n'est pas l'auteur de la
+ * référence — même principe que l'audit croisé. Aucune n'est volontairement mauvaise : ce
+ * sont trois styles courants plus une correction d'un défaut réel. Elles sont figées ici
+ * **avant** la première exécution, parce que connaître un résultat permet d'ajouter une
+ * variante de plus et que personne ne le fait consciemment.
+ *
+ * Réserve à porter avec le chiffre : leur auteur avait lu la référence, donc ce sont des
+ * voisines. La dispersion mesurée est une **borne basse** de la vraie sensibilité au prompt.
+ */
+export const EXEMPLE_DOC =
+  "Anna Petrova — dob 3 May 1990 — doc no ES-1234-A — Spain — lives 5 Calle Mayor, Madrid";
+
+const EXEMPLES: Record<Field, string> = {
+  name: "Anna Petrova",
+  birth: "3 May 1990",
+  document: "ES-1234-A",
+  country: "Spain",
+  address: "5 Calle Mayor, Madrid",
+};
+
+export type NomPrompt = "reference" | "A-sans-exemple" | "B-exemple-apparie" | "C-minimal" | "D-document-dabord";
+
+export const PROMPTS: Record<NomPrompt, (texte: string, champ: Field) => string> = {
+  /* La référence : un exemple unique, dont la question est celle du champ `document`. */
+  reference: (texte, champ) =>
     `Copy a single value out of a document, verbatim. Never rephrase, never reformat, ` +
     `never explain. If the value is absent, return an empty string.\n\n` +
     `Example.\n` +
-    `Document: Anna Petrova — dob 3 May 1990 — doc no ES-1234-A — Spain — lives 5 Calle Mayor, Madrid\n` +
-    `Question: What is the identity document number?\n` +
-    `Answer: ES-1234-A\n\n` +
+    `Document: ${EXEMPLE_DOC}\n` +
+    `Question: ${QUESTIONS.document}\n` +
+    `Answer: ${EXEMPLES.document}\n\n` +
     `Now the real one.\n` +
     `Document: ${texte}\n` +
     `Question: ${QUESTIONS[champ]}\n` +
     `Answer:`,
+
+  /* A : ce que l'exemple apporte, isolé en le retirant. */
+  "A-sans-exemple": (texte, champ) =>
+    `Copy a single value out of a document, verbatim. Never rephrase, never reformat, ` +
+    `never explain. If the value is absent, return an empty string.\n\n` +
+    `Document: ${texte}\n` +
+    `Question: ${QUESTIONS[champ]}\n` +
+    `Answer:`,
+
+  /* B : chaque champ voit un exemple qui pose SA question. Même document, aucune information neuve. */
+  "B-exemple-apparie": (texte, champ) =>
+    `Copy a single value out of a document, verbatim. Never rephrase, never reformat, ` +
+    `never explain. If the value is absent, return an empty string.\n\n` +
+    `Example.\n` +
+    `Document: ${EXEMPLE_DOC}\n` +
+    `Question: ${QUESTIONS[champ]}\n` +
+    `Answer: ${EXEMPLES[champ]}\n\n` +
+    `Now the real one.\n` +
+    `Document: ${texte}\n` +
+    `Question: ${QUESTIONS[champ]}\n` +
+    `Answer:`,
+
+  /* C : une phrase d'instruction, rien d'autre. La longueur sert-elle à quelque chose ? */
+  "C-minimal": (texte, champ) =>
+    `Extract the requested value from the document exactly as written. Return an empty ` +
+    `string if it is not there.\n\n` +
+    `Document: ${texte}\n` +
+    `Question: ${QUESTIONS[champ]}\n` +
+    `Answer:`,
+
+  /* D : même contenu, contrainte après le document. La position d'une instruction compte. */
+  "D-document-dabord": (texte, champ) =>
+    `Document: ${texte}\n\n` +
+    `Question: ${QUESTIONS[champ]}\n\n` +
+    `Answer with the value exactly as it appears in the document above. Do not ` +
+    `rephrase, reformat or explain. If it is absent, answer with an empty string.\n\n` +
+    `Answer:`,
+};
+
+async function extraireGeneratif(
+  tier: TierName, texte: string, champ: Field, prompt: NomPrompt = "reference",
+): Promise<string> {
+  const r = await ollama(tier, PROMPTS[prompt](texte, champ),
     { type: "object", properties: { answer: { type: "string" } }, required: ["answer"] });
   return String(r.answer ?? "").trim();
 }

@@ -1,0 +1,113 @@
+/**
+ * Reformuler le prompt déplace-t-il autant que changer de palier ?
+ *
+ * C'est la question qui commande tout le reste. Ce dépôt compare sept paliers à prompt fixe
+ * et en tire un routage ; si la simple formulation déplace l'exactitude d'autant, alors la
+ * comparaison de modèles est une comparaison de prompts et le routage optimise le mauvais
+ * axe. Personne ne l'avait mesuré.
+ *
+ * ─── Ce que le protocole protège ───
+ *
+ * Les cinq formulations sont figées dans `tiers.ts` **avant** la première exécution, et leur
+ * texte complet est enregistré à côté du résultat : un chiffre qu'on ne peut pas relier au
+ * geste qui l'a produit n'est pas reproductible. Les quatre alternatives ont été écrites par
+ * quelqu'un qui n'est pas l'auteur de la référence — mais qui l'avait lue, ce qui en fait des
+ * voisines et fait de la dispersion mesurée une **borne basse**.
+ *
+ * Le comparateur est posé d'avance, et c'est l'essentiel : la dispersion entre paliers à
+ * prompt fixe, qu'on connaît déjà du relevé. Le choisir après coup reviendrait à choisir
+ * celui qui rend le résultat intéressant.
+ *
+ *     npm run prompt          les cinq variantes, gen-4b, cinq champs, 120 cas
+ */
+
+import { writeFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { loadavg, cpus } from "node:os";
+import { isMain } from "./cli.ts";
+import { FIELDS, generateRecords } from "./corpus.ts";
+import { loadGeneratifs, extract, correct, PROMPTS, type NomPrompt } from "./tiers.ts";
+import { readProfiles } from "./measure.ts";
+
+import type { Field } from "./corpus.ts";
+
+const SORTIE = new URL("../prompts-2026-08-20.json", import.meta.url).pathname;
+const PALIER = "gen-4b" as const;
+
+if (isMain(import.meta)) {
+  const cas = Number(process.argv.find((a) => a.startsWith("--cases="))?.split("=")[1] ?? 120);
+  const dossiers = generateRecords(cas, "heldout");
+  const noms = Object.keys(PROMPTS) as NomPrompt[];
+
+  const version = (() => {
+    try {
+      const cwd = new URL("..", import.meta.url).pathname;
+      return {
+        commit: execFileSync("git", ["rev-parse", "--short", "HEAD"], { cwd, encoding: "utf8" }).trim(),
+        sale: execFileSync("git", ["status", "--porcelain"], { cwd, encoding: "utf8" }).trim().length > 0,
+      };
+    } catch { return undefined; }
+  })();
+
+  if (version?.sale) {
+    console.error("\nL'arbre porte des modifications non enregistrées : les variantes doivent être");
+    console.error("committées avant de tourner, sinon rien ne prouve qu'aucune n'a été ajoutée après.\n");
+    process.exit(1);
+  }
+
+  console.log(`\n${noms.length} formulations × ${FIELDS.length} champs × ${cas} cas sur ${PALIER}.`);
+  console.log(`Charge avant départ : ${loadavg()[0]!.toFixed(2)} sur ${cpus().length} cœurs.\n`);
+  await loadGeneratifs();
+
+  const resultats: Record<string, Record<Field, number>> = {};
+  for (const nom of noms) {
+    resultats[nom] = {} as Record<Field, number>;
+    for (const champ of FIELDS) {
+      let bons = 0;
+      for (const d of dossiers) if (correct(await extract(PALIER, d, champ, nom), d.truth[champ])) bons++;
+      resultats[nom]![champ] = bons / dossiers.length;
+      console.log(`  ${nom.padEnd(20)} ${champ.padEnd(10)} ${(100 * bons / dossiers.length).toFixed(1)} %`);
+    }
+  }
+
+  /*
+   * Le comparateur, lu dans le relevé et non recalculé ici : l'écart entre le meilleur et le
+   * pire palier sur chaque champ, à prompt fixe. C'est la grandeur que la dispersion des
+   * formulations doit être comparée à — et elle existait avant cette expérience.
+   */
+  const p = readProfiles();
+  const entrePaliers = {} as Record<Field, number | null>;
+  for (const champ of FIELDS) {
+    if (!p?.tiers) { entrePaliers[champ] = null; continue; }
+    const taux = p.tiers.filter((t) => t !== "human").map((t) => p.extraction[t][champ].accuracy);
+    entrePaliers[champ] = 100 * (Math.max(...taux) - Math.min(...taux));
+  }
+
+  const parFormulation = {} as Record<Field, number>;
+  for (const champ of FIELDS) {
+    const taux = noms.map((n) => resultats[n]![champ]);
+    parFormulation[champ] = 100 * (Math.max(...taux) - Math.min(...taux));
+  }
+
+  writeFileSync(SORTIE, JSON.stringify({
+    quoi: "Ce que la formulation du prompt déplace, comparé à ce que le choix du palier déplace.",
+    limite: "Les quatre alternatives ont été écrites après lecture de la référence : ce sont des "
+      + "voisines, et la dispersion mesurée est une borne basse de la vraie sensibilité au prompt.",
+    palier: PALIER, cas, mesureLe: new Date().toISOString(), code: version,
+    charge: { externalBefore: Number(loadavg()[0]!.toFixed(2)), coeurs: cpus().length },
+    /* Le texte complet, pas seulement le nom : sans lui le résultat ne se relie à rien. */
+    formulations: Object.fromEntries(noms.map((n) => [n, PROMPTS[n]("<DOCUMENT>", "document" as Field)])),
+    exactitudes: Object.fromEntries(noms.map((n) => [n,
+      Object.fromEntries(FIELDS.map((c) => [c, Number((100 * resultats[n]![c]).toFixed(1))]))])),
+    dispersion: {
+      parFormulation: Object.fromEntries(FIELDS.map((c) => [c, Number(parFormulation[c].toFixed(1))])),
+      entrePaliers: Object.fromEntries(FIELDS.map((c) => [c, entrePaliers[c] === null ? null : Number(entrePaliers[c]!.toFixed(1))])),
+    },
+  }, null, 2) + "\n");
+
+  console.log("\nchamp       formulation   entre paliers");
+  for (const c of FIELDS) {
+    console.log(`  ${c.padEnd(10)} ${parFormulation[c].toFixed(1).padStart(8)} pts ${(entrePaliers[c] ?? 0).toFixed(1).padStart(11)} pts`);
+  }
+  console.log(`\nÉcrit dans ${SORTIE.split("/").pop()}\n`);
+}

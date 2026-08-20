@@ -23,6 +23,7 @@ about two minutes.
 | `npm run optimise` | the routing, and what the next improvement would cost |
 | `npm run failures` | every case it gets wrong, with its input and its output |
 | `npm run sensitivity` | which assumptions decide the answer, and which do not |
+| `npm run prompt` | what rewording the prompt moves, against what changing tier moves |
 | `npm run figures` | regenerate every table on this page from the frozen profile |
 | `npm run landing` | regenerate landing.json — the figures a published page reads, with their provenance |
 | `npm run dossier` | the validation file a reviewer signs |

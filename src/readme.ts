@@ -335,6 +335,7 @@ const commandes = (() => {
     ["optimise", "the routing, and what the next improvement would cost"],
     ["failures", "every case it gets wrong, with its input and its output"],
     ["sensitivity", "which assumptions decide the answer, and which do not"],
+    ["prompt", "what rewording the prompt moves, against what changing tier moves"],
     ["figures", "regenerate every table on this page from the frozen profile"],
     ["landing", "regenerate landing.json — the figures a published page reads, with their provenance"],
     ["dossier", "the validation file a reviewer signs"],
