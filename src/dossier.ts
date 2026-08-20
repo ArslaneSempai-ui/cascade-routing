@@ -86,7 +86,7 @@ export function dossier(p: Profiles, h: Assumptions): string {
     return (["accuracy", "latency"] as const).map((quoi) => {
       const b = v[quoi];
       return [`\`${t}\``, quoi, b.measuredAt, b.commit ? `\`${b.commit}\`` : "not recorded",
-        b.charge ? `${b.charge.moyenne} / ${b.charge.coeurs} cores` : "—"];
+        b.charge ? `${b.charge.externalBefore} external / ${b.charge.coeurs} cores` : "—"];
     });
   });
   if (prov.some((r) => r[2] !== "—")) {

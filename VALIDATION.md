@@ -1,6 +1,6 @@
 # Validation file — task-level model routing
 
-Generated from the frozen measurement of `2026-08-20T07:49:53.789Z`, produced by commit `fffa112`. Every figure below is
+Generated from the frozen measurement of `2026-08-20T09:52:08.082Z`, produced by commit `c199da4`. Every figure below is
 produced from that same file: this document cannot disagree with the tables elsewhere in
 the repository, because it is not written by hand.
 
@@ -10,13 +10,20 @@ model. Each carries its own provenance rather than borrowing the other's.
 
 | Tier | Measured | At | Commit | Load during |
 |---|---|---|---|---|
-| `rules` | both | 2026-08-20T07:05:34.098Z | `fffa112` | not recorded |
-| `small` | both | 2026-08-19T22:38:44.326Z | `a6166c9` | not recorded |
-| `large` | both | 2026-08-19T22:44:26.476Z | `a6166c9` | not recorded |
-| `gen-0.6b` | both | 2026-08-20T07:10:50.345Z | `fffa112` | not recorded |
-| `gen-4b` | both | 2026-08-20T07:25:49.755Z | `fffa112` | not recorded |
-| `gen-8b` | both | 2026-08-20T07:49:53.747Z | `fffa112` | not recorded |
-| `human` | both | 2026-08-19T22:44:26.506Z | `a6166c9` | not recorded |
+| `rules` | accuracy | 2026-08-20T09:08:01.532Z | `c199da4` | undefined external / 10 cores |
+| `rules` | latency | 2026-08-20T09:08:01.532Z | `c199da4` | undefined external / 10 cores |
+| `small` | accuracy | 2026-08-20T09:10:55.102Z | `c199da4` | undefined external / 10 cores |
+| `small` | latency | 2026-08-20T09:10:55.102Z | `c199da4` | undefined external / 10 cores |
+| `large` | accuracy | 2026-08-20T09:16:30.026Z | `c199da4` | undefined external / 10 cores |
+| `large` | latency | 2026-08-20T09:16:30.026Z | `c199da4` | undefined external / 10 cores |
+| `gen-0.6b` | accuracy | 2026-08-20T09:20:39.595Z | `c199da4` | undefined external / 10 cores |
+| `gen-0.6b` | latency | 2026-08-20T09:20:39.595Z | `c199da4` | undefined external / 10 cores |
+| `gen-4b` | accuracy | 2026-08-20T09:34:21.632Z | `c199da4` | undefined external / 10 cores |
+| `gen-4b` | latency | 2026-08-20T09:34:21.632Z | `c199da4` | undefined external / 10 cores |
+| `gen-8b` | accuracy | 2026-08-20T09:52:08.055Z | `c199da4` | undefined external / 10 cores |
+| `gen-8b` | latency | 2026-08-20T09:52:08.055Z | `c199da4` | undefined external / 10 cores |
+| `human` | accuracy | 2026-08-20T09:16:30.060Z | `c199da4` | undefined external / 10 cores |
+| `human` | latency | 2026-08-20T09:16:30.060Z | `c199da4` | undefined external / 10 cores |
 
 **This file does not certify anything.** It assembles what a reviewer needs in order to
 decide, and states what the evidence will not support. The decision is the committee's.
@@ -33,11 +40,11 @@ available one. Where two tiers cannot be told apart on this sample, the cheaper 
 | `birth` | `rules` | 100.0 % | [100–100] | n=1000 | $0 |
 | `document` | `rules` | 79.7 % | [77–82] | n=1000 | $0 |
 | `country` | `rules` | 100.0 % | [100–100] | n=1000 | $0 |
-| `address` | `gen-4b` | 95.8 % | [91–98] | n=120 | $48 |
+| `address` | `gen-4b` | 95.8 % | [91–98] | n=120 | $43 |
 
-Overall: **94.4 %** for **$208** against a budget of $4,000
-(5.2 % consumed), at **1518 ms** per document
-against a ceiling of 2000 ms (75.9 % consumed).
+Overall: **94.4 %** for **$203** against a budget of $4,000
+(5.1 % consumed), at **1341 ms** per document
+against a ceiling of 2000 ms (67.0 % consumed).
 
 ## 2. Where the sample cannot decide
 

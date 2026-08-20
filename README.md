@@ -4,7 +4,7 @@ Four tiers — rules, a small model, a large one, a human — measured on held-o
 routed under a budget. The answer is rarely "buy the bigger model", and this says why.
 
 <!-- figures:finding -->
-**The finding.** Routing every field to the same tier is the default and it is wrong. Measured per field, 3 of the 5 fields are carried by regexes at **zero cost and up to 100 % accuracy**, and the money is worth spending on exactly the ones that need it. Total: **94.4 % for $208** of a $4,000 budget — the budget does not bind. No available budget buys a better routing. Measured on 1000 and 120 held-out cases depending on the tier — the tables carry each figure's own `n`.
+**The finding.** Routing every field to the same tier is the default and it is wrong. Measured per field, 3 of the 5 fields are carried by regexes at **zero cost and up to 100 % accuracy**, and the money is worth spending on exactly the ones that need it. Total: **94.4 % for $203** of a $4,000 budget — the budget does not bind. No available budget buys a better routing. Measured on 1000 and 120 held-out cases depending on the tier — the tables carry each figure's own `n`.
 <!-- /figures:finding -->
 
 **[Try it in your browser →](https://arslanesempai-ui.github.io/cascade-routing/)** — take a
@@ -65,11 +65,11 @@ on another they never saw. Measured honestly, they collapse.
 | Tier | name | birth | document | country | address | Latency |
 |---|---|---|---|---|---|---|
 | `rules` | 0.0 % | 100.0 % | 79.7 % | 100.0 % | 0.0 % | 0.0 ms |
-| `small` | 46.6 % | 97.9 % | 57.7 % | 100.0 % | 43.0 % | 32.7 ms |
-| `large` | 96.6 % | 100.0 % | 64.4 % | 100.0 % | 32.8 % | 64.9 ms |
-| `gen-0.6b` | 80.8 % | 87.5 % | 70.0 % | 83.3 % | 75.0 % | 417.3 ms |
-| `gen-4b` | 89.2 % | 99.2 % | 79.2 % | 100.0 % | 95.8 % | 1248.0 ms |
-| `gen-8b` | 91.7 % | 100.0 % | 83.3 % | 100.0 % | 82.5 % | 2089.1 ms |
+| `small` | 46.6 % | 97.9 % | 57.7 % | 100.0 % | 43.0 % | 29.6 ms |
+| `large` | 96.6 % | 100.0 % | 64.4 % | 100.0 % | 32.8 % | 62.1 ms |
+| `gen-0.6b` | 80.8 % | 87.5 % | 70.0 % | 83.3 % | 75.0 % | 335.2 ms |
+| `gen-4b` | 89.2 % | 99.2 % | 79.2 % | 100.0 % | 95.8 % | 1144.3 ms |
+| `gen-8b` | 91.7 % | 100.0 % | 83.3 % | 100.0 % | 82.5 % | 1529.6 ms |
 <!-- /figures:extraction -->
 
 Two things fall out of that table, and neither is guessable:
@@ -84,11 +84,11 @@ The second chain, classifying alert narratives, is where the keyword collapse is
 | Tier | Accuracy | 95 % interval | Latency |
 |---|---|---|---|
 | `rules` | 21.3 % | [19–24] | 0.00 ms |
-| `small` | 69.2 % | [66–72] | 5.34 ms |
-| `large` | 40.5 % | [37–44] | 12.51 ms |
-| `gen-0.6b` | 61.7 % | [53–70] | 447.21 ms |
-| `gen-4b` | 94.2 % | [88–97] | 1192.97 ms |
-| `gen-8b` | 100.0 % | [97–100] | 1390.43 ms |
+| `small` | 69.2 % | [66–72] | 5.44 ms |
+| `large` | 40.5 % | [37–44] | 11.42 ms |
+| `gen-0.6b` | 61.7 % | [53–70] | 340.64 ms |
+| `gen-4b` | 94.2 % | [88–97] | 1005.91 ms |
+| `gen-8b` | 100.0 % | [97–100] | 1307.19 ms |
 <!-- /figures:classification -->
 
 Those keywords scored **100 %** against the templates they were written from. On
@@ -193,12 +193,12 @@ around a second per field, so the constraint stops being decorative.
 <!-- figures:latence -->
 | Ceiling per document | Accuracy | Cost | Actual | Routing |
 |---|---|---|---|---|
-| 2000 ms | 94.4 % | $208 | 1518.0 ms | `large` `rules` `rules` `rules` `gen-4b` |
-| 500 ms | 83.9 % | $180 | 98.0 ms | `large` `rules` `rules` `rules` `small` |
-| 50 ms | 65.3 % | $20 | 32.2 ms | `small` `rules` `rules` `rules` `rules` |
-| 30 ms | 55.9 % | $0 | 0.0 ms | `rules` `rules` `rules` `rules` `rules` |
+| 2000 ms | 94.4 % | $203 | 1340.9 ms | `large` `rules` `rules` `rules` `gen-4b` |
+| 500 ms | 90.3 % | $172 | 428.5 ms | `large` `rules` `rules` `rules` `gen-0.6b` |
+| 100 ms | 75.3 % | $160 | 64.9 ms | `large` `rules` `rules` `rules` `rules` |
+| 50 ms | 65.3 % | $20 | 21.3 ms | `small` `rules` `rules` `rules` `rules` |
 
-**What the promise costs.** Lift the ceiling entirely and the cheapest routing that is statistically indistinguishable in accuracy costs $107 instead of $208 — it just takes 3205 ms per document. **Your latency promise is worth $102**, and the money budget never binds at all. That is the shadow price nobody prices.
+**What the promise costs.** Lift the ceiling entirely and the cheapest routing that is statistically indistinguishable in accuracy costs $93 instead of $203 — it just takes 2782 ms per document. **Your latency promise is worth $110**, and the money budget never binds at all. That is the shadow price nobody prices.
 <!-- /figures:latence -->
 
 Read it as the price list for a service level agreement: each row is what a tighter promise
@@ -241,8 +241,8 @@ baseline took four minutes to write.
 | birth | `rules` | 100.0 % | $0 |
 | document | `rules` | 79.7 % | $0 |
 | country | `rules` | 100.0 % | $0 |
-| address | `gen-4b` | 95.8 % | $42 |
-| **total** |  | **94.4 %** | **$208** |
+| address | `gen-4b` | 95.8 % | $38 |
+| **total** |  | **94.4 %** | **$203** |
 <!-- /figures:routing -->
 
 <!-- figures:shadow -->
@@ -371,7 +371,7 @@ comfortable declaring. It is generated from the code now, and a test fails if an
 tool runs on is missing from it.
 
 <!-- figures:provenance -->
-**4 measured**, **13 assumed**, **5 chosen**. What each kind means, and what you are entitled to ask of it:
+**4 measured**, **13 assumed**, **6 chosen**. What each kind means, and what you are entitled to ask of it:
 
 - **measured** — running the code in this repository produces it. *run it yourself — the draws are seeded.*
 - **assumed** — an input nobody here can know; yours to supply. *put your own figure in, and read the band around it.*
@@ -396,6 +396,7 @@ tool runs on is missing from it.
 | assumed | `latencyBudgetMs` | milliseconds allowed for one whole document, end to end | your service level agreement knows this exactly; it binds independently of the money |
 | assumed | `costWrongValue` | what a false value entering the record costs you | your risk function knows this; it is the number a regulator asks about |
 | assumed | `costBlankField` | what a blank field costs you | one analyst review — the only one of the two anybody can price from a timesheet |
+| chosen | `CHARGE_MAX_PAR_COEUR` | the external load per core above which a duration is not recorded | 0.5 because it felt right, not because anything was weighed — and it decides whether a pass keeps its own timings or the previous ones. It is compared to `externalBefore`, the load the machine carried before the tier started, never to `totalDuring`: an encoder saturates the cores by doing its job, and comparing that would refuse every measurement |
 | chosen | `CONFIANCE` | the confidence level every interval and every tie is decided at | 95 % because that is wilson()'s default, not because anyone weighed it — and it decides which findings survive |
 | chosen | `corpus` | the synthetic documents the models are scored on, and their ground truth | the first measurement scored rules at 100 % because I wrote the regexes against my own templates |
 | chosen | `TRAINING / HELDOUT` | which phrasings the rules may see and which they are scored on | the defence against marking my own homework; a test fails if the two share a shape |

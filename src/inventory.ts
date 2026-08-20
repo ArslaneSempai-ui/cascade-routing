@@ -52,6 +52,12 @@ const WHAT: Record<keyof typeof ASSUMPTIONS, { what: string; note: string }> = {
 
 export const INVENTORY: Inventory = [
   {
+    name: "CHARGE_MAX_PAR_COEUR",
+    provenance: "chosen",
+    what: "the external load per core above which a duration is not recorded",
+    note: "0.5 because it felt right, not because anything was weighed — and it decides whether a pass keeps its own timings or the previous ones. It is compared to `externalBefore`, the load the machine carried before the tier started, never to `totalDuring`: an encoder saturates the cores by doing its job, and comparing that would refuse every measurement",
+  },
+  {
     name: "CONFIANCE",
     provenance: "chosen",
     what: "the confidence level every interval and every tie is decided at",

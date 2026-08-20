@@ -247,7 +247,23 @@ export function construire(p: Profiles): unknown {
        * ce qui n'a jamais été écrit, et un `null` visible vaut mieux qu'une date empruntée
        * au voisin.
        */
-      perTier: Object.fromEntries(paliersMesures(p).map((t) => [t, p.provenance?.[t] ?? null])),
+      /*
+       * Traduit vers les clés publiques, et `externalBefore` seul.
+       *
+       * `totalDuring` reste au relevé et ne monte pas ici : il inclut le travail mesuré, donc
+       * un lecteur le prendrait pour une contamination là où il n'y a qu'un encodeur qui
+       * sature les cœurs. Ce qu'une page peut affirmer, c'est ce que la machine faisait
+       * **par ailleurs**.
+       */
+      perTier: Object.fromEntries(paliersMesures(p).map((t) => {
+        const v = p.provenance?.[t];
+        if (!v?.accuracy) return [t, null];
+        const bloc = (b: typeof v.accuracy) => ({
+          commit: b.commit, treeDirty: b.sale, measuredAt: b.measuredAt,
+          ...(b.charge ? { loadAvg: b.charge.externalBefore, cores: b.charge.coeurs } : {}),
+        });
+        return [t, { accuracy: bloc(v.accuracy), latency: bloc(v.latency) }];
+      })),
     },
     confidence: { level: CONFIANCE.niveau, method: "Wilson" },
     fields: FIELDS,

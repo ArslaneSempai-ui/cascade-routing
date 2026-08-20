@@ -71,6 +71,20 @@ export type Profile = {
   sorties?: string[];
 };
 
+/**
+ * La charge externe au-delà de laquelle une durée ne veut plus rien dire.
+ *
+ * Exprimé par cœur, parce qu'une charge de 4 est confortable sur seize cœurs et étouffante
+ * sur deux. La valeur sort de mon jugement et de rien d'autre — c'est un nombre **choisi**,
+ * au sens que ce dépôt donne au mot, et il est déclaré dans `INVENTORY` à ce titre.
+ *
+ * Il porte sur `externalBefore` — la charge que la machine subissait **avant** que la mesure
+ * commence — et jamais sur `totalDuring`, qui inclut le travail de la mesure elle-même. Les
+ * comparer au mauvais champ ferait refuser toute mesure d'encodeur, puisqu'une inférence
+ * sature les cœurs par construction.
+ */
+export const CHARGE_MAX_PAR_COEUR = 0.5;
+
 /** D'où vient un résultat : quel code, quel arbre, quand, et sous quelle charge. */
 export type Provenance = {
   commit: string | null;
@@ -78,8 +92,21 @@ export type Provenance = {
   measuredAt: string;
   /** La raison donnée si l'on a mesuré sciemment sur un arbre modifié. */
   malgreArbreSale?: string;
-  /** Charge moyenne de la machine pendant la mesure, et le nombre de cœurs pour la lire. */
-  charge?: { moyenne: number; coeurs: number };
+  /**
+   * Deux charges, et les confondre était le défaut de la première version.
+   *
+   * `externalBefore` est ce que la machine subissait juste avant que ce palier commence :
+   * c'est la seule qui parle des *conditions*, c'est celle que la garde teste, et c'est celle
+   * qu'une page peut publier. `totalDuring` est la moyenne réellement échantillonnée pendant
+   * la mesure — elle inclut donc le travail mesuré, et une inférence d'encodeur sature les
+   * cœurs par construction : `small` a été chronométré à 9,1 sans que rien d'étranger ne
+   * tourne.
+   *
+   * On garde quand même la seconde, parce que c'est elle qui a permis de s'attraper : un
+   * `totalDuring` très au-dessus de ce que le travail explique est le signal qu'un tiers
+   * s'est invité pendant la passe, et un relevé pris avant le départ ne l'aurait jamais vu.
+   */
+  charge?: { externalBefore: number; totalDuring: number; coeurs: number };
 };
 
 /**
@@ -281,6 +308,11 @@ export async function measure(
   const classification = {} as Record<TierName, Profile>;
 
   for (const tier of paliers) {
+    /* Un échantillon avant le départ, puis toutes les cinq secondes : « pendant » doit être vrai. */
+    const chargeAvant = Number(loadavg()[0]!.toFixed(2));
+    const echantillons: number[] = [];
+    const sonde = setInterval(() => echantillons.push(loadavg()[0]!), 5_000);
+
     const dossiers = tousDossiers.slice(0, combien(tier));
     const alertes = toutesAlertes.slice(0, combien(tier));
     extraction[tier] = {} as Record<Field, Profile>;
@@ -344,8 +376,15 @@ export async function measure(
       sale: version?.sale ?? null,
       measuredAt: new Date().toISOString(),
       ...(options.malgreArbreSale ? { malgreArbreSale: options.malgreArbreSale } : {}),
-      charge: { moyenne: Number(loadavg()[0]!.toFixed(2)), coeurs: cpus().length },
+      charge: {
+        externalBefore: chargeAvant,
+        totalDuring: Number((echantillons.length
+          ? echantillons.reduce((a, b) => a + b, 0) / echantillons.length
+          : loadavg()[0]!).toFixed(2)),
+        coeurs: cpus().length,
+      },
     };
+    clearInterval(sonde);
     /* L'exactitude est toujours la nôtre ; la latence ne l'est que si la machine le permettait. */
     const avant = readProfiles()?.provenance?.[tier];
     provenance[tier] = {
@@ -444,10 +483,10 @@ if (isMain(import.meta)) {
    */
   const coeurs = cpus().length;
   const chargeParCoeur = loadavg()[0]! / coeurs;
-  const latenceValide = chargeParCoeur <= 0.5 || process.argv.includes("--allow-load");
+  const latenceValide = chargeParCoeur <= CHARGE_MAX_PAR_COEUR || process.argv.includes("--allow-load");
   if (!latenceValide) {
     console.warn(`\n⚠ charge ${loadavg()[0]!.toFixed(2)} sur ${coeurs} cœurs `
-      + `(${(100 * chargeParCoeur).toFixed(0)} %) — trop pour chronométrer.`);
+      + `(${(100 * chargeParCoeur).toFixed(0)} %, seuil ${(100 * CHARGE_MAX_PAR_COEUR).toFixed(0)} %) — trop pour chronométrer.`);
     console.warn(`  Les exactitudes seront mesurées, les durées précédentes conservées.`);
     console.warn(`  Fermez ce qui tourne, ou --allow-load pour enregistrer quand même.\n`);
   }
