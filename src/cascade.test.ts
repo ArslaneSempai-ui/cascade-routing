@@ -757,11 +757,21 @@ test("un palier mesuré porte sa propre provenance", () => {
   if (!p) return;
   if (p.measuredAt === RELEVE_HISTORIQUE) return;
 
+  /*
+   * Compter ce qu'on a réellement vérifié.
+   *
+   * Chaque palier peut être sauté pour une raison légitime — provenance absente, forme
+   * antérieure au champ. Mais si le champ était renommé, **tous** seraient sautés et le test
+   * passerait au vert en n'ayant rien regardé. Un test qui agrège avant de vérifier est
+   * aveugle à la moitié qui s'est tue ; celui-ci exige d'avoir vu au moins un palier.
+   */
+  let verifies = 0;
   for (const t of paliersMesures(p)) {
     const v: ProvenanceDuPalier | undefined = p.provenance?.[t];
     if (v === undefined) continue;   // palier antérieur au champ : `null` assumé, pas inventé
     /* Relevé antérieur à la séparation par type de mesure : sa forme plate n'est pas une faute. */
     if (v.accuracy === undefined) continue;
+    verifies++;
     for (const quoi of ["accuracy", "latency"] as const) {
       const b: Provenance = v[quoi];
       assert.ok(b, `${t} n'a pas de provenance pour ${quoi}`);
@@ -770,6 +780,9 @@ test("un palier mesuré porte sa propre provenance", () => {
       assert.ok(b.sale === null || typeof b.sale === "boolean", `${t}/${quoi} a un état d'arbre mal formé`);
     }
   }
+  assert.ok(verifies > 0,
+    "aucun palier n'a été vérifié : tous ont été sautés, ce qui veut dire que le champ a "
+    + "changé de nom ou de forme et que ce test ne garde plus rien.");
 });
 
 /* ── ce qui peut sortir de cette machine, et rien d'autre ── */
@@ -932,4 +945,37 @@ test("aucun relevé suivi par git ne transporte ses sorties brutes", () => {
       }
     }
   }
+});
+
+test("chaque latence enregistrée dit sous quelle charge elle a été prise", () => {
+  /*
+   * Ce qui rend « mesuré sur machine au repos » vérifiable au lieu d'affirmable.
+   *
+   * Cette phrase a été écrite, crue, et fausse pendant une passe entière — un pilote audio
+   * oublié tenait un cœur sur dix depuis seize jours et valait un tiers de la latence de la
+   * chaîne. Personne ne pouvait le contrôler, parce que le nombre n'était nulle part.
+   *
+   * Il y est maintenant, et ce test l'exige : une durée sans sa charge est une durée qu'on
+   * demande au lecteur de croire. Le seuil qui décide de l'enregistrer est déclaré à côté,
+   * dans `INVENTORY`, comme le choix qu'il est.
+   */
+  const p = readProfiles();
+  if (!p) return;
+
+  let verifies = 0;
+  for (const t of paliersMesures(p)) {
+    const v: ProvenanceDuPalier | undefined = p.provenance?.[t];
+    if (!v?.latency) continue;                    // palier antérieur au champ
+    if (v.latency.charge === undefined) continue; // relevé antérieur à la charge
+    verifies++;
+    const c: NonNullable<Provenance["charge"]> = v.latency.charge;
+    assert.ok(Number.isFinite(c.externalBefore) && c.externalBefore >= 0,
+      `${t} enregistre une latence sans charge externe exploitable`);
+    assert.ok(Number.isFinite(c.totalDuring) && c.totalDuring >= 0,
+      `${t} enregistre une latence sans charge pendant la mesure`);
+    assert.ok(c.coeurs > 0, `${t} enregistre une charge sans le nombre de cœurs qui la rend lisible`);
+  }
+  assert.ok(verifies > 0,
+    "aucune latence n'a été vérifiée : le champ de charge a disparu, et « mesuré au repos » "
+    + "redevient une affirmation que personne ne peut contrôler.");
 });

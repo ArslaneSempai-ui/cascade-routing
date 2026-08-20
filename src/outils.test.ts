@@ -8,6 +8,10 @@
  */
 
 import { test } from "node:test";
+import { mkdtempSync, rmSync, symlinkSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { execFileSync } from "node:child_process";
 import assert from "node:assert/strict";
 import { ecart } from "./benchmark.ts";
 import { lire } from "./intake.ts";
@@ -113,5 +117,43 @@ test("chaque fichier de data/ a la forme que le générateur suppose", () => {
     for (const c of cles) {
       assert.ok(c in d, `${chemin} n'a pas de clé « ${c} » — le générateur du README la lit`);
     }
+  }
+});
+
+test("un clone frais rend un chiffre sans intervention manuelle", () => {
+  /*
+   * Le seul test qui vérifie la promesse plutôt que le code.
+   *
+   * « Clonez et vérifiez en deux minutes » était faux et rien ne le disait : `data/` est
+   * ignoré par git, donc un clone n'a aucun relevé, alors que le dépôt en livre un à la
+   * racine. Il fallait le copier à la main — une étape que personne ne devine et qu'aucun
+   * test ne pouvait voir, puisque tous tournaient dans un dépôt qui avait déjà mesuré.
+   *
+   * Celui-ci part d'un clone réel. Il tombe si le repli disparaît, si le relevé cesse d'être
+   * livré, ou si le premier nombre se met à exiger un modèle. C'est aussi le seul test dont
+   * l'échec se lit directement comme « la phrase de la page est devenue fausse ».
+   */
+  const racine = new URL("..", import.meta.url).pathname;
+  const dossier = mkdtempSync(join(tmpdir(), "clone-promesse-"));
+  try {
+    execFileSync("git", ["clone", "--quiet", racine, "cascade"], { cwd: dossier, stdio: "pipe" });
+    const clone = join(dossier, "cascade");
+
+    /* Les dépendances sont mesurées à part ; ce test porte sur ce que le dépôt livre. */
+    symlinkSync(join(racine, "node_modules"), join(clone, "node_modules"), "dir");
+
+    assert.ok(!existsSync(join(clone, "data", "profiles.json")),
+      "le clone porte déjà un relevé dans data/ — ce test ne vérifierait plus le repli");
+
+    const sortie = execFileSync(process.execPath, ["src/optimise.ts"],
+      { cwd: clone, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+
+    for (const attendu of ["CHAIN A", "chosen"]) {
+      assert.ok(sortie.includes(attendu),
+        `un clone frais ne rend pas « ${attendu} » sans qu'on l'aide.\n`
+        + `  → la promesse « clonez et vérifiez » redemande une étape manuelle.`);
+    }
+  } finally {
+    rmSync(dossier, { recursive: true, force: true });
   }
 });

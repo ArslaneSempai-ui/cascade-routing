@@ -10,7 +10,8 @@
  * Mixing the two would pass a tariff off as a fact.
  */
 
-import { mkdirSync, writeFileSync, readFileSync, existsSync, renameSync } from "node:fs";
+import { mkdirSync, writeFileSync, readFileSync, existsSync, renameSync, readdirSync } from "node:fs";
+import { join } from "node:path";
 import { isMain } from "./cli.ts";
 import { execFileSync } from "node:child_process";
 import { loadavg, cpus } from "node:os";
@@ -178,8 +179,43 @@ export type Profiles = {
   loadTime: Record<TierName, number>;
 };
 
+let refReferenceAnnoncee = false;
+
+/**
+ * Le relevé du lecteur, ou celui du dépôt — et jamais l'un pour l'autre.
+ *
+ * `data/` est ignoré par git : un clone frais n'a donc aucun relevé, alors que le dépôt en
+ * **livre** un à la racine. Le premier nombre demandait une copie manuelle que personne ne
+ * pouvait deviner, et « clonez et vérifiez » restait une phrase inexécutable.
+ *
+ * Le repli comble ça, mais il s'annonce, et c'est la moitié qui compte. Un repli silencieux
+ * ferait croire à quelqu'un qu'il lit *ses* mesures alors qu'il relit les nôtres — le pire
+ * mensonge que cet outil puisse produire, puisqu'il porterait exactement sur la distinction
+ * qu'il vend. La référence est choisie par sa date et non par son nom, pour qu'une passe
+ * future n'ait pas à mettre un chemin à jour.
+ */
 export function readProfiles(): Profiles | null {
-  return existsSync(FICHIER) ? JSON.parse(readFileSync(FICHIER, "utf8")) : null;
+  if (existsSync(FICHIER)) return JSON.parse(readFileSync(FICHIER, "utf8"));
+
+  const racine = new URL("..", import.meta.url).pathname;
+  const livres = readdirSync(racine)
+    .filter((f) => /^profiles-.*\.json$/.test(f))
+    .map((f) => {
+      try { return { f, p: JSON.parse(readFileSync(join(racine, f), "utf8")) as Profiles }; }
+      catch { return null; }
+    })
+    .filter((x): x is { f: string; p: Profiles } => Boolean(x?.p?.measuredAt))
+    .sort((a, b) => b.p.measuredAt.localeCompare(a.p.measuredAt));
+
+  const ref = livres[0];
+  if (!ref) return null;
+  if (!refReferenceAnnoncee) {
+    refReferenceAnnoncee = true;
+    console.warn(`\n⚠ Aucune mesure à vous dans data/profiles.json.`);
+    console.warn(`  Lecture du relevé de référence livré avec le dépôt : ${ref.f}`);
+    console.warn(`  Ce sont NOS chiffres, pas les vôtres — \`npm run measure\` mesure les vôtres.\n`);
+  }
+  return ref.p;
 }
 
 /** Le quantile d'une série, pour dire une durée avec sa dispersion. */

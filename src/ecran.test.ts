@@ -99,8 +99,22 @@ test("chaque symbole importé par le gabarit de pages.ts existe vraiment", async
   const source = readFileSync(new URL("./pages.ts", import.meta.url).pathname, "utf8");
   const imports = [...source.matchAll(/import\s*\{([^}]+)\}\s*from\s*"\.\/js\/([A-Za-z0-9_-]+)\.js"/g)];
 
-  assert.ok(imports.length > 0,
-    "aucun import ./js/ trouvé dans pages.ts — le gabarit a changé de forme et ce test ne garde plus rien");
+  /*
+   * Compter les imports ne suffit pas, il faut les retrouver tous.
+   *
+   * « au moins un » passait encore si trois des quatre lignes cessaient de correspondre — un
+   * bloc retagué, une classe renommée, et trois quarts du gabarit sortent du champ du contrôle
+   * sans que rien ne tombe. Les modules attendus sont donc nommés : en manquer un fait tomber
+   * le test avec le nom du manquant.
+   */
+  const attendus = ["corpus", "paliers", "optimise", "assumptions"];
+  const trouves = imports.map((m) => m[2]!);
+  for (const m of attendus) {
+    assert.ok(trouves.includes(m),
+      `le gabarit de pages.ts n'importe plus rien depuis ./js/${m}.js.\n`
+      + `  → soit le module a changé de nom, soit la ligne a changé de forme et ce test`
+      + ` ne surveille plus cette partie du gabarit.`);
+  }
 
   for (const [, liste, module] of imports) {
     const mod = await import(new URL(`./${module}.ts`, import.meta.url).pathname) as Record<string, unknown>;
