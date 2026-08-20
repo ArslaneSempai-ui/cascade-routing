@@ -458,6 +458,31 @@ export function construire(p: Profiles): unknown {
     cleanPerDocument: optimum === null ? null : dossiersPropres(p, optimum.routing),
     paired: egalitesTranchees(p),
 
+    /*
+     * Le journal, compté plutôt que recopié.
+     *
+     * `vueParPersonne` est le seul critère qui compte et il est écrit à la main dans le
+     * journal, pas déduit d'une phrase par un générateur : « personne ne l'a vue » est un
+     * jugement sur une histoire, et le laisser inférer d'un texte français le rendrait
+     * généreux au premier cas ambigu. Trois sur dix seulement — la sévérité de ce champ est
+     * ce qui empêche l'argument de se retourner.
+     */
+    retractions: (() => {
+      const f = new URL("../retractations.json", import.meta.url).pathname;
+      if (!existsSync(f)) return null;
+      const j = JSON.parse(readFileSync(f, "utf8")) as {
+        entrees: { date: string; resume?: string; vueParPersonne?: boolean }[] };
+      return {
+        total: j.entrees.length,
+        caughtBeforeAnyoneSawIt: j.entrees.filter((e) => e.vueParPersonne === true).length,
+        entries: j.entrees.map((e) => ({
+          date: e.date,
+          headline: e.resume ?? null,
+          caughtBeforeAnyoneSawIt: e.vueParPersonne ?? null,
+        })),
+      };
+    })(),
+
     /* Les entrées que le lecteur remplace. Aucune n'est mesurée, et la page doit le dire. */
     assumptions: {
       humanAccuracy: ASSUMPTIONS.humanAccuracy,

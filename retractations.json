@@ -8,7 +8,9 @@
       "vrai": "Elles atteignent 0 % sur deux d'entre eux. Les expressions régulières avaient été écrites contre les gabarits qui servaient à les noter.",
       "trouve": "Une relecture, avant publication.",
       "cout": "La reconstruction complète du corpus, et l'ajout d'un découpage entraînement / épreuve.",
-      "tenu": "les trois moitiés du corpus ne partagent aucune formulation"
+      "tenu": "les trois moitiés du corpus ne partagent aucune formulation",
+      "resume": "Les règles écrites à la main semblaient parfaites sur les cinq champs ; elles avaient été notées contre les gabarits qui avaient servi à les écrire.",
+      "vueParPersonne": true
     },
     {
       "date": "2026-07-02",
@@ -16,7 +18,9 @@
       "vrai": "63 %. L'évaluateur comptait « IT - 5560 - K » comme un échec face à « IT-5560-K » : il mesurait le formatage, pas le contenu.",
       "trouve": "La galerie d'échecs, à sa première exécution.",
       "cout": "133 échecs sur 685 étaient des faux. Un champ est passé de 51,7 % à 100 % après correction.",
-      "tenu": "formatting is not counted as an error"
+      "tenu": "formatting is not counted as an error",
+      "resume": "Le petit modèle passait pour incapable de lire un numéro d'identité ; c'est l'évaluateur qui comptait un espace comme une erreur.",
+      "vueParPersonne": false
     },
     {
       "date": "2026-08-19",
@@ -24,7 +28,9 @@
       "vrai": "Sur un seul champ — et sur 120 cas l'écart était de 4,2 points avec des intervalles qui se recouvraient presque entièrement. L'affirmation n'était pas seulement mal comptée, elle n'était pas soutenue.",
       "trouve": "Le générateur du dossier de validation, dont la section « ce que l'échantillon ne tranche pas » listait la paire.",
       "cout": "Un titre de billet public, retiré quelques heures avant sa publication.",
-      "tenu": "à écart non significatif, le moins cher est retenu"
+      "tenu": "à écart non significatif, le moins cher est retenu",
+      "resume": "Le grand modèle était annoncé pire que le petit sur deux champs ; l'écart n'était significatif sur aucun.",
+      "vueParPersonne": true
     },
     {
       "date": "2026-08-19",
@@ -32,7 +38,9 @@
       "vrai": "La première moitié tient — 82,5 % contre 95,8 % sur l'adresse, écart réel. La seconde non : entre 4B et 8B, la classification ne bouge pas de façon mesurable.",
       "trouve": "Le test de significativité, appliqué aux quatre affirmations d'un coup.",
       "cout": "Une phrase déjà donnée à l'oral comme acquise.",
-      "tenu": "un palier plus gros n'est pas supposé meilleur"
+      "tenu": "un palier plus gros n'est pas supposé meilleur",
+      "resume": "Sur l'échelle générative, « plus gros est pire » était présenté comme un fait ; l'échantillon ne le soutenait pas.",
+      "vueParPersonne": false
     },
     {
       "date": "2026-08-19",
@@ -40,7 +48,9 @@
       "vrai": "79,7 % contre 64,4 % et 57,7 %. Les trois chiffres étaient justes le jour où ils ont été écrits et sont devenus faux à la remesure à mille cas, dans une phrase que rien ne régénérait.",
       "trouve": "Un contrôle écrit ce jour-là, qui refuse tout nombre tapé à la main dans la prose.",
       "cout": "Trois chiffres faux en ligne pendant quelques heures.",
-      "tenu": "aucun chiffre n'est tapé à la main dans la prose du README"
+      "tenu": "aucun chiffre n'est tapé à la main dans la prose du README",
+      "resume": "Trois chiffres de la page étaient tapés à la main et faux.",
+      "vueParPersonne": false
     },
     {
       "date": "2026-08-19",
@@ -48,7 +58,9 @@
       "vrai": "C'était vrai le matin et faux le soir : un budget en secondes existe désormais et c'est lui qui contraint, pas l'argent. La page se contredisait d'une section à l'autre.",
       "trouve": "L'audit des affirmations en gras contre les tests qui les tiennent.",
       "cout": "Une contradiction visible sur la page publiée.",
-      "tenu": "le budget de temps mord avant le budget d'argent"
+      "tenu": "le budget de temps mord avant le budget d'argent",
+      "resume": "La latence était mesurée sans jouer aucun rôle dans le routage, alors que la page affirmait le contraire.",
+      "vueParPersonne": false
     },
     {
       "date": "2026-08-19",
@@ -57,7 +69,9 @@
       "trouve": "La vérification de l'affirmation, après l'avoir énoncée.",
       "cout": "Rien, sauf l'exactitude d'une phrase dite trop vite.",
       "tenu": null,
-      "nonTenue": "L'affirmation portait sur neuf dépôts publiés, pas sur celui-ci : aucun test de cette suite ne peut la tenir. Le contrôle qui l'attraperait ici — le détecteur de débordement de `verifier-ecran.mjs` — ne couvre que cet écran, et tourne avec `npm run pages`, pas avec `npm test`."
+      "nonTenue": "L'affirmation portait sur neuf dépôts publiés, pas sur celui-ci : aucun test de cette suite ne peut la tenir. Le contrôle qui l'attraperait ici — le détecteur de débordement de `verifier-ecran.mjs` — ne couvre que cet écran, et tourne avec `npm run pages`, pas avec `npm test`.",
+      "resume": "Un défaut d'affichage était annoncé sur neuf démos publiées ; il n'en touchait qu'une.",
+      "vueParPersonne": false
     },
     {
       "date": "2026-08-20",
@@ -65,7 +79,9 @@
       "vrai": "Elles étaient celles des modèles **plus un pilote audio que personne n'avait regardé**. `UA Mixer Engine` occupait un cœur sur dix depuis seize jours ; l'arrêter a retiré 22 à 36 % de la latence de chaque palier, et fait passer la chaîne retenue de 1 341 à 968 ms. Les exactitudes sont restées identiques sur les 35 combinaisons palier×champ : rien du modèle n'avait changé.",
       "trouve": "Une passe contaminée par mon propre travail concurrent, qui a rendu `gen-8b` 32 % plus lent et m'a fait relever la charge machine pour la première fois.",
       "cout": "Trois passes de mesure. Et la section « un palier disparu entre deux mesures », qui racontait une instabilité des modèles là où il n'y avait qu'une machine occupée : `gen-0.6b` mesuré à 2 098 ms sous une charge de 7,98, 1 676 sous 4,31, 1 167 sous 2,54, pour un plafond à 2 000.",
-      "tenu": "chaque latence enregistrée dit sous quelle charge elle a été prise"
+      "tenu": "chaque latence enregistrée dit sous quelle charge elle a été prise",
+      "resume": "Les latences publiées passaient pour celles des modèles ; c'étaient celles des modèles plus un pilote audio oublié qui tenait un cœur sur dix depuis seize jours, et valait un tiers du total.",
+      "vueParPersonne": false
     },
     {
       "date": "2026-08-20",
@@ -73,7 +89,9 @@
       "vrai": "Vrai par défaut, faux sur une configuration que rien n'interdisait. Le chemin d'une mesure ne contient qu'un seul appel sortant — l'hôte génératif — et `OLLAMA_HOST` est une variable d'environnement : pointée sur un serveur d'équipe, chaque document part chez ce tiers. La promesse était conditionnelle et sa condition n'était écrite nulle part.",
       "trouve": "Le recensement de tout ce qui peut ouvrir une connexion dans `src/`, fait pour transformer l'affirmation en preuve.",
       "cout": "Rien encore : aucun dossier réel n'avait été mesuré. C'est la seule des trois rétractations qui ait été prise avant d'avoir coûté quelque chose.",
-      "tenu": "une mesure ne peut contacter que cette machine"
+      "tenu": "une mesure ne peut contacter que cette machine",
+      "resume": "« Rien ne quitte votre machine » était vrai par défaut et faux dès qu'une variable d'environnement pointait un serveur distant — la condition n'était écrite nulle part.",
+      "vueParPersonne": true
     },
     {
       "date": "2026-08-20",
@@ -81,7 +99,9 @@
       "vrai": "Les deux étaient fausses. Les paliers sont déterministes — 35 combinaisons palier×champ identiques au millième sur quatre passes. Et la charge n'explique pas l'écart : mesuré exprès sous une charge de 8,35, `gen-0.6b` rend 1 654 ms là où le point d'origine annonçait 2 098 ms sous 7,98. La cause était un pilote audio, `UA Mixer Engine`, qui confisquait un cœur sur dix depuis seize jours ; l'arrêter a retiré 22 à 36 % de latence à tous les paliers.",
       "trouve": "Une expérience faite pour reproduire le point manquant, qui a rendu un verdict opposé à celui qu'elle devait confirmer.",
       "cout": "Une section de page de vente retirée deux fois : « un rival disparu entre deux mesures », puis « l'admissibilité bascule avec la charge ». La seconde était mieux étayée que la première et fausse pour la même raison — un seul de ses trois points la soutenait, et c'était celui qu'aucun fichier ne portait.",
-      "tenu": "chaque latence enregistrée dit sous quelle charge elle a été prise"
+      "tenu": "chaque latence enregistrée dit sous quelle charge elle a été prise",
+      "resume": "Deux explications successives de la même observation — des modèles instables, puis l'effet de la charge — toutes deux plausibles, toutes deux fausses.",
+      "vueParPersonne": false
     }
   ]
 }

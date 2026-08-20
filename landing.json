@@ -809,6 +809,62 @@
       }
     ]
   },
+  "retractions": {
+    "total": 10,
+    "caughtBeforeAnyoneSawIt": 3,
+    "entries": [
+      {
+        "date": "2026-06-14",
+        "headline": "Les règles écrites à la main semblaient parfaites sur les cinq champs ; elles avaient été notées contre les gabarits qui avaient servi à les écrire.",
+        "caughtBeforeAnyoneSawIt": true
+      },
+      {
+        "date": "2026-07-02",
+        "headline": "Le petit modèle passait pour incapable de lire un numéro d'identité ; c'est l'évaluateur qui comptait un espace comme une erreur.",
+        "caughtBeforeAnyoneSawIt": false
+      },
+      {
+        "date": "2026-08-19",
+        "headline": "Le grand modèle était annoncé pire que le petit sur deux champs ; l'écart n'était significatif sur aucun.",
+        "caughtBeforeAnyoneSawIt": true
+      },
+      {
+        "date": "2026-08-19",
+        "headline": "Sur l'échelle générative, « plus gros est pire » était présenté comme un fait ; l'échantillon ne le soutenait pas.",
+        "caughtBeforeAnyoneSawIt": false
+      },
+      {
+        "date": "2026-08-19",
+        "headline": "Trois chiffres de la page étaient tapés à la main et faux.",
+        "caughtBeforeAnyoneSawIt": false
+      },
+      {
+        "date": "2026-08-19",
+        "headline": "La latence était mesurée sans jouer aucun rôle dans le routage, alors que la page affirmait le contraire.",
+        "caughtBeforeAnyoneSawIt": false
+      },
+      {
+        "date": "2026-08-19",
+        "headline": "Un défaut d'affichage était annoncé sur neuf démos publiées ; il n'en touchait qu'une.",
+        "caughtBeforeAnyoneSawIt": false
+      },
+      {
+        "date": "2026-08-20",
+        "headline": "Les latences publiées passaient pour celles des modèles ; c'étaient celles des modèles plus un pilote audio oublié qui tenait un cœur sur dix depuis seize jours, et valait un tiers du total.",
+        "caughtBeforeAnyoneSawIt": false
+      },
+      {
+        "date": "2026-08-20",
+        "headline": "« Rien ne quitte votre machine » était vrai par défaut et faux dès qu'une variable d'environnement pointait un serveur distant — la condition n'était écrite nulle part.",
+        "caughtBeforeAnyoneSawIt": true
+      },
+      {
+        "date": "2026-08-20",
+        "headline": "Deux explications successives de la même observation — des modèles instables, puis l'effet de la charge — toutes deux plausibles, toutes deux fausses.",
+        "caughtBeforeAnyoneSawIt": false
+      }
+    ]
+  },
   "assumptions": {
     "humanAccuracy": 0.85,
     "humanSeconds": 45,

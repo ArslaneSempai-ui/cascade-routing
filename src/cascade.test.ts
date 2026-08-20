@@ -1039,3 +1039,32 @@ test("la décomposition des erreurs recompose l'exactitude du palier", () => {
     `le taux de dossiers propres (${l.cleanPerDocument.pct} %) dépasse le plus faible champ `
     + `du routage (${pireChamp.toFixed(1)} %) — impossible, un dossier n'est propre que si tous le sont.`);
 });
+
+test("chaque rétractation porte son résumé et dit si quelqu'un l'a vue", () => {
+  /*
+   * Deux champs qu'un générateur ne doit jamais déduire.
+   *
+   * Le résumé est une phrase écrite ; « personne ne l'a vue » est un jugement sur une
+   * histoire. Les inférer d'un texte français les rendrait généreux au premier cas ambigu —
+   * et la sévérité de ce second champ est exactement ce qui empêche l'argument de se
+   * retourner : une page qui compte ses rétractations sans conséquence a intérêt à en
+   * trouver beaucoup.
+   *
+   * Le test n'a pas d'avis sur leur valeur. Il exige seulement qu'elles soient posées, et
+   * qu'une entrée ajoutée demain ne parte pas sans elles.
+   */
+  const f = new URL("../retractations.json", import.meta.url).pathname;
+  if (!existsSync(f)) return;
+  const j = JSON.parse(readFileSync(f, "utf8")) as {
+    entrees: { date: string; resume?: string; vueParPersonne?: boolean }[] };
+
+  assert.ok(j.entrees.length > 0, "le journal est vide : rien n'est vérifié ici");
+  for (const e of j.entrees) {
+    assert.ok(typeof e.resume === "string" && e.resume.trim().length > 0,
+      `la rétractation du ${e.date} n'a pas de résumé — la page en afficherait un trou`);
+    assert.equal(typeof e.vueParPersonne, "boolean",
+      `la rétractation du ${e.date} ne dit pas si quelqu'un l'a vue.\n`
+      + `  → ce n'est pas déductible du texte, et un générateur qui devinerait pencherait`
+      + ` du côté qui flatte le compte.`);
+  }
+});
