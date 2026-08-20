@@ -264,6 +264,9 @@ export async function extract(
  * Réserve à porter avec le chiffre : leur auteur avait lu la référence, donc ce sont des
  * voisines. La dispersion mesurée est une **borne basse** de la vraie sensibilité au prompt.
  */
+/** Les paliers dont la formulation se règle : ceux qui ont un prompt. */
+export const GENERATIFS_PUBLICS = ["gen-0.6b", "gen-4b", "gen-8b"] as const;
+
 export const EXEMPLE_DOC =
   "Anna Petrova — dob 3 May 1990 — doc no ES-1234-A — Spain — lives 5 Calle Mayor, Madrid";
 
