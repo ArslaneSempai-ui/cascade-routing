@@ -22,6 +22,20 @@
 import { availableParallelism, loadavg } from "node:os";
 import { fork } from "node:child_process";
 
+/*
+ * Le fils d'abord, avant toute autre chose.
+ *
+ * Cette vérification était sous le contrôle des arguments, et `fork` n'en transmet aucun :
+ * chaque fils lisait donc « zéro boucle », imprimait l'aide et mourait avant d'atteindre sa
+ * boucle. Le père annonçait « 8 boucles » et la charge **descendait** — c'est la mesure qui
+ * a signalé le défaut, l'inverse de ce qu'elle devait produire.
+ *
+ * Un fils n'a pas d'arguments à valider ; il n'a qu'à occuper un cœur.
+ */
+if (process.env.CHARGER_FILS) {
+  for (;;) { /* saturer un cœur */ }
+}
+
 const boucles = Number(process.argv[2] ?? 0);
 const secondes = Number(process.argv[3] ?? 0);
 
@@ -29,11 +43,6 @@ if (!Number.isInteger(boucles) || boucles < 1) {
   console.error("usage : node src/charger.mjs <boucles> [secondes]");
   console.error(`  cette machine a ${availableParallelism()} cœurs disponibles`);
   process.exit(1);
-}
-
-/* Le fils : une boucle qui ne rend jamais la main, et rien d'autre. */
-if (process.env.CHARGER_FILS) {
-  for (;;) { /* saturer un cœur */ }
 }
 
 const fils = Array.from({ length: boucles }, () =>
