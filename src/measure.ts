@@ -157,6 +157,18 @@ export type Profiles = {
    * jamais été écrite.
    */
   provenance?: Record<TierName, ProvenanceDuPalier>;
+  /**
+   * La charge de la machine avant que la passe commence — la seule pleinement étrangère.
+   *
+   * `externalBefore` par palier dit vrai : la charge avant *ce* palier. Mais à l'intérieur
+   * d'une passe, ça inclut la traîne du palier précédent — `large` relevé à 5,48 n'avait
+   * aucun tiers sur le dos, c'était `small` qui finissait de s'éteindre dans une moyenne
+   * glissante d'une minute. Un champ qui décrit un palier ne peut pas décrire la passe ;
+   * comme pour `code` ce matin, on sépare les portées plutôt que de changer la mesure.
+   *
+   * C'est ce nombre-ci qu'une page publie, et lui seul.
+   */
+  chargeAvantPasse?: { externalBefore: number; coeurs: number };
   /** Les paliers que ce fichier contient réellement — l'échelle générative est optionnelle. */
   tiers?: TierName[];
   /** Chain A: one profile per tier AND per field — this is where the routing is decided. */
@@ -262,12 +274,14 @@ export async function measure(
    */
   const version = etatDuDepot();
 
+  const chargeAvantPasse = { externalBefore: Number(loadavg()[0]!.toFixed(2)), coeurs: cpus().length };
   const provenance = {} as NonNullable<Profiles["provenance"]>;
   const sauver = (ex: Profiles["extraction"], cl: Record<TierName, Profile>, lt: Record<TierName, number>) => {
     const ancien = readProfiles();
     const partiel: Profiles = {
       measuredAt: new Date().toISOString(),
       code: version,
+      chargeAvantPasse,
       provenance: { ...(ancien?.provenance ?? {}), ...provenance } as NonNullable<Profiles["provenance"]>,
       extraction: { ...(ancien?.extraction ?? {}), ...ex } as Profiles["extraction"],
       classification: { ...(ancien?.classification ?? {}), ...cl } as Record<TierName, Profile>,
@@ -417,6 +431,7 @@ export async function measure(
      * Trouvé par le test de provenance, sur la première re-mesure réelle qui l'ait exercé.
      */
     code: version,
+    chargeAvantPasse,
     provenance: { ...(ancien?.provenance ?? {}), ...provenance } as NonNullable<Profiles["provenance"]>,
     extraction: { ...(ancien?.extraction ?? {}), ...extraction } as Profiles["extraction"],
     classification: { ...(ancien?.classification ?? {}), ...classification } as Record<TierName, Profile>,

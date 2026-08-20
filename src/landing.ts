@@ -255,6 +255,25 @@ export function construire(p: Profiles): unknown {
        * sature les cœurs. Ce qu'une page peut affirmer, c'est ce que la machine faisait
        * **par ailleurs**.
        */
+      /*
+       * La charge de passe, ou son équivalent démontrable.
+       *
+       * Les relevés antérieurs à ce champ n'ont pas de valeur enregistrée — mais le palier
+       * mesuré **en premier** porte exactement la même chose dans son `externalBefore` :
+       * rien de cette passe n'avait encore tourné avant lui. Ce n'est pas une estimation,
+       * c'est la même grandeur lue ailleurs, et le repli le dit plutôt que de le supposer.
+       */
+      loadBeforePass: (() => {
+        if (p.chargeAvantPasse) {
+          return { loadAvg: p.chargeAvantPasse.externalBefore, cores: p.chargeAvantPasse.coeurs, from: "pass" };
+        }
+        const premiers = paliersMesures(p)
+          .map((t) => p.provenance?.[t])
+          .filter((v): v is NonNullable<typeof v> => Boolean(v?.latency?.charge))
+          .sort((a, b) => a.latency.measuredAt.localeCompare(b.latency.measuredAt));
+        const c = premiers[0]?.latency.charge;
+        return c ? { loadAvg: c.externalBefore, cores: c.coeurs, from: "first tier measured" } : null;
+      })(),
       perTier: Object.fromEntries(paliersMesures(p).map((t) => {
         const v = p.provenance?.[t];
         if (!v?.accuracy) return [t, null];

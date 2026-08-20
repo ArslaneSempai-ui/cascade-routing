@@ -1,105 +1,124 @@
 {
   "$comment": "Généré par `npm run landing` depuis data/profiles.json. Ne pas éditer à la main : `npm test` échoue si ce fichier ne correspond plus au relevé.",
   "generatedFrom": {
-    "measuredAt": "2026-08-20T09:52:08.082Z",
-    "commit": "c199da4",
+    "measuredAt": "2026-08-20T10:40:28.826Z",
+    "commit": "64bdacf",
     "treeDirty": false,
+    "loadBeforePass": {
+      "loadAvg": 2.54,
+      "cores": 10,
+      "from": "first tier measured"
+    },
     "perTier": {
       "rules": {
         "accuracy": {
-          "commit": "c199da4",
+          "commit": "64bdacf",
           "treeDirty": false,
-          "measuredAt": "2026-08-20T09:08:01.532Z",
+          "measuredAt": "2026-08-20T10:08:32.094Z",
+          "loadAvg": 2.54,
           "cores": 10
         },
         "latency": {
-          "commit": "c199da4",
+          "commit": "64bdacf",
           "treeDirty": false,
-          "measuredAt": "2026-08-20T09:08:01.532Z",
+          "measuredAt": "2026-08-20T10:08:32.094Z",
+          "loadAvg": 2.54,
           "cores": 10
         }
       },
       "small": {
         "accuracy": {
-          "commit": "c199da4",
+          "commit": "64bdacf",
           "treeDirty": false,
-          "measuredAt": "2026-08-20T09:10:55.102Z",
+          "measuredAt": "2026-08-20T10:10:22.725Z",
+          "loadAvg": 2.54,
           "cores": 10
         },
         "latency": {
-          "commit": "c199da4",
+          "commit": "64bdacf",
           "treeDirty": false,
-          "measuredAt": "2026-08-20T09:10:55.102Z",
+          "measuredAt": "2026-08-20T10:10:22.725Z",
+          "loadAvg": 2.54,
           "cores": 10
         }
       },
       "large": {
         "accuracy": {
-          "commit": "c199da4",
+          "commit": "64bdacf",
           "treeDirty": false,
-          "measuredAt": "2026-08-20T09:16:30.026Z",
+          "measuredAt": "2026-08-20T10:14:19.727Z",
+          "loadAvg": 5.48,
           "cores": 10
         },
         "latency": {
-          "commit": "c199da4",
+          "commit": "64bdacf",
           "treeDirty": false,
-          "measuredAt": "2026-08-20T09:16:30.026Z",
+          "measuredAt": "2026-08-20T10:14:19.727Z",
+          "loadAvg": 5.48,
           "cores": 10
         }
       },
       "gen-0.6b": {
         "accuracy": {
-          "commit": "c199da4",
+          "commit": "64bdacf",
           "treeDirty": false,
-          "measuredAt": "2026-08-20T09:20:39.595Z",
+          "measuredAt": "2026-08-20T10:17:08.107Z",
+          "loadAvg": 5.54,
           "cores": 10
         },
         "latency": {
-          "commit": "c199da4",
+          "commit": "64bdacf",
           "treeDirty": false,
-          "measuredAt": "2026-08-20T09:20:39.595Z",
+          "measuredAt": "2026-08-20T10:17:08.107Z",
+          "loadAvg": 5.54,
           "cores": 10
         }
       },
       "gen-4b": {
         "accuracy": {
-          "commit": "c199da4",
+          "commit": "64bdacf",
           "treeDirty": false,
-          "measuredAt": "2026-08-20T09:34:21.632Z",
+          "measuredAt": "2026-08-20T10:26:31.441Z",
+          "loadAvg": 2.12,
           "cores": 10
         },
         "latency": {
-          "commit": "c199da4",
+          "commit": "64bdacf",
           "treeDirty": false,
-          "measuredAt": "2026-08-20T09:34:21.632Z",
+          "measuredAt": "2026-08-20T10:26:31.441Z",
+          "loadAvg": 2.12,
           "cores": 10
         }
       },
       "gen-8b": {
         "accuracy": {
-          "commit": "c199da4",
+          "commit": "64bdacf",
           "treeDirty": false,
-          "measuredAt": "2026-08-20T09:52:08.055Z",
+          "measuredAt": "2026-08-20T10:40:28.800Z",
+          "loadAvg": 1.52,
           "cores": 10
         },
         "latency": {
-          "commit": "c199da4",
+          "commit": "64bdacf",
           "treeDirty": false,
-          "measuredAt": "2026-08-20T09:52:08.055Z",
+          "measuredAt": "2026-08-20T10:40:28.800Z",
+          "loadAvg": 1.52,
           "cores": 10
         }
       },
       "human": {
         "accuracy": {
-          "commit": "c199da4",
+          "commit": "64bdacf",
           "treeDirty": false,
-          "measuredAt": "2026-08-20T09:16:30.060Z",
+          "measuredAt": "2026-08-20T10:14:19.755Z",
+          "loadAvg": 5.54,
           "cores": 10
         },
         "latency": {
-          "commit": "c199da4",
+          "commit": "64bdacf",
           "treeDirty": false,
-          "measuredAt": "2026-08-20T09:16:30.060Z",
+          "measuredAt": "2026-08-20T10:14:19.755Z",
+          "loadAvg": 5.54,
           "cores": 10
         }
       }
@@ -275,12 +294,12 @@
       "id": "gen-0.6b",
       "n": 120,
       "costPerThousandDocuments": {
-        "value": 0.5587,
+        "value": 0.389,
         "provenance": "assumed",
         "basis": "latence mesurée × tarif machine supposé, sommée sur les cinq champs"
       },
       "costPerThousandExtractions": {
-        "value": 0.1053,
+        "value": 0.074,
         "provenance": "assumed",
         "basis": "un cinquième d'un document — ne jamais afficher ce nombre sous « par document »"
       },
@@ -326,12 +345,12 @@
       "id": "gen-4b",
       "n": 120,
       "costPerThousandDocuments": {
-        "value": 1.9072,
+        "value": 1.3134,
         "provenance": "assumed",
         "basis": "latence mesurée × tarif machine supposé, sommée sur les cinq champs"
       },
       "costPerThousandExtractions": {
-        "value": 0.3477,
+        "value": 0.2365,
         "provenance": "assumed",
         "basis": "un cinquième d'un document — ne jamais afficher ce nombre sous « par document »"
       },
@@ -377,12 +396,12 @@
       "id": "gen-8b",
       "n": 120,
       "costPerThousandDocuments": {
-        "value": 2.5494,
+        "value": 1.9909,
         "provenance": "assumed",
         "basis": "latence mesurée × tarif machine supposé, sommée sur les cinq champs"
       },
       "costPerThousandExtractions": {
-        "value": 0.5018,
+        "value": 0.3671,
         "provenance": "assumed",
         "basis": "un cinquième d'un document — ne jamais afficher ce nombre sous « par document »"
       },
@@ -490,10 +509,10 @@
       "address": "gen-4b"
     },
     "accuracy": 94.4,
-    "costPerThousandDocuments": 2.0254,
-    "latencyMsPerDocument": 1341,
-    "budgetShare": 0.0506,
-    "latencyShare": 0.6705,
+    "costPerThousandDocuments": 1.9066,
+    "latencyMsPerDocument": 968,
+    "budgetShare": 0.0477,
+    "latencyShare": 0.4839,
     "provenance": "measured",
     "basis": "routage calculé par `optimiseExtraction` sur le relevé gelé, sous le budget et le plafond de latence supposés ci-dessous"
   },
@@ -513,9 +532,9 @@
       "accuracy": 69,
       "accuracyProvenance": "measured",
       "costPerThousandDocuments": 1,
-      "latencyMsPerDocument": 148,
+      "latencyMsPerDocument": 95,
       "budgetShare": 0.025,
-      "latencyShare": 0.074,
+      "latencyShare": 0.0477,
       "admissible": true
     },
     {
@@ -523,39 +542,39 @@
       "accuracy": 78.8,
       "accuracyProvenance": "measured",
       "costPerThousandDocuments": 8,
-      "latencyMsPerDocument": 310,
+      "latencyMsPerDocument": 226,
       "budgetShare": 0.2,
-      "latencyShare": 0.1552,
+      "latencyShare": 0.1131,
       "admissible": true
     },
     {
       "id": "gen-0.6b",
       "accuracy": 79.3,
       "accuracyProvenance": "measured",
-      "costPerThousandDocuments": 0.5587,
-      "latencyMsPerDocument": 1676,
-      "budgetShare": 0.014,
-      "latencyShare": 0.838,
+      "costPerThousandDocuments": 0.389,
+      "latencyMsPerDocument": 1167,
+      "budgetShare": 0.0097,
+      "latencyShare": 0.5835,
       "admissible": true
     },
     {
       "id": "gen-4b",
       "accuracy": 92.7,
       "accuracyProvenance": "measured",
-      "costPerThousandDocuments": 1.9072,
-      "latencyMsPerDocument": 5721,
-      "budgetShare": 0.0477,
-      "latencyShare": 2.8607,
+      "costPerThousandDocuments": 1.3134,
+      "latencyMsPerDocument": 3940,
+      "budgetShare": 0.0328,
+      "latencyShare": 1.9701,
       "admissible": false
     },
     {
       "id": "gen-8b",
       "accuracy": 91.5,
       "accuracyProvenance": "measured",
-      "costPerThousandDocuments": 2.5494,
-      "latencyMsPerDocument": 7648,
-      "budgetShare": 0.0637,
-      "latencyShare": 3.824,
+      "costPerThousandDocuments": 1.9909,
+      "latencyMsPerDocument": 5973,
+      "budgetShare": 0.0498,
+      "latencyShare": 2.9863,
       "admissible": false
     },
     {
@@ -577,41 +596,41 @@
         "p90": 0
       },
       "small": {
-        "p10": 113.8,
-        "median": 148,
-        "p90": 244.6
+        "p10": 79.4,
+        "median": 95.3,
+        "p90": 158.8
       },
       "large": {
-        "p10": 263.1,
-        "median": 310.4,
-        "p90": 369.5
+        "p10": 193,
+        "median": 226.2,
+        "p90": 262.5
       },
       "gen-0.6b": {
-        "p10": 1508.2,
-        "median": 1676,
-        "p90": 1939.5
+        "p10": 1065.7,
+        "median": 1167.1,
+        "p90": 1267.8
       },
       "gen-4b": {
-        "p10": 5369.5,
-        "median": 5721.5,
-        "p90": 6296.8
+        "p10": 3720.3,
+        "median": 3940.1,
+        "p90": 4176.8
       },
       "gen-8b": {
-        "p10": 6536.4,
-        "median": 7648.1,
-        "p90": 8342.7
+        "p10": 5160.9,
+        "median": 5972.6,
+        "p90": 6487.6
       },
       "human": null
     },
     "routed": {
-      "p10": 1261.3,
-      "median": 1340.9,
-      "p90": 1422.5
+      "p10": 906.5,
+      "median": 967.7,
+      "p90": 1021
     },
     "ceilingMsPerDoc": 2000
   },
   "sensitivity": {
-    "measuredAt": "2026-08-20T09:52:08.082Z",
+    "measuredAt": "2026-08-20T10:40:28.826Z",
     "method": "bisection",
     "thresholds": {
       "humanAccuracy": {
@@ -665,13 +684,13 @@
       "pricePerThousandLarge": {
         "inUse": 1.6,
         "unit": "usd/1000 extractions",
-        "breaksAt": 39.57,
-        "factor": 24.7,
+        "breaksAt": 39.69,
+        "factor": 24.8,
         "moves": [
           {
             "field": "name",
             "from": "large",
-            "to": "gen-0.6b"
+            "to": "gen-4b"
           }
         ],
         "reason": "moves the routing"
@@ -679,8 +698,8 @@
       "machineHourlyCost": {
         "inUse": 1.2,
         "unit": "usd/hour",
-        "breaksAt": 108.3,
-        "factor": 90.3,
+        "breaksAt": 150.3,
+        "factor": 125,
         "moves": [
           {
             "field": "address",
