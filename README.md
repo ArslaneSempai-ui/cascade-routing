@@ -4,7 +4,7 @@ Four tiers — rules, a small model, a large one, a human — measured on held-o
 routed under a budget. The answer is rarely "buy the bigger model", and this says why.
 
 <!-- figures:finding -->
-**The finding.** Routing every field to the same tier is the default and it is wrong. Measured per field, 3 of the 5 fields are carried by regexes at **zero cost and up to 100 % accuracy**, and the money is worth spending on exactly the ones that need it. Total: **94.4 % for $208** of a $4,000 budget — the budget does not bind. No available budget buys a better routing. Measured on 1000 and 120 held-out cases depending on the tier — the tables carry each figure's own `n`.
+**The finding.** Routing every field to the same tier is the default and it is wrong. Measured per field, 3 of the 5 fields are carried by regexes at **zero cost and up to 100 % accuracy**, and the money is worth spending on exactly the ones that need it. Total: **94.4 % for $201** of a $4,000 budget — the budget does not bind. No available budget buys a better routing. Measured on 1000 and 120 held-out cases depending on the tier — the tables carry each figure's own `n`.
 <!-- /figures:finding -->
 
 **[Try it in your browser →](https://arslanesempai-ui.github.io/cascade-routing/)** — take a
@@ -65,11 +65,11 @@ on another they never saw. Measured honestly, they collapse.
 | Tier | name | birth | document | country | address | Latency |
 |---|---|---|---|---|---|---|
 | `rules` | 0.0 % | 100.0 % | 79.7 % | 100.0 % | 0.0 % | 0.0 ms |
-| `small` | 46.6 % | 97.9 % | 57.7 % | 100.0 % | 43.0 % | 27.5 ms |
-| `large` | 96.6 % | 100.0 % | 64.4 % | 100.0 % | 32.8 % | 67.4 ms |
-| `gen-0.6b` | 80.8 % | 87.5 % | 70.0 % | 83.3 % | 75.0 % | 419.6 ms |
-| `gen-4b` | 89.2 % | 99.2 % | 79.2 % | 100.0 % | 95.8 % | 1273.6 ms |
-| `gen-8b` | 91.7 % | 100.0 % | 83.3 % | 100.0 % | 82.5 % | 1985.8 ms |
+| `small` | 46.6 % | 97.9 % | 57.7 % | 100.0 % | 43.0 % | 32.7 ms |
+| `large` | 96.6 % | 100.0 % | 64.4 % | 100.0 % | 32.8 % | 64.9 ms |
+| `gen-0.6b` | 80.8 % | 87.5 % | 70.0 % | 83.3 % | 75.0 % | 375.4 ms |
+| `gen-4b` | 89.2 % | 99.2 % | 79.2 % | 100.0 % | 95.8 % | 1208.3 ms |
+| `gen-8b` | 91.7 % | 100.0 % | 83.3 % | 100.0 % | 82.5 % | 1583.9 ms |
 <!-- /figures:extraction -->
 
 Two things fall out of that table, and neither is guessable:
@@ -84,11 +84,11 @@ The second chain, classifying alert narratives, is where the keyword collapse is
 | Tier | Accuracy | 95 % interval | Latency |
 |---|---|---|---|
 | `rules` | 21.3 % | [19–24] | 0.00 ms |
-| `small` | 69.2 % | [66–72] | 5.53 ms |
-| `large` | 40.5 % | [37–44] | 13.60 ms |
-| `gen-0.6b` | 61.7 % | [53–70] | 485.34 ms |
-| `gen-4b` | 94.2 % | [88–97] | 1160.52 ms |
-| `gen-8b` | 100.0 % | [97–100] | 1620.35 ms |
+| `small` | 69.2 % | [66–72] | 5.34 ms |
+| `large` | 40.5 % | [37–44] | 12.51 ms |
+| `gen-0.6b` | 61.7 % | [53–70] | 437.07 ms |
+| `gen-4b` | 94.2 % | [88–97] | 958.10 ms |
+| `gen-8b` | 100.0 % | [97–100] | 1276.98 ms |
 <!-- /figures:classification -->
 
 Those keywords scored **100 %** against the templates they were written from. On
@@ -193,12 +193,12 @@ around a second per field, so the constraint stops being decorative.
 <!-- figures:latence -->
 | Ceiling per document | Accuracy | Cost | Actual | Routing |
 |---|---|---|---|---|
-| 2000 ms | 94.4 % | $208 | 1497.9 ms | `large` `rules` `rules` `rules` `gen-4b` |
-| 500 ms | 90.3 % | $174 | 482.8 ms | `large` `rules` `rules` `rules` `gen-0.6b` |
-| 100 ms | 75.3 % | $160 | 69.8 ms | `large` `rules` `rules` `rules` `rules` |
-| 50 ms | 65.3 % | $20 | 19.1 ms | `small` `rules` `rules` `rules` `rules` |
+| 2000 ms | 94.4 % | $201 | 1287.3 ms | `large` `rules` `rules` `rules` `gen-4b` |
+| 500 ms | 83.9 % | $180 | 98.0 ms | `large` `rules` `rules` `rules` `small` |
+| 50 ms | 65.3 % | $20 | 32.2 ms | `small` `rules` `rules` `rules` `rules` |
+| 30 ms | 55.9 % | $0 | 0.0 ms | `rules` `rules` `rules` `rules` `rules` |
 
-**What the promise costs.** Lift the ceiling entirely and the cheapest routing that is statistically indistinguishable in accuracy costs $108 instead of $208 — it just takes 3228 ms per document. **Your latency promise is worth $100**, and the money budget never binds at all. That is the shadow price nobody prices.
+**What the promise costs.** Lift the ceiling entirely and the cheapest routing that is statistically indistinguishable in accuracy costs $91 instead of $201 — it just takes 2733 ms per document. **Your latency promise is worth $110**, and the money budget never binds at all. That is the shadow price nobody prices.
 <!-- /figures:latence -->
 
 Read it as the price list for a service level agreement: each row is what a tighter promise
@@ -241,8 +241,8 @@ baseline took four minutes to write.
 | birth | `rules` | 100.0 % | $0 |
 | document | `rules` | 79.7 % | $0 |
 | country | `rules` | 100.0 % | $0 |
-| address | `gen-4b` | 95.8 % | $42 |
-| **total** |  | **94.4 %** | **$208** |
+| address | `gen-4b` | 95.8 % | $40 |
+| **total** |  | **94.4 %** | **$201** |
 <!-- /figures:routing -->
 
 <!-- figures:shadow -->

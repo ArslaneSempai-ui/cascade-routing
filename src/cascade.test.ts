@@ -1,8 +1,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, existsSync, readdirSync } from "node:fs";
+import { join } from "node:path";
 import { generateRecords, generateAlerts, FIELDS, TYPOLOGIES } from "./corpus.ts";
-import { correct, TIERS } from "./tiers.ts";
+import { correct, TIERS, estLocal, OLLAMA } from "./tiers.ts";
 import type { TierName } from "./paliers.ts";
 import { classify } from "./failures.ts";
 import { readProfiles, type Profile } from "./measure.ts";
@@ -761,4 +762,78 @@ test("un palier mesuré porte sa propre provenance", () => {
     assert.ok(v.commit === null || typeof v.commit === "string", `${t} a un commit mal formé`);
     assert.ok(v.sale === null || typeof v.sale === "boolean", `${t} a un état d'arbre mal formé`);
   }
+});
+
+/* ── ce qui peut sortir de cette machine, et rien d'autre ── */
+
+/**
+ * Les seuls appels sortants que ce dépôt s'autorise, avec la raison de chacun.
+ *
+ * Toute autre destination doit faire tomber la suite. C'est le contrôle qu'une revue de
+ * sécurité peut refaire en une minute : elle lit cette liste, elle lit le test, et elle sait
+ * ce que l'outil contacte sans avoir à lire dix fichiers ni à faire confiance à un README.
+ */
+const SORTIES_AUTORISEES = [
+  { motif: "OLLAMA_HOST", ou: "src/tiers.ts", pourquoi: "les modèles génératifs, sur la boucle locale par défaut" },
+  { motif: "raw.githubusercontent.com", ou: "src/benchmark.ts", pourquoi: "un jeu public, téléchargé par `npm run benchmark` seulement — hors du chemin d'une mesure" },
+];
+
+test("une mesure ne peut contacter que cette machine", () => {
+  /*
+   * La phrase la plus importante du dépôt pour qui manipule de vrais dossiers, et c'était une
+   * affirmation. `npm run egress` la mesure — mais son verdict vit dans `data/`, hors du
+   * dépôt, et une revue de sécurité ne peut ni le lire ni le rejouer en une minute.
+   *
+   * Ce test la rend structurelle : l'hôte génératif doit être local, faute de quoi chaque
+   * document mesuré part chez un tiers. C'est la seule configuration où ça arrive, et elle
+   * tenait à une variable d'environnement que personne ne vérifiait.
+   */
+  assert.ok(estLocal(OLLAMA),
+    `OLLAMA_HOST vise ${OLLAMA}, qui n'est pas cette machine — chaque document mesuré y partirait.`);
+
+  for (const [url, attendu] of [
+    ["http://localhost:11434", true], ["http://127.0.0.1:11434", true], ["http://[::1]:11434", true],
+    ["http://ollama.interne.example:11434", false], ["https://api.exemple.com", false],
+    ["http://127.0.0.1.evil.example", false], ["pas une url", false],
+  ] as [string, boolean][]) {
+    assert.equal(estLocal(url), attendu, `estLocal("${url}") devrait valoir ${attendu}`);
+  }
+});
+
+test("aucun appel sortant n'a été ajouté hors de la liste", () => {
+  /*
+   * Un `fetch` ajouté demain vers un point de télémétrie ne se verrait pas : il compilerait,
+   * les tests passeraient, et la promesse deviendrait fausse en silence. Ce test lit les
+   * sources et exige que chaque destination possible figure dans `SORTIES_AUTORISEES`.
+   *
+   * Les URL citées en texte — une source réglementaire, un lien dans une page — ne sont pas
+   * des appels : on ne retient que ce qui est passé à `fetch`.
+   */
+  const dossier = new URL("./", import.meta.url).pathname;
+  const fichiers = readdirSync(dossier).filter((f) => /\.(ts|mjs)$/.test(f) && !f.endsWith(".test.ts"));
+
+  const permis = SORTIES_AUTORISEES.map((s) => s.motif);
+  for (const f of fichiers) {
+    const src = readFileSync(join(dossier, f), "utf8");
+    for (const m of src.matchAll(/fetch\(\s*[`"']?([^`"'),\s]+)/g)) {
+      const cible = m[1]!;
+      const local = /localhost|127\.0\.0\.1|\$\{OLLAMA\}|\$\{port\}|\$\{PORT\}/.test(cible);
+      const liste = permis.some((p) => cible.includes(p) || src.includes(p));
+      assert.ok(local || liste,
+        `${f} appelle fetch vers « ${cible} », qui n'est ni local ni dans SORTIES_AUTORISEES.\n`
+        + `  → si c'est légitime, ajoutez-le à la liste avec sa raison ; sinon, la promesse`
+        + ` « rien ne quitte votre machine » vient de devenir fausse.`);
+    }
+  }
+});
+
+test("l'écran n'écoute que la boucle locale", () => {
+  /*
+   * `listen(PORT)` seul rend l'outil joignable par n'importe qui sur le même réseau — dans une
+   * banque, c'est un écran de dossiers clients exposé au réseau interne. L'adresse est déjà
+   * explicite dans le code ; ce test empêche qu'elle disparaisse à la faveur d'un nettoyage.
+   */
+  const src = readFileSync(new URL("./server.ts", import.meta.url).pathname, "utf8");
+  assert.match(src, /listen\(PORT,\s*"127\.0\.0\.1"/,
+    "le serveur doit écouter 127.0.0.1 explicitement, jamais toutes les interfaces");
 });

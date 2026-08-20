@@ -15,7 +15,7 @@ import { isMain } from "./cli.ts";
 import { execFileSync } from "node:child_process";
 import { dirname } from "node:path";
 import { generateRecords, generateAlerts, FIELDS, TYPOLOGIES } from "./corpus.ts";
-import { TIERS, ENCODEURS, GENERATIFS, loadExtractors, loadClassifiers, loadGeneratifs, extract, classify, correct } from "./tiers.ts";
+import { TIERS, ENCODEURS, GENERATIFS, loadExtractors, loadClassifiers, loadGeneratifs, extract, classify, correct, OLLAMA, estLocal } from "./tiers.ts";
 import type { TierName } from "./tiers.ts";
 import type { Field } from "./corpus.ts";
 
@@ -101,7 +101,7 @@ export type Profiles = {
    * palier antérieur à ce champ vaut `undefined` : on n'invente pas une provenance qui n'a
    * jamais été écrite.
    */
-  provenance?: Record<TierName, { commit: string | null; sale: boolean | null; measuredAt: string }>;
+  provenance?: Record<TierName, { commit: string | null; sale: boolean | null; measuredAt: string; malgreArbreSale?: string }>;
   /** Les paliers que ce fichier contient réellement — l'échelle générative est optionnelle. */
   tiers?: TierName[];
   /** Chain A: one profile per tier AND per field — this is where the routing is decided. */
@@ -123,9 +123,21 @@ function quantile(xs: number[], q: number): number {
   return tri[i]!;
 }
 
+/** Le commit courant et la propreté de l'arbre — lu deux fois : par la mesure, et par sa garde. */
+function etatDuDepot(): { commit: string; sale: boolean } | undefined {
+
+    try {
+      const commit = execFileSync("git", ["rev-parse", "--short", "HEAD"],
+        { cwd: new URL("..", import.meta.url).pathname, encoding: "utf8" }).trim();
+      const sale = execFileSync("git", ["status", "--porcelain"],
+        { cwd: new URL("..", import.meta.url).pathname, encoding: "utf8" }).trim().length > 0;
+      return { commit, sale };
+    } catch { return undefined; }   // dépôt cloné sans git, ou git absent : on n'invente rien
+}
+
 export async function measure(
   howMany = 120,
-  options: { llm?: boolean; tiers?: TierName[]; cases?: Partial<Record<TierName, number>> } = {},
+  options: { llm?: boolean; tiers?: TierName[]; cases?: Partial<Record<TierName, number>>; malgreArbreSale?: string } = {},
 ): Promise<Profiles> {
   /*
    * Measured on the held-out half, never on the training half.
@@ -184,15 +196,7 @@ export async function measure(
    * servir plus souvent. Un palier terminé est un palier gardé, et relancer ne refait que ce
    * qui manque.
    */
-  const version = (() => {
-    try {
-      const commit = execFileSync("git", ["rev-parse", "--short", "HEAD"],
-        { cwd: new URL("..", import.meta.url).pathname, encoding: "utf8" }).trim();
-      const sale = execFileSync("git", ["status", "--porcelain"],
-        { cwd: new URL("..", import.meta.url).pathname, encoding: "utf8" }).trim().length > 0;
-      return { commit, sale };
-    } catch { return undefined; }   // dépôt cloné sans git, ou git absent : on n'invente rien
-  })();
+  const version = etatDuDepot();
 
   const provenance = {} as NonNullable<Profiles["provenance"]>;
   const sauver = (ex: Profiles["extraction"], cl: Record<TierName, Profile>, lt: Record<TierName, number>) => {
@@ -300,6 +304,7 @@ export async function measure(
       commit: version?.commit ?? null,
       sale: version?.sale ?? null,
       measuredAt: new Date().toISOString(),
+      ...(options.malgreArbreSale ? { malgreArbreSale: options.malgreArbreSale } : {}),
     };
     sauver(extraction, classification, loadTime);
   }
@@ -378,13 +383,53 @@ if (isMain(import.meta)) {
      qui n'existe que pour refuser ça. */
   const aTourner = choisis ?? (llm ? [...ENCODEURS, ...GENERATIFS] : ENCODEURS);
   const generatifs = aTourner.filter((e) => (GENERATIFS as string[]).includes(e));
+  /*
+   * On ne mesure pas sur un arbre sale, et ça ne se rattrape pas après coup.
+   *
+   * Le relevé porte déjà `sale` : on pouvait donc mesurer, s'en apercevoir en lisant le
+   * fichier, et recommencer. C'est ce qui vient d'arriver — la leçon « committer avant de
+   * mesurer » avait été écrite le matin et n'a pas été appliquée le soir, ce qui a coûté trois
+   * paliers marqués non reproductibles et quarante minutes à refaire.
+   *
+   * Un champ qu'on lit après coup ne protège de rien : il faut que la mesure ne parte pas.
+   * `--allow-dirty="raison"` reste possible — on mesure parfois délibérément un code en cours —
+   * mais la raison s'écrit alors dans la provenance de chaque palier, pour qu'un relecteur
+   * sache que c'était voulu et pourquoi, au lieu de le supposer.
+   */
+  const etat = etatDuDepot();
+  const brutSale = process.argv.find((a) => a.startsWith("--allow-dirty"));
+  const malgreArbreSale = brutSale ? (brutSale.split("=")[1] || "raison non donnée") : undefined;
+  if (etat?.sale && !malgreArbreSale) {
+    console.error(`\nL'arbre de travail porte des modifications non enregistrées.`);
+    console.error(`Chaque palier mesuré serait marqué non reproductible, y compris par vous.\n`);
+    console.error(`  git commit -am "…"        puis relancez`);
+    console.error(`  ou --allow-dirty="pourquoi"  si c'est délibéré — la raison ira dans le relevé\n`);
+    process.exit(1);
+  }
+
+  /*
+   * Le seul chemin par lequel des dossiers peuvent quitter cette machine.
+   *
+   * Un `OLLAMA_HOST` distant envoie chaque document à un tiers. C'est une configuration
+   * légitime — un serveur d'équipe — mais elle contredit la phrase que ce dépôt publie, et
+   * quelqu'un qui mesure sur de vrais dossiers doit l'avoir voulue explicitement plutôt que
+   * l'avoir héritée d'un `.env` oublié. On s'arrête, on nomme l'hôte, et on demande un
+   * drapeau : un consentement se tape, il ne se déduit pas.
+   */
+  if (!estLocal(OLLAMA) && !process.argv.includes("--remote-ollama")) {
+    console.error(`\nOLLAMA_HOST vise ${OLLAMA}, qui n'est pas cette machine.`);
+    console.error(`Chaque document mesuré partirait chez cet hôte.\n`);
+    console.error(`Si c'est voulu, relancez avec --remote-ollama. Sinon, retirez OLLAMA_HOST.\n`);
+    process.exit(1);
+  }
+
   console.log(`\nMeasuring ${aTourner.filter((e) => e !== "human").join(", ")} on ${cases} held-out cases.`);
   if (generatifs.length) console.log("Needs Ollama running. Allow a few minutes per generative tier.");
   else console.log("Encoders only. First run downloads 1.26 GB of model weights — allow several minutes\non a fast line, longer on a slow one. Add --llm for the generative tiers (eight gigabytes more).");
   console.log("Tiers not measured here keep their frozen figures.\n");
 
   const parPalier = Object.fromEntries(GENERATIFS.map((t) => [t, casesGen])) as Partial<Record<TierName, number>>;
-  const p = await measure(cases, { llm, tiers: choisis, cases: parPalier });
+  const p = await measure(cases, { llm, tiers: choisis, cases: parPalier, malgreArbreSale });
   const pc = (x: number) => (x * 100).toFixed(1).padStart(5) + " %";
 
   console.log("CHAIN A — extraction, accuracy per field\n");

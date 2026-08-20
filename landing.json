@@ -1,17 +1,46 @@
 {
   "$comment": "Généré par `npm run landing` depuis data/profiles.json. Ne pas éditer à la main : `npm test` échoue si ce fichier ne correspond plus au relevé.",
   "generatedFrom": {
-    "measuredAt": "2026-08-19T18:52:47.557Z",
-    "commit": "5f00df3",
+    "measuredAt": "2026-08-20T07:03:04.568Z",
+    "commit": "a6166c9",
     "treeDirty": true,
     "perTier": {
-      "rules": null,
-      "small": null,
-      "large": null,
-      "gen-0.6b": null,
-      "gen-4b": null,
-      "gen-8b": null,
-      "human": null
+      "rules": {
+        "commit": "a6166c9",
+        "sale": true,
+        "measuredAt": "2026-08-20T07:03:04.558Z",
+        "malgreArbreSale": "réparation d'un essai de garde, sera refait au propre"
+      },
+      "small": {
+        "commit": "a6166c9",
+        "sale": false,
+        "measuredAt": "2026-08-19T22:38:44.326Z"
+      },
+      "large": {
+        "commit": "a6166c9",
+        "sale": false,
+        "measuredAt": "2026-08-19T22:44:26.476Z"
+      },
+      "gen-0.6b": {
+        "commit": "a6166c9",
+        "sale": true,
+        "measuredAt": "2026-08-19T23:12:04.994Z"
+      },
+      "gen-4b": {
+        "commit": "a6166c9",
+        "sale": true,
+        "measuredAt": "2026-08-19T23:26:11.006Z"
+      },
+      "gen-8b": {
+        "commit": "a6166c9",
+        "sale": true,
+        "measuredAt": "2026-08-19T23:44:39.839Z"
+      },
+      "human": {
+        "commit": "a6166c9",
+        "sale": false,
+        "measuredAt": "2026-08-19T22:44:26.506Z"
+      }
     }
   },
   "confidence": {
@@ -184,12 +213,12 @@
       "id": "gen-0.6b",
       "n": 120,
       "costPerThousandDocuments": {
-        "value": 0.6994,
+        "value": 0.6257,
         "provenance": "assumed",
         "basis": "latence mesurée × tarif machine supposé, sommée sur les cinq champs"
       },
       "costPerThousandExtractions": {
-        "value": 0.1504,
+        "value": 0.0759,
         "provenance": "assumed",
         "basis": "un cinquième d'un document — ne jamais afficher ce nombre sous « par document »"
       },
@@ -235,12 +264,12 @@
       "id": "gen-4b",
       "n": 120,
       "costPerThousandDocuments": {
-        "value": 2.1227,
+        "value": 2.0138,
         "provenance": "assumed",
         "basis": "latence mesurée × tarif machine supposé, sommée sur les cinq champs"
       },
       "costPerThousandExtractions": {
-        "value": 0.3976,
+        "value": 0.4003,
         "provenance": "assumed",
         "basis": "un cinquième d'un document — ne jamais afficher ce nombre sous « par document »"
       },
@@ -286,12 +315,12 @@
       "id": "gen-8b",
       "n": 120,
       "costPerThousandDocuments": {
-        "value": 3.3097,
+        "value": 2.6399,
         "provenance": "assumed",
         "basis": "latence mesurée × tarif machine supposé, sommée sur les cinq champs"
       },
       "costPerThousandExtractions": {
-        "value": 0.5999,
+        "value": 0.5039,
         "provenance": "assumed",
         "basis": "un cinquième d'un document — ne jamais afficher ce nombre sous « par document »"
       },
@@ -399,10 +428,10 @@
       "address": "gen-4b"
     },
     "accuracy": 94.4,
-    "costPerThousandDocuments": 2.076,
-    "latencyMsPerDocument": 1498,
-    "budgetShare": 0.0519,
-    "latencyShare": 0.749,
+    "costPerThousandDocuments": 2.007,
+    "latencyMsPerDocument": 1287,
+    "budgetShare": 0.0502,
+    "latencyShare": 0.6436,
     "provenance": "measured",
     "basis": "routage calculé par `optimiseExtraction` sur le relevé gelé, sous le budget et le plafond de latence supposés ci-dessous"
   },
@@ -422,9 +451,9 @@
       "accuracy": 69,
       "accuracyProvenance": "measured",
       "costPerThousandDocuments": 1,
-      "latencyMsPerDocument": 137,
+      "latencyMsPerDocument": 164,
       "budgetShare": 0.025,
-      "latencyShare": 0.0687,
+      "latencyShare": 0.0818,
       "admissible": true
     },
     {
@@ -432,39 +461,39 @@
       "accuracy": 78.8,
       "accuracyProvenance": "measured",
       "costPerThousandDocuments": 8,
-      "latencyMsPerDocument": 337,
+      "latencyMsPerDocument": 324,
       "budgetShare": 0.2,
-      "latencyShare": 0.1686,
+      "latencyShare": 0.1622,
       "admissible": true
     },
     {
       "id": "gen-0.6b",
       "accuracy": 79.3,
       "accuracyProvenance": "measured",
-      "costPerThousandDocuments": 0.6994,
-      "latencyMsPerDocument": 2098,
-      "budgetShare": 0.0175,
-      "latencyShare": 1.049,
-      "admissible": false
+      "costPerThousandDocuments": 0.6257,
+      "latencyMsPerDocument": 1877,
+      "budgetShare": 0.0156,
+      "latencyShare": 0.9385,
+      "admissible": true
     },
     {
       "id": "gen-4b",
       "accuracy": 92.7,
       "accuracyProvenance": "measured",
-      "costPerThousandDocuments": 2.1227,
-      "latencyMsPerDocument": 6368,
-      "budgetShare": 0.0531,
-      "latencyShare": 3.1841,
+      "costPerThousandDocuments": 2.0138,
+      "latencyMsPerDocument": 6041,
+      "budgetShare": 0.0503,
+      "latencyShare": 3.0207,
       "admissible": false
     },
     {
       "id": "gen-8b",
       "accuracy": 91.5,
       "accuracyProvenance": "measured",
-      "costPerThousandDocuments": 3.3097,
-      "latencyMsPerDocument": 9929,
-      "budgetShare": 0.0827,
-      "latencyShare": 4.9646,
+      "costPerThousandDocuments": 2.6399,
+      "latencyMsPerDocument": 7920,
+      "budgetShare": 0.066,
+      "latencyShare": 3.9598,
       "admissible": false
     },
     {
@@ -486,41 +515,41 @@
         "p90": 0
       },
       "small": {
-        "p10": 111.8,
-        "median": 137.4,
-        "p90": 222.3
+        "p10": 136.4,
+        "median": 163.5,
+        "p90": 270.4
       },
       "large": {
-        "p10": 285.1,
-        "median": 337.2,
-        "p90": 396.9
+        "p10": 276.7,
+        "median": 324.4,
+        "p90": 380.5
       },
       "gen-0.6b": {
-        "p10": 1810.4,
-        "median": 2098.1,
-        "p90": 2603.4
+        "p10": 1590,
+        "median": 1877,
+        "p90": 2282.3
       },
       "gen-4b": {
-        "p10": 6025.4,
-        "median": 6368.2,
-        "p90": 6803.9
+        "p10": 5621.6,
+        "median": 6041.4,
+        "p90": 6476
       },
       "gen-8b": {
-        "p10": 8585,
-        "median": 9929.2,
-        "p90": 11487
+        "p10": 6837.2,
+        "median": 7919.7,
+        "p90": 8670.6
       },
       "human": null
     },
     "routed": {
-      "p10": 1401.7,
-      "median": 1497.9,
-      "p90": 1620.3
+      "p10": 1201.8,
+      "median": 1287.3,
+      "p90": 1364
     },
     "ceilingMsPerDoc": 2000
   },
   "sensitivity": {
-    "measuredAt": "2026-08-19T18:52:47.557Z",
+    "measuredAt": "2026-08-20T07:03:04.568Z",
     "method": "bisection",
     "thresholds": {
       "humanSeconds": {
@@ -566,7 +595,7 @@
       "pricePerThousandLarge": {
         "inUse": 1.6,
         "unit": "usd/1000 extractions",
-        "breaksAt": 39.52,
+        "breaksAt": 39.59,
         "factor": 24.7,
         "moves": [
           {
@@ -580,8 +609,8 @@
       "machineHourlyCost": {
         "inUse": 1.2,
         "unit": "usd/hour",
-        "breaksAt": 96.8,
-        "factor": 80.7,
+        "breaksAt": 113.2,
+        "factor": 94.4,
         "moves": [
           {
             "field": "address",

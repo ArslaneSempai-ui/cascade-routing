@@ -1,8 +1,21 @@
 # Validation file — task-level model routing
 
-Generated from the frozen measurement of `2026-08-19T18:52:47.557Z`, produced by commit `5f00df3` **with uncommitted changes in the working tree — this run is not reproducible by anyone, including its author**. Every figure below is
+Generated from the frozen measurement of `2026-08-19T23:44:39.862Z`, produced by commit `a6166c9` **with uncommitted changes in the working tree — this run is not reproducible by anyone, including its author**. Every figure below is
 produced from that same file: this document cannot disagree with the tables elsewhere in
 the repository, because it is not written by hand.
+
+Not every tier was measured in the same pass. Where a tier predates this record, its
+provenance says so rather than borrowing its neighbour's.
+
+| Tier | Measured at | Commit | Working tree |
+|---|---|---|---|
+| `rules` | 2026-08-19T22:35:35.787Z | `a6166c9` | clean |
+| `small` | 2026-08-19T22:38:44.326Z | `a6166c9` | clean |
+| `large` | 2026-08-19T22:44:26.476Z | `a6166c9` | clean |
+| `gen-0.6b` | 2026-08-19T23:12:04.994Z | `a6166c9` | **dirty** |
+| `gen-4b` | 2026-08-19T23:26:11.006Z | `a6166c9` | **dirty** |
+| `gen-8b` | 2026-08-19T23:44:39.839Z | `a6166c9` | **dirty** |
+| `human` | 2026-08-19T22:44:26.506Z | `a6166c9` | clean |
 
 **This file does not certify anything.** It assembles what a reviewer needs in order to
 decide, and states what the evidence will not support. The decision is the committee's.
@@ -19,11 +32,11 @@ available one. Where two tiers cannot be told apart on this sample, the cheaper 
 | `birth` | `rules` | 100.0 % | [100–100] | n=1000 | $0 |
 | `document` | `rules` | 79.7 % | [77–82] | n=1000 | $0 |
 | `country` | `rules` | 100.0 % | [100–100] | n=1000 | $0 |
-| `address` | `gen-4b` | 95.8 % | [91–98] | n=120 | $48 |
+| `address` | `gen-4b` | 95.8 % | [91–98] | n=120 | $41 |
 
-Overall: **94.4 %** for **$208** against a budget of $4,000
-(5.2 % consumed), at **1498 ms** per document
-against a ceiling of 2000 ms (74.9 % consumed).
+Overall: **94.4 %** for **$201** against a budget of $4,000
+(5.0 % consumed), at **1287 ms** per document
+against a ceiling of 2000 ms (64.4 % consumed).
 
 ## 2. Where the sample cannot decide
 

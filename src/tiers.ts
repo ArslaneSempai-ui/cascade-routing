@@ -114,7 +114,39 @@ export const MODELES_LOCAUX: Record<string, { tag: string; digest: string }> = {
   "gen-8b": { tag: "qwen3:8b", digest: "500a1f067a9f" },
 };
 
-const OLLAMA = process.env.OLLAMA_HOST ?? "http://localhost:11434";
+/**
+ * Le seul hôte qu'une mesure contacte — et la seule façon dont vos dossiers pourraient sortir.
+ *
+ * Tout le reste du chemin d'une mesure est local : le corpus est engendré en mémoire, les
+ * encodeurs tournent dans le processus, rien n'est téléversé. Il reste exactement un appel
+ * réseau, celui-ci, et il vise par défaut la boucle locale.
+ *
+ * Mais `OLLAMA_HOST` est une variable d'environnement. Pointée sur une machine distante — un
+ * serveur d'équipe, un Ollama hébergé — chaque document part chez ce tiers, et la phrase
+ * « rien ne quitte votre machine » devient fausse sans qu'une ligne de code ait changé. C'est
+ * la seule configuration où ça arrive, et rien ne la signalait.
+ *
+ * `estLocal` existe donc pour être vérifiable : par un test, et par la mesure elle-même, qui
+ * refuse de partir vers un hôte distant sans un consentement écrit dans la commande.
+ */
+export const OLLAMA = process.env.OLLAMA_HOST ?? "http://localhost:11434";
+
+/**
+ * Un hôte est local quand il désigne cette machine, et rien d'autre.
+ *
+ * La première version testait `/^127\./`, ce qui accepte `127.0.0.1.evil.example` : un nom de
+ * domaine qui *commence* par une adresse de boucle et continue chez quelqu'un d'autre. Le
+ * préfixe est la mauvaise question — il faut que la totalité du nom soit une adresse locale,
+ * d'où les ancres des deux côtés. Attrapé par le test qui accompagne cette fonction, à sa
+ * première exécution.
+ */
+export function estLocal(url: string): boolean {
+  try {
+    const h = new URL(url).hostname.replace(/^\[|\]$/g, "").toLowerCase();
+    if (h === "localhost" || h === "::1") return true;
+    return /^127(\.\d{1,3}){3}$/.test(h);
+  } catch { return false; }
+}
 
 /**
  * Un appel au serveur local, sous schéma.
