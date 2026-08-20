@@ -108,6 +108,8 @@ export type Provenance = {
    * s'est invité pendant la passe, et un relevé pris avant le départ ne l'aurait jamais vu.
    */
   charge?: { externalBefore: number; totalDuring: number; coeurs: number };
+  /** La commande qui a fabriqué la charge, quand elle a été fabriquée exprès. */
+  chargeFabriqueePar?: string;
 };
 
 /**
@@ -240,7 +242,7 @@ function etatDuDepot(): { commit: string; sale: boolean } | undefined {
 
 export async function measure(
   howMany = 120,
-  options: { llm?: boolean; tiers?: TierName[]; cases?: Partial<Record<TierName, number>>; malgreArbreSale?: string; latenceValide?: boolean } = {},
+  options: { llm?: boolean; tiers?: TierName[]; cases?: Partial<Record<TierName, number>>; malgreArbreSale?: string; latenceValide?: boolean; malgreCharge?: string } = {},
 ): Promise<Profiles> {
   /*
    * Measured on the held-out half, never on the training half.
@@ -426,6 +428,7 @@ export async function measure(
       sale: version?.sale ?? null,
       measuredAt: new Date().toISOString(),
       ...(options.malgreArbreSale ? { malgreArbreSale: options.malgreArbreSale } : {}),
+      ...(options.malgreCharge ? { chargeFabriqueePar: options.malgreCharge } : {}),
       charge: {
         externalBefore: chargeAvant,
         totalDuring: Number((echantillons.length
@@ -534,7 +537,17 @@ if (isMain(import.meta)) {
    */
   const coeurs = cpus().length;
   const chargeParCoeur = loadavg()[0]! / coeurs;
-  const latenceValide = chargeParCoeur <= CHARGE_MAX_PAR_COEUR || process.argv.includes("--allow-load");
+  /*
+   * `--allow-load="node src/charger.mjs 8"` — la commande, pas une phrase.
+   *
+   * `--allow-dirty` inscrivait déjà sa raison ; celle-ci ne le faisait pas, alors que c'est
+   * la garde qu'on contourne exprès pour mesurer sous charge. Une raison en texte libre se
+   * lit et s'interprète ; nommer le script et son argument fait de la reproduction une
+   * commande. Le relevé porte les deux : ce qui a été lancé, et la charge constatée avant.
+   */
+  const brutCharge = process.argv.find((a) => a.startsWith("--allow-load"));
+  const malgreCharge = brutCharge ? (brutCharge.split("=")[1] || "raison non donnée") : undefined;
+  const latenceValide = chargeParCoeur <= CHARGE_MAX_PAR_COEUR || malgreCharge !== undefined;
   if (!latenceValide) {
     console.warn(`\n⚠ charge ${loadavg()[0]!.toFixed(2)} sur ${coeurs} cœurs `
       + `(${(100 * chargeParCoeur).toFixed(0)} %, seuil ${(100 * CHARGE_MAX_PAR_COEUR).toFixed(0)} %) — trop pour chronométrer.`);
@@ -588,7 +601,7 @@ if (isMain(import.meta)) {
   console.log("Tiers not measured here keep their frozen figures.\n");
 
   const parPalier = Object.fromEntries(GENERATIFS.map((t) => [t, casesGen])) as Partial<Record<TierName, number>>;
-  const p = await measure(cases, { llm, tiers: choisis, cases: parPalier, malgreArbreSale, latenceValide });
+  const p = await measure(cases, { llm, tiers: choisis, cases: parPalier, malgreArbreSale, latenceValide, malgreCharge });
   const pc = (x: number) => (x * 100).toFixed(1).padStart(5) + " %";
 
   console.log("CHAIN A — extraction, accuracy per field\n");

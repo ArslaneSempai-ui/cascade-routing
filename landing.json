@@ -777,7 +777,37 @@
   "paired": {
     "test": "McNemar",
     "pairs": 30,
-    "flipped": 4
+    "flipped": 4,
+    "decided": [
+      {
+        "field": "name",
+        "a": "gen-0.6b",
+        "b": "gen-4b",
+        "aWins": 0,
+        "bWins": 10
+      },
+      {
+        "field": "name",
+        "a": "gen-0.6b",
+        "b": "gen-8b",
+        "aWins": 0,
+        "bWins": 13
+      },
+      {
+        "field": "document",
+        "a": "gen-0.6b",
+        "b": "gen-4b",
+        "aWins": 5,
+        "bWins": 16
+      },
+      {
+        "field": "document",
+        "a": "gen-0.6b",
+        "b": "gen-8b",
+        "aWins": 0,
+        "bWins": 16
+      }
+    ]
   },
   "assumptions": {
     "humanAccuracy": 0.85,

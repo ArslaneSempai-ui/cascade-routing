@@ -281,9 +281,22 @@ function dossiersPropres(p: Profiles, routing: Routing) {
   return { pct: pc(r.rate), lo: pc(r.low), hi: pc(r.high), n, clean: propres };
 }
 
-/** Ce que le test apparié tranche que le recouvrement d'intervalles laissait flou. */
+/**
+ * Ce que le test apparié tranche que le recouvrement d'intervalles laissait flou.
+ *
+ * Le compte seul ne suffisait pas. La page écrivait « quatre verdicts déplacés, chacun d'eux
+ * contre `gen-0.6b` » à partir d'un `{pairs, flipped}` qui ne portait que deux nombres : la
+ * seconde moitié de la phrase était vraie et invérifiable, ce qui est la forme même du défaut
+ * qu'on vient de retirer ailleurs. Un résumé qui ne soutient pas la prose qu'il sert est un
+ * résumé de trop.
+ *
+ * Chaque verdict déplacé sort donc avec son champ, ses deux paliers, et le compte des cas où
+ * chacun l'emporte — ce dernier étant ce qui rend la conclusion lisible : zéro victoire d'un
+ * côté ne se lit pas comme un écart serré.
+ */
 function egalitesTranchees(p: Profiles) {
   const T = paliersMesures(p).filter((t) => t !== "human");
+  const details: { field: Field; a: TierName; b: TierName; aWins: number; bWins: number }[] = [];
   let pairs = 0, flipped = 0;
   for (const c of FIELDS) {
     for (let i = 0; i < T.length; i++) {
@@ -298,11 +311,14 @@ function egalitesTranchees(p: Profiles) {
         }
         const flou = !distinguishable(rate(Math.round(a.accuracy * a.items), a.items),
           rate(Math.round(b.accuracy * b.items), b.items));
-        if (flou && pairedVerdict(g, pe).decidable) flipped++;
+        if (flou && pairedVerdict(g, pe).decidable) {
+          flipped++;
+          details.push({ field: c, a: T[i]!, b: T[j]!, aWins: g, bWins: pe });
+        }
       }
     }
   }
-  return { test: "McNemar", pairs, flipped };
+  return { test: "McNemar", pairs, flipped, decided: details };
 }
 
 export function construire(p: Profiles): unknown {
