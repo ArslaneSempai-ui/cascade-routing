@@ -106,7 +106,7 @@ test("chaque fichier de data/ a la forme que le générateur suppose", () => {
   const racine = new URL("../", import.meta.url).pathname;
   const attendus: Record<string, string[]> = {
     "data/profiles.json": ["measuredAt", "extraction", "classification"],
-    "data/retractations.json": ["entrees"],
+    "retractations.json": ["entrees"],
     "data/fuite.json": ["palier", "champs"],
     "data/egress.json": ["mesureLe", "connexions", "verdict"],
     "benchmarks/banking77.json": ["jeu", "source", "cas", "references", "paliers"],

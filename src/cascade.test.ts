@@ -498,7 +498,7 @@ test("chaque rétractation nomme un test qui existe vraiment", () => {
    * Ce test ferme la boucle dans le seul sens qui soit mécanisable : chaque `tenu` doit
    * désigner un test réel du dépôt.
    */
-  const f = new URL("../data/retractations.json", import.meta.url).pathname;
+  const f = new URL("../retractations.json", import.meta.url).pathname;
   if (!existsSync(f)) return;
   const journal = JSON.parse(readFileSync(f, "utf8")) as {
     entrees: { affirmait: string; tenu: string | null; nonTenue?: string }[] };

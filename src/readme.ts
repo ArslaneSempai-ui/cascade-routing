@@ -266,7 +266,7 @@ const deuxfaits = (() => {
  * gênante, et c'est précisément le jour où elle compte.
  */
 const retractations = (() => {
-  const f = new URL("../data/retractations.json", import.meta.url).pathname;
+  const f = new URL("../retractations.json", import.meta.url).pathname;
   if (!existsSync(f)) return "";
   const d = JSON.parse(readFileSync(f, "utf8")) as {
     entrees: { date: string; affirmait: string; vrai: string; trouve: string; cout: string; tenu: string | null }[];
