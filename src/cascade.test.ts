@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
+import { execFileSync } from "node:child_process";
 import { generateRecords, generateAlerts, FIELDS, TYPOLOGIES } from "./corpus.ts";
 import { correct, TIERS, estLocal, OLLAMA } from "./tiers.ts";
 import type { TierName } from "./paliers.ts";
@@ -896,5 +897,39 @@ test("les deux fichiers classent une absence de seuil de la même façon", () =>
       + `par landing.json.\n`
       + `  → le même dépôt dirait deux choses incompatibles du même chiffre, et l'une des deux`
       + ` se lit comme rassurante.`);
+  }
+});
+
+test("aucun relevé suivi par git ne transporte ses sorties brutes", () => {
+  /*
+   * Un blob entré dans l'historique y reste, dans tous les clones, pour toujours.
+   *
+   * Les sorties brutes pèsent quatre cents kilooctets par passe et n'ont aucune raison d'être
+   * lues par un relecteur : elles servent à re-scorer, pas à comprendre. Deux copies de
+   * sauvegarde de sept cent dix kilooctets ont pourtant été committées — non par négligence
+   * du principe, mais parce que la vérification portait sur `data/profiles.json`, bien ignoré
+   * par git, et pas sur les copies que la sauvegarde fabriquait à la racine. On vérifiait le
+   * fichier dont on parlait, pas celui qu'on créait.
+   *
+   * Il a fallu réécrire onze commits. Ce test rend l'erreur impossible plutôt que réparable :
+   * il regarde ce que git suit réellement, ce qu'aucune relecture d'intention n'aurait vu.
+   */
+  const suivis = execFileSync("git", ["ls-files", "--", "*.json"], {
+    cwd: new URL("..", import.meta.url).pathname, encoding: "utf8",
+  }).split("\n").filter((f) => /profiles.*\.json$/.test(f));
+
+  for (const f of suivis) {
+    const chemin = new URL(`../${f}`, import.meta.url).pathname;
+    if (!existsSync(chemin)) continue;
+    const p = JSON.parse(readFileSync(chemin, "utf8")) as {
+      extraction?: Record<string, Record<string, { sorties?: unknown }>> };
+    for (const [tier, champs] of Object.entries(p.extraction ?? {})) {
+      for (const [champ, profil] of Object.entries(champs)) {
+        assert.equal(profil.sorties, undefined,
+          `${f} est suivi par git et transporte les sorties brutes de ${tier}/${champ}.\n`
+          + `  → quatre cents kilooctets par passe, définitifs dès le premier commit, et`
+          + ` téléchargés par quiconque clone. Les sorties vont dans data/, qui est ignoré.`);
+      }
+    }
   }
 });
