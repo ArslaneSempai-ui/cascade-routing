@@ -619,16 +619,21 @@ test("toute hypothèse qui tarife un palier sélectionnable est balayée", () =>
   if (!p) return;
 
   const paliers = paliersMesures(p);
+  let gouvernantes = 0;
   for (const cle of Object.keys(ASSUMPTIONS) as (keyof typeof ASSUMPTIONS)[]) {
     const perturbee = { ...ASSUMPTIONS, [cle]: (ASSUMPTIONS[cle] as number) * 2 };
     const touches: string[] = paliers.filter((t: TierName) =>
       pricePerThousandDocuments(p, perturbee, t) !== pricePerThousandDocuments(p, ASSUMPTIONS, t));
     if (touches.length === 0) continue;
+    gouvernantes++;
 
     assert.ok(cle in PLAUSIBLE,
       `« ${cle} » tarife ${touches.join(", ")} et n'est pas dans PLAUSIBLE.\n`
       + `  → \`npm run sensitivity\` conclurait sans elle, en donnant une assurance qu'il n'a pas vérifiée.`);
   }
+  assert.ok(gouvernantes > 0,
+    "aucune hypothèse ne tarife un palier : la règle de gouvernance ne reconnaît plus rien, "
+    + "et ce test ne garde plus le balayage.");
 });
 
 test("les deux balayages de prix ne peuvent pas se contredire", () => {
@@ -882,9 +887,11 @@ test("les deux fichiers classent une absence de seuil de la même façon", () =>
 
   /* Huit pas au lieu de soixante : on compare des verdicts, pas des bornes de bande,
      et chaque pas coûte une énumération complète des routages. */
+  let compares = 0;
   for (const b of bands(p, ASSUMPTIONS, 8)) {
     const cote = publie.sensitivity.thresholds[b.assumption];
     if (!cote) continue;   // pas balayée des deux côtés : hors sujet ici
+    compares++;
 
     /*
      * Les deux ne posent pas la même question, et j'ai d'abord écrit qu'elles la posaient.
@@ -911,6 +918,9 @@ test("les deux fichiers classent une absence de seuil de la même façon", () =>
       + `  → le même dépôt dirait deux choses incompatibles du même chiffre, et l'une des deux`
       + ` se lit comme rassurante.`);
   }
+  assert.ok(compares > 0,
+    "aucune hypothèse n'est balayée des deux côtés : si `landing.json` cessait d'en publier, "
+    + "ce test constaterait un accord parfait entre deux ensembles vides.");
 });
 
 test("aucun relevé suivi par git ne transporte ses sorties brutes", () => {
@@ -931,9 +941,16 @@ test("aucun relevé suivi par git ne transporte ses sorties brutes", () => {
     cwd: new URL("..", import.meta.url).pathname, encoding: "utf8",
   }).split("\n").filter((f) => /profiles.*\.json$/.test(f));
 
+  assert.ok(suivis.length > 0,
+    "aucun relevé n'est suivi par git — soit ils ont tous disparu, soit le motif de recherche "
+    + "ne les reconnaît plus, et ce test passerait au vert en n'ayant rien regardé. "
+    + "C'est arrivé : juste après la réécriture d'historique, les fichiers étaient hors index.");
+
+  let vus = 0;
   for (const f of suivis) {
     const chemin = new URL(`../${f}`, import.meta.url).pathname;
     if (!existsSync(chemin)) continue;
+    vus++;
     const p = JSON.parse(readFileSync(chemin, "utf8")) as {
       extraction?: Record<string, Record<string, { sorties?: unknown }>> };
     for (const [tier, champs] of Object.entries(p.extraction ?? {})) {
@@ -945,6 +962,7 @@ test("aucun relevé suivi par git ne transporte ses sorties brutes", () => {
       }
     }
   }
+  assert.ok(vus > 0, "aucun relevé suivi n'a pu être lu sur le disque : rien n'a été vérifié");
 });
 
 test("chaque latence enregistrée dit sous quelle charge elle a été prise", () => {

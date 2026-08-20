@@ -111,12 +111,30 @@ test("chaque fichier de data/ a la forme que le générateur suppose", () => {
     "data/egress.json": ["mesureLe", "connexions", "verdict"],
     "benchmarks/banking77.json": ["jeu", "source", "cas", "references", "paliers"],
   };
+  /*
+   * Sauter un fichier absent est légitime ; les sauter tous ne l'est pas forcément.
+   *
+   * `data/` est ignoré par git : sur un clone frais les cinq fichiers manquent, les cinq sont
+   * sautés, et ce test passe au vert en n'ayant rien regardé — dans le test dont le sujet est
+   * précisément qu'un tableau vide ne se voit pas. Deux absences se ressemblent et ne se
+   * valent pas : « rien n'a encore été produit » et « les fichiers ont changé de nom ».
+   *
+   * On les sépare par la seule chose qui les distingue : si le dossier existe, quelque chose
+   * a été produit, et au moins un des fichiers attendus doit s'y trouver.
+   */
+  let vus = 0;
   for (const [chemin, cles] of Object.entries(attendus)) {
     if (!existsSync(racine + chemin)) continue;   // pas encore produit : rien à tenir
+    vus++;
     const d = JSON.parse(readFileSync(racine + chemin, "utf8"));
     for (const c of cles) {
       assert.ok(c in d, `${chemin} n'a pas de clé « ${c} » — le générateur du README la lit`);
     }
+  }
+  if (existsSync(racine + "data")) {
+    assert.ok(vus > 0,
+      "data/ existe mais ne contient aucun des fichiers attendus : leurs noms ont changé, "
+      + "et ce test — comme le générateur du README — regarde à côté sans rien signaler.");
   }
 });
 
