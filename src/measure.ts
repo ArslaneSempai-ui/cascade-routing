@@ -17,7 +17,7 @@ import { execFileSync } from "node:child_process";
 import { loadavg, cpus } from "node:os";
 import { dirname } from "node:path";
 import { generateRecords, generateAlerts, FIELDS, TYPOLOGIES } from "./corpus.ts";
-import { TIERS, ENCODEURS, GENERATIFS, loadExtractors, loadClassifiers, loadGeneratifs, extract, classify, correct, OLLAMA, estLocal } from "./tiers.ts";
+import { TIERS, ENCODEURS, GENERATIFS, loadExtractors, loadClassifiers, loadGeneratifs, extract, classify, correct, OLLAMA, estLocal, PROMPTS, type NomPrompt } from "./tiers.ts";
 import type { TierName } from "./tiers.ts";
 import type { Field } from "./corpus.ts";
 
@@ -110,6 +110,15 @@ export type Provenance = {
   charge?: { externalBefore: number; totalDuring: number; coeurs: number };
   /** La commande qui a fabriqué la charge, quand elle a été fabriquée exprès. */
   chargeFabriqueePar?: string;
+  /**
+   * La formulation employée, quand ce n'est pas la référence.
+   *
+   * Une exactitude générative dépend du prompt autant que du modèle — mesuré le 20 août :
+   * cinq formulations dispersent `gen-4b` de 45,8 points sur `birth`, contre 12,5 entre les
+   * trois modèles. Un taux sans sa formulation n'est donc pas attribuable, et deux relevés
+   * pris sous deux prompts se compareraient comme s'ils mesuraient la même chose.
+   */
+  promptUtilise?: string;
 };
 
 /**
@@ -242,7 +251,7 @@ function etatDuDepot(): { commit: string; sale: boolean } | undefined {
 
 export async function measure(
   howMany = 120,
-  options: { llm?: boolean; tiers?: TierName[]; cases?: Partial<Record<TierName, number>>; malgreArbreSale?: string; latenceValide?: boolean; malgreCharge?: string } = {},
+  options: { llm?: boolean; tiers?: TierName[]; cases?: Partial<Record<TierName, number>>; malgreArbreSale?: string; latenceValide?: boolean; malgreCharge?: string; prompt?: NomPrompt } = {},
 ): Promise<Profiles> {
   /*
    * Measured on the held-out half, never on the training half.
@@ -377,7 +386,7 @@ export async function measure(
       const sorties: string[] = [];
       for (const d of dossiers) {
         const t0 = performance.now();
-        const got = await extract(tier, d, champ);
+        const got = await extract(tier, d, champ, options.prompt ?? "reference");
         durees.push(performance.now() - t0);
         sorties.push(got);
         const bon = correct(got, d.truth[champ]);
@@ -429,6 +438,7 @@ export async function measure(
       measuredAt: new Date().toISOString(),
       ...(options.malgreArbreSale ? { malgreArbreSale: options.malgreArbreSale } : {}),
       ...(options.malgreCharge ? { chargeFabriqueePar: options.malgreCharge } : {}),
+      ...(options.prompt && options.prompt !== "reference" ? { promptUtilise: options.prompt } : {}),
       charge: {
         externalBefore: chargeAvant,
         totalDuring: Number((echantillons.length
@@ -600,8 +610,16 @@ if (isMain(import.meta)) {
   else console.log("Encoders only. First run downloads 1.26 GB of model weights — allow several minutes\non a fast line, longer on a slow one. Add --llm for the generative tiers (eight gigabytes more).");
   console.log("Tiers not measured here keep their frozen figures.\n");
 
+  /* `--prompt=C-minimal` : mesurer sous une autre formulation, en l'inscrivant dans le relevé. */
+  const brutPrompt = process.argv.find((a) => a.startsWith("--prompt="))?.split("=")[1];
+  if (brutPrompt && !(brutPrompt in PROMPTS)) {
+    console.error(`formulation inconnue : ${brutPrompt}\nles formulations sont : ${Object.keys(PROMPTS).join(", ")}`);
+    process.exit(1);
+  }
+  const prompt = brutPrompt as NomPrompt | undefined;
+
   const parPalier = Object.fromEntries(GENERATIFS.map((t) => [t, casesGen])) as Partial<Record<TierName, number>>;
-  const p = await measure(cases, { llm, tiers: choisis, cases: parPalier, malgreArbreSale, latenceValide, malgreCharge });
+  const p = await measure(cases, { llm, tiers: choisis, cases: parPalier, malgreArbreSale, latenceValide, malgreCharge, prompt });
   const pc = (x: number) => (x * 100).toFixed(1).padStart(5) + " %";
 
   console.log("CHAIN A — extraction, accuracy per field\n");

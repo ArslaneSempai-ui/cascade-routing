@@ -1,0 +1,75 @@
+{
+  "quoi": "Ce que la formulation du prompt déplace, comparé à ce que le choix du palier déplace.",
+  "limite": "Les quatre alternatives ont été écrites après lecture de la référence : ce sont des voisines, et la dispersion mesurée est une borne basse de la vraie sensibilité au prompt.",
+  "palier": "gen-4b",
+  "cas": 120,
+  "mesureLe": "2026-08-20T20:42:55.074Z",
+  "code": {
+    "commit": "2be9cbf",
+    "sale": false
+  },
+  "charge": {
+    "externalBefore": 1.57,
+    "coeurs": 10
+  },
+  "formulations": {
+    "reference": "Copy a single value out of a document, verbatim. Never rephrase, never reformat, never explain. If the value is absent, return an empty string.\n\nExample.\nDocument: Anna Petrova — dob 3 May 1990 — doc no ES-1234-A — Spain — lives 5 Calle Mayor, Madrid\nQuestion: What is the identity document number?\nAnswer: ES-1234-A\n\nNow the real one.\nDocument: <DOCUMENT>\nQuestion: What is the identity document number?\nAnswer:",
+    "A-sans-exemple": "Copy a single value out of a document, verbatim. Never rephrase, never reformat, never explain. If the value is absent, return an empty string.\n\nDocument: <DOCUMENT>\nQuestion: What is the identity document number?\nAnswer:",
+    "B-exemple-apparie": "Copy a single value out of a document, verbatim. Never rephrase, never reformat, never explain. If the value is absent, return an empty string.\n\nExample.\nDocument: Anna Petrova — dob 3 May 1990 — doc no ES-1234-A — Spain — lives 5 Calle Mayor, Madrid\nQuestion: What is the identity document number?\nAnswer: ES-1234-A\n\nNow the real one.\nDocument: <DOCUMENT>\nQuestion: What is the identity document number?\nAnswer:",
+    "C-minimal": "Extract the requested value from the document exactly as written. Return an empty string if it is not there.\n\nDocument: <DOCUMENT>\nQuestion: What is the identity document number?\nAnswer:",
+    "D-document-dabord": "Document: <DOCUMENT>\n\nQuestion: What is the identity document number?\n\nAnswer with the value exactly as it appears in the document above. Do not rephrase, reformat or explain. If it is absent, answer with an empty string.\n\nAnswer:"
+  },
+  "exactitudes": {
+    "reference": {
+      "name": 89.2,
+      "birth": 99.2,
+      "document": 79.2,
+      "country": 100,
+      "address": 95.8
+    },
+    "A-sans-exemple": {
+      "name": 94.2,
+      "birth": 100,
+      "document": 83.3,
+      "country": 100,
+      "address": 95.8
+    },
+    "B-exemple-apparie": {
+      "name": 90,
+      "birth": 54.2,
+      "document": 79.2,
+      "country": 100,
+      "address": 99.2
+    },
+    "C-minimal": {
+      "name": 98.3,
+      "birth": 100,
+      "document": 83.3,
+      "country": 100,
+      "address": 96.7
+    },
+    "D-document-dabord": {
+      "name": 95.8,
+      "birth": 96.7,
+      "document": 83.3,
+      "country": 99.2,
+      "address": 94.2
+    }
+  },
+  "dispersion": {
+    "parFormulation": {
+      "name": 9.2,
+      "birth": 45.8,
+      "document": 4.2,
+      "country": 0.8,
+      "address": 5
+    },
+    "entrePaliers": {
+      "name": 96.6,
+      "birth": 12.5,
+      "document": 25.6,
+      "country": 16.7,
+      "address": 95.8
+    }
+  }
+}
