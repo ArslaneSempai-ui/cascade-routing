@@ -501,7 +501,7 @@ test("chaque rétractation nomme un test qui existe vraiment", () => {
   const f = new URL("../retractations.json", import.meta.url).pathname;
   if (!existsSync(f)) return;
   const journal = JSON.parse(readFileSync(f, "utf8")) as {
-    entrees: { affirmait: string; tenu: string | null; nonTenue?: string }[] };
+    entries: { claimed: string; heldBy: string | null; notHeld?: string }[] };
 
   const sources = ["cascade.test.ts", "your-cases.test.ts", "demo.test.ts", "ecran.test.ts", "registre.test.ts"]
     .map((n) => new URL(`./${n}`, import.meta.url).pathname)
@@ -509,7 +509,7 @@ test("chaque rétractation nomme un test qui existe vraiment", () => {
     .map((p) => readFileSync(p, "utf8")).join("\n");
   const noms = new Set([...sources.matchAll(/test\("([^"]+)"/g)].map((m) => m[1]!));
 
-  for (const e of journal.entrees) {
+  for (const e of journal.entries) {
     /*
      * Un `tenu` vide n'est plus une sortie silencieuse.
      *
@@ -519,15 +519,15 @@ test("chaque rétractation nomme un test qui existe vraiment", () => {
      * tienne une erreur est une réponse admissible — certaines portent sur d'autres dépôts —
      * mais c'est une réponse qui doit être **écrite**, pas déduite d'un champ absent.
      */
-    if (!e.tenu) {
-      assert.ok(e.nonTenue && e.nonTenue.trim().length > 0,
-        `la rétractation « ${e.affirmait} » n'est tenue par aucun test et ne dit pas pourquoi.\n`
+    if (!e.heldBy) {
+      assert.ok(e.notHeld && e.notHeld.trim().length > 0,
+        `la rétractation « ${e.claimed} » n'est tenue par aucun test et ne dit pas pourquoi.\n`
         + `  → soit elle nomme le test qui la tient dans « tenu »,\n`
         + `    soit elle explique dans « nonTenue » ce qui l'empêche d'en avoir un.`);
       continue;
     }
-    assert.ok(noms.has(e.tenu),
-      `une rétractation dit être tenue par le test « ${e.tenu} », qui n'existe pas.\n`
+    assert.ok(noms.has(e.heldBy),
+      `une rétractation dit être tenue par le test « ${e.heldBy} », qui n'existe pas.\n`
       + `  → soit le test a été renommé et l'entrée doit suivre,\n`
       + `    soit le contrôle a disparu et l'erreur peut revenir sans que rien ne tombe.`);
   }
@@ -1056,13 +1056,13 @@ test("chaque rétractation porte son résumé et dit si quelqu'un l'a vue", () =
   const f = new URL("../retractations.json", import.meta.url).pathname;
   if (!existsSync(f)) return;
   const j = JSON.parse(readFileSync(f, "utf8")) as {
-    entrees: { date: string; resume?: string; vueParPersonne?: boolean }[] };
+    entries: { date: string; headline?: string; caughtBeforeAnyoneSawIt?: boolean }[] };
 
-  assert.ok(j.entrees.length > 0, "le journal est vide : rien n'est vérifié ici");
-  for (const e of j.entrees) {
-    assert.ok(typeof e.resume === "string" && e.resume.trim().length > 0,
+  assert.ok(j.entries.length > 0, "le journal est vide : rien n'est vérifié ici");
+  for (const e of j.entries) {
+    assert.ok(typeof e.headline === "string" && e.headline.trim().length > 0,
       `la rétractation du ${e.date} n'a pas de résumé — la page en afficherait un trou`);
-    assert.equal(typeof e.vueParPersonne, "boolean",
+    assert.equal(typeof e.caughtBeforeAnyoneSawIt, "boolean",
       `la rétractation du ${e.date} ne dit pas si quelqu'un l'a vue.\n`
       + `  → ce n'est pas déductible du texte, et un générateur qui devinerait pencherait`
       + ` du côté qui flatte le compte.`);

@@ -269,12 +269,12 @@ const retractations = (() => {
   const f = new URL("../retractations.json", import.meta.url).pathname;
   if (!existsSync(f)) return "";
   const d = JSON.parse(readFileSync(f, "utf8")) as {
-    entrees: { date: string; affirmait: string; vrai: string; trouve: string; cout: string; tenu: string | null }[];
+    entries: { date: string; claimed: string; actually: string; caughtBy: string; cost: string; heldBy: string | null }[];
   };
-  const tenus = d.entrees.filter((e) => e.tenu).length;
+  const tenus = d.entries.filter((e) => e.heldBy).length;
   return table(["When", "What was claimed", "What was true", "What caught it"],
-    d.entrees.map((e) => [e.date, e.affirmait, e.vrai, e.trouve]))
-    + `\n\n${tenus} of these ${d.entrees.length} are now held by a named test, so the same mistake `
+    d.entries.map((e) => [e.date, e.claimed, e.actually, e.caughtBy]))
+    + `\n\n${tenus} of these ${d.entries.length} are now held by a named test, so the same mistake `
     + `fails the build rather than reaching a reader.`;
 })();
 

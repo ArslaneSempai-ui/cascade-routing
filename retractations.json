@@ -1,109 +1,109 @@
 {
-  "quoi": "Les conclusions que cet outil a publiées, ou failli publier, et qui étaient fausses.",
-  "pourquoi": "Toute page de mesure montre ce que le système mesuré rate. Presque aucune ne montre ce que la mesure elle-même a raté. C'est pourtant la seule preuve qu'un chiffre a été soumis à quelque chose, et le seul historique qu'un validateur de modèles puisse auditer.",
-  "vueParPersonne_definition": "Vrai quand l'affirmation a été retirée AVANT d'atteindre quiconque hors de ceux qui l'ont écrite : avant publication, avant d'être dite à quelqu'un, avant d'être mise en ligne. Faux dès qu'elle a été publiée, prononcée ou lue par un tiers — quelle qu'en soit la durée et si peu nombreux qu'aient été les lecteurs. Une page interne lue par deux personnes compte comme vue. En cas de doute sur la portée, on marque faux : l'erreur va alors du côté qui diminue le compte flatteur, jamais de celui qui le gonfle.",
-  "entrees": [
+  "what": "The conclusions this tool published, or nearly published, and which were wrong.",
+  "why": "Every measurement page shows what the measured system gets wrong. Almost none shows what the measurement itself got wrong. Yet that is the only evidence a figure was ever put to the test, and the only history a model validator can audit.",
+  "caughtBeforeAnyoneSawIt_definition": "True when the claim was withdrawn BEFORE reaching anyone outside the people who wrote it: before publication, before being said to someone, before going online. False as soon as it was published, spoken or read by a third party — however briefly, and however few the readers. An internal page two people read counts as seen. Where the reach is uncertain, mark false: the error then goes toward shrinking the flattering count, never toward inflating it.",
+  "entries": [
     {
       "date": "2026-06-14",
-      "affirmait": "Les règles écrites à la main atteignent 100 % sur les cinq champs.",
-      "vrai": "Elles atteignent 0 % sur deux d'entre eux. Les expressions régulières avaient été écrites contre les gabarits qui servaient à les noter.",
-      "trouve": "Une relecture, avant publication.",
-      "cout": "La reconstruction complète du corpus, et l'ajout d'un découpage entraînement / épreuve.",
-      "tenu": "les trois moitiés du corpus ne partagent aucune formulation",
-      "resume": "Les règles écrites à la main semblaient parfaites sur les cinq champs ; elles avaient été notées contre les gabarits qui avaient servi à les écrire.",
-      "vueParPersonne": true
+      "headline": "The hand-written rules seemed perfect on all five fields; they had been graded against the very templates used to write them.",
+      "claimed": "The hand-written rules score 100 % on all five fields.",
+      "actually": "They score 0 % on two of them. The regexes had been written against the very templates used to grade them.",
+      "caughtBy": "A re-reading, before publication.",
+      "cost": "A complete rebuild of the corpus, and the addition of a training / held-out split.",
+      "heldBy": "les trois moitiés du corpus ne partagent aucune formulation",
+      "caughtBeforeAnyoneSawIt": true
     },
     {
       "date": "2026-07-02",
-      "affirmait": "Le petit modèle ne sait pas lire un numéro d'identité — 0 %, pas un score faible.",
-      "vrai": "63 %. L'évaluateur comptait « IT - 5560 - K » comme un échec face à « IT-5560-K » : il mesurait le formatage, pas le contenu.",
-      "trouve": "La galerie d'échecs, à sa première exécution.",
-      "cout": "133 échecs sur 685 étaient des faux. Un champ est passé de 51,7 % à 100 % après correction.",
-      "tenu": "formatting is not counted as an error",
-      "resume": "Le petit modèle passait pour incapable de lire un numéro d'identité ; c'est l'évaluateur qui comptait un espace comme une erreur.",
-      "vueParPersonne": false,
-      "porteeIncertaine": "Rien n'établit que cette affirmation ait été publiée ou dite. Marquée « vue » par prudence, conformément à la règle du doute ci-dessus."
+      "headline": "The small model looked incapable of reading an identity number; it was the scorer counting a space as an error.",
+      "claimed": "The small model cannot read an identity number — 0 %, not a low score.",
+      "actually": "63 %. The scorer counted « IT - 5560 - K » as a failure against « IT-5560-K »: it was measuring formatting, not content.",
+      "caughtBy": "The failure gallery, on its first run.",
+      "cost": "133 of 685 recorded failures were false. One field went from 51.7 % to 100 % after the fix.",
+      "heldBy": "formatting is not counted as an error",
+      "reachUncertain": "Nothing establishes that this claim was ever published or spoken. Marked as seen out of caution, following the doubt rule above.",
+      "caughtBeforeAnyoneSawIt": false
     },
     {
       "date": "2026-08-19",
-      "affirmait": "Le grand modèle est pire que le petit sur deux champs sur cinq.",
-      "vrai": "Sur un seul champ — et sur 120 cas l'écart était de 4,2 points avec des intervalles qui se recouvraient presque entièrement. L'affirmation n'était pas seulement mal comptée, elle n'était pas soutenue.",
-      "trouve": "Le générateur du dossier de validation, dont la section « ce que l'échantillon ne tranche pas » listait la paire.",
-      "cout": "Un titre de billet public, retiré quelques heures avant sa publication.",
-      "tenu": "à écart non significatif, le moins cher est retenu",
-      "resume": "Le grand modèle était annoncé pire que le petit sur deux champs ; l'écart n'était significatif sur aucun.",
-      "vueParPersonne": true
+      "headline": "The large model was announced as worse than the small one on two fields; the gap was significant on neither.",
+      "claimed": "The large model is worse than the small one on two fields out of five.",
+      "actually": "On a single field — and on 120 cases the gap was 4.2 points with intervals that almost entirely overlapped. The claim was not merely miscounted, it was unsupported.",
+      "caughtBy": "The validation dossier generator, whose « what the sample cannot decide » section listed the pair.",
+      "cost": "A public post title, pulled a few hours before it went out.",
+      "heldBy": "à écart non significatif, le moins cher est retenu",
+      "caughtBeforeAnyoneSawIt": true
     },
     {
       "date": "2026-08-19",
-      "affirmait": "Sur l'échelle générative, plus gros est pire sur une tâche et meilleur sur l'autre.",
-      "vrai": "La première moitié tient — 82,5 % contre 95,8 % sur l'adresse, écart réel. La seconde non : entre 4B et 8B, la classification ne bouge pas de façon mesurable.",
-      "trouve": "Le test de significativité, appliqué aux quatre affirmations d'un coup.",
-      "cout": "Une phrase déjà donnée à l'oral comme acquise.",
-      "tenu": "un palier plus gros n'est pas supposé meilleur",
-      "resume": "Sur l'échelle générative, « plus gros est pire » était présenté comme un fait ; l'échantillon ne le soutenait pas.",
-      "vueParPersonne": false
+      "headline": "On the generative ladder, « bigger is worse » was presented as a fact; the sample did not support it.",
+      "claimed": "On the generative ladder, bigger is worse on one task and better on the other.",
+      "actually": "The first half holds — 82.5 % against 95.8 % on address, a real gap. The second does not: between 4B and 8B, classification does not move measurably.",
+      "caughtBy": "The significance test, applied to all four claims at once.",
+      "cost": "A sentence already given aloud as settled.",
+      "heldBy": "un palier plus gros n'est pas supposé meilleur",
+      "caughtBeforeAnyoneSawIt": false
     },
     {
       "date": "2026-08-19",
-      "affirmait": "79,7 % — non : « 83 % contre 68 % et 63 % » sur le numéro de document.",
-      "vrai": "79,7 % contre 64,4 % et 57,7 %. Les trois chiffres étaient justes le jour où ils ont été écrits et sont devenus faux à la remesure à mille cas, dans une phrase que rien ne régénérait.",
-      "trouve": "Un contrôle écrit ce jour-là, qui refuse tout nombre tapé à la main dans la prose.",
-      "cout": "Trois chiffres faux en ligne pendant quelques heures.",
-      "tenu": "aucun chiffre n'est tapé à la main dans la prose du README",
-      "resume": "Trois chiffres de la page étaient tapés à la main et faux.",
-      "vueParPersonne": false
+      "headline": "Three figures on the page were typed by hand and wrong.",
+      "claimed": "79.7 % — no: « 83 % against 68 % and 63 % » on the document number.",
+      "actually": "79.7 % against 64.4 % and 57.7 %. All three figures were right the day they were written and became wrong at the thousand-case re-measurement, inside a sentence nothing regenerated.",
+      "caughtBy": "A check written that day, which refuses any hand-typed number in the prose.",
+      "cost": "Three wrong figures online for a few hours.",
+      "heldBy": "aucun chiffre n'est tapé à la main dans la prose du README",
+      "caughtBeforeAnyoneSawIt": false
     },
     {
       "date": "2026-08-19",
-      "affirmait": "La latence est mesurée mais ne joue aucun rôle dans le routage.",
-      "vrai": "C'était vrai le matin et faux le soir : un budget en secondes existe désormais et c'est lui qui contraint, pas l'argent. La page se contredisait d'une section à l'autre.",
-      "trouve": "L'audit des affirmations en gras contre les tests qui les tiennent.",
-      "cout": "Une contradiction visible sur la page publiée.",
-      "tenu": "le budget de temps mord avant le budget d'argent",
-      "resume": "La latence était mesurée sans jouer aucun rôle dans le routage, alors que la page affirmait le contraire.",
-      "vueParPersonne": false
+      "headline": "Latency was measured while playing no part in the routing, though the page claimed otherwise.",
+      "claimed": "Latency is measured but plays no part in the routing.",
+      "actually": "True in the morning and false by evening: a budget in seconds now exists and it is the one that binds, not the money. The page contradicted itself from one section to the next.",
+      "caughtBy": "The audit of the bold claims against the tests that hold them.",
+      "cost": "A contradiction visible on the published page.",
+      "heldBy": "le budget de temps mord avant le budget d'argent",
+      "caughtBeforeAnyoneSawIt": false
     },
     {
       "date": "2026-08-19",
-      "affirmait": "Le défaut de débordement touche les neuf démos publiées.",
-      "vrai": "Une seule. Les huit autres portaient la même feuille de style et ne débordaient pas : il fallait aussi un parent sans rembourrage.",
-      "trouve": "La vérification de l'affirmation, après l'avoir énoncée.",
-      "cout": "Rien, sauf l'exactitude d'une phrase dite trop vite.",
-      "tenu": null,
-      "nonTenue": "L'affirmation portait sur neuf dépôts publiés, pas sur celui-ci : aucun test de cette suite ne peut la tenir. Le contrôle qui l'attraperait ici — le détecteur de débordement de `verifier-ecran.mjs` — ne couvre que cet écran, et tourne avec `npm run pages`, pas avec `npm test`.",
-      "resume": "Un défaut d'affichage était annoncé sur neuf démos publiées ; il n'en touchait qu'une.",
-      "vueParPersonne": false
+      "headline": "A display defect was announced across nine published demos; it affected one.",
+      "claimed": "The overflow defect affects all nine published demos.",
+      "actually": "One. The other eight carried the same stylesheet and did not overflow: a parent without padding was also required.",
+      "caughtBy": "Checking the claim, after making it.",
+      "cost": "Nothing, except the accuracy of a sentence said too quickly.",
+      "heldBy": null,
+      "notHeld": "The claim was about nine published repositories, not this one: no test in this suite can hold it. The check that would catch it here — the overflow detector in `verifier-ecran.mjs` — covers only this screen, and runs with `npm run pages`, not with `npm test`.",
+      "caughtBeforeAnyoneSawIt": false
     },
     {
       "date": "2026-08-20",
-      "affirmait": "Les latences publiées sont celles des modèles, mesurées un élément à la fois sur machine au repos.",
-      "vrai": "Elles étaient celles des modèles **plus un pilote audio que personne n'avait regardé**. `UA Mixer Engine` occupait un cœur sur dix depuis seize jours ; l'arrêter a retiré 22 à 36 % de la latence de chaque palier, et fait passer la chaîne retenue de 1 341 à 968 ms. Les exactitudes sont restées identiques sur les 35 combinaisons palier×champ : rien du modèle n'avait changé.",
-      "trouve": "Une passe contaminée par mon propre travail concurrent, qui a rendu `gen-8b` 32 % plus lent et m'a fait relever la charge machine pour la première fois.",
-      "cout": "Trois passes de mesure. Et la section « un palier disparu entre deux mesures », qui racontait une instabilité des modèles là où il n'y avait qu'une machine occupée : `gen-0.6b` mesuré à 2 098 ms sous une charge de 7,98, 1 676 sous 4,31, 1 167 sous 2,54, pour un plafond à 2 000.",
-      "tenu": "chaque latence enregistrée dit sous quelle charge elle a été prise",
-      "resume": "Les latences publiées passaient pour celles des modèles ; c'étaient celles des modèles plus un pilote audio oublié qui tenait un cœur sur dix depuis seize jours, et valait un tiers du total.",
-      "vueParPersonne": false
+      "headline": "The published latencies passed for the models'; they were the models' plus a forgotten audio driver holding one core of ten for sixteen days, worth a third of the total.",
+      "claimed": "The published latencies are the models', measured one item at a time on an idle machine.",
+      "actually": "They were the models' **plus an audio driver nobody had looked at**. `UA Mixer Engine` held one core of ten for sixteen days; stopping it removed 22 to 36 % of every tier's latency, and took the retained chain from 1,341 to 968 ms. The accuracies stayed identical across all 35 tier×field combinations: nothing of the model had changed.",
+      "caughtBy": "A pass contaminated by my own concurrent work, which made `gen-8b` 32 % slower and made me record machine load for the first time.",
+      "cost": "Three measurement passes. And the section « a tier that vanished between two measurements », which told a story of unstable models where there was only a busy machine: `gen-0.6b` measured at 2,098 ms under a load of 7.98, 1,676 under 4.31, 1,167 under 2.54, against a 2,000 ms ceiling.",
+      "heldBy": "chaque latence enregistrée dit sous quelle charge elle a été prise",
+      "caughtBeforeAnyoneSawIt": false
     },
     {
       "date": "2026-08-20",
-      "affirmait": "Everything runs locally. No API key, nothing leaves the machine.",
-      "vrai": "Vrai par défaut, faux sur une configuration que rien n'interdisait. Le chemin d'une mesure ne contient qu'un seul appel sortant — l'hôte génératif — et `OLLAMA_HOST` est une variable d'environnement : pointée sur un serveur d'équipe, chaque document part chez ce tiers. La promesse était conditionnelle et sa condition n'était écrite nulle part.",
-      "trouve": "Le recensement de tout ce qui peut ouvrir une connexion dans `src/`, fait pour transformer l'affirmation en preuve.",
-      "cout": "Rien encore : aucun dossier réel n'avait été mesuré. C'est la seule des trois rétractations qui ait été prise avant d'avoir coûté quelque chose.",
-      "tenu": "une mesure ne peut contacter que cette machine",
-      "resume": "« Rien ne quitte votre machine » était vrai par défaut et faux dès qu'une variable d'environnement pointait un serveur distant — la condition n'était écrite nulle part.",
-      "vueParPersonne": true
+      "headline": "« Nothing leaves your machine » was true by default and false the moment an environment variable pointed at a remote server — the condition was written nowhere.",
+      "claimed": "Everything runs locally. No API key, nothing leaves the machine.",
+      "actually": "True by default, false on a configuration nothing forbade. A measurement's path contains exactly one outbound call — the generative host — and `OLLAMA_HOST` is an environment variable: pointed at a team server, every document goes to that third party. The promise was conditional and its condition was written nowhere.",
+      "caughtBy": "The inventory of everything that can open a connection in `src/`, made in order to turn the claim into proof.",
+      "cost": "Nothing yet: no real file had been measured. It is the only one of the three taken before it had cost anything.",
+      "heldBy": "une mesure ne peut contacter que cette machine",
+      "caughtBeforeAnyoneSawIt": true
     },
     {
       "date": "2026-08-20",
-      "affirmait": "Deux fois de suite, une explication plausible de la même observation : d'abord que les paliers génératifs étaient instables d'une passe à l'autre, ensuite que leur latence suivait la charge de la machine.",
-      "vrai": "Les deux étaient fausses. Les paliers sont déterministes — 35 combinaisons palier×champ identiques au millième sur quatre passes. Et la charge n'explique pas l'écart : mesuré exprès sous une charge de 8,35, `gen-0.6b` rend 1 654 ms là où le point d'origine annonçait 2 098 ms sous 7,98. La cause était un pilote audio, `UA Mixer Engine`, qui confisquait un cœur sur dix depuis seize jours ; l'arrêter a retiré 22 à 36 % de latence à tous les paliers.",
-      "trouve": "Une expérience faite pour reproduire le point manquant, qui a rendu un verdict opposé à celui qu'elle devait confirmer.",
-      "cout": "Une section de page de vente retirée deux fois : « un rival disparu entre deux mesures », puis « l'admissibilité bascule avec la charge ». La seconde était mieux étayée que la première et fausse pour la même raison — un seul de ses trois points la soutenait, et c'était celui qu'aucun fichier ne portait.",
-      "tenu": "chaque latence enregistrée dit sous quelle charge elle a été prise",
-      "resume": "Deux explications successives de la même observation — des modèles instables, puis l'effet de la charge — toutes deux plausibles, toutes deux fausses.",
-      "vueParPersonne": false
+      "headline": "Two successive explanations of the same observation — unstable models, then the effect of load — both plausible, both wrong.",
+      "claimed": "Twice running, a plausible explanation of the same observation: first that the generative tiers were unstable from pass to pass, then that their latency followed machine load.",
+      "actually": "Both were wrong. The tiers are deterministic — 35 tier×field combinations identical to the thousandth across four passes. And load does not explain the gap: measured deliberately under a load of 8.35, `gen-0.6b` returns 1,654 ms where the original point claimed 2,098 ms under 7.98. The cause was an audio driver, `UA Mixer Engine`, holding one core of ten for sixteen days; stopping it removed 22 to 36 % of latency from every tier.",
+      "caughtBy": "An experiment built to reproduce the missing point, which returned the opposite verdict to the one it was meant to confirm.",
+      "cost": "A sales-page section retired twice: « a rival that vanished between two measurements », then « admissibility flips with load ». The second was better supported than the first and wrong for the same reason — one of its three points carried it, and that point was in no file.",
+      "heldBy": "chaque latence enregistrée dit sous quelle charge elle a été prise",
+      "caughtBeforeAnyoneSawIt": false
     }
   ]
 }

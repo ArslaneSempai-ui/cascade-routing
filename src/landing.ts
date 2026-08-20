@@ -471,14 +471,14 @@ export function construire(p: Profiles): unknown {
       const f = new URL("../retractations.json", import.meta.url).pathname;
       if (!existsSync(f)) return null;
       const j = JSON.parse(readFileSync(f, "utf8")) as {
-        entrees: { date: string; resume?: string; vueParPersonne?: boolean }[] };
+        entries: { date: string; headline?: string; caughtBeforeAnyoneSawIt?: boolean }[] };
       return {
-        total: j.entrees.length,
-        caughtBeforeAnyoneSawIt: j.entrees.filter((e) => e.vueParPersonne === true).length,
-        entries: j.entrees.map((e) => ({
+        total: j.entries.length,
+        caughtBeforeAnyoneSawIt: j.entries.filter((e) => e.caughtBeforeAnyoneSawIt === true).length,
+        entries: j.entries.map((e) => ({
           date: e.date,
-          headline: e.resume ?? null,
-          caughtBeforeAnyoneSawIt: e.vueParPersonne ?? null,
+          headline: e.headline ?? null,
+          caughtBeforeAnyoneSawIt: e.caughtBeforeAnyoneSawIt ?? null,
         })),
       };
     })(),
