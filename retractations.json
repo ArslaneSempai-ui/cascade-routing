@@ -1,6 +1,7 @@
 {
   "quoi": "Les conclusions que cet outil a publiées, ou failli publier, et qui étaient fausses.",
   "pourquoi": "Toute page de mesure montre ce que le système mesuré rate. Presque aucune ne montre ce que la mesure elle-même a raté. C'est pourtant la seule preuve qu'un chiffre a été soumis à quelque chose, et le seul historique qu'un validateur de modèles puisse auditer.",
+  "vueParPersonne_definition": "Vrai quand l'affirmation a été retirée AVANT d'atteindre quiconque hors de ceux qui l'ont écrite : avant publication, avant d'être dite à quelqu'un, avant d'être mise en ligne. Faux dès qu'elle a été publiée, prononcée ou lue par un tiers — quelle qu'en soit la durée et si peu nombreux qu'aient été les lecteurs. Une page interne lue par deux personnes compte comme vue. En cas de doute sur la portée, on marque faux : l'erreur va alors du côté qui diminue le compte flatteur, jamais de celui qui le gonfle.",
   "entrees": [
     {
       "date": "2026-06-14",
@@ -20,7 +21,8 @@
       "cout": "133 échecs sur 685 étaient des faux. Un champ est passé de 51,7 % à 100 % après correction.",
       "tenu": "formatting is not counted as an error",
       "resume": "Le petit modèle passait pour incapable de lire un numéro d'identité ; c'est l'évaluateur qui comptait un espace comme une erreur.",
-      "vueParPersonne": false
+      "vueParPersonne": false,
+      "porteeIncertaine": "Rien n'établit que cette affirmation ait été publiée ou dite. Marquée « vue » par prudence, conformément à la règle du doute ci-dessus."
     },
     {
       "date": "2026-08-19",
