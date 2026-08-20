@@ -997,3 +997,45 @@ test("chaque latence enregistrée dit sous quelle charge elle a été prise", ()
     "aucune latence n'a été vérifiée : le champ de charge a disparu, et « mesuré au repos » "
     + "redevient une affirmation que personne ne peut contrôler.");
 });
+
+test("la décomposition des erreurs recompose l'exactitude du palier", () => {
+  /*
+   * Deux dérivations du même relevé doivent se rejoindre.
+   *
+   * `errorSplit` compte les échecs par type ; `accuracy` compte les réussites. Sur un même
+   * palier et un même champ, blanc + faux doit valoir exactement ce que l'exactitude laisse
+   * de côté. Si les deux divergent, l'une des deux lectures de `reussites` est fausse — et
+   * ces trois blocs viennent précisément d'être ajoutés parce qu'ils voyageaient à la main
+   * sans que rien ne les tienne.
+   *
+   * Le test tient aussi la borne : un dossier n'est propre que si ses cinq champs le sont,
+   * donc le taux propre ne peut pas dépasser le plus faible de ses cinq champs.
+   */
+  const p = readProfiles();
+  if (!p) return;
+  const f = new URL("../landing.json", import.meta.url).pathname;
+  if (!existsSync(f)) return;
+  const l = JSON.parse(readFileSync(f, "utf8")) as {
+    errorSplit: { perThousand: Record<string, { tier: string; blank: number | null; wrong: number | null }> } | null;
+    cleanPerDocument: { pct: number; n: number; clean: number } | null;
+  };
+  if (!l.errorSplit || !l.cleanPerDocument) return;
+
+  let verifies = 0;
+  let pireChamp = 100;
+  for (const c of FIELDS) {
+    const e: { tier: string; blank: number | null; wrong: number | null } | undefined = l.errorSplit.perThousand[c];
+    if (!e || e.blank === null || e.wrong === null) continue;
+    verifies++;
+    const q = p.extraction[e.tier as TierName][c];
+    const echecs = Math.round(1000 * (1 - q.accuracy));
+    assert.ok(Math.abs(e.blank + e.wrong - echecs) <= 1,
+      `${c} : errorSplit compte ${e.blank + e.wrong} échecs pour mille, l'exactitude en dit `
+      + `${echecs}. Deux lectures du même relevé qui ne se rejoignent pas.`);
+    pireChamp = Math.min(pireChamp, 100 * q.accuracy);
+  }
+  assert.ok(verifies > 0, "aucun champ vérifié : la décomposition ne couvre plus rien");
+  assert.ok(l.cleanPerDocument.pct <= pireChamp + 0.05,
+    `le taux de dossiers propres (${l.cleanPerDocument.pct} %) dépasse le plus faible champ `
+    + `du routage (${pireChamp.toFixed(1)} %) — impossible, un dossier n'est propre que si tous le sont.`);
+});

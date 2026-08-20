@@ -734,6 +734,51 @@
     },
     "note": "Chaque hypothèse est balayée seule, les autres restant à leur valeur en usage : deux prix qui bougent ensemble peuvent basculer le routage plus tôt qu'aucun des deux séparément. Le balayage ne couvre que les entrées qui tarifent un palier — le plafond de latence et le volume ne sont pas des prix et changent la réponse par d'autres chemins."
   },
+  "errorSplit": {
+    "perThousand": {
+      "name": {
+        "tier": "large",
+        "blank": 0,
+        "wrong": 34
+      },
+      "birth": {
+        "tier": "rules",
+        "blank": 0,
+        "wrong": 0
+      },
+      "document": {
+        "tier": "rules",
+        "blank": 203,
+        "wrong": 0
+      },
+      "country": {
+        "tier": "rules",
+        "blank": 0,
+        "wrong": 0
+      },
+      "address": {
+        "tier": "gen-4b",
+        "blank": 0,
+        "wrong": 42
+      }
+    },
+    "coverage": {
+      "fields": 5,
+      "of": 5
+    }
+  },
+  "cleanPerDocument": {
+    "pct": 76.7,
+    "lo": 68.3,
+    "hi": 83.3,
+    "n": 120,
+    "clean": 92
+  },
+  "paired": {
+    "test": "McNemar",
+    "pairs": 30,
+    "flipped": 4
+  },
   "assumptions": {
     "humanAccuracy": 0.85,
     "humanSeconds": 45,

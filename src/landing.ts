@@ -27,10 +27,11 @@ import { FIELDS } from "./corpus.ts";
 import { readProfiles } from "./measure.ts";
 import { ASSUMPTIONS, UNITS, pricePerThousandExtractions, latency } from "./assumptions.ts";
 import { optimiseExtraction, evaluer, paliersMesures, pricePerThousandDocuments, justessePonderee } from "./optimise.ts";
-import { rate, CONFIANCE } from "./interval.ts";
+import { rate, CONFIANCE, distinguishable, pairedVerdict } from "./interval.ts";
 
 import type { Field } from "./corpus.ts";
 import type { TierName } from "./paliers.ts";
+import type { Routing } from "./optimise.ts";
 import type { Profiles } from "./measure.ts";
 import type { Provenance } from "./provenance.ts";
 import type { Assumptions } from "./assumptions.ts";
@@ -227,6 +228,83 @@ function seuils(p: Profiles, h: Assumptions): Record<string, Seuil> {
   return out;
 }
 
+/**
+ * Les trois chiffres qui voyageaient à la main sous un nom qui avait l'air calculé.
+ *
+ * Ils étaient exacts et invérifiables : recalculés une fois, recopiés dans une page, puis
+ * figés — donc muets à la prochaine mesure, et personne pour le dire. Un audit croisé les a
+ * trouvés parce qu'ils ressemblaient à toutes les autres clés vues du côté qui les consomme.
+ *
+ * Ils se dérivent entièrement de `reussites` et `sorties` : un bit dit l'échec, une sortie
+ * vide dit lequel des deux échecs c'était. Aucun scoreur n'est rejoué ici — la vérité terrain
+ * a servi au moment de la mesure, et la relire ferait entrer un runtime de modèles dans un
+ * générateur qui n'a besoin que d'arithmétique.
+ */
+function decomposeErreurs(p: Profiles, routing: Routing) {
+  const perThousand: Record<string, { tier: TierName; blank: number | null; wrong: number | null }> = {};
+  let couverts = 0;
+  for (const c of FIELDS) {
+    const t = routing[c];
+    const q = p.extraction[t][c];
+    if (!q.sorties || !q.reussites || q.reussites.length !== q.sorties.length) {
+      perThousand[c] = { tier: t, blank: null, wrong: null };
+      continue;
+    }
+    couverts++;
+    let vide = 0, faux = 0;
+    for (let i = 0; i < q.sorties.length; i++) {
+      if (q.reussites[i] === "1") continue;
+      if ((q.sorties[i] ?? "").trim() === "") vide++; else faux++;
+    }
+    const n = q.sorties.length;
+    perThousand[c] = { tier: t, blank: Math.round((1000 * vide) / n), wrong: Math.round((1000 * faux) / n) };
+  }
+  return { perThousand, coverage: { fields: couverts, of: FIELDS.length } };
+}
+
+/**
+ * Le taux de dossiers entièrement propres — le chiffre de l'acheteur.
+ *
+ * Une moyenne de cinq taux par champ n'est pas le taux auquel un dossier sort sans humain.
+ * Il se compte sur les cas où **les cinq** champs sont bons à la fois, donc sur l'intersection
+ * des échantillons : un palier mesuré sur cent vingt cas plafonne le compte, et c'est dit.
+ */
+function dossiersPropres(p: Profiles, routing: Routing) {
+  const n = Math.min(...FIELDS.map((c) => p.extraction[routing[c]][c].items));
+  if (!FIELDS.every((c) => p.extraction[routing[c]][c].reussites)) return null;
+  let propres = 0;
+  for (let i = 0; i < n; i++) {
+    if (FIELDS.every((c) => p.extraction[routing[c]][c].reussites![i] === "1")) propres++;
+  }
+  const r = rate(propres, n);
+  const pc = (x: number) => Number((100 * x).toFixed(1));
+  return { pct: pc(r.rate), lo: pc(r.low), hi: pc(r.high), n, clean: propres };
+}
+
+/** Ce que le test apparié tranche que le recouvrement d'intervalles laissait flou. */
+function egalitesTranchees(p: Profiles) {
+  const T = paliersMesures(p).filter((t) => t !== "human");
+  let pairs = 0, flipped = 0;
+  for (const c of FIELDS) {
+    for (let i = 0; i < T.length; i++) {
+      for (let j = i + 1; j < T.length; j++) {
+        const a = p.extraction[T[i]!][c], b = p.extraction[T[j]!][c];
+        if (!a.reussites || !b.reussites || a.reussites.length !== b.reussites.length) continue;
+        pairs++;
+        let g = 0, pe = 0;
+        for (let k = 0; k < a.reussites.length; k++) {
+          const x = a.reussites[k] === "1", y = b.reussites[k] === "1";
+          if (x && !y) g++; else if (y && !x) pe++;
+        }
+        const flou = !distinguishable(rate(Math.round(a.accuracy * a.items), a.items),
+          rate(Math.round(b.accuracy * b.items), b.items));
+        if (flou && pairedVerdict(g, pe).decidable) flipped++;
+      }
+    }
+  }
+  return { test: "McNemar", pairs, flipped };
+}
+
 export function construire(p: Profiles): unknown {
   const paliers = paliersMesures(p);
   const optimum = optimiseExtraction(p, ASSUMPTIONS);
@@ -359,6 +437,10 @@ export function construire(p: Profiles): unknown {
         + "plafond de latence et le volume ne sont pas des prix et changent la réponse par "
         + "d'autres chemins.",
     },
+
+    errorSplit: optimum === null ? null : decomposeErreurs(p, optimum.routing),
+    cleanPerDocument: optimum === null ? null : dossiersPropres(p, optimum.routing),
+    paired: egalitesTranchees(p),
 
     /* Les entrées que le lecteur remplace. Aucune n'est mesurée, et la page doit le dire. */
     assumptions: {
