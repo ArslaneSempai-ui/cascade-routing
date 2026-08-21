@@ -1098,7 +1098,7 @@
     ]
   },
   "retractions": {
-    "total": 21,
+    "total": 22,
     "caughtBeforeAnyoneSawIt": 9,
     "entries": [
       {
@@ -1204,6 +1204,11 @@
       {
         "date": "2026-08-21",
         "headline": "Counted a one-field case as a whole document, reported twelve where there is one, and drew the opposite conclusion.",
+        "caughtBeforeAnyoneSawIt": false
+      },
+      {
+        "date": "2026-08-21",
+        "headline": "Reported a winning routing that the relevé did not contain and the latency ceiling forbids — inside the report proving escalation fails on that ceiling.",
         "caughtBeforeAnyoneSawIt": false
       }
     ]

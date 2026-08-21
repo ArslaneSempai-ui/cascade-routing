@@ -3,7 +3,7 @@
   "budgetDeclare": {
     "parCorpusPct": 10,
     "parDocumentMaxChamps": 2,
-    "declareLe": "2026-08-21T18:04:15.867Z",
+    "declareLe": "2026-08-21T18:12:42.289Z",
     "pourquoi": "Déclaré avant la mesure. Le point retenu s'y réfère ; les autres points de la courbe sont là pour montrer la forme, pas pour choisir le plus favorable."
   },
   "regle": "trier les champs candidats par nombre de signaux gratuits d'accord, escalader du plus sûr au moins sûr, sans dépasser k champs sur un même document, s'arrêter au budget.",
@@ -22,7 +22,7 @@
   ],
   "pasDeContinuum": "Le classement a deux marches utiles, pas un continuum : un client qui demande 5 % obtient 2,7 %, et un client qui demande 20 % obtient 2,7 % aussi. Les taux effectifs sont rapportés à côté des budgets demandés.",
   "plafondDeLatenceMs": 2000,
-  "mesureLe": "2026-08-21T18:04:15.947Z",
+  "mesureLe": "2026-08-21T18:12:42.488Z",
   "journal": "tentatives/2026-08-21T16-54-14-816Z-dur.jsonl",
   "documents": 30,
   "champs": 150,
@@ -147,6 +147,56 @@
     "hasard": 0.01,
     "oracle": 0,
     "estLeBudgetDeclare": true
+  },
+  "routagesFixes": {
+    "quoi": "Tous les routages fixes, avec leur admissibilité sous les deux budgets. L'exactitude vient du corpus dur ; le prix et la latence du relevé publié.",
+    "budgetParMilleEuros": 40,
+    "plafondLatenceMs": 2000,
+    "total": 7776,
+    "admissibles": 4321,
+    "recommande": {
+      "routage": {
+        "name": "large",
+        "birth": "rules",
+        "document": "rules",
+        "country": "rules",
+        "address": "gen-4b"
+      },
+      "prixParMille": 1.8365,
+      "msParDocument": 967.7,
+      "dossiersEntiers": 0,
+      "champsJustes": 44,
+      "admissible": true
+    },
+    "meilleurAdmissibleParChamps": {
+      "routage": {
+        "name": "gen-0.6b",
+        "birth": "gen-0.6b",
+        "document": "rules",
+        "country": "gen-8b",
+        "address": "gen-0.6b"
+      },
+      "prixParMille": 0.5891,
+      "msParDocument": 1631.4,
+      "dossiersEntiers": 0,
+      "champsJustes": 83,
+      "admissible": true
+    },
+    "meilleurAdmissibleParDossiers": {
+      "routage": {
+        "name": "large",
+        "birth": "gen-0.6b",
+        "document": "small",
+        "country": "gen-8b",
+        "address": "gen-0.6b"
+      },
+      "prixParMille": 2.3151,
+      "msParDocument": 1475.2,
+      "dossiersEntiers": 1,
+      "champsJustes": 77,
+      "admissible": true
+    },
+    "choisiSurLesMemesDonnees": "Le meilleur admissible est choisi sur les trente documents qui servent à le noter. Son chiffre est donc flatté, exactement comme un prompt réglé sur le jeu de test. Ce que la comparaison établit est la fragilité du routage recommandé, pas la valeur de cette alternative-là : pour la valider il faudrait une seconde moitié de corpus dur, qui n'existe pas."
   },
   "limite": "Trente documents, comptes de dossiers entiers entre zéro et deux. Aucun écart n'est départageable et aucun taux n'est publiable depuis ces comptes."
 }

@@ -238,6 +238,57 @@ if (isMain(import.meta)) {
     }
   }
 
+  /*
+   * Le meilleur routage fixe ADMISSIBLE, sur ce corpus — coût **et** plafond de latence.
+   *
+   * La première version de ce bloc ne bornait que le coût. Elle a donc désigné un routage à
+   * 3 273 ms par document sous un plafond de 2 000, et ce routage interdit est parti dans un
+   * rapport comme s'il gagnait — dans le rapport même qui démontrait que l'escalade tombe pour
+   * dépassement de ce plafond. Un chiffre présent dans la prose et absent du relevé est la
+   * faute que ce dépôt retire de sa page depuis le matin ; celui-ci était en plus inadmissible.
+   */
+  const budgetParMille = ASSUMPTIONS.budget / (ASSUMPTIONS.volume / 1000);
+  const tousLesRoutages: { routage: Record<Field, TierName>; prixParMille: number;
+    msParDocument: number; dossiersEntiers: number; champsJustes: number; admissible: boolean }[] = [];
+  const explorer = (i: number, acc: Partial<Record<Field, TierName>>) => {
+    if (i === FIELDS.length) {
+      const r = acc as Record<Field, TierName>;
+      const lat = FIELDS.reduce((a, c) => a + ms(r[c], c), 0);
+      const cout = FIELDS.reduce((a, c) => a + prix(r[c]), 0);
+      let entiers = 0, justes = 0;
+      for (const cas of complets) {
+        let ok = true;
+        for (const c of FIELDS) {
+          const x = rep.get(`${r[c]}|${cas}|${c}`);
+          if (x && x.outcome === "clean") justes++; else ok = false;
+        }
+        if (ok) entiers++;
+      }
+      tousLesRoutages.push({ routage: r, prixParMille: Number(cout.toFixed(4)),
+        msParDocument: Number(lat.toFixed(1)), dossiersEntiers: entiers, champsJustes: justes,
+        admissible: lat <= ASSUMPTIONS.latencyBudgetMs && cout <= budgetParMille });
+      return;
+    }
+    for (const t of ordre) explorer(i + 1, { ...acc, [FIELDS[i]!]: t });
+  };
+  explorer(0, {});
+  const admissibles = tousLesRoutages.filter((x) => x.admissible);
+  const meilleurChamps = [...admissibles].sort((a, b) =>
+    b.champsJustes - a.champsJustes || a.prixParMille - b.prixParMille)[0] ?? null;
+  const meilleurEntiers = [...admissibles].sort((a, b) =>
+    b.dossiersEntiers - a.dossiersEntiers || b.champsJustes - a.champsJustes || a.prixParMille - b.prixParMille)[0] ?? null;
+  const recommande = tousLesRoutages.find((x) => FIELDS.every((c) => x.routage[c] === routage[c])) ?? null;
+
+  console.log(`\n  ${tousLesRoutages.length} routages, ${admissibles.length} admissibles `
+    + `(latence ≤ ${ASSUMPTIONS.latencyBudgetMs} ms, coût ≤ ${budgetParMille.toFixed(2)} €/1000)`);
+  const dire = (nom: string, x: typeof tousLesRoutages[number] | null) => x && console.log(
+    `    ${nom.padEnd(34)} ${FIELDS.map((c) => x.routage[c]).join(", ").padEnd(46)}`
+    + ` ${String(x.champsJustes).padStart(3)}/150 champs  ${x.dossiersEntiers}/30 entiers`
+    + `  ${x.prixParMille.toFixed(2).padStart(5)} €  ${x.msParDocument.toFixed(0).padStart(5)} ms`);
+  dire("recommandé (réglé sur le propre)", recommande);
+  dire("meilleur admissible, champs", meilleurChamps);
+  dire("meilleur admissible, dossiers", meilleurEntiers);
+
   const retenu = lignes.find((l) => l.estLeBudgetDeclare) ?? null;
   console.log(`\n  point retenu au budget déclaré : ${retenu ? `${retenu.dossiersEntiers} dossiers entiers, ${retenu.tauxEffectifPct} % effectif` : "aucun point ne respecte le budget déclaré"}`);
 
@@ -259,6 +310,19 @@ if (isMain(import.meta)) {
     mesureLe: new Date().toISOString(), journal: f.split("/").slice(-2).join("/"),
     documents: complets.length, champs: total, routageFixe: routage, echelleDesPrix: ordre,
     points: lignes, pointRetenu: retenu,
+    routagesFixes: {
+      quoi: "Tous les routages fixes, avec leur admissibilité sous les deux budgets. L'exactitude "
+        + "vient du corpus dur ; le prix et la latence du relevé publié.",
+      budgetParMilleEuros: Number(budgetParMille.toFixed(4)),
+      plafondLatenceMs: ASSUMPTIONS.latencyBudgetMs,
+      total: tousLesRoutages.length, admissibles: admissibles.length,
+      recommande, meilleurAdmissibleParChamps: meilleurChamps, meilleurAdmissibleParDossiers: meilleurEntiers,
+      choisiSurLesMemesDonnees: "Le meilleur admissible est choisi sur les trente documents qui "
+        + "servent à le noter. Son chiffre est donc flatté, exactement comme un prompt réglé sur "
+        + "le jeu de test. Ce que la comparaison établit est la fragilité du routage recommandé, "
+        + "pas la valeur de cette alternative-là : pour la valider il faudrait une seconde moitié "
+        + "de corpus dur, qui n'existe pas.",
+    },
     limite: "Trente documents, comptes de dossiers entiers entre zéro et deux. Aucun écart n'est "
       + "départageable et aucun taux n'est publiable depuis ces comptes.",
   }, null, 2) + "\n");

@@ -216,6 +216,17 @@
       "cost": "A committed message states the wrong figures and the wrong conclusion. It is corrected here and in rapports/2026-08-21-corpus-dur.md rather than rewritten, because rewriting history orphaned a relevé's provenance earlier today. No published rate moves: per-field rates, the paired verdicts, over-refusals and over-answers all count declared fields and are untouched.",
       "heldBy": "un cas à un seul champ ne compte pas comme un dossier entier",
       "caughtBeforeAnyoneSawIt": false
+    },
+    {
+      "date": "2026-08-21",
+      "headline": "Reported a winning routing that the relevé did not contain and the latency ceiling forbids — inside the report proving escalation fails on that ceiling.",
+      "claimed": "That the best fixed routing within the cascade's budget completes two whole documents at 0.99 € per thousand, half the recommended routing's price. It was written in the escalation report and appeared in no file.",
+      "actually": "That routing runs at 3,273 ms per document against a declared ceiling of 2,000. It is not a cheaper routing, it is a forbidden one. The search that produced it constrained cost and never latency — in the same report whose central finding is that escalation to gen-8b fails because it breaks that exact ceiling. The number was also absent from escalade.json, which is the defect this repository has spent the day removing from its own page.",
+      "caughtBy": "The coordinating session reading the report against the file and finding the routing in neither.",
+      "cost": "One paragraph of a report, withdrawn. Nothing published. The search now applies both budgets and every routing, admissible or not, is emitted with its verdict.",
+      "heldBy": null,
+      "notHeld": "No test holds this one. Nothing in a repository can check that a sentence in a report corresponds to a number in a file; only reading the two against each other does, which is how it was found.",
+      "caughtBeforeAnyoneSawIt": false
     }
   ]
 }
