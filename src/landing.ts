@@ -729,6 +729,11 @@ export function construire(p: Profiles): unknown {
       "Les paliers ne sont pas mesurés au même n : les encodeurs sur l'échantillon complet, "
       + "les génératifs sur ses premiers cas seulement. Chaque chiffre porte son propre n.",
       "Aucun prix n'est mesuré. Tous sortent de `assumptions`, que le lecteur remplace.",
+      "Le prix des paliers génératifs est du temps machine, donc il dépend de la configuration "
+      + "de l'appel autant que du modèle. La sortie est contrainte par un schéma JSON : sans "
+      + "cette contrainte, `gen-4b` consomme tous les jetons autorisés et raisonne à voix haute "
+      + "— 644 ms deviennent 5 412 sur vingt extractions mesurées le 21 août, soit un facteur "
+      + "8,4 sur le prix. Le prix publié suppose la contrainte.",
       "La latence est mesurée un élément à la fois sur une machine au repos ; rien ici ne dit "
       + "ce qu'elle devient sous charge.",
       "Ces chiffres sont ceux de la chaîne d'extraction. La chaîne de classification range les "

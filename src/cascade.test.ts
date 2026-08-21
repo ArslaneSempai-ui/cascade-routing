@@ -1300,3 +1300,32 @@ test("chaque seuil publié porte son unité, dénominateur compris", () => {
       + `    deviné faux une fois : quarante-cinq dollars la seconde pour un analyste.`);
   }
 });
+
+/*
+ * La sortie structurée est ce qui tient le prix, et rien ne la gardait.
+ *
+ * Sans `format`, `gen-4b` ne s'arrête pas : il consomme les deux cents jetons autorisés à chaque
+ * champ et se met à raisonner à voix haute — « We are given a document string and a question ».
+ * Mesuré le 21 août sur vingt extractions : 15,6 jetons et 644 ms avec le schéma, 200 jetons et
+ * 5 412 ms sans. **Un facteur 8,4 sur la durée, donc sur le prix**, puisque le coût d'un palier
+ * génératif est du temps machine.
+ *
+ * Le prix publié suppose donc la contrainte de sortie, et cette dépendance n'était tenue par
+ * rien : quelqu'un qui retire `format` en croyant simplifier multiplie le coût réel par huit
+ * sans qu'aucun chiffre du dépôt ne bouge, puisqu'il faudrait remesurer pour le voir.
+ */
+test("l'appel génératif impose une sortie structurée, sinon le prix publié est faux d'un facteur huit", () => {
+  const src = readFileSync(new URL("./tiers.ts", import.meta.url).pathname, "utf8");
+  const i = src.indexOf("/api/generate");
+  assert.notEqual(i, -1, "l'appel de génération est introuvable.");
+  const appel = src.slice(i, i + 700);
+
+  assert.match(appel, /format:\s*schema/,
+    "l'appel de génération n'impose plus de schéma de sortie.\n"
+    + "  → sans lui, gen-4b prend tous les jetons autorisés et raisonne à voix haute :\n"
+    + "    644 ms deviennent 5 412, mesuré, et le prix publié devient faux d'un facteur huit.");
+  assert.match(appel, /num_predict:\s*\d+/,
+    "l'appel n'a plus de plafond de jetons : une sortie qui ne s'arrête pas n'a plus de borne du tout.");
+  assert.match(appel, /temperature:\s*0/,
+    "la température n'est plus à zéro : les mesures cessent d'être reproductibles.");
+});
