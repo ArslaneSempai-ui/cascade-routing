@@ -104,6 +104,38 @@
       "cost": "A sales-page section retired twice: « a rival that vanished between two measurements », then « admissibility flips with load ». The second was better supported than the first and wrong for the same reason — one of its three points carried it, and that point was in no file.",
       "heldBy": "chaque latence enregistrée dit sous quelle charge elle a été prise",
       "caughtBeforeAnyoneSawIt": false
+    },
+    {
+      "date": "2026-08-21",
+      "headline": "A prompt was declared « retained » for each generative tier on a margin of one field extraction out of six hundred.",
+      "claimed": "Each generative tier had a formulation chosen for it on the tuning split: `A-sans-exemple` for gen-0.6b and gen-4b, `B-exemple-apparie` for gen-8b. The file wrote them under a key named `retenu` — retained — with no interval and no test.",
+      "actually": "The selector took the maximum of five rates. The winners beat their runners-up by 12, 1 and 3 field extractions out of 600 — for gen-4b, `A-sans-exemple` at 99.3 % over `C-minimal` at 99.2 %, which is a single extraction. Nothing in the file said so, and nothing could: the script kept only rates, so the margins were not even recoverable from it. A maximum over five noisy numbers is a choice dressed as a measurement.",
+      "caughtBy": "A paired test run for a different question, whose data made the margins visible — and then by checking which formulation was actually the runner-up before drawing any conclusion from it.",
+      "cost": "Nothing published: no artefact consumed `retenu`. But the three assignments were reported as results to the person running the project and to the session coordinating it, and the held-out re-measurement they were meant to feed was planned on their basis.",
+      "heldBy": "departager ne retient rien quand le vainqueur n'est pas séparable de son second",
+      "caughtBeforeAnyoneSawIt": false
+    },
+    {
+      "date": "2026-08-21",
+      "headline": "Two confident explanations of prompt behaviour, given without measuring, both wrong.",
+      "claimed": "First, that `B-exemple-apparie` lost accuracy on the birth field because the model reformatted its answer to match the example's date style. Second, that gen-0.6b collapses without an example because a small model needs one to understand the task.",
+      "actually": "The first was refuted by looking: 52 of 55 failures are corrupted output, not reformatting — `1 August 1955` came back as `1 August 1:55`. The second is contradicted by the same table it was read from: `A-sans-exemple` contains no example and is the best formulation gen-0.6b has, at 83.5 %.",
+      "caughtBy": "Being told to check the first before building on it, and by reading the column that disproved the second.",
+      "cost": "Two mechanisms offered as understanding. Both were the kind of explanation that sounds like knowledge of how models work and is actually a story fitted to one number.",
+      "heldBy": null,
+      "caughtBeforeAnyoneSawIt": false,
+      "notHeld": "No test holds this one. It is not a claim about the code but about the habit of explaining a number before measuring it — the same measurement that refutes such a story would have prevented it, and there is nothing to assert in between."
+    },
+    {
+      "date": "2026-08-21",
+      "headline": "A decisive paired test, run on the wrong pair, about to be reported as validating a choice it never examined.",
+      "claimed": "Nearly: that the per-tier formulations survived a paired test. McNemar separated `A-sans-exemple` from `reference` on gen-4b, 32–1, p = 8e-9, and separated them the other way on gen-8b, 45–1. Two decisive p-values, sitting right next to the question of whether the tuning choice held.",
+      "actually": "Neither test touches the tuning decision. gen-4b's runner-up was `C-minimal`, not `reference`; gen-8b's winner was `B-exemple-apparie`, which was not in the run at all. The comparison measured was winner against third place, and loser against second. The p-values are correct and answer nothing that was asked.",
+      "caughtBy": "Reading the runner-up out of the tuning file before writing the sentence, instead of after.",
+      "cost": "None. It was checked inside the same minute it was computed, and never left the session.",
+      "heldBy": null,
+      "caughtBeforeAnyoneSawIt": true,
+      "notHeld": "No test holds this one. Nothing in a repository can check that a correct statistic was applied to the pair somebody actually asked about; only reading the question again does that."
     }
   ]
 }

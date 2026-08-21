@@ -175,3 +175,42 @@ test("un clone frais rend un chiffre sans intervention manuelle", () => {
     rmSync(dossier, { recursive: true, force: true });
   }
 });
+
+/*
+ * Le réglage de prompt ne doit pas nommer un vainqueur qu'il ne sait pas départager.
+ *
+ * La première version prenait le maximum de cinq taux. Sur `dev`, `gen-4b` en est sorti réglé
+ * sur `A-sans-exemple` avec **une** extraction d'avance sur 600, et `gen-8b` sur
+ * `B-exemple-apparie` avec trois. Aucun des deux écarts n'a été testé, et le fichier écrivait
+ * `retenu` comme un fait. Ce test tient la règle qui l'en empêche.
+ */
+test("departager ne retient rien quand le vainqueur n'est pas séparable de son second", async () => {
+  const { departager } = await import("./regler-prompt.ts");
+  const CHAMPS = ["name", "birth", "document", "country", "address"] as const;
+  const faire = (motifs: Record<string, string>) =>
+    Object.fromEntries(Object.entries(motifs).map(([nom, m]) => [nom,
+      Object.fromEntries(CHAMPS.map((c) => [c, m]))])) as never;
+
+  /* Une seule extraction d'écart, sur cinq champs de 20 cas : exactement le cas de `gen-4b`. */
+  const serre = departager(faire({
+    gagne: "1".repeat(20),
+    perd: "1".repeat(19) + "0",
+  }), ["gagne", "perd"] as never);
+  assert.equal(serre.vainqueur, "gagne", "le classement par taux reste calculé");
+  assert.equal(serre.ecartExtractions, 5, "cinq champs × une extraction");
+  assert.equal(serre.retenu, null, "cinq cas discordants du même côté ne suffisent pas à trancher");
+
+  /* Vingt-cinq contre zéro : McNemar tranche, et le vainqueur est nommé. */
+  const net = departager(faire({
+    gagne: "1".repeat(20),
+    perd: "0".repeat(5) + "1".repeat(15),
+  }), ["gagne", "perd"] as never);
+  assert.equal(net.retenu, "gagne", "25 cas discordants d'un seul côté sont départageables");
+  assert.equal(net.gains, 25);
+  assert.equal(net.regressions, 0);
+
+  /* Et l'égalité parfaite ne retient rien non plus, sans diviser par zéro. */
+  const nul = departager(faire({ a: "1".repeat(20), b: "1".repeat(20) }), ["a", "b"] as never);
+  assert.equal(nul.retenu, null, "aucun cas discordant : rien à retenir");
+  assert.equal(nul.gains + nul.regressions, 0);
+});

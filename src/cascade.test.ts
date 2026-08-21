@@ -503,10 +503,16 @@ test("chaque rétractation nomme un test qui existe vraiment", () => {
   const journal = JSON.parse(readFileSync(f, "utf8")) as {
     entries: { claimed: string; heldBy: string | null; notHeld?: string }[] };
 
-  const sources = ["cascade.test.ts", "your-cases.test.ts", "demo.test.ts", "ecran.test.ts", "registre.test.ts"]
-    .map((n) => new URL(`./${n}`, import.meta.url).pathname)
-    .filter((p) => existsSync(p))
-    .map((p) => readFileSync(p, "utf8")).join("\n");
+  /*
+   * La liste des fichiers de test était écrite à la main, et `outils.test.ts` n'y était pas.
+   * Une entrée tenue par un test réel de ce fichier a donc été refusée comme imaginaire — le
+   * contrôle disait « ce test n'existe pas » là où il fallait lire « je ne l'ai pas cherché ».
+   * Un contrôle anti-péremption qui périme lui-même demande le répertoire, il ne le récite pas.
+   */
+  const dossier = new URL(".", import.meta.url).pathname;
+  const fichiers = readdirSync(dossier).filter((n) => n.endsWith(".test.ts")).sort();
+  assert.ok(fichiers.length >= 5, `${fichiers.length} fichier(s) de test trouvé(s) : la lecture du répertoire a échoué.`);
+  const sources = fichiers.map((n) => readFileSync(join(dossier, n), "utf8")).join("\n");
   const noms = new Set([...sources.matchAll(/test\("([^"]+)"/g)].map((m) => m[1]!));
 
   for (const e of journal.entries) {

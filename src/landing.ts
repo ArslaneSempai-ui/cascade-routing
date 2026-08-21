@@ -508,6 +508,12 @@ export function construire(p: Profiles): unknown {
       + "paliers dans l'ordre inverse, ce qui interdit d'en tirer un classement général.",
       "Un routage expire : il est calculé sur des révisions épinglées et un échantillon figé. "
       + "Une dérive du trafic ou une mise à jour de modèle l'invalide sans lever d'erreur.",
+      "L'indiscernabilité est mesurée sous une seule formulation de prompt, celle du dépôt. "
+      + "Elle n'y survit pas partout : sur le découpage de réglage, `gen-4b` et `gen-8b` sont "
+      + "indiscernables sous cette formulation (McNemar 13–25 sur 600 extractions), et "
+      + "départagés en faveur de `gen-4b` sous `A-sans-exemple` (64–1, portés par name, "
+      + "document et address). « Ce palier vaut celui-là » est donc une propriété du couple "
+      + "palier-formulation, pas du palier.",
     ],
   };
 }

@@ -810,8 +810,8 @@
     ]
   },
   "retractions": {
-    "total": 10,
-    "caughtBeforeAnyoneSawIt": 3,
+    "total": 13,
+    "caughtBeforeAnyoneSawIt": 4,
     "entries": [
       {
         "date": "2026-06-14",
@@ -862,6 +862,21 @@
         "date": "2026-08-20",
         "headline": "Two successive explanations of the same observation — unstable models, then the effect of load — both plausible, both wrong.",
         "caughtBeforeAnyoneSawIt": false
+      },
+      {
+        "date": "2026-08-21",
+        "headline": "A prompt was declared « retained » for each generative tier on a margin of one field extraction out of six hundred.",
+        "caughtBeforeAnyoneSawIt": false
+      },
+      {
+        "date": "2026-08-21",
+        "headline": "Two confident explanations of prompt behaviour, given without measuring, both wrong.",
+        "caughtBeforeAnyoneSawIt": false
+      },
+      {
+        "date": "2026-08-21",
+        "headline": "A decisive paired test, run on the wrong pair, about to be reported as validating a choice it never examined.",
+        "caughtBeforeAnyoneSawIt": true
       }
     ]
   },
@@ -883,6 +898,7 @@
     "Aucun prix n'est mesuré. Tous sortent de `assumptions`, que le lecteur remplace.",
     "La latence est mesurée un élément à la fois sur une machine au repos ; rien ici ne dit ce qu'elle devient sous charge.",
     "Ces chiffres sont ceux de la chaîne d'extraction. La chaîne de classification range les paliers dans l'ordre inverse, ce qui interdit d'en tirer un classement général.",
-    "Un routage expire : il est calculé sur des révisions épinglées et un échantillon figé. Une dérive du trafic ou une mise à jour de modèle l'invalide sans lever d'erreur."
+    "Un routage expire : il est calculé sur des révisions épinglées et un échantillon figé. Une dérive du trafic ou une mise à jour de modèle l'invalide sans lever d'erreur.",
+    "L'indiscernabilité est mesurée sous une seule formulation de prompt, celle du dépôt. Elle n'y survit pas partout : sur le découpage de réglage, `gen-4b` et `gen-8b` sont indiscernables sous cette formulation (McNemar 13–25 sur 600 extractions), et départagés en faveur de `gen-4b` sous `A-sans-exemple` (64–1, portés par name, document et address). « Ce palier vaut celui-là » est donc une propriété du couple palier-formulation, pas du palier."
   ]
 }
