@@ -20,6 +20,7 @@ import { writeFileSync, readFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { loadavg, cpus } from "node:os";
 import { isMain } from "./cli.ts";
+import { FIELDS } from "./corpus.ts";
 import { ouvrirJournal } from "./journal.ts";
 import { loadExtractors, loadGeneratifs, extract, TIERS } from "./tiers.ts";
 import { corpusDur, lireFichier, noterDur, REGLE_DE_NOTATION } from "./corpus-dur.ts";
@@ -82,9 +83,14 @@ if (isMain(import.meta)) {
 
   const par = {} as Record<TierName, { clean: number; blank: number; wrong: number;
     overRefusal: number; overAnswer: number; parSource: Record<string, { clean: number; total: number }> }>;
+  /* Le taux par document, tenu à côté du taux par champ — c'est lui que le client consomme. */
+  const entiers = new Map<TierName, Set<string>>();
+  const completsAttendus = tous.filter((c) => Object.keys(c.attendus).length === FIELDS.length).length;
 
   for (const t of paliers) {
     par[t] = { clean: 0, blank: 0, wrong: 0, overRefusal: 0, overAnswer: 0, parSource: {} };
+    const propres = new Set<string>(); const sales = new Set<string>();
+    entiers.set(t, propres);
     for (const c of tous) {
       for (const [champ, attendu] of Object.entries(c.attendus) as [Field, Attendu & { silenceAussi?: boolean }][]) {
         const t0 = performance.now();
@@ -98,6 +104,10 @@ if (isMain(import.meta)) {
         par[t][note.outcome]++;
         if (note.overRefusal) par[t].overRefusal++;
         if (note.overAnswer) par[t].overAnswer++;
+        if (Object.keys(c.attendus).length === FIELDS.length) {
+          if (note.outcome === "clean") { if (!sales.has(c.cle)) propres.add(c.cle); }
+          else { sales.add(c.cle); propres.delete(c.cle); }
+        }
         const s = par[t].parSource[c.source] ?? { clean: 0, total: 0 };
         s.total++; if (note.outcome === "clean") s.clean++;
         par[t].parSource[c.source] = s;
@@ -109,9 +119,26 @@ if (isMain(import.meta)) {
       }
     }
     const n = par[t].clean + par[t].blank + par[t].wrong;
-    console.log(`  ${t.padEnd(10)} juste ${(100 * par[t].clean / n).toFixed(1).padStart(5)} %`
-      + `   sur-refus ${String(par[t].overRefusal).padStart(3)}   sur-réponse ${String(par[t].overAnswer).padStart(3)}   (${n} champs)`);
+    const d = entiers.get(t)!;
+    console.log(`  ${t.padEnd(10)} champs ${(100 * par[t].clean / n).toFixed(1).padStart(5)} %`
+      + `   dossiers entiers ${String(d.size).padStart(2)}/${completsAttendus}`
+      + `   sur-refus ${String(par[t].overRefusal).padStart(3)}   sur-réponse ${String(par[t].overAnswer).padStart(3)}`);
   }
+
+  /*
+   * Le plafond d'un routage par document, et il est bas.
+   *
+   * `gen-4b` et `gen-8b` rendent douze dossiers entiers chacun — et onze sont **les mêmes**.
+   * Les neuf points d'exactitude par champ qui séparent les deux se dispersent sur des champs
+   * qui ne suffisent jamais à sauver un dossier de plus. Router par document entre eux gagne un
+   * dossier sur quarante-quatre.
+   *
+   * Et l'oracle — le meilleur des six paliers pour chaque document, choisi après coup, donc
+   * irréalisable — en rend quinze. Trois de plus que le meilleur palier seul. C'est le plafond
+   * de tout ce que le routage par document peut rapporter ici, et il se mesure avant d'écrire
+   * la moindre ligne de routeur.
+   */
+  const oracle = new Set([...entiers.values()].flatMap((s) => [...s]));
 
   const j = journal.fermer();
   writeFileSync(SORTIE, JSON.stringify({
@@ -123,6 +150,19 @@ if (isMain(import.meta)) {
     charge: { externalBefore: Number(loadavg()[0]!.toFixed(2)), coeurs: cpus().length },
     journal: j.chemin.split("/").slice(-2).join("/"),
     paliers: par,
+    parDocument: Object.fromEntries([...entiers].map(([t, s]) => [t, {
+      entiers: s.size, sur: completsAttendus,
+      tauxDocument: Number((s.size / completsAttendus).toFixed(4)),
+      lesquels: [...s].sort(),
+    }])),
+    plafondDuRoutageParDocument: {
+      oracle: oracle.size, sur: completsAttendus,
+      meilleurPalierSeul: Math.max(...[...entiers.values()].map((s) => s.size)),
+      gainDeLOracle: oracle.size - Math.max(...[...entiers.values()].map((s) => s.size)),
+      quoi: "L'oracle choisit après coup le meilleur palier pour chaque document. Il est "
+        + "irréalisable et donne le plafond de ce qu'un routage par document peut rapporter. "
+        + "Le mesurer coûte une requête ; l'écrire coûterait un routeur.",
+    },
     limite: "Aucun taux d'ici ne se compare à un taux du corpus propre : ce ne sont pas les mêmes "
       + "documents ni la même règle de notation. La baisse est attendue et voulue.",
   }, null, 2) + "\n");
