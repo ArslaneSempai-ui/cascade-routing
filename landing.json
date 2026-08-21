@@ -1236,7 +1236,7 @@
     ]
   },
   "retractions": {
-    "total": 25,
+    "total": 26,
     "caughtBeforeAnyoneSawIt": 9,
     "entries": [
       {
@@ -1362,6 +1362,11 @@
       {
         "date": "2026-08-21",
         "headline": "Published a price ratio of 8.4 from twenty timings with no spread, on a machine whose single-call spread is fivefold — hours after retracting the same defect.",
+        "caughtBeforeAnyoneSawIt": false
+      },
+      {
+        "date": "2026-08-22",
+        "headline": "Refuted another session's result on three points that were wrong, after truncating the search that would have shown it.",
         "caughtBeforeAnyoneSawIt": false
       }
     ]

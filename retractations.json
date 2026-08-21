@@ -259,6 +259,17 @@
       "cost": "A caveat in landing.json quoting a price ratio. Replaced by what the data carries: the token counts, which are counted rather than timed, and the fact that without the constraint the JSON parser fails on prose so the field returns empty — not a price/accuracy trade but the difference between a parseable answer and none.",
       "heldBy": "l'appel génératif impose une sortie structurée, sinon le prix publié est faux d'un facteur huit",
       "caughtBeforeAnyoneSawIt": false
+    },
+    {
+      "date": "2026-08-22",
+      "headline": "Refuted another session's result on three points that were wrong, after truncating the search that would have shown it.",
+      "claimed": "That the machine and load attribution did not match the files, that no run showed decay, and that the M5 does not reproduce — the last presented as the main finding, with a factor of 1.67 between two of its figures.",
+      "actually": "All three were wrong. The files carry two top-level fields both meaning load — `chargeMediane` at 3.48, 3.01, 7.02, 2 and `conditionsDepart.load1` at 2.86, 2.40, 3.48, 1.58 — so the summary was right and my reading was partial. `charge-elevee` does decay, 18.09 to 14.21 across five repetitions, monotone: I quoted the sustained-phase slope and concluded about the generation phase. And within a single pass the M5 repeats to under 2 % — the two figures I compared are repetitions from different files at median loads of 7.02 and 2, a factor of 3.5, which is a load test presented as a repeatability test.",
+      "caughtBy": "The session I had refuted, reading my refutation as carefully as I had read their summary.",
+      "cost": "A refutation delivered with three wrong points, and a night of disagreement between two sessions that both read carefully. The first search printed `list(d.keys())[:12]` and its results as `trouve[:4]`; `chargeMediane` sits past the twelfth key. Two truncations written for readability removed the evidence, and the search that found it differed only in not truncating.",
+      "heldBy": null,
+      "notHeld": "No test holds this one. Nothing in a repository can detect that a view of the data was truncated where the answer lay — the output looks complete because truncation is silent by design.",
+      "caughtBeforeAnyoneSawIt": false
     }
   ]
 }

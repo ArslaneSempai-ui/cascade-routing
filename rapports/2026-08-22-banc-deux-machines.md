@@ -1,119 +1,89 @@
 # Trying to break the two-machine result
 
-Asked to refute before it is written anywhere. It does not survive in the form
-proposed, and what replaces it is narrower and better.
+**Three of the six points below are withdrawn.** They were wrong, and the
+corrections came from the session I was refuting. What survives is at the end,
+and it is less than what I claimed.
 
-Everything below is read from the four files in `cascade-banc/`, not from the
-summary of them.
+---
 
-## The finding that breaks it: one machine repeats, the other does not
+## Withdrawn 1 — "the attribution does not match the files"
 
-| file | chip | burst 8b (median of 5) | sustained plateau | sustained ÷ burst |
-|---|---|---|---|---|
-| `pro.json` | M1 Pro | 23.07 | 22.64 | 98 % |
-| `pro-calme.json` | M1 Pro | 23.07 | 23.07 | 100 % |
-| `charge-elevee.json` | M5 | **14.78** | 16.09 | 109 % |
-| `banc-37de6cfe.json` | M5 | **24.67** | 15.07 | 61 % |
+It does. The files carry **two top-level fields that both mean load**:
 
-**The M1 Pro's two burst medians agree to four figures. The M5's differ by a
-factor of 1.67**, same bench version, same model, same machine.
+    chargeMediane            3.48 · 3.01 · 7.02 · 2      load across the whole pass
+    conditionsDepart.load1   2.86 · 2.40 · 3.48 · 1.58   load at the first instant
 
-So "each machine repeats itself" holds for one of them. And two machines cannot
-be ranked when one of them does not repeat.
+I read `load1` and reported that no run started at 7.02, which is true and
+irrelevant: 7.02 is `charge-elevee`'s `chargeMediane`, and it is exactly where the
+summary said it was. Nobody invented a number. A scalar named *charge* carries two
+quantities, and two people reading carefully disagreed for a whole night over a
+shared name.
 
-It also decides which run the headline rests on. *"In burst the M5 wins
-everywhere, +11.8 / +3.7 / +6.9 %"* compares `pro-calme` against
-`banc-37de6cfe` — the M5 run where it happened to be fast. Compared against
-`charge-elevee`, the M5 **loses** in burst: 14.78 against 23.07. The conclusion
-depends on which of the M5's two runs is picked, and nothing in the files says
-which one to pick.
+**How I missed a top-level field.** My first pass printed `list(d.keys())[:12]`
+and the results as `trouve[:4]`. `chargeMediane` sits past the twelfth key. Two
+truncations written for readability removed the evidence, and the second search —
+which found it — differed only in not truncating.
 
-Likewise the sustained drop. In one M5 run the plateau is 61 % of burst; in the
-other it is 109 % — no drop at all. A 40 % sustained collapse that appears in one
-run of two is not yet a property of the chip.
+## Withdrawn 2 — "there is no decay on either machine"
 
-## The machine and load attribution in the summary does not match the files
+`charge-elevee` decays clearly, across its five 8b repetitions:
 
-| | summary says | files say |
-|---|---|---|
-| `pro.json` | M1 Pro, load 3.48 | M1 Pro, **load1 2.86** (load5 3.45) |
-| `charge-elevee.json` | M5, load 7.02 | M5, **load1 3.48** (load5 3.64) |
-| `pro-calme.json` | M1 Pro, load 3.01 | M1 Pro, **load1 2.40** (load5 1.91) |
-| `banc-37de6cfe.json` | M5, load 2 | M5, **load1 1.58** (load5 2.19) |
+    18.09 → 15.91 → 14.78 → 14.27 → 14.21     monotone, −21 %
 
-**3.48 is the M5's load, not the M1 Pro's** — which settles the question Écriture
-raised about two sessions giving opposite attributions. And **no run started at
-7.02**; the highest `load1` in the four files is 3.48.
+I quoted `penteParMin`, which describes the **sustained** phase, and concluded
+about the **generation** phase. Different phases of the same file. The M1 Pro's
+own repetitions fall 1.7 % over five, and `pro-calme` not at all.
 
-## The thermal explanation has no support in these files
+So there is one intra-pass decay among the four and it is the M5's, in the run
+whose median load is 7.02. The thermal hypothesis is not supported, and it is not
+dismissed either: it is confounded with external load, and these files do not
+separate them.
 
-All four recorded slopes are **positive** — throughput rising over the run, not
-decaying:
+## Withdrawn 3 — "the M5 does not repeat"
 
-    M1 Pro  pro.json          +0.0025 /min      22.62 → 22.64
-    M1 Pro  pro-calme.json    +0.5825 /min      23.07 → 23.07
-    M5      charge-elevee     +0.1025 /min      14.94 → 16.21
-    M5      banc-37de6cfe     +0.6800 /min      15.00 → 15.19
+Within a single pass the M5 repeats better than almost anything here:
 
-There is no "2.5 %/min against 4.5 %" decay in the data, and the slopes do not
-sort by machine: the flattest and the steepest are both the M1 Pro's. Cooling is
-recorded as "ventilated (inferred from the model)" — inferred, so assumed, and it
-is the weakest of the three candidate causes on this evidence rather than the
-leading one.
+    banc-37de6cfe   24.40 · 24.67 · 24.51 · 24.73 · 24.79     under 2 % spread
 
-## Two candidate causes that are measured rather than inferred
+My 14.78 and 24.67 are repetition 3 of one file and repetition 2 of another, at
+median loads of 7.02 and 2 — a factor of 3.5. **That is a load test, not a
+repeatability test**, and I presented it as the latter.
 
-**The M5 has half the performance cores.** `hote` records 8 performance and 2
-efficiency cores for the M1 Pro, against **4 performance and 6 efficiency** for
-the M5. For a sustained single-model generation that saturates performance cores,
-that is a plain explanation needing no thermals — and it is in the file.
+---
 
-**This M5 is under heavy memory pressure.** Swapouts: 29.5 and 29.8 million on
-the M5, against 0.89 and 0.97 million on the M1 Pro — a factor of thirty. One M5
-run started with **69 MB free**. Both machines have 16 GiB. That is a property of
-this machine's state, not of the chip, and it is a strong candidate for both the
-instability and the sustained drop.
+## What survives
 
-Neither is tested. Both are checkable, and both beat an inferred cooling label.
+**Repeatability before ranking** — but for the other session's reason, not mine.
+Not because the M5 failed a repeatability test, but because **it was never played
+twice under the same conditions**. The M1 Pro was: 23.07 at median load 3.01 and
+22.94 at 3.48, one per cent apart. It is the only machine here whose repeatability
+is demonstrated.
 
-## The dropout question, answered
+**Two measured candidate causes, neither tested.** The M5 has 4 performance cores
+against the M1 Pro's 8, recorded in `hote`. And this M5 carries thirty times the
+swapouts — 29.8 million against 0.97 — with one pass starting at 69 MB free on a
+16 GiB machine. The second was confirmed on the live machine afterwards: 465 MB
+free, 4.19 GB swapped, and three fresh passes refused by their own 1 GB threshold
+at 434, 435 and 434 MB even after every session went quiet. **The system does not
+return pages because a process stops asking.**
 
-Requests kept: `pro.json` 34/34, `pro-calme` 32/32, `charge-elevee` 24/24, and
-**`banc-37de6cfe` 21 of 22 — the M5 dropped one**. So both machines have
-exclusions, and the M5's is a rejected request while the M1 Pro's is a
-plateau-window exclusion.
+**The dropout does not carry the gap.** Keeping `pro-calme`'s 7.36 tok/s point
+drops the M1 Pro from 23.07 to 21.39, still far above 15. And `banc-37de6cfe`
+dropped a whole request, 21 of 22, so both machines have exclusions.
 
-The 7.36 tok/s point sits inside `pro-calme`'s `fin` window, dragging its mean to
-21.39 against a median of 23.07. Keeping it, the M1 Pro's sustained figure falls
-from 23.07 to 21.39 — still far above the M5's 15. **The dropout does not carry
-the gap.** It is the reproducibility that does.
+**Load as a queue length** remains right in general — a slower machine doing
+identical work reports a higher load — and it is now the point that matters
+rather than a caveat, since the two M5 passes differ by 3.5× in exactly that
+quantity.
 
-## Load as a queue length
+## What this cost, and what it is worth
 
-The worry is right in general: load average is a run-queue length, so a slower
-machine doing identical work reports a higher load, and comparing 2.40 against
-1.58 across machines compares nothing.
+A refutation with three wrong points, published to the session that asked for it.
+It also produced the corrections: the shared-name defect, the intra-pass decay,
+and the load-versus-repeatability confusion were all found by someone reading my
+refutation as carefully as I read their summary.
 
-For this comparison it does not bite, and the data says why: within the M5, the
-higher-load run is the *faster* one — 16.09 at load1 3.48 against 15.07 at 1.58.
-Load is not driving the plateau in this range. But that also means "comparable
-load" was never doing the work it was credited with.
-
-## What can be said
-
-- **The M1 Pro reproduces; this M5 does not.** Two figures agreeing to four
-  significant digits against two differing by 67 %.
-- **A machine that does not reproduce cannot be ranked**, in either direction.
-- The sustained-versus-burst framing is the right one, because it compares each
-  machine with itself and so needs no cross-machine load comparability — but it
-  needs the M5 to repeat before it says anything.
-
-## What would settle it
-
-Three more M5 runs, on an idle machine with memory pressure recorded and free
-memory above a declared floor. If the burst median lands near 24.67 each time,
-the earlier 14.78 was a bad run and the sustained drop is real. If it scatters
-between 15 and 25 again, the M5 measurements do not support any ranking and the
-question is about this machine's state, not about chips.
-
-Cheap, and it decides a claim that would otherwise go on a page.
+The asymmetry worth keeping: **the summary I was given was accurate, and my
+reading of the files was not.** "Read the files, not the summary" was the right
+instinct and it is not sufficient — a file read with a truncated view is a summary
+one has written oneself, without noticing.
