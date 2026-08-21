@@ -116,8 +116,15 @@ const PILOTE = `
  * et comme elles étaient identiques, Pillow les a fondues en une seule : un GIF d'une image,
  * sans la moindre erreur affichée.
  */
+/*
+ * `--bind 127.0.0.1`, et pas seulement une URL en 127.0.0.1.
+ *
+ * Sans lui, `http.server` écoute sur toutes les interfaces : le contenu servi est joignable par
+ * n'importe qui sur le même réseau, même si nous ne nous y connectons que par la boucle locale.
+ * Un résidu de ce script tournait depuis deux jours et huit heures sur `*:8840`, oublié.
+ */
 function servir(racine, port) {
-  const p = spawn("python3", ["-m", "http.server", String(port), "--directory", racine],
+  const p = spawn("python3", ["-m", "http.server", String(port), "--bind", "127.0.0.1", "--directory", racine],
     { stdio: "ignore", detached: false });
   execFileSync("bash", ["-c", `for i in $(seq 1 50); do curl -sf -o /dev/null http://127.0.0.1:${port}/index.html && exit 0; sleep 0.1; done; exit 1`]);
   return p;

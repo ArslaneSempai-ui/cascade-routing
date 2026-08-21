@@ -108,7 +108,7 @@ writeFileSync(temp + "index.html", readFileSync(temp + "index.html", "utf8") + A
 let port = 0, serveur = null;
 for (let essai = 0; essai < 20 && !serveur; essai++) {
   port = 8600 + Math.floor(Math.random() * 900);
-  const candidat = spawn("python3", ["-m", "http.server", String(port), "--directory", temp], { stdio: "ignore" });
+  const candidat = spawn("python3", ["-m", "http.server", String(port), "--bind", "127.0.0.1", "--directory", temp], { stdio: "ignore" });
   const vivant = (() => {
     try {
       execFileSync("bash", ["-c",

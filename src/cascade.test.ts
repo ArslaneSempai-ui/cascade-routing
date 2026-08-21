@@ -869,6 +869,36 @@ test("l'écran n'écoute que la boucle locale", () => {
   const src = readFileSync(new URL("./server.ts", import.meta.url).pathname, "utf8");
   assert.match(src, /listen\(PORT,\s*"127\.0\.0\.1"/,
     "le serveur doit écouter 127.0.0.1 explicitement, jamais toutes les interfaces");
+
+  /*
+   * Et tous les autres serveurs du dépôt, pas seulement celui-ci.
+   *
+   * Ce test ne lisait que `server.ts`. Deux autres fichiers lancent un `http.server` Python
+   * sans `--bind`, donc sur toutes les interfaces — invisibles pour lui pendant tout ce temps.
+   * Un résidu de l'un d'eux écoutait sur `*:8840` depuis deux jours et huit heures.
+   *
+   * Se connecter en 127.0.0.1 ne suffit pas : c'est l'adresse d'écoute qui décide qui peut
+   * joindre, pas celle qu'on emploie soi-même. Le gardien lit donc le répertoire au lieu de
+   * réciter une liste — la même correction que le contrôle des rétractations a demandée.
+   */
+  const dossier = new URL(".", import.meta.url).pathname;
+  const fichiers = readdirSync(dossier).filter((n) => /\.(ts|mjs)$/.test(n) && !n.endsWith(".test.ts"));
+  const lanceurs = fichiers
+    .map((n) => ({ n, src: readFileSync(join(dossier, n), "utf8") }))
+    .filter(({ src: s2 }) => /http\.server/.test(s2) || /\.listen\(/.test(s2));
+  assert.ok(lanceurs.length >= 3,
+    `${lanceurs.length} fichier(s) lançant un serveur trouvé(s) : la détection a échoué et ce test ne vérifie rien.`);
+  for (const { n, src: s2 } of lanceurs) {
+    if (/http\.server/.test(s2)) {
+      assert.match(s2, /"--bind",\s*"127\.0\.0\.1"/,
+        `${n} lance http.server sans --bind : il écoute sur toutes les interfaces.\n`
+        + `  → se connecter en 127.0.0.1 ne change rien, c'est l'adresse d'écoute qui décide.`);
+    }
+    if (/\.listen\(/.test(s2)) {
+      assert.match(s2, /\.listen\([^)]*"127\.0\.0\.1"/,
+        `${n} appelle listen sans adresse : il écoute sur toutes les interfaces.`);
+    }
+  }
 });
 
 test("les deux fichiers classent une absence de seuil de la même façon", () => {
