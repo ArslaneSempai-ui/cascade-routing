@@ -25,6 +25,7 @@ import { writeFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { loadavg, cpus } from "node:os";
 import { isMain } from "./cli.ts";
+import { ouvrirJournal, issue } from "./journal.ts";
 import { FIELDS, generateRecords } from "./corpus.ts";
 import { loadGeneratifs, extract, correct, PROMPTS, type NomPrompt } from "./tiers.ts";
 import { readProfiles } from "./measure.ts";
@@ -60,11 +61,27 @@ if (isMain(import.meta)) {
   await loadGeneratifs();
 
   const resultats: Record<string, Record<Field, number>> = {};
+  /* Septième passe à mesurer sans rien garder — et la première dont l'oubli a coûté une
+     remesure, le matin même où la question « mauvaises dates ou mauvais format ? » s'est posée. */
+  const journal = ouvrirJournal("sensibilite", {
+    quoi: "Sensibilité d'un palier à la formulation du prompt.",
+    split: "heldout", cases: cas,
+    chargeAvant: Number(loadavg()[0]!.toFixed(2)),
+  });
   for (const nom of noms) {
     resultats[nom] = {} as Record<Field, number>;
     for (const champ of FIELDS) {
       let bons = 0;
-      for (const d of dossiers) if (correct(await extract(PALIER, d, champ, nom), d.truth[champ])) bons++;
+      for (const d of dossiers) {
+        const t0 = performance.now();
+        const got = await extract(PALIER, d, champ, nom);
+        journal.ligne({
+          tier: PALIER, field: champ, caseId: d.id, phrasing: nom, split: "heldout",
+          outcome: issue(got, d.truth[champ]), ms: Number((performance.now() - t0).toFixed(3)),
+          value: got, expected: d.truth[champ],
+        });
+        if (correct(got, d.truth[champ])) bons++;
+      }
       resultats[nom]![champ] = bons / dossiers.length;
       console.log(`  ${nom.padEnd(20)} ${champ.padEnd(10)} ${(100 * bons / dossiers.length).toFixed(1)} %`);
     }
@@ -89,6 +106,7 @@ if (isMain(import.meta)) {
     parFormulation[champ] = 100 * (Math.max(...taux) - Math.min(...taux));
   }
 
+  journal.fermer();
   writeFileSync(SORTIE, JSON.stringify({
     quoi: "Ce que la formulation du prompt déplace, comparé à ce que le choix du palier déplace.",
     limite: "Les quatre alternatives ont été écrites après lecture de la référence : ce sont des "

@@ -23,6 +23,7 @@ import { writeFileSync, readFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { loadavg, cpus } from "node:os";
 import { isMain } from "./cli.ts";
+import { ouvrirJournal, issue } from "./journal.ts";
 import { FIELDS, generateRecords } from "./corpus.ts";
 import { loadGeneratifs, extract, correct, GENERATIFS_PUBLICS } from "./tiers.ts";
 import { departager } from "./regler-prompt.ts";
@@ -72,6 +73,11 @@ if (isMain(import.meta)) {
   for (const x of paires) console.log(`  ${x.palier.padEnd(10)} ${x.vainqueur} contre ${x.second}  (${x.ecartPoints} pt sur dev)`);
   console.log(`\nCe passage peut réfuter un choix, jamais le confirmer — l'indiscernabilité n'est pas transitive.`);
   console.log(`Charge avant départ : ${loadavg()[0]!.toFixed(2)} sur ${cpus().length} cœurs.\n`);
+  const journal = ouvrirJournal("departager", {
+    quoi: "Le vainqueur du réglage est-il séparable de son second ?", split: "dev", cases: cas,
+    commit: version?.commit, sale: version?.sale,
+    chargeAvant: Number(loadavg()[0]!.toFixed(2)),
+  });
   await loadGeneratifs();
 
   const resultats: Record<string, unknown> = {};
@@ -82,7 +88,15 @@ if (isMain(import.meta)) {
       bits[nom] = {} as Record<Field, string>;
       for (const champ of FIELDS) {
         let s = "";
-        for (const d of dossiers) s += correct(await extract(palier, d, champ, nom), d.truth[champ]) ? "1" : "0";
+        for (const d of dossiers) {
+          const t0 = performance.now();
+          const got = await extract(palier, d, champ, nom);
+          const ms = performance.now() - t0;
+          s += correct(got, d.truth[champ]) ? "1" : "0";
+          journal.ligne({ tier: palier, field: champ, caseId: d.id, phrasing: nom, split: "dev",
+            outcome: issue(got, d.truth[champ]), ms: Number(ms.toFixed(3)),
+            value: got, expected: d.truth[champ] });
+        }
         bits[nom]![champ] = s;
       }
       const ok = FIELDS.reduce((a, c) => a + [...bits[nom]![c]!].filter((x) => x === "1").length, 0);

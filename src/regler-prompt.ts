@@ -24,6 +24,7 @@ import { writeFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { loadavg, cpus } from "node:os";
 import { isMain } from "./cli.ts";
+import { ouvrirJournal, issue } from "./journal.ts";
 import { FIELDS, generateRecords } from "./corpus.ts";
 import { loadGeneratifs, extract, correct, PROMPTS, GENERATIFS_PUBLICS, type NomPrompt } from "./tiers.ts";
 
@@ -86,6 +87,11 @@ if (isMain(import.meta)) {
 
   console.log(`\n${noms.length} formulations × ${paliers.length} paliers × ${FIELDS.length} champs × ${cas} cas — sur \`dev\`.`);
   console.log(`Charge avant départ : ${loadavg()[0]!.toFixed(2)} sur ${cpus().length} cœurs.\n`);
+  const journal = ouvrirJournal("regler", {
+    quoi: "Cinq formulations par palier, sur le découpage de réglage.", split: "dev", cases: cas,
+    commit: version?.commit, sale: version?.sale,
+    chargeAvant: Number(loadavg()[0]!.toFixed(2)),
+  });
   await loadGeneratifs();
 
   const scores = {} as Record<TierName, Record<NomPrompt, Record<Field, number>>>;
@@ -101,7 +107,15 @@ if (isMain(import.meta)) {
            départager deux formulations sur les mêmes cas, et son absence a déjà coûté deux
            remesures à ce dépôt. */
         let s = "";
-        for (const d of dossiers) s += correct(await extract(t, d, champ, nom), d.truth[champ]) ? "1" : "0";
+        for (const d of dossiers) {
+          const t0 = performance.now();
+          const got = await extract(t, d, champ, nom);
+          const ms = performance.now() - t0;
+          s += correct(got, d.truth[champ]) ? "1" : "0";
+          journal.ligne({ tier: t, field: champ, caseId: d.id, phrasing: nom, split: "dev",
+            outcome: issue(got, d.truth[champ]), ms: Number(ms.toFixed(3)),
+            value: got, expected: d.truth[champ] });
+        }
         bits[t][nom]![champ] = s;
         scores[t][nom]![champ] = [...s].filter((x) => x === "1").length / dossiers.length;
       }
@@ -137,5 +151,7 @@ if (isMain(import.meta)) {
       ? `  ${t.padEnd(10)} ${d.retenu.padEnd(20)} ${(100 * moyenne(t, d.retenu)).toFixed(1)} % — ${d.gains}–${d.regressions} contre ${d.second}`
       : `  ${t.padEnd(10)} ${"— non départagé —".padEnd(20)} ${d.vainqueur} devant ${d.second} de ${d.ecartExtractions} extraction(s) sur ${d.total} ; apparié ${d.gains}–${d.regressions}`);
   }
+  const j = journal.fermer();
+  console.log(`${j.lignes} tentatives dans ${j.chemin.split("/").slice(-2).join("/")}`);
   console.log(`\nÉcrit dans ${SORTIE.split("/").pop()} — à mesurer ensuite sur \`heldout\`.\n`);
 }

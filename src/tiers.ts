@@ -347,6 +347,22 @@ async function extraireGeneratif(
  * model returning "26 ulica Nowy Świat, Lisbon" rather than the same without the comma
  * has found the right answer, and counting that as a failure would measure formatting.
  */
+/**
+ * La normalisation que `correct` applique aux deux côtés.
+ *
+ * Exportée parce que le journal des tentatives en a besoin pour distinguer un blanc d'une
+ * valeur fausse : « rien » doit vouloir dire la même chose ici et là, sinon deux fichiers du
+ * même dépôt comptent les blancs différemment.
+ */
+export function normaliserReponse(x: string): string {
+  return x
+    .toLowerCase()
+    .replace(/\s*([\/\-.,;:])\s*/g, "$1")   // spaces the tokeniser added around separators
+    .replace(/[.,;:]+$/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 export function correct(got: string, expected: string): boolean {
   /*
    * Formatting is not an error, and counting it as one measures the wrong thing.
@@ -359,13 +375,7 @@ export function correct(got: string, expected: string): boolean {
    * So separators are normalised on both sides. What is NOT normalised is content: a
    * missing word, a wrong span or an empty answer stays wrong, which is the whole point.
    */
-  const n = (x: string) => x
-    .toLowerCase()
-    .replace(/\s*([\/\-.,;:])\s*/g, "$1")   // spaces the tokeniser added around separators
-    .replace(/[.,;:]+$/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-  return n(got) === n(expected) && n(got).length > 0;
+  return normaliserReponse(got) === normaliserReponse(expected) && normaliserReponse(got).length > 0;
 }
 
 

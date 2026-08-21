@@ -16,7 +16,9 @@
 
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
+import { loadavg } from "node:os";
 import { isMain } from "./cli.ts";
+import { ouvrirJournal, issue } from "./journal.ts";
 import { generateRecords, FIELDS } from "./corpus.ts";
 import { loadGeneratifs, extract, correct } from "./tiers.ts";
 
@@ -27,11 +29,27 @@ const FICHIER = new URL("../data/fuite.json", import.meta.url).pathname;
 
 export async function mesurerFuite(palier: TierName, combien = 120) {
   const champs: Record<string, { dev: number; heldout: number; n: number }> = {};
+  /* Sixième passe à mesurer sans rien garder — elle tourne sur les deux moitiés, ce qui en
+     fait la seule source de lignes `dev` et `heldout` produites dans les mêmes conditions. */
+  const journal = ouvrirJournal("fuite", {
+    quoi: "Le prix de la fuite : le même prompt sur la moitié réglée et sur une moitié neuve.",
+    split: "heldout+dev", cases: combien,
+    chargeAvant: Number(loadavg()[0]!.toFixed(2)),
+  });
   for (const moitie of ["heldout", "dev"] as const) {
     const cas = generateRecords(combien, moitie);
     for (const champ of FIELDS) {
       let bons = 0;
-      for (const d of cas) if (correct(await extract(palier, d, champ), d.truth[champ])) bons++;
+      for (const d of cas) {
+        const t0 = performance.now();
+        const got = await extract(palier, d, champ);
+        journal.ligne({
+          tier: palier, field: champ, caseId: d.id, phrasing: "reference", split: moitie,
+          outcome: issue(got, d.truth[champ]), ms: Number((performance.now() - t0).toFixed(3)),
+          value: got, expected: d.truth[champ],
+        });
+        if (correct(got, d.truth[champ])) bons++;
+      }
       champs[champ] ??= { dev: 0, heldout: 0, n: cas.length };
       champs[champ]![moitie] = bons / cas.length;
     }

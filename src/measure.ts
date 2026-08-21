@@ -13,6 +13,7 @@
 import { mkdirSync, writeFileSync, readFileSync, existsSync, renameSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { isMain } from "./cli.ts";
+import { ouvrirJournal, issue } from "./journal.ts";
 import { execFileSync } from "node:child_process";
 import { loadavg, cpus } from "node:os";
 import { dirname } from "node:path";
@@ -85,6 +86,15 @@ export type Profile = {
  * sature les cœurs par construction.
  */
 export const CHARGE_MAX_PAR_COEUR = 0.5;
+
+/**
+ * La passe publiée mesure sur `heldout`, et nulle part ailleurs.
+ *
+ * Nommé plutôt qu'écrit trois fois : le journal des tentatives doit enregistrer le découpage
+ * sur chaque ligne, et deux littéraux qui dérivent l'un de l'autre est exactement la faute que
+ * ce dépôt corrige partout.
+ */
+export const DECOUPAGE_DE_MESURE = "heldout" as const;
 
 /** D'où vient un résultat : quel code, quel arbre, quand, et sous quelle charge. */
 export type Provenance = {
@@ -284,8 +294,8 @@ export async function measure(
 
   const combien = (t: TierName) => options.cases?.[t] ?? howMany;
   const maxCas = Math.max(howMany, ...Object.values(options.cases ?? {}).map(Number).filter(Number.isFinite));
-  const tousDossiers = generateRecords(maxCas, "heldout");
-  const toutesAlertes = generateAlerts(maxCas, "heldout");
+  const tousDossiers = generateRecords(maxCas, DECOUPAGE_DE_MESURE);
+  const toutesAlertes = generateAlerts(maxCas, DECOUPAGE_DE_MESURE);
 
   /*
    * Quels paliers, et pourquoi c'est un choix et non un défaut.
@@ -368,6 +378,22 @@ export async function measure(
   const extraction = {} as Profiles["extraction"];
   const classification = {} as Record<TierName, Profile>;
 
+  /*
+   * Une ligne par tentative, écrite au fil de la passe.
+   *
+   * Les taux ci-dessous restent le produit publié ; ce journal est ce qui permet de répondre à
+   * la question suivante sans repayer la machine. Trois passes l'ont appris le même jour.
+   * `d.id` sert de clé de cas : un petit tirage est le préfixe exact d'un grand, donc le même
+   * identifiant désigne le même document d'un palier à l'autre — c'est ce qui rend l'appariement
+   * licite, et un test du dépôt le tient déjà.
+   */
+  const journal = ouvrirJournal("measure", {
+    quoi: "Passe de mesure : exactitude et latence par palier et par champ.",
+    split: DECOUPAGE_DE_MESURE, cases: tousDossiers.length,
+    commit: version?.commit, sale: version?.sale,
+    chargeAvant: chargeAvantPasse.externalBefore,
+  });
+
   for (const tier of paliers) {
     /* Un échantillon avant le départ, puis toutes les cinq secondes : « pendant » doit être vrai. */
     const chargeAvant = Number(loadavg()[0]!.toFixed(2));
@@ -387,11 +413,18 @@ export async function measure(
       for (const d of dossiers) {
         const t0 = performance.now();
         const got = await extract(tier, d, champ, options.prompt ?? "reference");
-        durees.push(performance.now() - t0);
+        const ms = performance.now() - t0;
+        durees.push(ms);
         sorties.push(got);
         const bon = correct(got, d.truth[champ]);
         bits.push(bon ? "1" : "0");
         if (bon) right++;
+        journal.ligne({
+          chain: "extraction", tier, field: champ, caseId: d.id,
+          phrasing: options.prompt ?? "reference", split: DECOUPAGE_DE_MESURE,
+          outcome: issue(got, d.truth[champ]), ms: Number(ms.toFixed(3)),
+          value: got, expected: d.truth[champ],
+        });
       }
       /* Durées conservées de la passe précédente quand la machine ne permettait pas de les prendre. */
       const ancienChamp = latenceValide ? undefined : readProfiles()?.extraction?.[tier]?.[champ];
@@ -414,11 +447,18 @@ export async function measure(
       for (const a of alertes) {
         const t0 = performance.now();
         const got = await classify(tier, a);
-        durees.push(performance.now() - t0);
+        const ms = performance.now() - t0;
+        durees.push(ms);
         sorties.push(String(got));
         const bon = got === a.truth;
         bits.push(bon ? "1" : "0");
         if (bon) right++;
+        journal.ligne({
+          chain: "classification", tier, field: "typologie", caseId: a.id,
+          phrasing: options.prompt ?? "reference", split: DECOUPAGE_DE_MESURE,
+          outcome: bon ? "clean" : String(got).trim().length === 0 ? "blank" : "wrong",
+          ms: Number(ms.toFixed(3)), value: String(got), expected: a.truth,
+        });
       }
       classification[tier] = {
         reussites: bits.join(""),
@@ -493,6 +533,8 @@ export async function measure(
   profils.tiers = (Object.keys(profils.extraction) as TierName[]);
   mkdirSync(dirname(FICHIER), { recursive: true });
   writeFileSync(FICHIER, JSON.stringify(profils, null, 2));
+  const { lignes, chemin } = journal.fermer();
+  console.log(`\n${lignes} tentatives enregistrées dans ${chemin.split("/").slice(-2).join("/")}`);
   return profils;
 }
 

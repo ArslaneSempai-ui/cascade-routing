@@ -18,6 +18,7 @@ import { writeFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { loadavg, cpus } from "node:os";
 import { isMain } from "./cli.ts";
+import { ouvrirJournal, issue } from "./journal.ts";
 import { FIELDS, generateRecords } from "./corpus.ts";
 import { loadGeneratifs, extract, correct, PROMPTS } from "./tiers.ts";
 import { rate, distinguishable, pairedVerdict, writeRate } from "./interval.ts";
@@ -47,6 +48,11 @@ if (isMain(import.meta)) {
 
   console.log(`\n${PALIERS.length} paliers × ${FORMULATIONS.length} formulations × ${FIELDS.length} champs × ${cas} cas, sur \`dev\`.`);
   console.log(`Charge avant départ : ${loadavg()[0]!.toFixed(2)} sur ${cpus().length} cœurs.\n`);
+  const journal = ouvrirJournal("apparier", {
+    quoi: "Le classement de gen-4b et gen-8b dépend-il de la formulation ?", split: "dev", cases: cas,
+    commit: version?.commit, sale: version?.sale,
+    chargeAvant: Number(loadavg()[0]!.toFixed(2)),
+  });
   await loadGeneratifs();
 
   /* Les bits, cas par cas — ce que les deux expériences précédentes ont omis de garder. */
@@ -57,7 +63,15 @@ if (isMain(import.meta)) {
       bits[cle] = {} as Record<Field, string>;
       for (const champ of FIELDS) {
         let s = "";
-        for (const d of dossiers) s += correct(await extract(t, d, champ, f), d.truth[champ]) ? "1" : "0";
+        for (const d of dossiers) {
+          const t0 = performance.now();
+          const got = await extract(t, d, champ, f);
+          const ms = performance.now() - t0;
+          s += correct(got, d.truth[champ]) ? "1" : "0";
+          journal.ligne({ tier: t, field: champ, caseId: d.id, phrasing: f, split: "dev",
+            outcome: issue(got, d.truth[champ]), ms: Number(ms.toFixed(3)),
+            value: got, expected: d.truth[champ] });
+        }
         bits[cle]![champ] = s;
         console.log(`  ${cle.padEnd(28)} ${champ.padEnd(10)} ${(100 * [...s].filter((x) => x === "1").length / s.length).toFixed(1)} %`);
       }
@@ -99,5 +113,7 @@ if (isMain(import.meta)) {
     reussites: bits,
     verdicts,
   }, null, 2) + "\n");
+  const j = journal.fermer();
+  console.log(`${j.lignes} tentatives dans ${j.chemin.split("/").slice(-2).join("/")}`);
   console.log(`\nÉcrit dans ${SORTIE.split("/").pop()}\n`);
 }

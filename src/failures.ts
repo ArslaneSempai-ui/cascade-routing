@@ -15,7 +15,9 @@
  */
 
 import { generateRecords, FIELDS } from "./corpus.ts";
+import { loadavg } from "node:os";
 import { isMain } from "./cli.ts";
+import { ouvrirJournal, issue } from "./journal.ts";
 import { ENCODEURS, GENERATIFS, TIERS, loadExtractors, extract, correct } from "./tiers.ts";
 import type { TierName } from "./tiers.ts";
 import type { Field } from "./corpus.ts";
@@ -64,11 +66,30 @@ export async function collect(howMany = 120, paliers: TierName[] = ENCODEURS): P
   await loadExtractors();
   const failures: Failure[] = [];
 
+  /*
+   * La galerie ne garde que les échecs, et jette les réussites qu'elle vient de calculer.
+   *
+   * C'est la cinquième passe du dépôt à mesurer puis à ne rien garder — trouvée par le test
+   * qui exige un journal de toute boucle d'extraction, pas par relecture. Les réussites de
+   * cette passe valent celles d'une autre : ce sont les mêmes cas, le même correcteur.
+   */
+  const journal = ouvrirJournal("failures", {
+    quoi: "Galerie des échecs : chaque tentative, retenue ou non.",
+    split: "heldout", cases: records.length,
+    chargeAvant: Number(loadavg()[0]!.toFixed(2)),
+  });
+
   for (const tier of paliers) {
     if (tier === "human") continue;   // the human tier is an assumption, not a measurement
     for (const field of FIELDS) {
       for (const r of records) {
+        const t0 = performance.now();
         const got = await extract(tier, r, field);
+        journal.ligne({
+          tier, field, caseId: r.id, phrasing: "reference", split: "heldout",
+          outcome: issue(got, r.truth[field]), ms: Number((performance.now() - t0).toFixed(3)),
+          value: got, expected: r.truth[field],
+        });
         if (!correct(got, r.truth[field])) {
           failures.push({
             tier, field, recordId: r.id,
@@ -80,6 +101,7 @@ export async function collect(howMany = 120, paliers: TierName[] = ENCODEURS): P
       }
     }
   }
+  journal.fermer();
   return failures;
 }
 

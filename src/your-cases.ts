@@ -28,7 +28,9 @@
  */
 
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
+import { loadavg } from "node:os";
 import { isMain } from "./cli.ts";
+import { ouvrirJournal, issue } from "./journal.ts";
 import { loadExtractors, loadClassifiers, loadGeneratifs, extract, correct, classerParmi, MODELES_LOCAUX } from "./tiers.ts";
 import { ENCODEURS, GENERATIFS } from "./paliers.ts";
 import { rate, writeRate, distinguishable, CONFIANCE, ENOUGH } from "./interval.ts";
@@ -94,10 +96,29 @@ function chargerRegles(chemin: string): Record<string, RegExp> {
   return Object.fromEntries(Object.entries(brut).map(([champ, motif]) => [champ, new RegExp(motif)]));
 }
 
+/**
+ * Le journal des tentatives est **facultatif ici, et éteint par défaut**.
+ *
+ * Partout ailleurs dans ce dépôt, garder chaque tentative est le bon réflexe : le corpus est
+ * synthétique, écrit par nous, et le jeter coûte une passe de GPU. Ici les cas sont ceux du
+ * lecteur — des dossiers d'identité réels, potentiellement. Écrire leur texte et les valeurs
+ * extraites dans un fichier qu'il n'a pas demandé n'est pas un service qu'on rend, c'est une
+ * copie de données personnelles qu'on fabrique à son insu.
+ *
+ * Donc : `--journal` pour l'activer, et rien sans ça. Le même format, la même valeur — les
+ * six requêtes gratuites marchent sur ses cas comme sur les nôtres — mais c'est lui qui
+ * décide qu'une deuxième copie existe.
+ */
 export async function mesurerVosCas(
   cas: Cas[], champs: string[], paliers: TierName[], regles?: Record<string, RegExp>,
+  journaliser = false,
 ): Promise<Record<string, Record<TierName, { bons: number; sur: number; ms: number }>>> {
   const releve: Record<string, Record<TierName, { bons: number; sur: number; ms: number }>> = {};
+  const journal = journaliser ? ouvrirJournal("vos-cas", {
+    quoi: "Vos cas, palier par palier — journal demandé explicitement avec --journal.",
+    split: "vos-cas", cases: cas.length,
+    chargeAvant: Number(loadavg()[0]!.toFixed(2)),
+  }) : undefined;
   for (const champ of champs) {
     releve[champ] = {} as Record<TierName, { bons: number; sur: number; ms: number }>;
 
@@ -117,13 +138,20 @@ export async function mesurerVosCas(
            propriétés utiles, et le champ n'est qu'une clé. Le typage local est plus étroit
            que la réalité, d'où la conversion — explicite plutôt que silencieuse. */
         const got = await extract(palier, { id: c.id, text: c.text, truth: c.truth } as never, champ as never);
-        durees.push(performance.now() - t0);
+        const ms = performance.now() - t0;
+        durees.push(ms);
+        journal?.ligne({
+          tier: palier, field: champ, caseId: c.id, phrasing: "reference", split: "vos-cas",
+          outcome: issue(got, c.truth[champ]!), ms: Number(ms.toFixed(3)),
+          value: got, expected: c.truth[champ]!,
+        });
         if (correct(got, c.truth[champ]!)) bons++;
       }
       durees.sort((a, b) => a - b);
       releve[champ]![palier] = { bons, sur: cas.length, ms: durees[Math.floor(durees.length / 2)] ?? 0 };
     }
   }
+  journal?.fermer();
   return releve;
 }
 
@@ -242,7 +270,7 @@ Nothing leaves your machine: the models are local and this path makes no network
   }
 
   await loadExtractors();
-  const releve = await mesurerVosCas(cas, champs, paliers, regles);
+  const releve = await mesurerVosCas(cas, champs, paliers, regles, process.argv.includes("--journal"));
 
   console.log("\nACCURACY PER FIELD, with the interval at "
     + `${(CONFIANCE.niveau * 100).toFixed(0)} %\n`);
