@@ -139,3 +139,40 @@ test("aucune clé de cas dur n'en désigne deux", async () => {
   assert.equal(new Set(doubles.map((c) => c.cle)).size, doubles.length,
     "des cas partagent leur identifiant et leur clé : la clé ne les sépare pas.");
 });
+
+/*
+ * Le compte des formulations survivantes est mécanique, pas déclaré.
+ *
+ * Les vingt du corpus supposent cinq champs en un appel ; la chaîne en extrait un par appel.
+ * Cinq d'entre elles perdent leur axe au transport et deviennent identiques à la base. Le
+ * drapeau `garde` est une déclaration humaine ; le rendu, lui, se compare caractère par
+ * caractère. Ce test exige que les deux disent la même chose — sinon quelqu'un annoncera vingt
+ * formulations en en mesurant quinze, ce qui gonfle l'apparente couverture d'un tiers.
+ */
+test("les formulations déclarées effondrées sont exactement celles qui rendent la base", async () => {
+  const { FORMULATIONS, distinctes } = await import("./formulations.ts");
+  assert.equal(FORMULATIONS.length, 20, "le corpus en déclare vingt.");
+
+  const groupes = distinctes();
+  const absorbees = new Set(groupes.flatMap((g) => g.absorbe));
+  const declareesEffondrees = new Set(FORMULATIONS.filter((f) => !f.garde).map((f) => f.id));
+
+  assert.deepEqual([...absorbees].sort(), [...declareesEffondrees].sort(),
+    "le rendu et la déclaration ne s'accordent pas : une formulation est annoncée distincte et\n"
+    + "  rend la base, ou l'inverse. C'est le rendu qui a raison.");
+  assert.equal(groupes.length, FORMULATIONS.length - absorbees.size);
+  assert.ok(absorbees.size >= 1, "aucune formulation absorbée : ce test ne vérifie plus rien.");
+
+  /* Et chaque effondrement doit dire pourquoi — « elle a disparu » n'est pas une raison. */
+  for (const f of FORMULATIONS.filter((x) => !x.garde)) {
+    assert.ok(f.effondrement && f.effondrement.length > 25,
+      `${f.id} est déclarée effondrée sans dire ce qui l'aplatit.`);
+  }
+
+  /* Les gardées doivent réellement différer entre elles, deux à deux. */
+  const gardees = FORMULATIONS.filter((f) => f.garde);
+  const rendus = new Set(gardees.map((f) => (["name", "birth", "document", "country", "address"] as const)
+    .map((c) => f.rendre("<DOC>", c)).join(" ")));
+  assert.equal(rendus.size, gardees.length,
+    "deux formulations gardées rendent la même chose : le compte annoncé est trop grand.");
+});
