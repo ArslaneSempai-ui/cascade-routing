@@ -1,0 +1,84 @@
+{
+  "quoi": "Exactitude sur les cas durs — documents cassés, écritures non latines, cas ambigus.",
+  "scoringRule": "correct = any defensible reading declared before measurement; for twenty-one fields the declared answer is silence, where a blank is correct and a value is wrong",
+  "scoringRuleDeclaredIn": "NOTATION-CAS-DURS.md, committed before this pass",
+  "decoupage": "hard-corpus",
+  "cas": 44,
+  "champs": 164,
+  "mesureLe": "2026-08-21T15:33:46.735Z",
+  "code": {
+    "commit": "b5371ca",
+    "sale": false
+  },
+  "charge": {
+    "externalBefore": 5.12,
+    "coeurs": 10
+  },
+  "journal": "tentatives/2026-08-21T15-33-32-775Z-dur.jsonl",
+  "paliers": {
+    "rules": {
+      "clean": 30,
+      "blank": 133,
+      "wrong": 1,
+      "overRefusal": 133,
+      "overAnswer": 0,
+      "parSource": {
+        "documents-malformes.md": {
+          "clean": 23,
+          "total": 90
+        },
+        "ecritures-non-latines.md": {
+          "clean": 3,
+          "total": 60
+        },
+        "cas-ambigus.md": {
+          "clean": 4,
+          "total": 14
+        }
+      }
+    },
+    "small": {
+      "clean": 26,
+      "blank": 0,
+      "wrong": 138,
+      "overRefusal": 0,
+      "overAnswer": 21,
+      "parSource": {
+        "documents-malformes.md": {
+          "clean": 13,
+          "total": 90
+        },
+        "ecritures-non-latines.md": {
+          "clean": 9,
+          "total": 60
+        },
+        "cas-ambigus.md": {
+          "clean": 4,
+          "total": 14
+        }
+      }
+    },
+    "large": {
+      "clean": 46,
+      "blank": 14,
+      "wrong": 104,
+      "overRefusal": 14,
+      "overAnswer": 21,
+      "parSource": {
+        "documents-malformes.md": {
+          "clean": 28,
+          "total": 90
+        },
+        "ecritures-non-latines.md": {
+          "clean": 8,
+          "total": 60
+        },
+        "cas-ambigus.md": {
+          "clean": 10,
+          "total": 14
+        }
+      }
+    }
+  },
+  "limite": "Aucun taux d'ici ne se compare à un taux du corpus propre : ce ne sont pas les mêmes documents ni la même règle de notation. La baisse est attendue et voulue."
+}
