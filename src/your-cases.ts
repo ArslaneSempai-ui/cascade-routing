@@ -92,34 +92,35 @@ export function lireCsv(texte: string): { champs: string[]; cas: Cas[] } {
 
 /** Des règles fournies par le lecteur, en expressions régulières nommées par champ. */
 /**
- * Ce que le client a produit lui-même — ses sorties, jamais son code.
+ * Ce que le client nous envoie : des **issues**, jamais des valeurs.
  *
- * Un client fait tourner sa chaîne chez lui et nous envoie ce qu'elle a rendu, document par
- * document et champ par champ. On le note exactement comme un palier : une valeur **fournie**
- * au lieu d'une valeur trouvée. Sa technologie n'entre pas — modèle, API, script maison,
- * chaîne propriétaire, prose : on ne voit que des valeurs.
+ * La version précédente de ce mode chargeait ce que sa chaîne avait rendu — des noms, des dates
+ * de naissance, des numéros de passeport. C'est-à-dire des données personnelles, arrivant chez
+ * nous, dans un outil dont la lettre de mission déclare qu'aucune donnée personnelle ne nous
+ * parvient et qu'aucun accord de traitement n'est requis. Sous droit grec l'article 28 en
+ * exigeait un. La correction n'est pas de le signer, c'est de ne pas recevoir les valeurs.
  *
- * **Aucune porte d'exécution**, et c'est délibéré. « Trois cents lignes sans dépendance » et
- * « un outil qui lance ce qu'on lui indique » ne s'approuvent pas par les mêmes personnes, et
- * le premier est ce qui permet à un responsable conformité de dire oui. On ne l'échange pas
- * contre de la commodité.
+ * **La notation se fait chez lui.** Notre outil tourne déjà sur sa machine et sa clé de
+ * réponses y est ; il note avec notre correcteur et nous renvoie une issue par cas. Donc son
+ * exactitude reste **mesurée** — par notre code, exécuté ailleurs — et pas déclarée. Mais cette
+ * distinction ne tient que si le fichier dit **quelle version** l'a notée : sans ça, « noté par
+ * notre correcteur là-bas » et « tapé à la main » se lisent pareil, et c'est le défaut du
+ * `null` qui vaut deux choses, corrigé partout ailleurs dans ce dépôt.
  *
- * Ce qu'on mesure de sa chaîne et ce qu'on ne mesure pas :
- *
- *   son exactitude — **mesurée** : on note ses valeurs contre ses réponses de référence,
- *                    c'est un calcul fait ici, reproductible par lui.
- *   son coût et sa latence — il les **déclare**. On ne les a pas vus.
- *
- * Or l'admissibilité se décide sur un plafond en millisecondes. Toute comparaison qui met sa
- * chaîne en balance porte donc la provenance la plus faible de ses entrées, et ce n'est pas une
- * faiblesse à cacher : c'est une phrase à écrire. Nous mesurons l'exactitude de votre chaîne
- * sur vos cas ; son coût et sa latence sont ceux que vous nous donnez.
+ * **Ce que ça coûte, écrit plutôt que découvert :** on ne peut plus re-noter ses cas sous un
+ * correcteur plus strict sans qu'il remesure. Le balayage de sévérité, gratuit sur nos propres
+ * lignes, ne l'est pas sur les siennes. C'est le prix de ne pas recevoir ses données, et il se
+ * paie une fois, en connaissance de cause.
  */
+export type IssueClient = "clean" | "wrong" | "blank";
+
 export type SortiesFournies = {
   /** Le nom que porte sa chaîne dans les tableaux. */
   nom: string;
-  /** `valeurs[champ][id du cas]` — ce que sa chaîne a rendu. */
-  valeurs: Record<string, Record<string, string>>;
+  /** `issues[champ][id du cas]` — le verdict, jamais la valeur. */
+  issues: Record<string, Record<string, IssueClient>>;
+  /** Qui a noté, et avec quoi. Sans ça l'exactitude n'est plus mesurée mais crue. */
+  notePar?: { outil?: string; version?: string; correcteur?: string };
   /** Déclarés par lui, jamais mesurés ici. */
   declares?: { coutParMilleDocuments?: number; msParDocument?: number };
 };
@@ -141,6 +142,8 @@ export const PROVENANCE_DES_DECLARES = {
     + "ferait diverger cinq dépôts qui le copient à l'identique.",
 };
 
+export const ISSUES_VALIDES: IssueClient[] = ["clean", "wrong", "blank"];
+
 /**
  * Comment une durée s'écrit selon d'où elle vient.
  *
@@ -155,12 +158,42 @@ export function ecrireMs(ms: number, declaree: boolean): string {
 }
 
 export function chargerSorties(chemin: string): SortiesFournies {
-  const brut = JSON.parse(readFileSync(chemin, "utf8")) as Partial<SortiesFournies>;
-  if (!brut.valeurs || typeof brut.valeurs !== "object") {
-    throw new Error(`${chemin} : pas de clé \`valeurs\`. Forme attendue : `
-      + `{ "nom": "…", "valeurs": { "<champ>": { "<id du cas>": "<valeur rendue>" } } }`);
+  const brut = JSON.parse(readFileSync(chemin, "utf8")) as Partial<SortiesFournies>
+    & { valeurs?: unknown };
+
+  /*
+   * L'ancienne forme est refusée avec sa raison, pas ignorée.
+   *
+   * Elle a existé une heure et quelqu'un l'aura copiée. Un fichier de valeurs chargé en
+   * silence, ou pire lu comme vide, ferait entrer chez nous exactement ce que ce refus existe
+   * pour empêcher.
+   */
+  if (brut.valeurs !== undefined) {
+    throw new Error(`${chemin} porte une clé \`valeurs\`, qui n'est plus acceptée.\n`
+      + `  Les valeurs extraites d'un dossier d'identité sont des données personnelles, et cet\n`
+      + `  outil déclare n'en recevoir aucune. Notez chez vous et n'envoyez que les issues :\n`
+      + `  { "nom": "…", "issues": { "<champ>": { "<id>": "clean" | "wrong" | "blank" } },\n`
+      + `    "notePar": { "outil": "cascade", "version": "<commit>" } }`);
   }
-  return { nom: brut.nom ?? "votre chaîne", valeurs: brut.valeurs, declares: brut.declares };
+  if (!brut.issues || typeof brut.issues !== "object") {
+    throw new Error(`${chemin} : pas de clé \`issues\`. Forme attendue :\n`
+      + `  { "nom": "…", "issues": { "<champ>": { "<id du cas>": "clean" | "wrong" | "blank" } },\n`
+      + `    "notePar": { "outil": "cascade", "version": "<commit>" },\n`
+      + `    "declares": { "coutParMilleDocuments": …, "msParDocument": … } }`);
+  }
+
+  /* Toute valeur hors des trois issues est refusée : c'est ainsi qu'une donnée entrerait. */
+  for (const [champ, parCas] of Object.entries(brut.issues)) {
+    for (const [id, v] of Object.entries(parCas as Record<string, unknown>)) {
+      if (!ISSUES_VALIDES.includes(v as IssueClient)) {
+        throw new Error(`${chemin} : ${champ}/${id} vaut ${JSON.stringify(v)}, qui n'est pas une `
+          + `issue.\n  Les trois seules acceptées sont ${ISSUES_VALIDES.join(", ")}. Une valeur `
+          + `ici serait une donnée personnelle.`);
+      }
+    }
+  }
+  return { nom: brut.nom ?? "votre chaîne", issues: brut.issues,
+    notePar: brut.notePar, declares: brut.declares };
 }
 
 /**
@@ -175,12 +208,12 @@ export function correspondance(cas: Cas[], champs: string[], s: SortiesFournies)
   const manquants: Record<string, string[]> = {};
   const inconnus: Record<string, string[]> = {};
   for (const champ of champs) {
-    const siens = s.valeurs[champ] ?? {};
+    const siens = s.issues[champ] ?? {};
     manquants[champ] = cas.filter((c) => !(c.id in siens)).map((c) => c.id);
     inconnus[champ] = Object.keys(siens).filter((id) => !nos.has(id));
   }
   const total = champs.reduce((a, c) => a + manquants[c]!.length + inconnus[c]!.length, 0);
-  return { manquants, inconnus, total, champsSansAucuneValeur: champs.filter((c) => !s.valeurs[c]) };
+  return { manquants, inconnus, total, champsSansAucuneValeur: champs.filter((c) => !s.issues[c]) };
 }
 
 function chargerRegles(chemin: string): Record<string, RegExp> {
@@ -222,12 +255,12 @@ export async function mesurerVosCas(
      * pour instantané, ce qui est faux dans la seule direction qui l'avantage.
      */
     if (sorties) {
-      const siennes = sorties.valeurs[champ] ?? {};
+      const siennes = sorties.issues[champ] ?? {};
       let bons = 0, apparies = 0;
       for (const c of cas) {
         if (!(c.id in siennes)) continue;      // absent de son fichier : compté ailleurs, pas ici
         apparies++;
-        if (correct(siennes[c.id]!, c.truth[champ]!)) bons++;
+        if (siennes[c.id] === "clean") bons++;
       }
       releve[champ]![sorties.nom as TierName] = {
         bons, sur: apparies,
@@ -401,7 +434,24 @@ Nothing leaves your machine: the models are local and this path makes no network
   if (sorties) {
     const corr = correspondance(cas, champs, sorties);
     console.log(`\nVotre chaîne : « ${sorties.nom} ».`);
-    console.log(`  exactitude : mesurée ici, sur vos réponses de référence.`);
+    /*
+     * Qui a noté, et avec quoi — sans quoi l'exactitude n'est plus mesurée mais crue.
+     *
+     * Les issues sont produites par notre correcteur, exécuté sur sa machine sur sa clé. C'est
+     * une mesure, et pas une déclaration — mais seulement si le fichier dit quelle version l'a
+     * produite. Sans cette ligne, « noté par notre code là-bas » et « tapé à la main » sont le
+     * même fichier, et le second n'est pas une mesure.
+     */
+    if (sorties.notePar?.version) {
+      console.log(`  exactitude : mesurée par ${sorties.notePar.outil ?? "cet outil"}`
+        + ` ${sorties.notePar.version}, exécuté chez vous sur votre clé.`);
+    } else {
+      console.log(`  ⚠ exactitude : le fichier ne dit pas quelle version l'a notée.`);
+      console.log(`    Sans \`notePar.version\`, « noté par cet outil chez vous » et « saisi à la`
+        + ` main » sont indiscernables,`);
+      console.log(`    et seul le premier est une mesure. Le taux ci-dessous se lit comme déclaré.`);
+    }
+    console.log(`  aucune valeur extraite n'est reçue : seules les issues, par cas.`);
     console.log(`  coût et latence : ${sorties.declares ? "déclarés par vous" : "non déclarés"}`
       + ` — ${PROVENANCE_DES_DECLARES.provenance}, jamais mesurés ici.`);
     if (corr.champsSansAucuneValeur.length) {

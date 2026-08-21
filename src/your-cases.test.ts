@@ -97,24 +97,38 @@ test("un fichier à une seule colonne est refusé, avec une raison", () => {
  * en millisecondes, donc elle doit se lire à chaque ligne et pas seulement dans un en-tête.
  */
 
-test("un fichier de sorties malformé est refusé avec la forme attendue", async () => {
+test("aucune valeur extraite n'entre : seules les issues sont acceptées", async () => {
   const { chargerSorties } = await import("./your-cases.ts");
   const dossier = mkdtempSync(join(tmpdir(), "sorties-"));
   try {
-    const f = join(dossier, "vide.json");
-    writeFileSync(f, JSON.stringify({ nom: "la mienne" }));
-    assert.throws(() => chargerSorties(f), /valeurs/,
-      "un fichier sans `valeurs` doit être refusé, pas lu comme vide.");
-    try { chargerSorties(f); } catch (e) {
-      assert.match((e as Error).message, /\{ "nom"/,
-        "le refus doit montrer la forme attendue, pas seulement la nommer.");
-    }
+    /*
+     * L'ancienne forme a existé une heure et quelqu'un l'aura copiée. Elle doit être refusée
+     * avec sa raison — un fichier de valeurs lu en silence ferait entrer chez nous des noms et
+     * des numéros de passeport, dans un outil qui déclare n'en recevoir aucun.
+     */
+    const ancien = join(dossier, "ancien.json");
+    writeFileSync(ancien, JSON.stringify({ nom: "la mienne", valeurs: { name: { d1: "Anna Petrova" } } }));
+    assert.throws(() => chargerSorties(ancien), /données personnelles/,
+      "l'ancienne forme, qui porte des valeurs, doit être refusée en disant pourquoi.");
+
+    const vide = join(dossier, "vide.json");
+    writeFileSync(vide, JSON.stringify({ nom: "la mienne" }));
+    assert.throws(() => chargerSorties(vide), /issues/,
+      "un fichier sans `issues` est refusé, pas lu comme vide.");
+
+    /* Une valeur glissée à la place d'une issue est le chemin par lequel une donnée entrerait. */
+    const glisse = join(dossier, "glisse.json");
+    writeFileSync(glisse, JSON.stringify({ issues: { name: { d1: "Anna Petrova" } } }));
+    assert.throws(() => chargerSorties(glisse), /n'est pas une issue|donnée personnelle/,
+      "une valeur là où une issue est attendue doit être refusée, pas comptée comme fausse.");
 
     const bon = join(dossier, "bon.json");
-    writeFileSync(bon, JSON.stringify({ valeurs: { name: { d1: "Anna" } } }));
+    writeFileSync(bon, JSON.stringify({ issues: { name: { d1: "clean", d2: "wrong" } } }));
     const s = chargerSorties(bon);
     assert.equal(s.nom, "votre chaîne", "un fichier sans nom en reçoit un, il ne casse pas.");
     assert.equal(s.declares, undefined);
+    assert.equal(s.notePar, undefined,
+      "l'absence de `notePar` ne casse pas la lecture — c'est le rapport qui doit la signaler.");
   } finally { rmSync(dossier, { recursive: true, force: true }); }
 });
 
@@ -127,7 +141,7 @@ test("les identifiants sans correspondance sont comptés et nommés dans les deu
   ];
   const c = correspondance(cas, ["name", "birth"], {
     nom: "la sienne",
-    valeurs: { name: { d1: "Anna", d2: "J.", d9: "Inconnu" } },
+    issues: { name: { d1: "clean", d2: "wrong", d9: "clean" } },
   });
 
   assert.deepEqual(c.manquants["name"], ["d3"], "un de nos cas absent de son fichier est nommé.");
@@ -147,7 +161,7 @@ test("le taux du client porte sur les cas appariés, jamais sur les nôtres", as
   ];
   const releve = await mesurerVosCas(cas, ["name"], [], undefined, false, {
     nom: "la sienne",
-    valeurs: { name: { d1: "Anna", d2: "faux" } },
+    issues: { name: { d1: "clean", d2: "wrong" } },
     declares: { msParDocument: 480 },
   });
   const r = releve["name"]!["la sienne" as never] as { bons: number; sur: number; ms: number };
@@ -177,4 +191,29 @@ test("« déclaré » n'entre pas dans le vocabulaire de provenance, qui est cop
   assert.equal(PROVENANCE_DES_DECLARES.provenance, "assumed");
   assert.ok(PROVENANCE_DES_DECLARES.declarePar.length > 0,
     "le vocabulaire ne dit pas qui a posé l'hypothèse : ça se dit à côté, pas dedans.");
+});
+
+/*
+ * Sans version de correcteur, l'exactitude du client n'est plus mesurée mais crue.
+ *
+ * Les issues sont produites par notre correcteur, exécuté sur sa machine sur sa clé — c'est
+ * une mesure, et c'est ce qui permet de dire « exactitude mesurée, coût déclaré ». Mais un
+ * fichier qui ne dit pas quelle version l'a notée est indiscernable d'un fichier saisi à la
+ * main, et le second n'est pas une mesure. C'est le défaut du `null` qui vaut deux choses.
+ */
+test("le mode de notation du client est annoncé, et son absence dégrade le rang du chiffre", async () => {
+  const src = readFileSync(new URL("./your-cases.ts", import.meta.url).pathname, "utf8");
+
+  assert.match(src, /notePar\?\.version/,
+    "rien ne regarde la version du correcteur qui a produit les issues.");
+  assert.match(src, /indiscernables/,
+    "l'absence de version doit être dite au lecteur, pas seulement constatée.");
+
+  /* Et aucune valeur extraite ne doit pouvoir traverser le chargeur. */
+  const { ISSUES_VALIDES } = await import("./your-cases.ts");
+  assert.deepEqual([...ISSUES_VALIDES], ["clean", "wrong", "blank"],
+    "les issues acceptées ont changé : tout élargissement ici est un chemin par lequel une\n"
+    + "  donnée personnelle peut entrer, et l'outil déclare n'en recevoir aucune.");
+  assert.ok(!/sorties\.valeurs/.test(src),
+    "le code lit encore une clé `valeurs` : les valeurs extraites ne doivent plus entrer.");
 });
