@@ -729,6 +729,11 @@ export function construire(p: Profiles): unknown {
       "Les paliers ne sont pas mesurés au même n : les encodeurs sur l'échantillon complet, "
       + "les génératifs sur ses premiers cas seulement. Chaque chiffre porte son propre n.",
       "Aucun prix n'est mesuré. Tous sortent de `assumptions`, que le lecteur remplace.",
+      "Le routage est calibré à la taille de document du corpus — 166 caractères en moyenne, "
+      + "environ 185 jetons d'entrée. Le rapport de coût entre paliers bouge avec la longueur : "
+      + "mesuré ici entre ×4,1 et ×11,8 de `gen-0.6b` à `gen-8b` selon l'entrée, sur trois "
+      + "répétitions par point, ce qui suffit à établir que le rapport bouge et pas à en donner "
+      + "la forme. Un client aux documents nettement plus longs doit recalibrer.",
       "Le prix des paliers génératifs est du temps machine, donc il dépend de la configuration "
       + "de l'appel autant que du modèle. La sortie est contrainte par un schéma JSON : sans "
       + "cette contrainte, `gen-4b` consomme tous les jetons autorisés et raisonne à voix haute "
