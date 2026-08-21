@@ -1,0 +1,20 @@
+{
+  "what": "Commits cited by a shipped measurement that no longer exist, and where their content went.",
+  "why": "Rewriting history to purge 1.4 MB of raw outputs from eleven commits changed their hashes. Every relevé measured before that rewrite therefore records a commit a reader cannot check out — including the reference relevé the published numbers come from. The measurement is intact; what broke is the reader's ability to fetch the code that produced it, which is the only reason to record a commit at all.",
+  "howEntriesAreEstablished": "Never by assumption. A successor is named only when it is bracketed on both sides: by content, because the relevé carries a field the successor's code introduces and its predecessor's does not; and by time, because the pass began after that commit and no other commit exists before the pass ended. Both are stated per entry so a reader can redo the reasoning.",
+  "entries": [
+    {
+      "missing": "64bdacf",
+      "nowAt": "19d19e8",
+      "citedBy": [
+        "profiles-2026-08-20-coeur-rendu.json",
+        "profiles-2026-08-20-charge-8.json",
+        "data/profiles.json"
+      ],
+      "establishedBy": "inferred, not recorded",
+      "contentEvidence": "The relevé records `charge.externalBefore` for every tier. `19d19e8` introduces that field to src/measure.ts (4 occurrences); its predecessor `c199da4` has none. The relevé cannot have been produced by any earlier commit.",
+      "timeEvidence": "The pass ran 2026-08-20T10:08:32Z to 10:40:28Z with a clean tree. `19d19e8` was committed at 10:07:29Z, 63 seconds before it started, and the next commit in the repository is 4871dd8 at 16:56:53Z — six hours and forty-eight minutes after the pass finished.",
+      "limit": "The original object is gone from this repository and from its reflog, so the two hashes cannot be shown to name the same tree. The claim is that they name the same code, established by the two arguments above, not that the mapping was recorded at the time. It was not."
+    }
+  ]
+}

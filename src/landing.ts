@@ -28,6 +28,7 @@ import { readProfiles } from "./measure.ts";
 import { ASSUMPTIONS, UNITS, pricePerThousandExtractions, latency } from "./assumptions.ts";
 import { optimiseExtraction, evaluer, paliersMesures, pricePerThousandDocuments, justessePonderee } from "./optimise.ts";
 import { rate, CONFIANCE, distinguishable, pairedVerdict } from "./interval.ts";
+import { versLeBas } from "./sensitivity.ts";
 
 import type { Field } from "./corpus.ts";
 import type { TierName } from "./paliers.ts";
@@ -240,6 +241,125 @@ function seuils(p: Profiles, h: Assumptions): Record<string, Seuil> {
  * a servi au moment de la mesure, et la relire ferait entrer un runtime de modèles dans un
  * générateur qui n'a besoin que d'arithmétique.
  */
+/** Le commit existe-t-il encore, et sinon où est passé son contenu ? */
+function commitReecrit(commit: string | null) {
+  if (!commit) return {};
+  const f = new URL("../commits-reecrits.json", import.meta.url).pathname;
+  if (!existsSync(f)) return {};
+  const j = JSON.parse(readFileSync(f, "utf8")) as {
+    entries: { missing: string; nowAt: string; establishedBy: string }[] };
+  const e = j.entries.find((x) => x.missing === commit);
+  return e ? { commitRewrittenTo: e.nowAt, commitMappingEstablishedBy: e.establishedBy } : {};
+}
+
+/**
+ * Le premier commit où plusieurs formulations existent.
+ *
+ * Avant lui, `measure.ts` n'avait pas de sélection de prompt : une seule formulation pouvait
+ * tourner, et c'était la référence. Ce n'est donc pas une supposition mais une propriété du
+ * code de l'époque — et un test la vérifie en demandant à git plutôt qu'en la croyant.
+ */
+export const PREMIER_COMMIT_MULTI_FORMULATION = "cd05c3c";
+
+function formulation(b: { promptUtilise?: string; measuredAt: string }) {
+  if (b.promptUtilise) return { phrasing: b.promptUtilise, phrasingSource: "recorded" };
+  return {
+    phrasing: "reference",
+    phrasingSource: `derived from code: measured before ${PREMIER_COMMIT_MULTI_FORMULATION}, `
+      + "when only one formulation existed",
+  };
+}
+
+/**
+ * Les deux points de charge — et lesquels des sept paliers ont réellement été mesurés deux fois.
+ *
+ * Le relevé « chargé » n'est pas une seconde passe complète : c'est le relevé au repos dont
+ * **un seul** palier a été remesuré sous charge, `gen-0.6b`. Les six autres y sont recopiés à
+ * l'identique, avec la provenance de la passe au repos. Dire « l'exactitude est identique au
+ * millième aux deux charges » en les comptant tous serait donc vrai et vide : six des sept
+ * égalités sont des copies, pas des mesures.
+ *
+ * L'égalité n'est donc affirmée que sur les paliers réellement mesurés deux fois, et leur
+ * nombre est écrit à côté. Un lecteur qui voit « 1 palier sur 7 » sait ce qu'il achète ; un
+ * lecteur qui voit « identique au millième » sans ce chiffre croit avoir sept confirmations.
+ */
+function balayageDeCharge() {
+  const racine = new URL("..", import.meta.url).pathname;
+  const lire = (nom: string, fichier: string) => {
+    const chemin = `${racine}/${fichier}`;
+    if (!existsSync(chemin)) return null;
+    const q = JSON.parse(readFileSync(chemin, "utf8")) as Profiles;
+    const o = optimiseExtraction(q, ASSUMPTIONS);
+    /* Comme `loadBeforePass` : à défaut de charge de passe, celle du premier palier mesuré. */
+    const charge = q.chargeAvantPasse ?? (() => {
+      const premiers = paliersMesures(q).map((t) => q.provenance?.[t])
+        .filter((v): v is NonNullable<typeof v> => Boolean(v?.latency?.charge))
+        .sort((a, b) => a.latency.measuredAt.localeCompare(b.latency.measuredAt));
+      const c = premiers[0]?.latency.charge;
+      return c ? { externalBefore: c.externalBefore, coeurs: c.coeurs } : undefined;
+    })();
+    return { nom, fichier, q, o, charge };
+  };
+
+  const repos = lire("at rest", "profiles-2026-08-20-coeur-rendu.json");
+  const charge = lire("under generated load", "profiles-2026-08-20-charge-8.json");
+  if (!repos || !charge) return null;
+
+  const moyenne = (q: Profiles, t: TierName) => {
+    const ch = FIELDS.map((c) => q.extraction[t][c].accuracy);
+    return 100 * ch.reduce((a, x) => a + x, 0) / ch.length;
+  };
+
+  const paliers = paliersMesures(charge.q).map((t) => {
+    const auRepos = repos.q.provenance?.[t]?.accuracy?.measuredAt ?? null;
+    const sousCharge = charge.q.provenance?.[t]?.accuracy?.measuredAt ?? null;
+    const remesure = auRepos !== null && sousCharge !== null && auRepos !== sousCharge;
+    const a = moyenne(repos.q, t), b = moyenne(charge.q, t);
+    return {
+      id: t, remeasuredUnderLoad: remesure,
+      accuracyPctAtRest: Number(a.toFixed(3)),
+      accuracyPctUnderLoad: Number(b.toFixed(3)),
+      accuracyGapPct: Number(Math.abs(a - b).toFixed(4)),
+      latencyMsAtRest: Number(repos.q.extraction[t][FIELDS[0]!].latency.toFixed(1)),
+      latencyMsUnderLoad: Number(charge.q.extraction[t][FIELDS[0]!].latency.toFixed(1)),
+      ...(remesure ? {} : { why: "carried over from the rest pass, not measured again" }),
+    };
+  });
+
+  const mesuresDeux = paliers.filter((x) => x.remeasuredUnderLoad);
+  const ecartMax = mesuresDeux.length === 0 ? null
+    : Math.max(...mesuresDeux.map((x) => x.accuracyGapPct));
+
+  /* Le total par document ne bouge pas, et il faut dire pourquoi : le routage retenu n'emploie
+     pas le seul palier qui a été remesuré. Sans cette phrase, deux ms/doc identiques passeraient
+     pour une preuve que la charge n'agit pas. */
+  const routageRetenu = repos.o ? new Set(FIELDS.map((c) => repos.o!.routing[c])) : new Set<TierName>();
+  const remesuresUtilisees = mesuresDeux.filter((x) => routageRetenu.has(x.id as TierName));
+
+  return {
+    points: [repos, charge].map(({ nom, fichier, q, o, charge: c }) => ({
+      name: nom, profile: fichier,
+      loadAvg: c?.externalBefore ?? null, cores: c?.coeurs ?? null,
+      msPerDoc: o === null ? null : Number(o.latencyPerItem.toFixed(1)),
+      tiersMeasuredHere: paliersMesures(q).length,
+    })),
+    tiers: paliers,
+    tiersMeasuredAtBothLoads: mesuresDeux.length,
+    tiersTotal: paliers.length,
+    accuracyIdenticalToThousandth: ecartMax === null ? null : ecartMax < 0.001,
+    largestGapAmongRemeasuredPct: ecartMax,
+    msPerDocComparable: remesuresUtilisees.length > 0,
+    note: mesuresDeux.length === paliers.length
+      ? "Les deux points sont des passes complètes."
+      : `Le point chargé n'est pas une passe complète : ${mesuresDeux.length} palier(s) sur `
+        + `${paliers.length} y ont été remesurés (${mesuresDeux.map((x) => x.id).join(", ") || "aucun"}). `
+        + "Les autres sont recopiés du point au repos, donc leur égalité est une copie et non un "
+        + "résultat. L'égalité au millième ne porte que sur les paliers remesurés. Le temps par "
+        + "document est identique aux deux points parce que le routage retenu n'emploie aucun "
+        + "palier remesuré — ce n'est pas une preuve que la charge est sans effet sur lui.",
+  };
+}
+
 function decomposeErreurs(p: Profiles, routing: Routing) {
   const perThousand: Record<string, { tier: TierName; blank: number | null; wrong: number | null }> = {};
   let couverts = 0;
@@ -373,6 +493,24 @@ export function construire(p: Profiles): unknown {
         if (!v?.accuracy) return [t, null];
         const bloc = (b: typeof v.accuracy) => ({
           commit: b.commit, treeDirty: b.sale, measuredAt: b.measuredAt,
+          /*
+           * Où est passé ce commit, quand il n'existe plus.
+           *
+           * Réécrire l'historique pour purger les sorties brutes a changé onze empreintes, et
+           * le relevé de référence a continué d'afficher une empreinte que personne ne peut
+           * extraire. Enregistrer un commit n'a qu'une raison d'être : que le lecteur aille
+           * voir. Un commit introuvable est donc un champ mort qui a l'air vivant.
+           */
+          ...commitReecrit(b.commit),
+          /*
+           * La formulation, toujours — y compris quand c'est la référence.
+           *
+           * `promptUtilise` n'était écrit que lorsqu'il différait, donc « mesuré sous la
+           * référence » et « personne ne l'a noté » se lisaient pareil. Corrigé dans la mesure ;
+           * il fallait qu'il ressorte jusqu'ici. Pour les relevés antérieurs au drapeau, la
+           * réponse est déductible du code plutôt qu'inventée — et la déduction est nommée.
+           */
+          ...formulation(b),
           ...(b.charge ? { loadAvg: b.charge.externalBefore, cores: b.charge.coeurs } : {}),
         });
         return [t, { accuracy: bloc(v.accuracy), latency: bloc(v.latency) }];
@@ -447,12 +585,31 @@ export function construire(p: Profiles): unknown {
       measuredAt: p.measuredAt,
       method: "bisection",
       thresholds: seuils(p, ASSUMPTIONS),
+      /*
+       * L'affirmation inverse, enregistrée plutôt que crue.
+       *
+       * `thresholds` cherche le point de rupture vers le haut. La page affirme aussi qu'aucune
+       * baisse de prix ne déplace le routage — une affirmation différente, vraie, et qui
+       * n'était écrite nulle part. Une affirmation vraie et non enregistrée ne se distingue
+       * pas d'une fausse tant que personne n'a regardé.
+       */
+      downward: versLeBas(p, ASSUMPTIONS),
       note: "Chaque hypothèse est balayée seule, les autres restant à leur valeur en usage : "
         + "deux prix qui bougent ensemble peuvent basculer le routage plus tôt qu'aucun des "
         + "deux séparément. Le balayage ne couvre que les entrées qui tarifent un palier — le "
         + "plafond de latence et le volume ne sont pas des prix et changent la réponse par "
         + "d'autres chemins.",
     },
+
+    /*
+     * Les deux points de charge, avec leur exactitude.
+     *
+     * La page dit l'exactitude « identique au millième aux deux charges ». C'est probablement
+     * vrai — le décodage est glouton, il ne dépend pas de la charge — et ça n'avait jamais été
+     * relevé : les deux points ne portaient que la charge, le temps par document et un nom de
+     * fichier. Ici la comparaison est faite et son résultat écrit, y compris s'il dément.
+     */
+    loadSweep: balayageDeCharge(),
 
     errorSplit: optimum === null ? null : decomposeErreurs(p, optimum.routing),
     cleanPerDocument: optimum === null ? null : dossiersPropres(p, optimum.routing),

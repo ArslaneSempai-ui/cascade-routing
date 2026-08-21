@@ -1,4 +1,5 @@
 import { test } from "node:test";
+import { PREMIER_COMMIT_MULTI_FORMULATION } from "./landing.ts";
 import assert from "node:assert/strict";
 import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
@@ -1073,4 +1074,115 @@ test("chaque rétractation porte son résumé et dit si quelqu'un l'a vue", () =
       + `  → ce n'est pas déductible du texte, et un générateur qui devinerait pencherait`
       + ` du côté qui flatte le compte.`);
   }
+});
+
+/*
+ * Le point chargé n'est pas une passe complète, et la page ne doit pas le laisser croire.
+ *
+ * Six paliers sur sept y sont recopiés du relevé au repos. Affirmer « exactitude identique au
+ * millième aux deux charges » en les comptant tous serait vrai et vide : on comparerait des
+ * copies à elles-mêmes. Un seul palier a réellement été mesuré deux fois, et c'est cette
+ * mesure-là — une seule — qui porte l'affirmation.
+ */
+test("l'égalité d'exactitude sous charge ne porte que sur les paliers réellement remesurés", () => {
+  const f = new URL("../landing.json", import.meta.url).pathname;
+  if (!existsSync(f)) return;
+  const ls = (JSON.parse(readFileSync(f, "utf8")) as {
+    loadSweep: null | {
+      tiers: { id: string; remeasuredUnderLoad: boolean; accuracyGapPct: number }[];
+      tiersMeasuredAtBothLoads: number; tiersTotal: number;
+      accuracyIdenticalToThousandth: boolean | null;
+      largestGapAmongRemeasuredPct: number | null;
+      msPerDocComparable: boolean; note: string;
+    }}).loadSweep;
+  assert.ok(ls, "landing.json ne porte pas de balayage de charge.");
+
+  const remesures = ls.tiers.filter((t) => t.remeasuredUnderLoad);
+  assert.equal(remesures.length, ls.tiersMeasuredAtBothLoads,
+    "le compte annoncé ne correspond pas aux paliers marqués remesurés.");
+  assert.ok(ls.tiersMeasuredAtBothLoads >= 1,
+    "aucun palier mesuré aux deux charges : l'affirmation d'égalité n'a aucune mesure derrière elle.");
+
+  /* Le plus grand écart doit venir des remesurés seuls, jamais de l'ensemble. */
+  const attendu = Math.max(...remesures.map((t) => t.accuracyGapPct));
+  assert.equal(ls.largestGapAmongRemeasuredPct, attendu,
+    "l'écart publié n'est pas celui des paliers remesurés.");
+  assert.equal(ls.accuracyIdenticalToThousandth, attendu < 0.001);
+
+  if (ls.tiersMeasuredAtBothLoads < ls.tiersTotal) {
+    assert.ok(/sur \d+ y ont été remesurés/.test(ls.note),
+      "le point chargé est partiel et la note ne le dit pas — c'est là que le lecteur se trompe.");
+    assert.equal(ls.msPerDocComparable, false,
+      "aucun palier remesuré n'est employé par le routage : deux ms/doc identiques ne prouvent rien.");
+  }
+});
+
+/*
+ * « Mesuré sous la référence » est déduit du code, pas supposé — et la déduction est vérifiable.
+ *
+ * Les relevés antérieurs au drapeau `--prompt` n'enregistrent aucune formulation, et pour cause :
+ * il n'y en avait qu'une. Écrire « reference » sans le démontrer serait remplacer un `null`
+ * honnête par une supposition confortable. Ce test demande à git ce que le code contenait.
+ */
+test("le commit qui introduit le choix de formulation est bien celui qu'on nomme", () => {
+  const racine = new URL("..", import.meta.url).pathname;
+  const c = PREMIER_COMMIT_MULTI_FORMULATION;
+  const contient = (rev: string) => {
+    try {
+      return execFileSync("git", ["show", `${rev}:src/measure.ts`], { cwd: racine, encoding: "utf8" })
+        .includes("--prompt=");
+    } catch { return null; }
+  };
+  const ici = contient(c);
+  const avant = contient(`${c}~1`);
+  assert.notEqual(ici, null, `${c} est introuvable : la déduction sur la formulation ne tient plus.`);
+  assert.equal(ici, true, `${c} ne contient pas de sélection de formulation dans measure.ts.`);
+  assert.equal(avant, false,
+    `le parent de ${c} en contient déjà une : ce n'est pas le commit qui l'introduit,\n`
+    + `  donc « mesuré avant lui ⇒ formulation reference » ne se déduit plus du code.`);
+
+  /* Et tout palier de landing.json doit porter sa formulation, jamais l'absence. */
+  const f = new URL("../landing.json", import.meta.url).pathname;
+  if (!existsSync(f)) return;
+  const perTier = (JSON.parse(readFileSync(f, "utf8")) as {
+    generatedFrom: { perTier: Record<string, null | { accuracy: { phrasing?: string; phrasingSource?: string } }> };
+  }).generatedFrom.perTier;
+  let vus = 0;
+  for (const [t, v] of Object.entries(perTier)) {
+    if (!v) continue;
+    vus++;
+    assert.ok(v.accuracy.phrasing, `${t} ne dit pas sous quelle formulation son exactitude a été mesurée.`);
+    assert.ok(v.accuracy.phrasingSource,
+      `${t} donne une formulation sans dire si elle est enregistrée ou déduite.`);
+  }
+  assert.ok(vus >= 5, `${vus} palier(s) examiné(s) : trop peu pour que ce test ait vérifié quoi que ce soit.`);
+});
+
+/*
+ * Le balayage vers le bas doit avoir vraiment balayé.
+ *
+ * Un `movesRouting: false` obtenu en n'essayant aucun prix serait le vert vide habituel : la
+ * page dirait « aucune baisse ne déplace le routage » sur la foi d'une boucle qui n'a pas tourné.
+ */
+test("le balayage vers le bas essaie des prix, et le dit", () => {
+  const f = new URL("../landing.json", import.meta.url).pathname;
+  if (!existsSync(f)) return;
+  const d = (JSON.parse(readFileSync(f, "utf8")) as {
+    sensitivity: { downward: {
+      tiers: { id: string; driver: string; from: number; to: number; movesRouting: boolean; driverAlsoPrices: string[] }[];
+      allFree: { movesRouting: boolean }; steps: number; note: string } };
+  }).sensitivity.downward;
+
+  assert.ok(d.steps >= 20, `${d.steps} pas : trop peu pour affirmer qu'aucune baisse ne déplace rien.`);
+  assert.ok(d.tiers.length >= 5, `${d.tiers.length} palier(s) balayé(s) : le balayage a raté des paliers tarifés.`);
+  for (const t of d.tiers) {
+    assert.equal(t.to, 0, `${t.id} n'est pas descendu jusqu'à zéro.`);
+    assert.ok(t.from > 0, `${t.id} part d'un prix nul : il n'y avait rien à faire descendre.`);
+    /* Un pilote partagé doit être annoncé : le descendre rend plusieurs paliers gratuits. */
+    const autres = d.tiers.filter((x) => x.driver === t.driver && x.id !== t.id).map((x) => x.id);
+    assert.deepEqual([...t.driverAlsoPrices].sort(), autres.sort(),
+      `${t.id} n'annonce pas correctement les paliers que son pilote tarife aussi.`);
+  }
+  assert.ok(/soixante pas|pas une preuve continue/.test(d.note),
+    "le balayage ne dit pas que son verdict ne couvre que les points essayés.");
 });

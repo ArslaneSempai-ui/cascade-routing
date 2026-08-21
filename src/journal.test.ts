@@ -10,7 +10,8 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync, writeFileSync, mkdtempSync, rmSync, readdirSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdtempSync, rmSync, readdirSync, existsSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { issue, lireJournal, apparie, parDocument, issues } from "./journal.ts";
@@ -182,4 +183,76 @@ test("chaque ligne porte sa formulation, référence comprise", () => {
         `${n} écrit une ligne sans issue, sans valeur ou sans attendu — elle ne sera pas rejouable.`);
     }
   }
+});
+
+/*
+ * Tout commit cité par un relevé livré doit exister, ou dire où il est passé.
+ *
+ * Enregistrer le commit d'une mesure n'a qu'une raison d'être : qu'un lecteur puisse aller
+ * chercher le code qui a produit le chiffre. Réécrire l'historique pour purger 1,4 Mo de
+ * sorties brutes a changé onze empreintes, et le relevé de référence — celui dont sortent les
+ * chiffres publiés — a continué d'afficher une empreinte que personne ne peut extraire.
+ *
+ * Le correctif d'une faute en a donc cassé une autre, en silence, pendant une journée. Ce test
+ * est ce qui aurait crié le soir même.
+ */
+test("aucun relevé livré ne cite un commit introuvable", () => {
+  const racine = new URL("..", import.meta.url).pathname;
+  const releves = readdirSync(racine).filter((n) => /^profiles-.*\.json$/.test(n));
+  assert.ok(releves.length >= 3, `${releves.length} relevé(s) trouvé(s) : la lecture a échoué.`);
+
+  const carte = (() => {
+    const f = join(racine, "commits-reecrits.json");
+    if (!existsSync(f)) return new Map<string, string>();
+    const j = JSON.parse(readFileSync(f, "utf8")) as { entries: { missing: string; nowAt: string }[] };
+    return new Map(j.entries.map((e) => [e.missing, e.nowAt]));
+  })();
+
+  const existe = (c: string) => {
+    try { execFileSync("git", ["cat-file", "-e", `${c}^{commit}`], { cwd: racine, stdio: "ignore" }); return true; }
+    catch { return false; }
+  };
+
+  let verifies = 0;
+  const sansCommit: string[] = [];
+  for (const n of releves) {
+    const p = JSON.parse(readFileSync(join(racine, n), "utf8")) as {
+      code?: { commit?: string };
+      provenance?: Record<string, { accuracy?: { commit?: string }; latency?: { commit?: string } }>;
+    };
+    const cites = new Set<string>();
+    if (p.code?.commit) cites.add(p.code.commit);
+    for (const v of Object.values(p.provenance ?? {})) {
+      if (v.accuracy?.commit) cites.add(v.accuracy.commit);
+      if (v.latency?.commit) cites.add(v.latency.commit);
+    }
+    if (cites.size === 0) sansCommit.push(n);
+    for (const c of cites) {
+      verifies++;
+      if (existe(c)) continue;
+      const vers = carte.get(c);
+      assert.ok(vers,
+        `${n} cite le commit ${c}, qui n'existe pas dans ce dépôt et n'est déclaré nulle part.\n`
+        + `  → un lecteur ne peut pas extraire le code qui a produit ce chiffre,\n`
+        + `    ce qui est la seule raison d'enregistrer un commit.\n`
+        + `  → soit l'historique a été réécrit et commits-reecrits.json doit le dire,\n`
+        + `    soit le relevé doit être refait sous un commit qui existe.`);
+      assert.ok(existe(vers!),
+        `${n} cite ${c}, redirigé vers ${vers}, qui n'existe pas non plus.`);
+    }
+  }
+  /*
+   * Ce que ce test a réellement regardé, et ce qu'il ne peut pas regarder.
+   *
+   * Deux relevés du 19 août ne citent aucun commit : ils datent d'avant la provenance, et rien
+   * ici ne peut les rattacher à du code. Les compter comme vérifiés serait le vert vide que ce
+   * dépôt corrige partout — ils sont donc nommés, pas passés sous silence.
+   */
+  assert.equal(sansCommit.length, 2,
+    `${sansCommit.length} relevé(s) sans aucun commit : ${sansCommit.join(", ") || "aucun"}.\n`
+    + `  → si ce nombre monte, une mesure a été écrite sans provenance et rien ne la rattache au code.`);
+  assert.ok(verifies >= releves.length - sansCommit.length,
+    `${verifies} citation(s) vérifiée(s) pour ${releves.length - sansCommit.length} relevé(s) avec provenance.`);
+  assert.ok(verifies >= 3,
+    `${verifies} commit(s) cité(s) vérifié(s) : trop peu pour que ce test ait regardé quoi que ce soit.`);
 });

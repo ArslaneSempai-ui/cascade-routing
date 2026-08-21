@@ -25,6 +25,7 @@ import { isMain } from "./cli.ts";
 import { ASSUMPTIONS, accuracy, latency } from "./assumptions.ts";
 import { FIELDS } from "./corpus.ts";
 import { readProfiles } from "./measure.ts";
+import type { TierName } from "./paliers.ts";
 import type { Assumptions } from "./assumptions.ts";
 import type { Profiles } from "./measure.ts";
 
@@ -241,4 +242,73 @@ if (isMain(import.meta)) {
     "\nwould dominate it at a smaller volume. Reporting those two the same way would send a" +
     "\nreader away from exactly the number they should go and find.\n",
   );
+}
+
+/**
+ * Le balayage vers le bas : une baisse de prix peut-elle déplacer le routage ?
+ *
+ * `band` cherche le point de rupture **vers le haut** — jusqu'où un prix peut monter avant que
+ * la recommandation bouge. La page affirme aussi l'inverse : qu'aucune baisse ne la déplace.
+ * C'est une affirmation différente, et jusqu'ici elle n'était enregistrée nulle part. Une
+ * affirmation vraie et non enregistrée ne se distingue pas d'une fausse tant que personne n'a
+ * regardé — et personne ne peut regarder ce qui n'est pas dans le fichier.
+ *
+ * Ce que ce balayage établit, exactement : chaque entrée qui tarife un palier est descendue de
+ * sa valeur en usage jusqu'à zéro, par pas réguliers, les autres restant en place. Il ne
+ * couvre pas les baisses simultanées — deux prix qui descendent ensemble relâchent le budget
+ * plus vite qu'aucun des deux seul, et le second passage, qui retient le routage le moins cher
+ * *indiscernable* du sommet, n'est pas monotone en le budget. La descente conjointe est donc
+ * mesurée en plus, comme un point unique : tout gratuit.
+ */
+export function versLeBas(p: Profiles, a = ASSUMPTIONS, steps = 60) {
+  const reference = routingOf(p, a);
+  const descendre = (cles: (keyof Assumptions)[]) => {
+    const depart = cles.map((k) => a[k] as number);
+    let premierMouvement: number | null = null;
+    for (let i = 1; i <= steps; i++) {
+      const f = 1 - i / steps;                       // de la valeur en usage jusqu'à zéro
+      const modifie = { ...a };
+      cles.forEach((k, j) => { (modifie[k] as number) = depart[j]! * f; });
+      if (routingOf(p, modifie) !== reference) { premierMouvement = f; break; }
+    }
+    return premierMouvement;
+  };
+
+  /* Quelle entrée tarife quel palier. Les trois génératifs partagent la leur : la descendre
+     les rend gratuits tous les trois à la fois, ce qui est une propriété du modèle de coût,
+     pas une approximation — et doit se lire dans le fichier plutôt que se deviner. */
+  const pilote: Partial<Record<TierName, keyof Assumptions>> = {
+    small: "pricePerThousandSmall",
+    large: "pricePerThousandLarge",
+    "gen-0.6b": "machineHourlyCost",
+    "gen-4b": "machineHourlyCost",
+    "gen-8b": "machineHourlyCost",
+    human: "analystAnnualCost",
+  };
+  const partages = (k: keyof Assumptions) =>
+    Object.entries(pilote).filter(([, v]) => v === k).map(([t]) => t as TierName);
+
+  const tiers = paliersMesures(p)
+    .filter((t) => pilote[t] !== undefined)
+    .map((t) => {
+      const k = pilote[t]!;
+      const bouge = descendre([k]);
+      return {
+        id: t, driver: k, from: a[k] as number, to: 0,
+        movesRouting: bouge !== null,
+        firstMoveAtFraction: bouge,
+        driverAlsoPrices: partages(k).filter((x) => x !== t),
+      };
+    });
+
+  const toutesLesCles = [...new Set(Object.values(pilote))] as (keyof Assumptions)[];
+  const ensemble = descendre(toutesLesCles);
+  return {
+    tiers,
+    allFree: { drivers: toutesLesCles, movesRouting: ensemble !== null, firstMoveAtFraction: ensemble },
+    steps,
+    note: "Chaque entrée descend seule jusqu'à zéro, les autres en place ; `allFree` les "
+      + "descend ensemble. Un `movesRouting` faux ne prouve rien au-delà des points essayés — "
+      + "soixante pas, pas une preuve continue.",
+  };
 }
