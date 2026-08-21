@@ -202,11 +202,70 @@ async function ollama(tier: TierName, prompt: string, schema: unknown): Promise<
 }
 
 /** Le serveur répond-il, et les trois modèles sont-ils là ? */
-export async function loadGeneratifs(): Promise<void> {
-  for (const tier of Object.keys(MODELES_LOCAUX)) {
-    await ollama(tier as TierName, "ping",
+/** Ce qu'Ollama garde effectivement en mémoire, à cet instant. */
+export async function residents(): Promise<{ nom: string; octets: number }[]> {
+  const r = await fetch(`${OLLAMA}/api/ps`, { signal: AbortSignal.timeout(10_000) });
+  const j = await r.json() as { models?: { name: string; size: number }[] };
+  return (j.models ?? []).map((m) => ({ nom: m.name, octets: m.size }));
+}
+
+/** La taille de chaque modèle sur disque, pour savoir lequel charger en premier. */
+async function tailles(): Promise<Map<string, number>> {
+  try {
+    const r = await fetch(`${OLLAMA}/api/tags`, { signal: AbortSignal.timeout(10_000) });
+    const j = await r.json() as { models?: { name: string; size: number }[] };
+    return new Map((j.models ?? []).map((m) => [m.name, m.size]));
+  } catch { return new Map(); }
+}
+
+/**
+ * Charger du plus gros au plus petit, et vérifier la résidence au lieu de la supposer.
+ *
+ * L'ordre de chargement décide de la survie en mémoire, et l'éviction est **silencieuse** :
+ * `ollama ps` rend une ligne de moins, sans erreur. Un modèle qu'on croit résident se recharge
+ * depuis le disque à l'appel suivant, et la durée mesurée est alors celle d'un chargement, pas
+ * celle d'une inférence — sans que rien ne le signale.
+ *
+ * Mesuré sur cette machine, dix-sept gigaoctets, trois essais par sens :
+ *
+ *   du plus gros au plus petit   3 résidents, 3, puis 2   (jusqu'à 10,1 Go)
+ *   du plus petit au plus gros   1 résident, 1, 1         (seul le 8b survit)
+ *
+ * Le sens décroissant n'est donc pas une garantie — un essai sur trois a perdu un modèle — et
+ * c'est précisément pourquoi la résidence est **vérifiée** ici plutôt que déduite de l'ordre.
+ * La fonction rend ce qu'elle a constaté ; l'appelant décide si ça lui suffit.
+ */
+export async function loadGeneratifs(): Promise<{ demandes: string[]; residents: string[]; totalOctets: number }> {
+  const t = await tailles();
+  const tiers = Object.keys(MODELES_LOCAUX) as TierName[];
+  const ordre = [...tiers].sort((a, b) =>
+    (t.get(MODELES_LOCAUX[b]!.tag) ?? 0) - (t.get(MODELES_LOCAUX[a]!.tag) ?? 0));
+
+  for (const tier of ordre) {
+    await ollama(tier, "ping",
       { type: "object", properties: { ok: { type: "string" } }, required: ["ok"] });
   }
+  const vus = await residents();
+  return {
+    demandes: ordre.map((x) => MODELES_LOCAUX[x]!.tag),
+    residents: vus.map((v) => v.nom),
+    totalOctets: vus.reduce((a, v) => a + v.octets, 0),
+  };
+}
+
+/**
+ * Réchauffer un palier juste avant de le mesurer.
+ *
+ * Le premier appel d'un palier était systématiquement un rechargement — 1 066 ms contre 213 de
+ * médiane pour `gen-0.6b`, 2 346 contre 679, 3 102 contre 1 057 — et un seul par palier, ce qui
+ * laissait la médiane intacte sur cent vingt appels. Intact n'est pas propre : un appel sur
+ * cent vingt mesurait autre chose que ce que la colonne annonce.
+ */
+export async function rechauffer(tier: TierName): Promise<boolean> {
+  if (!estGeneratif(tier)) return true;
+  await ollama(tier, "ping", { type: "object", properties: { ok: { type: "string" } }, required: ["ok"] });
+  const vus = await residents();
+  return vus.some((v) => v.nom === MODELES_LOCAUX[tier]!.tag);
 }
 
 let qaSmall: any = null, qaLarge: any = null;

@@ -18,7 +18,7 @@ import { execFileSync } from "node:child_process";
 import { loadavg, cpus } from "node:os";
 import { dirname } from "node:path";
 import { generateRecords, generateAlerts, FIELDS, TYPOLOGIES } from "./corpus.ts";
-import { TIERS, ENCODEURS, GENERATIFS, loadExtractors, loadClassifiers, loadGeneratifs, extract, classify, correct, OLLAMA, estLocal, PROMPTS, type NomPrompt } from "./tiers.ts";
+import { TIERS, ENCODEURS, GENERATIFS, loadExtractors, loadClassifiers, loadGeneratifs, extract, classify, correct, OLLAMA, estLocal, PROMPTS, type NomPrompt, rechauffer, residents} from "./tiers.ts";
 import type { TierName } from "./tiers.ts";
 import type { Field } from "./corpus.ts";
 
@@ -98,6 +98,19 @@ export const DECOUPAGE_DE_MESURE = "heldout" as const;
 
 /** D'où vient un résultat : quel code, quel arbre, quand, et sous quelle charge. */
 export type Provenance = {
+  /**
+   * Le modèle était-il en mémoire quand la durée a été prise ?
+   *
+   * L'éviction est silencieuse : `ollama ps` rend une ligne de moins, sans erreur, et le modèle
+   * se recharge au premier appel suivant. La durée relevée est alors celle d'un chargement — cinq
+   * fois la médiane, mesuré sur les trois paliers — et rien ne la distinguait d'une inférence.
+   *
+   * Ne concerne que la latence. L'exactitude ne dépend ni de la résidence ni de la charge, et
+   * ce dépôt l'a mesuré plutôt que supposé : 984 tentatives, deux charges, identiques au dixième.
+   */
+  residentAvantLaMesure?: boolean;
+  residentsPendant?: string[];
+  octetsResidents?: number;
   commit: string | null;
   sale: boolean | null;
   measuredAt: string;
@@ -395,6 +408,18 @@ export async function measure(
   });
 
   for (const tier of paliers) {
+    /*
+     * Réchauffer ce palier et constater sa résidence, juste avant de le chronométrer.
+     *
+     * L'éviction est silencieuse : un modèle sorti de mémoire se recharge au premier appel, et
+     * la durée relevée est celle d'un chargement. Sans ce réchauffage, le premier appel de
+     * chaque palier valait cinq fois sa médiane. La résidence est **constatée**, pas déduite de
+     * l'ordre de chargement — un essai sur trois perd un modèle même en chargeant du plus gros
+     * au plus petit.
+     */
+    const resident = await rechauffer(tier);
+    const memoire = await residents();
+
     /* Un échantillon avant le départ, puis toutes les cinq secondes : « pendant » doit être vrai. */
     const chargeAvant = Number(loadavg()[0]!.toFixed(2));
     const echantillons: number[] = [];
@@ -472,6 +497,19 @@ export async function measure(
     }
 
     /* La provenance est écrite avec le palier, pas avec le fichier. */
+    /*
+     * La résidence appartient à la latence, pas à l'exactitude.
+     *
+     * Une durée prise sur un modèle évincé et une durée prise sur un modèle résident sont deux
+     * grandeurs différentes, et rien dans ce fichier ne les distinguait. L'exactitude, elle,
+     * ne bouge pas : mesurée identique au dixième sur 984 tentatives à deux charges.
+     */
+    const residence = {
+      residentAvantLaMesure: resident,
+      residentsPendant: memoire.map((m) => m.nom),
+      octetsResidents: memoire.reduce((a, m) => a + m.octets, 0),
+    };
+
     const bloc: Provenance = {
       commit: version?.commit ?? null,
       sale: version?.sale ?? null,
@@ -495,7 +533,7 @@ export async function measure(
     const avant = readProfiles()?.provenance?.[tier];
     provenance[tier] = {
       accuracy: bloc,
-      latency: latenceValide ? bloc : (avant?.latency ?? bloc),
+      latency: latenceValide ? { ...bloc, ...residence } : (avant?.latency ?? { ...bloc, ...residence }),
     };
     sauver(extraction, classification, loadTime);
   }

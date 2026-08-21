@@ -386,3 +386,44 @@ test("le pied de page d'une passe dit la charge pendant, et si les durées valen
       + "la charge de la passe elle-même, pas sur ce qui la dérange.");
   } finally { rmSync(dossier, { recursive: true, force: true }); }
 });
+
+/*
+ * L'éviction silencieuse : mesurée ici plutôt que reprise d'une autre machine.
+ *
+ * Une seconde machine a rapporté que l'ordre de chargement décide de la survie en mémoire, et
+ * a explicitement demandé de ne pas reprendre son chiffre. Vérifié sur celle-ci, dix-sept
+ * gigaoctets : du plus gros au plus petit, trois puis trois puis deux modèles résidents ; du
+ * plus petit au plus gros, un seul, les trois fois.
+ *
+ * Ce test ne rejoue pas l'expérience — elle coûte des chargements de modèle. Il tient les deux
+ * conséquences dans le code : on charge dans l'ordre décroissant, et la résidence est
+ * **constatée** et non déduite de cet ordre, puisque un essai sur trois la perd quand même.
+ */
+test("les modèles se chargent du plus gros au plus petit, et la résidence est constatée", () => {
+  const src = readFileSync(new URL("./tiers.ts", import.meta.url).pathname, "utf8");
+
+  const f = src.slice(src.indexOf("export async function loadGeneratifs"));
+  const corps = f.slice(0, f.indexOf("\n}\n") + 2);
+  assert.ok(/sort\(/.test(corps) && /tailles?\(/.test(corps),
+    "loadGeneratifs ne trie pas les modèles par taille : l'ordre de chargement redevient celui\n"
+    + "  de la déclaration, et le plus petit chargé en premier est évincé sans un mot.");
+  assert.ok(/await residents\(\)/.test(corps),
+    "loadGeneratifs ne constate pas la résidence — l'ordre seul ne suffit pas, un essai sur trois échoue.");
+
+  /* Et la mesure doit réchauffer chaque palier juste avant de le chronométrer. */
+  const mes = readFileSync(new URL("./measure.ts", import.meta.url).pathname, "utf8");
+  assert.ok(/await rechauffer\(tier\)/.test(mes),
+    "measure.ts ne réchauffe pas le palier avant de le mesurer : son premier appel sera un\n"
+    + "  rechargement, mesuré à cinq fois la médiane.");
+  assert.ok(/residentAvantLaMesure/.test(mes),
+    "la résidence n'entre pas dans la provenance : une durée sur modèle évincé et une durée sur\n"
+    + "  modèle résident sont deux grandeurs, et rien ne les distinguerait dans le relevé.");
+
+  /* La résidence appartient à la latence seule — l'exactitude n'en dépend pas, c'est mesuré. */
+  const i = mes.indexOf("provenance[tier] = {");
+  const bloc = mes.slice(i, i + 400);
+  assert.ok(/accuracy: bloc,/.test(bloc),
+    "le bloc d'exactitude ne doit pas porter la résidence : elle ne la concerne pas.");
+  assert.ok(/latency:[^;]*residence/.test(bloc),
+    "le bloc de latence ne porte pas la résidence.");
+});

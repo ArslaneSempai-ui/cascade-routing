@@ -1042,7 +1042,7 @@
     ]
   },
   "retractions": {
-    "total": 19,
+    "total": 20,
     "caughtBeforeAnyoneSawIt": 9,
     "entries": [
       {
@@ -1139,6 +1139,11 @@
         "date": "2026-08-21",
         "headline": "A field called `dureesUtilisables` claimed a verdict no pass can reach from inside itself.",
         "caughtBeforeAnyoneSawIt": true
+      },
+      {
+        "date": "2026-08-21",
+        "headline": "Every generative tier's first timed call was a model reload, for the whole life of this repository.",
+        "caughtBeforeAnyoneSawIt": false
       }
     ]
   },

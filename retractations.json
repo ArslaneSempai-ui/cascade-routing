@@ -196,6 +196,16 @@
       "cost": "None published. Accuracy is untouched — this repository measured that across 984 attempts at two loads earlier the same hour. The affected pass carries an appended note; not one measured value was rewritten.",
       "heldBy": "le pied de page d'une passe dit la charge pendant, et si les durées valent quelque chose",
       "caughtBeforeAnyoneSawIt": true
+    },
+    {
+      "date": "2026-08-21",
+      "headline": "Every generative tier's first timed call was a model reload, for the whole life of this repository.",
+      "claimed": "That each recorded duration is an inference time. The latency column says nothing else, and the provenance beside it records the commit, the load and the formulation — but not whether the model was in memory.",
+      "actually": "Loading smallest-first evicts the small models when the large one arrives, silently: `ollama ps` returns one line fewer, with no error. So the first call to each tier measured a load from disk, not an inference — 1,066 ms against a 213 ms median for gen-0.6b, 2,346 against 679, 3,102 against 1,057. One call per tier out of a hundred and twenty, which is why no median moved and why nothing ever showed it.",
+      "caughtBy": "A second machine reporting the ordering effect, and then checking it here rather than adopting its numbers — three trials each way on this machine: three, three, then two models resident loading largest-first; one, one, one loading smallest-first.",
+      "cost": "No published median moves; the spike is a single call out of a hundred and twenty and the figures are medians. What was wrong is that one call in every tier measured a different quantity from the one the column names, and the file could not say which. Tiers are now warmed immediately before timing, models load largest-first, and residency is recorded in the latency provenance — not in the accuracy provenance, which it does not affect.",
+      "heldBy": "les modèles se chargent du plus gros au plus petit, et la résidence est constatée",
+      "caughtBeforeAnyoneSawIt": false
     }
   ]
 }
