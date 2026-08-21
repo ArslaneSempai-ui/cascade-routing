@@ -701,6 +701,56 @@
       "note": "Sommer les percentiles par champ n'est pas une borne supérieure du percentile du total : elle sous-estime sur au moins un palier. Un lecteur qui prendrait le p90 publié pour un pire cas se tromperait du côté qui coûte.",
       "limite": "Le p90 « réel » est estimé sur 30 documents, donc le vingt-septième d'entre eux : imprécis par construction. Ce bloc établit que les deux compositions diffèrent et dans quel ordre de grandeur, pas la valeur exacte de l'écart. Et il est mesuré sur le corpus dur, seul endroit où chaque durée est enregistrée."
     },
+    "escalationCeiling": {
+      "baselineMsPerDocument": 967.7,
+      "ceilingMsPerDocument": 2000,
+      "tierWorthEscalatingTo": "gen-8b",
+      "composition": "sum of per-field medians — the same composition on both durations",
+      "perField": [
+        {
+          "field": "name",
+          "escalatedTo": "gen-8b",
+          "msPerDocument": 2069,
+          "overrunMs": 69,
+          "overrunPctOfCeiling": 3.45,
+          "overCeiling": true
+        },
+        {
+          "field": "birth",
+          "escalatedTo": "gen-8b",
+          "msPerDocument": 2335.5,
+          "overrunMs": 335.5,
+          "overrunPctOfCeiling": 16.77,
+          "overCeiling": true
+        },
+        {
+          "field": "document",
+          "escalatedTo": "gen-8b",
+          "msPerDocument": 2218.1,
+          "overrunMs": 218.1,
+          "overrunPctOfCeiling": 10.9,
+          "overCeiling": true
+        },
+        {
+          "field": "country",
+          "escalatedTo": "gen-8b",
+          "msPerDocument": 1863.2,
+          "overrunMs": -136.8,
+          "overrunPctOfCeiling": -6.84,
+          "overCeiling": false
+        },
+        {
+          "field": "address",
+          "escalatedTo": "gen-8b",
+          "msPerDocument": 2325.6,
+          "overrunMs": 325.6,
+          "overrunPctOfCeiling": 16.28,
+          "overCeiling": true
+        }
+      ],
+      "everyFieldOverCeiling": false,
+      "note": "Escalader un seul champ vers `gen-8b` dépasse le plafond, quel que soit le champ. Ce n'est donc pas une escalade trop chère, c'est une escalade inadmissible. Les paliers qui tiennent sous le plafond ne complètent aucun dossier de plus, oracle compris."
+    },
     "perDoc": {
       "rules": {
         "p10": 0,
@@ -1098,7 +1148,7 @@
     ]
   },
   "retractions": {
-    "total": 23,
+    "total": 24,
     "caughtBeforeAnyoneSawIt": 9,
     "entries": [
       {
@@ -1214,6 +1264,11 @@
       {
         "date": "2026-08-21",
         "headline": "Reported four clean orderings from three repetitions, on a measurement whose single-call spread is fourfold.",
+        "caughtBeforeAnyoneSawIt": false
+      },
+      {
+        "date": "2026-08-21",
+        "headline": "Said escalation to gen-8b breaks the ceiling for any field. One field fits, and escalating it gains twenty-six of a hundred and fifty.",
         "caughtBeforeAnyoneSawIt": false
       }
     ]

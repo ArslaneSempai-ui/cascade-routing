@@ -419,6 +419,43 @@ function compositionMesuree() {
   };
 }
 
+/**
+ * Ce qu'une escalade d'un seul champ coûte, contre le plafond.
+ *
+ * Le total de base et le total escaladé viennent tous deux de la **même** composition — somme
+ * des médianes par champ — parce que comparer deux durées obtenues autrement ne compare rien.
+ * Et l'escalade est chiffrée **par champ** : escalader `birth` et escalader `address` ne coûtent
+ * pas la même chose, et un chiffre unique le cacherait.
+ */
+function plafondEtEscalade(p: Profiles, optimum: ReturnType<typeof optimiseExtraction>) {
+  if (!optimum) return null;
+  const cible: TierName = "gen-8b";
+  if (!p.extraction[cible]) return null;
+  const base = FIELDS.reduce((s, c) => s + p.extraction[optimum.routing[c]][c].latency, 0);
+  const plafond = ASSUMPTIONS.latencyBudgetMs;
+  const parChamp = FIELDS.map((c) => {
+    const total = base + p.extraction[cible][c].latency;
+    return {
+      field: c, escalatedTo: cible,
+      msPerDocument: Number(total.toFixed(1)),
+      overrunMs: Number((total - plafond).toFixed(1)),
+      overrunPctOfCeiling: Number((100 * (total - plafond) / plafond).toFixed(2)),
+      overCeiling: total > plafond,
+    };
+  });
+  return {
+    baselineMsPerDocument: Number(base.toFixed(1)),
+    ceilingMsPerDocument: plafond,
+    tierWorthEscalatingTo: cible,
+    composition: "sum of per-field medians — the same composition on both durations",
+    perField: parChamp,
+    everyFieldOverCeiling: parChamp.every((x) => x.overCeiling),
+    note: "Escalader un seul champ vers `gen-8b` dépasse le plafond, quel que soit le champ. "
+      + "Ce n'est donc pas une escalade trop chère, c'est une escalade inadmissible. Les paliers "
+      + "qui tiennent sous le plafond ne complètent aucun dossier de plus, oracle compris.",
+  };
+}
+
 function decomposeErreurs(p: Profiles, routing: Routing) {
   const perThousand: Record<string, { tier: TierName; blank: number | null; wrong: number | null }> = {};
   let couverts = 0;
@@ -641,6 +678,15 @@ export function construire(p: Profiles): unknown {
        */
       composition: "sum of per-field percentiles",
       compositionCheck: compositionMesuree(),
+      /*
+       * Le plafond, et de combien une seule escalade le dépasse.
+       *
+       * La page ne peut pas publier le résultat d'escalade sans ces valeurs, et les taper à la
+       * main est la faute qu'on retire d'elle depuis ce matin. La composition est émise avec
+       * elles : sur une marge de soixante-neuf millisecondes, laquelle des deux compositions a
+       * produit les deux durées est la première question d'un lecteur attentif.
+       */
+      escalationCeiling: plafondEtEscalade(p, optimum),
       perDoc: Object.fromEntries(paliers.map((t) => [t, dispersion(p, t)])),
       routed: optimum === null ? null : (() => {
         const somme = (cle: "latencyP10" | "latency" | "latencyP90") =>

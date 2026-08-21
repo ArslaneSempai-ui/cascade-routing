@@ -238,6 +238,17 @@
       "heldBy": null,
       "notHeld": "No test holds this one. Nothing in a repository can decide that a sample is too small for the claim being made of it; only reporting the spread beside the median does, which is what the previous version omitted.",
       "caughtBeforeAnyoneSawIt": false
+    },
+    {
+      "date": "2026-08-21",
+      "headline": "Said escalation to gen-8b breaks the ceiling for any field. One field fits, and escalating it gains twenty-six of a hundred and fifty.",
+      "claimed": "That escalating a single field to gen-8b costs 2,069 ms against a 2,000 ms ceiling and is therefore inadmissible — 'for a single field on any document' — and that escalation buys nothing.",
+      "actually": "Four of five fields, not five. The recommended routing sends `country` to `rules`, whose latency is nil, so escalating it costs only gen-8b's own time: 1,863 ms, a hundred and thirty-seven under the ceiling. And that one admissible escalation gains twenty-six fields of a hundred and fifty — 44 to 70, paired 0–26, p = 3e-8, Wilson intervals that do not touch — for thirty pence per thousand more. It gains no whole document, because the other four fields keep failing. So escalation buys fields within the budget and does not buy files, which is narrower and truer than what was written.",
+      "caughtBy": "Emitting the ceiling figure per field because the page asked for it, instead of quoting the single field the earlier measurement happened to use.",
+      "cost": "A sentence in a report generalising from one field to all five. The whole-document conclusion stands; the claim that escalation is inadmissible does not.",
+      "heldBy": null,
+      "notHeld": "No test holds this one. What caught it was emitting per field rather than in aggregate — an aggregate that hides a case is not something a test can detect without being told which case to look for.",
+      "caughtBeforeAnyoneSawIt": false
     }
   ]
 }
