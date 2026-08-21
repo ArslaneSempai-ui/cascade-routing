@@ -5,16 +5,16 @@
   "decoupage": "hard-corpus",
   "cas": 44,
   "champs": 164,
-  "mesureLe": "2026-08-21T16:00:02.221Z",
+  "mesureLe": "2026-08-21T16:59:25.974Z",
   "code": {
-    "commit": "f8f27a3",
+    "commit": "1d1eeb1",
     "sale": false
   },
   "charge": {
-    "externalBefore": 2.29,
+    "externalBefore": 1.75,
     "coeurs": 10
   },
-  "journal": "tentatives/2026-08-21T15-54-10-139Z-dur.jsonl",
+  "journal": "tentatives/2026-08-21T16-54-14-816Z-dur.jsonl",
   "paliers": {
     "rules": {
       "clean": 30,
@@ -142,6 +142,55 @@
         }
       }
     }
+  },
+  "parDocument": {
+    "rules": {
+      "entiers": 0,
+      "sur": 30,
+      "tauxDocument": 0,
+      "lesquels": []
+    },
+    "small": {
+      "entiers": 0,
+      "sur": 30,
+      "tauxDocument": 0,
+      "lesquels": []
+    },
+    "large": {
+      "entiers": 0,
+      "sur": 30,
+      "tauxDocument": 0,
+      "lesquels": []
+    },
+    "gen-0.6b": {
+      "entiers": 0,
+      "sur": 30,
+      "tauxDocument": 0,
+      "lesquels": []
+    },
+    "gen-4b": {
+      "entiers": 1,
+      "sur": 30,
+      "tauxDocument": 0.0333,
+      "lesquels": [
+        "documents-malformes#R3"
+      ]
+    },
+    "gen-8b": {
+      "entiers": 1,
+      "sur": 30,
+      "tauxDocument": 0.0333,
+      "lesquels": [
+        "documents-malformes#M3"
+      ]
+    }
+  },
+  "plafondDuRoutageParDocument": {
+    "oracle": 2,
+    "sur": 30,
+    "meilleurPalierSeul": 1,
+    "gainDeLOracle": 1,
+    "quoi": "L'oracle choisit après coup le meilleur palier pour chaque document. Il est irréalisable et donne le plafond de ce qu'un routage par document peut rapporter. Le mesurer coûte une requête ; l'écrire coûterait un routeur."
   },
   "limite": "Aucun taux d'ici ne se compare à un taux du corpus propre : ce ne sont pas les mêmes documents ni la même règle de notation. La baisse est attendue et voulue."
 }

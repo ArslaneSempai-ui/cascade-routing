@@ -648,53 +648,53 @@
     "composition": "sum of per-field percentiles",
     "compositionCheck": {
       "measured": true,
-      "from": "tentatives/2026-08-21T15-54-10-139Z-dur.jsonl",
+      "from": "tentatives/2026-08-21T16-54-14-816Z-dur.jsonl",
       "corpus": "hard-corpus",
       "perTier": [
         {
           "tier": "gen-0.6b",
           "documents": 30,
           "sumOfFieldPercentilesMs": {
-            "p10": 948,
-            "median": 1082,
-            "p90": 1244
+            "p10": 891,
+            "median": 1012,
+            "p90": 1512
           },
           "percentilesOfRealTotalMs": {
-            "p10": 1025,
-            "median": 1080,
-            "p90": 1196
+            "p10": 929,
+            "median": 1031,
+            "p90": 1465
           },
-          "p90ErrorPct": 4
+          "p90ErrorPct": 3.2
         },
         {
           "tier": "gen-4b",
           "documents": 30,
           "sumOfFieldPercentilesMs": {
-            "p10": 2948,
-            "median": 3421,
-            "p90": 4252
+            "p10": 2629,
+            "median": 3038,
+            "p90": 3684
           },
           "percentilesOfRealTotalMs": {
-            "p10": 3124,
-            "median": 3404,
-            "p90": 4513
+            "p10": 2796,
+            "median": 3013,
+            "p90": 3820
           },
-          "p90ErrorPct": -5.8
+          "p90ErrorPct": -3.6
         },
         {
           "tier": "gen-8b",
           "documents": 30,
           "sumOfFieldPercentilesMs": {
-            "p10": 3817,
-            "median": 5166,
-            "p90": 7551
+            "p10": 3374,
+            "median": 4458,
+            "p90": 6142
           },
           "percentilesOfRealTotalMs": {
-            "p10": 4261,
-            "median": 5297,
-            "p90": 7260
+            "p10": 3740,
+            "median": 4526,
+            "p90": 6120
           },
-          "p90ErrorPct": 4
+          "p90ErrorPct": 0.4
         }
       ],
       "conservative": false,
@@ -1098,7 +1098,7 @@
     ]
   },
   "retractions": {
-    "total": 20,
+    "total": 21,
     "caughtBeforeAnyoneSawIt": 9,
     "entries": [
       {
@@ -1199,6 +1199,11 @@
       {
         "date": "2026-08-21",
         "headline": "Every generative tier's first timed call was a model reload, for the whole life of this repository.",
+        "caughtBeforeAnyoneSawIt": false
+      },
+      {
+        "date": "2026-08-21",
+        "headline": "Counted a one-field case as a whole document, reported twelve where there is one, and drew the opposite conclusion.",
         "caughtBeforeAnyoneSawIt": false
       }
     ]

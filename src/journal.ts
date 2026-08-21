@@ -222,20 +222,44 @@ export function apparie(
  * 95 % donnent entre 75 % et 95 % de dossiers propres selon que les erreurs se groupent ou
  * non, et rien dans les moyennes ne dit laquelle. C'est l'acheteur qui voit ce chiffre-là.
  */
-export function parDocument(tentatives: readonly Tentative[], s: { tier: string; phrasing?: string }) {
+export function parDocument(
+  tentatives: readonly Tentative[],
+  s: { tier: string; phrasing?: string; champsRequis?: number },
+) {
   const docs = new Map<string, Tentative[]>();
   for (const t of tentatives) {
     if (t.tier !== s.tier) continue;
     if (s.phrasing !== undefined && t.phrasing !== s.phrasing) continue;
     (docs.get(t.caseId) ?? docs.set(t.caseId, []).get(t.caseId)!).push(t);
   }
+  /*
+   * Un document n'est entier que s'il porte tous ses champs.
+   *
+   * Sans `champsRequis`, un cas où un seul champ est déclaré comptait comme « dossier entier »
+   * dès que ce champ était juste — et sur un corpus qui mêle des cas à cinq champs et des cas
+   * ambigus à un seul, ça a rendu 12 dossiers entiers là où il y en a 1. Le chiffre publié
+   * était quatre fois trop grand et la conclusion qu'on en tirait était l'inverse de la vraie.
+   *
+   * Le compte des documents écartés est rendu, jamais tu : écarter en silence est la faute
+   * qu'on vient de payer.
+   */
+  const complets = new Map<string, Tentative[]>();
+  let ecartes = 0;
+  for (const [id, champs] of docs) {
+    if (s.champsRequis !== undefined && champs.length !== s.champsRequis) { ecartes++; continue; }
+    complets.set(id, champs);
+  }
   let propres = 0;
-  for (const [, champs] of docs) if (champs.every((t) => t.outcome === "clean")) propres++;
+  for (const [, champs] of complets) if (champs.every((t) => t.outcome === "clean")) propres++;
   const parChamp = [...docs.values()].flat();
+  const tailles = [...new Set([...docs.values()].map((c) => c.length))].sort((a, b) => a - b);
   return {
-    documents: docs.size, propres,
-    tauxDocument: docs.size ? propres / docs.size : null,
+    documents: complets.size, propres, ecartes,
+    champsParDocument: tailles,
+    melange: tailles.length > 1 && s.champsRequis === undefined,
+    tauxDocument: complets.size ? propres / complets.size : null,
     tauxChamp: parChamp.length ? parChamp.filter((t) => t.outcome === "clean").length / parChamp.length : null,
+    lesquels: [...complets].filter(([, c]) => c.every((t) => t.outcome === "clean")).map(([k]) => k).sort(),
   };
 }
 

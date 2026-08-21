@@ -427,3 +427,42 @@ test("les modèles se chargent du plus gros au plus petit, et la résidence est 
   assert.ok(/latency:[^;]*residence/.test(bloc),
     "le bloc de latence ne porte pas la résidence.");
 });
+
+/*
+ * Un document n'est entier que s'il porte tous ses champs.
+ *
+ * Sur un corpus qui mêle des cas à cinq champs et des cas ambigus à un seul, compter « entier »
+ * comme « tous les champs enregistrés sont justes » a rendu douze dossiers entiers là où il y en
+ * a un. Le chiffre était douze fois trop grand, et la conclusion qu'on en tirait — deux paliers
+ * qui sauvent les mêmes documents — était l'inverse de la vraie : ils n'en partagent aucun.
+ */
+test("un cas à un seul champ ne compte pas comme un dossier entier", () => {
+  const t = (caseId: string, champs: [string, Tentative["outcome"]][]): Tentative[] =>
+    champs.map(([field, outcome]) => ({
+      run: "r", tier: "gen-4b", field, caseId, phrasing: "reference", split: "hard-corpus",
+      outcome, ms: 1, value: "", expected: "",
+    }));
+
+  const rows = [
+    ...t("complet-juste", [["name", "clean"], ["birth", "clean"], ["document", "clean"],
+      ["country", "clean"], ["address", "clean"]]),
+    ...t("complet-rate", [["name", "clean"], ["birth", "wrong"], ["document", "clean"],
+      ["country", "clean"], ["address", "clean"]]),
+    ...t("ambigu", [["birth", "clean"]]),      // un seul champ déclaré
+  ];
+
+  const laxiste = parDocument(rows, { tier: "gen-4b" });
+  assert.equal(laxiste.propres, 2, "sans exigence de champs, le cas à un champ passe pour entier");
+  assert.equal(laxiste.melange, true,
+    "le mélange de tailles de documents doit être signalé quand rien ne l'exclut");
+
+  const strict = parDocument(rows, { tier: "gen-4b", champsRequis: 5 });
+  assert.equal(strict.documents, 2, "seuls les documents à cinq champs sont comptés");
+  assert.equal(strict.propres, 1, "un seul document sort entier");
+  assert.equal(strict.ecartes, 1, "le document écarté est compté, pas passé sous silence");
+  assert.deepEqual(strict.lesquels, ["complet-juste"]);
+  assert.equal(strict.melange, false);
+
+  /* Le taux par champ ne change pas : il porte sur toutes les tentatives, entières ou non. */
+  assert.equal(laxiste.tauxChamp, strict.tauxChamp);
+});

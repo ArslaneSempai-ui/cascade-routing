@@ -206,6 +206,16 @@
       "cost": "No published median moves; the spike is a single call out of a hundred and twenty and the figures are medians. What was wrong is that one call in every tier measured a different quantity from the one the column names, and the file could not say which. Tiers are now warmed immediately before timing, models load largest-first, and residency is recorded in the latency provenance — not in the accuracy provenance, which it does not affect.",
       "heldBy": "les modèles se chargent du plus gros au plus petit, et la résidence est constatée",
       "caughtBeforeAnyoneSawIt": false
+    },
+    {
+      "date": "2026-08-21",
+      "headline": "Counted a one-field case as a whole document, reported twelve where there is one, and drew the opposite conclusion.",
+      "claimed": "That gen-4b and gen-8b each complete twelve whole documents of forty-four, eleven of them the same — so the two tiers fail on the same documents, the nine-point field gap scatters across fields that never complete a file, and per-document routing would gain one document in forty-four.",
+      "actually": "Each completes one whole document of thirty, and they share none. gen-4b completes R3, gen-8b completes M3. The count treated a document as whole when every recorded field was correct, on a corpus mixing thirty five-field cases with fourteen ambiguous cases declaring one field each — so any ambiguous case with its single field right counted as a complete document. Twelvefold too large, and the conclusion inverted: the two tiers do not save the same documents, they save disjoint ones. Neither figure supports a rate — one per tier is far below this repository's floor of twenty — so what survives is the ceiling and not a recommendation.",
+      "caughtBy": "The pass printing 0/30 for four tiers where the earlier query had said 4, 4 and 10 — two numbers from the same data that could not both be right.",
+      "cost": "A committed message states the wrong figures and the wrong conclusion. It is corrected here and in rapports/2026-08-21-corpus-dur.md rather than rewritten, because rewriting history orphaned a relevé's provenance earlier today. No published rate moves: per-field rates, the paired verdicts, over-refusals and over-answers all count declared fields and are untouched.",
+      "heldBy": "un cas à un seul champ ne compte pas comme un dossier entier",
+      "caughtBeforeAnyoneSawIt": false
     }
   ]
 }
