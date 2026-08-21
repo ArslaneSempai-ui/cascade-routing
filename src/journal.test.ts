@@ -371,5 +371,15 @@ test("le pied de page d'une passe dit la charge pendant, et si les durées valen
     assert.ok("chargePendant" in lu.fin!, "le pied de page ne porte pas la charge pendant la passe");
     assert.ok("dureesUtilisables" in lu.fin!,
       "rien ne dit si les durées de cette passe valent quelque chose — c'est le champ qui manquait.");
+    /*
+     * Et le verdict ne doit pas se prononcer sur la charge que la passe produit elle-même.
+     *
+     * La première version jugeait `pic / cœurs`, et une passe générative dépasse le seuil par
+     * son propre travail : elle a rendu `false` au premier usage réel, machine par ailleurs au
+     * repos. Un champ qui condamne toujours ne renseigne pas plus qu'un champ absent.
+     */
+    assert.equal(lu.fin!.dureesUtilisables, true,
+      "une passe lancée à charge externe nulle est jugée inutilisable : le verdict porte sur "
+      + "la charge de la passe elle-même, pas sur ce qui la dérange.");
   } finally { rmSync(dossier, { recursive: true, force: true }); }
 });

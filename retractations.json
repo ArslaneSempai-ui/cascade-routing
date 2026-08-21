@@ -176,6 +176,16 @@
       "cost": "No published figure moves: the measurement loop visited both documents correctly and the rates are unaffected. Every paired and per-document query on this corpus ran on 159 fields instead of 164. Keys now carry their file, and the reader refuses two cases that share one.",
       "heldBy": "aucune clé de cas dur n'en désigne deux",
       "caughtBeforeAnyoneSawIt": true
+    },
+    {
+      "date": "2026-08-21",
+      "headline": "A guard against contaminated durations condemned every pass, including the clean ones, by judging each pass on the load it produces itself.",
+      "claimed": "That the hard-corpus re-run's durations were unusable — the footer said so, peak 5.11 on ten cores, 0.51 per core, over the threshold.",
+      "actually": "Nothing else was running. A generative pass loads the machine by itself, and measuring its durations against its own load condemns all of them. measure.ts separates external load before from total during for exactly this reason; the footer written an hour earlier conflated them. A field that always says no carries no more information than a missing field, and it is worse, because it looks like a verdict.",
+      "caughtBy": "Its first use on a real pass, which returned false on an idle machine.",
+      "cost": "None. It was built and broken within the same hour, and the first pass it judged was the one that exposed it. The footer now judges the external load before the pass and reports the rise during it without pretending to attribute it.",
+      "heldBy": "le pied de page d'une passe dit la charge pendant, et si les durées valent quelque chose",
+      "caughtBeforeAnyoneSawIt": true
     }
   ]
 }

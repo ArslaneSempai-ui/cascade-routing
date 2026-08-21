@@ -5,16 +5,16 @@
   "decoupage": "hard-corpus",
   "cas": 44,
   "champs": 164,
-  "mesureLe": "2026-08-21T15:49:05.873Z",
+  "mesureLe": "2026-08-21T16:00:02.221Z",
   "code": {
-    "commit": "9e6b098",
+    "commit": "f8f27a3",
     "sale": false
   },
   "charge": {
-    "externalBefore": 0.85,
+    "externalBefore": 2.29,
     "coeurs": 10
   },
-  "journal": "tentatives/2026-08-21T15-43-39-868Z-dur.jsonl",
+  "journal": "tentatives/2026-08-21T15-54-10-139Z-dur.jsonl",
   "paliers": {
     "rules": {
       "clean": 30,

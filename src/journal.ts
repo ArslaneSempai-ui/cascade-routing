@@ -118,8 +118,25 @@ export function ouvrirJournal(nom: string, conditions: Omit<Conditions, "platefo
           echantillons: echantillons.length,
           parCoeur: Number((pic / cpus().length).toFixed(2)),
         },
-        /* Le seuil est celui de measure.ts : au-delà, une durée n'est pas une mesure. */
-        dureesUtilisables: pic === null ? null : pic / cpus().length <= 0.5,
+        /*
+         * Le verdict porte sur la charge **externe**, pas sur le pic total.
+         *
+         * Première version : `pic / cœurs <= 0.5`. Elle a rendu `false` dès son premier usage
+         * réel, sur une passe où rien d'autre ne tournait — parce qu'une passe générative
+         * charge la machine par elle-même, et que juger ses durées sur sa propre charge les
+         * condamne toutes. measure.ts sépare `externalBefore` de `totalDuring` pour cette
+         * raison exacte ; ce pied de page les confondait.
+         *
+         * Ce qu'on peut dire honnêtement : la charge externe au départ, et de combien le total
+         * est monté. La montée ne se décompose pas — on ne sait pas ce qui, du travail de la
+         * passe ou d'un intrus, l'a produite — donc elle est rapportée et non jugée.
+         */
+        dureesUtilisables: conditions.chargeAvant / cpus().length <= 0.5,
+        montéePendant: pic === null ? null : Number((pic - conditions.chargeAvant).toFixed(2)),
+        commentLire: "`dureesUtilisables` juge la charge externe avant la passe. `chargePendant` "
+          + "inclut le travail de la passe elle-même et ne se décompose pas : une montée forte "
+          + "peut venir d'elle ou d'un autre travail lancé en route, et ce fichier ne sait pas "
+          + "lequel.",
       }) + "\n");
       return { lignes, chemin, chargePic: pic };
     },
