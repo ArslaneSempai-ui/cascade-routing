@@ -466,3 +466,44 @@ test("un cas à un seul champ ne compte pas comme un dossier entier", () => {
   /* Le taux par champ ne change pas : il porte sur toutes les tentatives, entières ou non. */
   assert.equal(laxiste.tauxChamp, strict.tauxChamp);
 });
+
+/*
+ * Un signal doit battre un signal au hasard, sinon ce n'est pas un signal.
+ *
+ * Sans témoin, n'importe quelle séparation paraît impressionnante : sur un corpus où une valeur
+ * sur deux est fausse, tirer au hasard donne déjà 50 % de précision. Ce test tient le témoin
+ * lui-même — un signal qui n'a rien appris ne doit pas être déclaré vainqueur.
+ */
+test("le témoin négatif atteint le taux d'erreur de base, et un signal aveugle ne le bat pas", async () => {
+  const { evaluerSignal } = await import("./signal.ts");
+  const ligne = (i: number, faux: boolean) => ({
+    run: "r", tier: "gen-4b", field: "name", caseId: `d${i}`, phrasing: "reference",
+    split: "hard-corpus", outcome: (faux ? "wrong" : "clean") as Tentative["outcome"],
+    ms: 1, value: `v${i}`, expected: "", faux,
+  });
+  /* Quatre cents valeurs, une sur quatre fausse. */
+  const lignes = Array.from({ length: 400 }, (_, i) => ligne(i, i % 4 === 0));
+
+  /* Un signal qui tire sans regarder : sa précision doit tomber sur le taux de base, 25 %. */
+  const aveugle = evaluerSignal(lignes, "aveugle", "tire un cas sur cinq sans rien regarder",
+    (t) => Number(t.caseId.slice(1)) % 5 === 1);
+  assert.ok(Math.abs((aveugle.precision ?? 0) - 0.25) < 0.1,
+    `un signal aveugle rend ${aveugle.precision} de précision au lieu du taux de base 0,25.`);
+  assert.equal(aveugle.bat, false,
+    "un signal qui ne regarde rien est déclaré meilleur que le hasard.");
+  assert.ok(Math.abs(aveugle.temoin.precisionMoyenne - 0.25) < 0.06,
+    `le témoin rend ${aveugle.temoin.precisionMoyenne} au lieu du taux de base 0,25.`);
+
+  /* Un signal parfait doit le battre, et ne coûter aucune fausse alerte. */
+  const parfait = evaluerSignal(lignes, "parfait", "tire exactement les fausses", (t) => t.outcome === "wrong");
+  assert.equal(parfait.precision, 1);
+  assert.equal(parfait.rappel, 1);
+  assert.equal(parfait.faussesAlertes, 0, "un signal parfait n'envoie personne en relecture pour rien.");
+  assert.equal(parfait.bat, true);
+
+  /* Et un signal qui ne tire jamais ne doit pas passer pour parfait faute de contre-exemple. */
+  const muet = evaluerSignal(lignes, "muet", "ne tire jamais", () => false);
+  assert.equal(muet.declenche, 0);
+  assert.equal(muet.precision, null, "un signal qui ne tire jamais n'a pas de précision de 100 %.");
+  assert.equal(muet.bat, null);
+});

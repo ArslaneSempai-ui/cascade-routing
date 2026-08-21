@@ -1,0 +1,115 @@
+{
+  "quoi": "Quels signaux annoncent une valeur fausse, sans la clé de réponses.",
+  "mesureLe": "2026-08-21T17:31:41.214Z",
+  "journal": "tentatives/2026-08-21T16-54-14-816Z-dur.jsonl",
+  "corpus": "hard-corpus",
+  "valeursNotees": 810,
+  "tauxDErreurDeBase": 0.5185,
+  "exclus": "les blancs — un blanc est déjà visible et ne demande aucun signal",
+  "signaux": [
+    {
+      "nom": "désaccord",
+      "description": "la valeur diffère de celle que rend la pluralité des autres paliers sur le même champ",
+      "declenche": 444,
+      "justes": 390,
+      "fausses": 420,
+      "precision": 0.7545,
+      "rappel": 0.7976,
+      "faussesAlertes": 109,
+      "tauxDeFaussesAlertes": 0.2795,
+      "temoin": {
+        "precisionMoyenne": 0.5184,
+        "rappelMoyen": 0.5481,
+        "tirages": 500
+      },
+      "bat": true
+    },
+    {
+      "nom": "forme",
+      "description": "la valeur ne passe pas la règle de forme déclarée pour son champ",
+      "declenche": 155,
+      "justes": 390,
+      "fausses": 420,
+      "precision": 0.8065,
+      "rappel": 0.2976,
+      "faussesAlertes": 30,
+      "tauxDeFaussesAlertes": 0.0769,
+      "temoin": {
+        "precisionMoyenne": 0.52,
+        "rappelMoyen": 0.1919,
+        "tirages": 500
+      },
+      "bat": true
+    },
+    {
+      "nom": "absente du document",
+      "description": "la valeur rendue n'apparaît pas dans le texte du document",
+      "declenche": 120,
+      "justes": 390,
+      "fausses": 420,
+      "precision": 0.925,
+      "rappel": 0.2643,
+      "faussesAlertes": 9,
+      "tauxDeFaussesAlertes": 0.0231,
+      "temoin": {
+        "precisionMoyenne": 0.5192,
+        "rappelMoyen": 0.1483,
+        "tirages": 500
+      },
+      "bat": true
+    },
+    {
+      "nom": "au moins un des trois",
+      "description": "l'un quelconque des trois signaux se déclenche",
+      "declenche": 474,
+      "justes": 390,
+      "fausses": 420,
+      "precision": 0.7637,
+      "rappel": 0.8619,
+      "faussesAlertes": 112,
+      "tauxDeFaussesAlertes": 0.2872,
+      "temoin": {
+        "precisionMoyenne": 0.5192,
+        "rappelMoyen": 0.586,
+        "tirages": 500
+      },
+      "bat": true
+    },
+    {
+      "nom": "au moins deux des trois",
+      "description": "deux signaux au moins se déclenchent ensemble",
+      "declenche": 213,
+      "justes": 390,
+      "fausses": 420,
+      "precision": 0.831,
+      "rappel": 0.4214,
+      "faussesAlertes": 36,
+      "tauxDeFaussesAlertes": 0.0923,
+      "temoin": {
+        "precisionMoyenne": 0.5167,
+        "rappelMoyen": 0.262,
+        "tirages": 500
+      },
+      "bat": true
+    },
+    {
+      "nom": "les trois",
+      "description": "les trois signaux se déclenchent ensemble",
+      "declenche": 32,
+      "justes": 390,
+      "fausses": 420,
+      "precision": 1,
+      "rappel": 0.0762,
+      "faussesAlertes": 0,
+      "tauxDeFaussesAlertes": 0,
+      "temoin": {
+        "precisionMoyenne": 0.5127,
+        "rappelMoyen": 0.0391,
+        "tirages": 500
+      },
+      "bat": true
+    }
+  ],
+  "laCleNEstPasNecessaireAuSignal": "Les trois signaux se calculent sur ce que le client possède : le document, la valeur rendue, et pour le premier une seconde opinion. La clé n'entre que dans la validation ci-dessus. C'est ce qui les rend transposables.",
+  "limite": "Mesuré sur un corpus de trente à quarante-quatre documents durs. Assez pour écarter un signal qui ne bat pas le hasard, pas assez pour estimer sa précision : un intervalle sur ces effectifs serait plus large que les écarts entre signaux."
+}

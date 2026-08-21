@@ -342,6 +342,7 @@ const commandes = (() => {
     ["tentatives", "query stored per-attempt outcomes — paired tests and clean rates, no GPU"],
     ["dur", "measure the hard corpus: broken documents, non-Latin scripts, ambiguous readings"],
     ["mur", "how far the exhaustive solver goes, in fields and tiers, measured"],
+    ["signal", "which key-free signals predict a wrong value, against a random control"],
     ["figures", "regenerate every table on this page from the frozen profile"],
     ["landing", "regenerate landing.json — the figures a published page reads, with their provenance"],
     ["dossier", "the validation file a reviewer signs"],

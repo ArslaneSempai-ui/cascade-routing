@@ -30,6 +30,7 @@ about two minutes.
 | `npm run tentatives` | query stored per-attempt outcomes — paired tests and clean rates, no GPU |
 | `npm run dur` | measure the hard corpus: broken documents, non-Latin scripts, ambiguous readings |
 | `npm run mur` | how far the exhaustive solver goes, in fields and tiers, measured |
+| `npm run signal` | which key-free signals predict a wrong value, against a random control |
 | `npm run figures` | regenerate every table on this page from the frozen profile |
 | `npm run landing` | regenerate landing.json — the figures a published page reads, with their provenance |
 | `npm run dossier` | the validation file a reviewer signs |
