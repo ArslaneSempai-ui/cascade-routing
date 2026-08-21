@@ -6,7 +6,8 @@
  */
 
 import { readProfiles } from "./measure.ts";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { join } from "node:path";
 import { INVENTORY } from "./inventory.ts";
 import { markdown } from "./provenance.ts";
 import { optimiseExtraction, optimiseClassification, budgetShadowPrice, latenceRepresentative, paliersMesures } from "./optimise.ts";
@@ -418,6 +419,26 @@ const finding = (() => {
     suivant() + melange;
 })();
 
+/**
+ * Le nombre de tests, compté plutôt qu'écrit.
+ *
+ * Le README portait « 54 tests », tapé à la main et enveloppé dans une marque de portfolio
+ * — `<!--p:portfolio.parDepot.cascade-->` — qui ne pointait plus sur rien depuis que `cascade`
+ * a quitté la liste des dépôts d'outils. Deux défauts superposés : un compteur d'un autre dépôt
+ * dans le README du produit, et un chiffre figé à 54 quand la suite en compte le double.
+ *
+ * Le compte se lit maintenant dans les fichiers de test, comme tout le reste de cette page.
+ */
+const tests = (() => {
+  const dossier = new URL(".", import.meta.url).pathname;
+  const fichiers = readdirSync(dossier).filter((n: string) => n.endsWith(".test.ts"));
+  const n = fichiers.reduce((a: number, f: string) =>
+    a + (readFileSync(join(dossier, f), "utf8").match(/^test\(/gm) ?? []).length, 0);
+  if (n < 20) throw new Error(`${n} tests comptés dans ${fichiers.length} fichier(s) : la lecture a échoué.`);
+  return `**${n} tests** across ${fichiers.length} files, counted from the sources rather than typed here.`;
+})();
+
 emit(new URL("../README.md", import.meta.url).pathname,
   { finding, extraction, classification, routing, shadow, gallery, baselines, provenance,
-    echelles, latence, egalites, fuite, deuxfaits, retractations, public: publicJeu, commandes });
+    echelles, latence, egalites, fuite, deuxfaits, retractations, public: publicJeu, commandes,
+    tests });
