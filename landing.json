@@ -749,6 +749,27 @@
         }
       ],
       "everyFieldOverCeiling": false,
+      "admissibleEscalation": {
+        "measured": true,
+        "corpus": "hard-corpus",
+        "escalatedField": "country",
+        "escalatedTo": "gen-8b",
+        "documents": 30,
+        "fields": 150,
+        "escalations": 30,
+        "fieldsCorrectBefore": 44,
+        "fieldsCorrectAfter": 70,
+        "paired": {
+          "gains": 26,
+          "losses": 0,
+          "decidable": true
+        },
+        "wholeDocumentsBefore": 0,
+        "wholeDocumentsAfter": 0,
+        "wholeDocumentsGained": 0,
+        "extraCostPerThousandDocuments": 0.2985,
+        "note": "Admissible, mesurable, et sans effet sur ce que le client consomme : l'exactitude par champ monte nettement, le nombre de dossiers livrables ne bouge pas."
+      },
       "fieldsOverCeiling": [
         "name",
         "birth",
@@ -758,7 +779,7 @@
       "fieldsUnderCeiling": [
         "country"
       ],
-      "note": "Escalader un champ vers `gen-8b` dépasse le plafond sur quatre champs sur cinq. `country` fait exception — le routage recommandé l'envoie à `rules`, dont la latence est nulle, donc le remplacer ne coûte que le temps de `gen-8b`. Cette escalade-là est donc admissible, et elle fait passer l'exactitude par champ de 44 à 70 sur cent cinquante (apparié 0–26) pour trente centimes de plus par millier. Elle ne complète aucun dossier entier de plus : les quatre autres champs continuent d'échouer."
+      "note": "Escalader un champ vers `gen-8b` dépasse le plafond sur tous les champs sauf `country` — voir `fieldsOverCeiling` et `fieldsUnderCeiling`. L'exception tient parce que le routage recommandé envoie `country` à `rules`, dont la latence est nulle : le remplacer ne coûte que le temps de `gen-8b`. Cette escalade-là est donc admissible, et `admissibleEscalation` dit ce qu'elle rapporte — l'exactitude par champ monte, le nombre de dossiers livrables ne bouge pas, parce que les autres champs continuent d'échouer."
     },
     "perDoc": {
       "rules": {

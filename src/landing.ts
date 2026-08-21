@@ -29,7 +29,10 @@ import { ASSUMPTIONS, UNITS, pricePerThousandExtractions, latency } from "./assu
 import { optimiseExtraction, evaluer, paliersMesures, pricePerThousandDocuments, justessePonderee } from "./optimise.ts";
 import { rate, CONFIANCE, distinguishable, pairedVerdict } from "./interval.ts";
 import { versLeBas } from "./sensitivity.ts";
-import { journaux, lireJournal } from "./journal.ts";
+import { journaux, lireJournal, issue } from "./journal.ts";
+import { normaliserReponse } from "./tiers.ts";
+import { FORME } from "./signal.ts";
+import { corpusDur } from "./corpus-dur.ts";
 
 import type { Field } from "./corpus.ts";
 import type { TierName } from "./paliers.ts";
@@ -450,14 +453,99 @@ function plafondEtEscalade(p: Profiles, optimum: ReturnType<typeof optimiseExtra
     composition: "sum of per-field medians — the same composition on both durations",
     perField: parChamp,
     everyFieldOverCeiling: parChamp.every((x) => x.overCeiling),
+    /*
+     * Ce que l'unique escalade admissible rapporte — dérivé, pas recopié.
+     *
+     * Ces chiffres vivaient dans la phrase en dessous, calculés à part. Une prose qui porte des
+     * nombres que les données ne portent pas est le défaut qu'on venait de corriger dans ce même
+     * objet une heure plus tôt ; les recopier en constantes l'aurait seulement déplacé.
+     */
+    admissibleEscalation: gainDeCountry(p, optimum, cible),
     fieldsOverCeiling: parChamp.filter((x) => x.overCeiling).map((x) => x.field),
     fieldsUnderCeiling: parChamp.filter((x) => !x.overCeiling).map((x) => x.field),
-    note: "Escalader un champ vers `gen-8b` dépasse le plafond sur quatre champs sur cinq. "
-      + "`country` fait exception — le routage recommandé l'envoie à `rules`, dont la latence est "
-      + "nulle, donc le remplacer ne coûte que le temps de `gen-8b`. Cette escalade-là est donc "
-      + "admissible, et elle fait passer l'exactitude par champ de 44 à 70 sur cent cinquante "
-      + "(apparié 0–26) pour trente centimes de plus par millier. Elle ne complète aucun dossier "
-      + "entier de plus : les quatre autres champs continuent d'échouer.",
+    /*
+     * La note décrit, les champs chiffrent.
+     *
+     * Sa version précédente portait les cinq nombres de l'escalade dans sa phrase, et eux seuls
+     * — donc illisibles par une machine, et libres de dériver du jour où les tentatives
+     * changeraient. Ce qui mérite d'être lu mérite d'être émis : ils sont dans
+     * `admissibleEscalation` et `perField`, et la prose n'en répète aucun.
+     */
+    note: "Escalader un champ vers `gen-8b` dépasse le plafond sur tous les champs sauf "
+      + "`country` — voir `fieldsOverCeiling` et `fieldsUnderCeiling`. L'exception tient parce "
+      + "que le routage recommandé envoie `country` à `rules`, dont la latence est nulle : le "
+      + "remplacer ne coûte que le temps de `gen-8b`. Cette escalade-là est donc admissible, et "
+      + "`admissibleEscalation` dit ce qu'elle rapporte — l'exactitude par champ monte, le "
+      + "nombre de dossiers livrables ne bouge pas, parce que les autres champs continuent "
+      + "d'échouer.",
+  };
+}
+
+/**
+ * Le gain de l'unique escalade qui tient sous le plafond, recalculé depuis les tentatives.
+ *
+ * Sans journal du corpus dur — un clone frais n'en a pas, `data/` est ignoré par git — la clé
+ * dit pourquoi elle est vide plutôt que de disparaître.
+ */
+function gainDeCountry(p: Profiles, optimum: ReturnType<typeof optimiseExtraction>, cible: TierName) {
+  if (!optimum) return null;
+  const f = journaux().filter((x) => x.includes("-dur.jsonl")).pop();
+  if (!f) return { measured: false, why: "aucun journal du corpus dur : `data/` n'est pas versionné, "
+    + "donc un clone frais n'a pas les tentatives d'où ce gain se calcule. `npm run dur` les produit." };
+
+  const { tentatives } = lireJournal(f);
+  const rep = new Map(tentatives.map((t) => [`${t.tier}|${t.caseId}|${t.field}`, t]));
+  const complets = corpusDur()
+    .filter((c) => Object.keys(c.attendus).length === FIELDS.length).map((c) => c.cle);
+  const textes = new Map(corpusDur().map((c) => [c.cle, c.texte]));
+
+  /* Les deux signaux gratuits, identiques à ceux du banc : blanc, forme, absence. */
+  const suspect = (t: { value: string; field: string; caseId: string }) => {
+    const v = normaliserReponse(t.value);
+    if (v.length === 0) return true;
+    const texte = textes.get(t.caseId);
+    if (texte !== undefined && !normaliserReponse(texte).includes(v)) return true;
+    const r = FORME[t.field];
+    return r !== undefined && !r(t.value);
+  };
+
+  let avant = 0, apres = 0, escalades = 0, gains = 0, pertes = 0;
+  let entiersAvant = 0, entiersApres = 0, champs = 0;
+  let coutAvant = 0, coutApres = 0;
+  for (const cas of complets) {
+    let okAvant = true, okApres = true;
+    for (const c of FIELDS) {
+      const base = rep.get(`${optimum.routing[c]}|${cas}|${c}`);
+      if (!base) { okAvant = okApres = false; continue; }
+      champs++;
+      const prixBase = pricePerThousandExtractions(optimum.routing[c], ASSUMPTIONS,
+        p.extraction[optimum.routing[c]][c].latency) / 1000;
+      coutAvant += prixBase; coutApres += prixBase;
+      let final = base;
+      if (c === "country" && suspect(base)) {
+        escalades++;
+        coutApres += pricePerThousandExtractions(cible, ASSUMPTIONS, p.extraction[cible][c].latency) / 1000;
+        final = rep.get(`${cible}|${cas}|${c}`) ?? base;
+      }
+      const a = base.outcome === "clean", b = final.outcome === "clean";
+      if (a) avant++; else okAvant = false;
+      if (b) apres++; else okApres = false;
+      if (a && !b) pertes++; else if (b && !a) gains++;
+    }
+    if (okAvant) entiersAvant++;
+    if (okApres) entiersApres++;
+  }
+  const v = pairedVerdict(gains, pertes);
+  return {
+    measured: true, corpus: "hard-corpus", escalatedField: "country", escalatedTo: cible,
+    documents: complets.length, fields: champs, escalations: escalades,
+    fieldsCorrectBefore: avant, fieldsCorrectAfter: apres,
+    paired: { gains, losses: pertes, decidable: v.decidable },
+    wholeDocumentsBefore: entiersAvant, wholeDocumentsAfter: entiersApres,
+    wholeDocumentsGained: entiersApres - entiersAvant,
+    extraCostPerThousandDocuments: Number((1000 * (coutApres - coutAvant) / complets.length).toFixed(4)),
+    note: "Admissible, mesurable, et sans effet sur ce que le client consomme : "
+      + "l'exactitude par champ monte nettement, le nombre de dossiers livrables ne bouge pas.",
   };
 }
 

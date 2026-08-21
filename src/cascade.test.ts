@@ -1369,6 +1369,23 @@ test("la prose du plafond nomme l'exception que ses chiffres portent", () => {
   assert.equal(bloc.everyFieldOverCeiling, dessous.length === 0,
     "`everyFieldOverCeiling` ne suit pas ses propres listes.");
 
+  /*
+   * La prose ne porte aucun chiffre que les champs ne portent pas.
+   *
+   * Sa version précédente énonçait le gain de l'escalade — cinq nombres — dans sa phrase et
+   * nulle part ailleurs. Une prose lisible et des données muettes obligent à recopier à la
+   * main, ce qui est la faute qu'on retire de la page depuis deux jours, et les nombres d'une
+   * phrase ne se recalculent pas quand les mesures changent.
+   *
+   * La règle est nette : la note décrit, les champs chiffrent. Les identifiants de palier
+   * comme `gen-8b` sont des noms, pas des mesures, et ne comptent pas.
+   */
+  const sansNoms = bloc.note.replace(/gen-[0-9.]+b/g, "");
+  const chiffres = sansNoms.match(/\d+(?:[.,]\d+)?/g) ?? [];
+  assert.deepEqual(chiffres, [],
+    `la note du plafond porte des chiffres — ${chiffres.join(", ")} — que le lecteur devra recopier.\n`
+    + `  → ils appartiennent à \`admissibleEscalation\` ou \`perField\`, pas à une phrase.`);
+
   /* Et s'il y a une exception, la prose doit la nommer. C'est la phrase qu'on recopie. */
   if (dessous.length > 0) {
     for (const champ of dessous) {
