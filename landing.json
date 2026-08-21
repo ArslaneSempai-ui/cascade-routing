@@ -1098,7 +1098,7 @@
     ]
   },
   "retractions": {
-    "total": 22,
+    "total": 23,
     "caughtBeforeAnyoneSawIt": 9,
     "entries": [
       {
@@ -1210,6 +1210,11 @@
         "date": "2026-08-21",
         "headline": "Reported a winning routing that the relevé did not contain and the latency ceiling forbids — inside the report proving escalation fails on that ceiling.",
         "caughtBeforeAnyoneSawIt": false
+      },
+      {
+        "date": "2026-08-21",
+        "headline": "Reported four clean orderings from three repetitions, on a measurement whose single-call spread is fourfold.",
+        "caughtBeforeAnyoneSawIt": false
       }
     ]
   },
@@ -1229,7 +1234,7 @@
     "Le corpus est synthétique et écrit par l'auteur, sur une coupe held-out. Cela protège contre l'auto-notation, pas contre l'écart avec de vrais documents.",
     "Les paliers ne sont pas mesurés au même n : les encodeurs sur l'échantillon complet, les génératifs sur ses premiers cas seulement. Chaque chiffre porte son propre n.",
     "Aucun prix n'est mesuré. Tous sortent de `assumptions`, que le lecteur remplace.",
-    "Le routage est calibré à la taille de document du corpus — 166 caractères en moyenne, environ 185 jetons d'entrée. Le rapport de coût entre paliers bouge avec la longueur : mesuré ici entre ×4,1 et ×11,8 de `gen-0.6b` à `gen-8b` selon l'entrée, sur trois répétitions par point, ce qui suffit à établir que le rapport bouge et pas à en donner la forme. Un client aux documents nettement plus longs doit recalibrer.",
+    "Le routage est calibré à la taille de document du corpus — 166 caractères en moyenne, environ 185 jetons d'entrée — et le rapport de coût entre paliers bouge avec la longueur d'entrée. Deux balayages du 21 août donnent des rapports différents sur les mêmes points, parce que la dispersion d'un appel isolé y est large : à 200 jetons, `gen-0.6b` va de 167 à 802 ms sur cinq répétitions. Ce qui est établi est que le rapport bouge et qu'un client aux documents nettement plus longs doit recalibrer ; aucune valeur de ce rapport n'est publiée, faute d'un échantillon qui la tienne. Les latences par palier du relevé, elles, portent sur cent vingt appels et leur p10/p90.",
     "Le prix des paliers génératifs est du temps machine, donc il dépend de la configuration de l'appel autant que du modèle. La sortie est contrainte par un schéma JSON : sans cette contrainte, `gen-4b` consomme tous les jetons autorisés et raisonne à voix haute — 644 ms deviennent 5 412 sur vingt extractions mesurées le 21 août, soit un facteur 8,4 sur le prix. Le prix publié suppose la contrainte.",
     "La latence est mesurée un élément à la fois sur une machine au repos ; rien ici ne dit ce qu'elle devient sous charge.",
     "Ces chiffres sont ceux de la chaîne d'extraction. La chaîne de classification range les paliers dans l'ordre inverse, ce qui interdit d'en tirer un classement général.",

@@ -227,6 +227,17 @@
       "heldBy": null,
       "notHeld": "No test holds this one. Nothing in a repository can check that a sentence in a report corresponds to a number in a file; only reading the two against each other does, which is how it was found.",
       "caughtBeforeAnyoneSawIt": false
+    },
+    {
+      "date": "2026-08-21",
+      "headline": "Reported four clean orderings from three repetitions, on a measurement whose single-call spread is fourfold.",
+      "claimed": "That there is no tier-ordering crossover at any input length here — gen-4b faster than gen-8b at all four sizes measured — and that the cost ratio between the smallest and largest tier runs from ×4.1 to ×11.8.",
+      "actually": "Re-measured with five repetitions and the ranges printed, the spread on a single call swamps the effect being reported: gen-0.6b at 200 input tokens runs 167 to 802 ms, a factor of nearly five. At 902 tokens the medians now put gen-4b marginally slower than gen-8b — 2,385 against 2,308 — with ranges of 1,403–2,898 and 2,272–4,010 that overlap almost entirely. Neither the crossover nor its absence is established at that point. The ratio range moved from ×4.1–×11.8 to ×4.5–×9.7 between the two sweeps, so the first range was noise quoted as a measurement.",
+      "caughtBy": "The coordinating session reporting that it had run a Chrome render during the pass, which prompted a re-measure to find out whether the numbers were contaminated. They were unstable for a simpler reason: three repetitions.",
+      "cost": "A caveat in landing.json quoting a ratio range that does not reproduce. Replaced: the caveat now states that the ratio moves and that no value of it is published, with the reason. The ordering claim is withdrawn at the middle sizes and kept only where the margins are large.",
+      "heldBy": null,
+      "notHeld": "No test holds this one. Nothing in a repository can decide that a sample is too small for the claim being made of it; only reporting the spread beside the median does, which is what the previous version omitted.",
+      "caughtBeforeAnyoneSawIt": false
     }
   ]
 }
