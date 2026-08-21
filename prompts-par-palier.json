@@ -42,5 +42,10 @@
     "gen-0.6b": "A-sans-exemple",
     "gen-4b": "A-sans-exemple",
     "gen-8b": "B-exemple-apparie"
+  },
+  "refutePar": {
+    "fichier": "departage-reglage.json",
+    "quoi": "`retenu` ci-dessous a été obtenu en prenant le maximum de cinq taux, sans test. Remesuré en apparié le 21 août, aucun des trois vainqueurs ne se sépare de son second : gen-0.6b 37–25, gen-4b 2–1, gen-8b 3–0. Aucune formulation n'est retenue pour aucun palier. Les taux de `surDev` restent valides — ils se sont reproduits au dixième —, c'est leur classement qui ne l'est pas.",
+    "mesureLe": "2026-08-21T12:33:05.915Z"
   }
 }

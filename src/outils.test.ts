@@ -245,3 +245,48 @@ test("la paire à départager est le vainqueur et son second, pas une paire comm
   assert.equal(PEUT_CONFIRMER, false,
     "un départage contre le second ne rend pas une formulation retenue : l'indiscernabilité n'est pas transitive");
 });
+
+/*
+ * Aucune formulation n'est déclarée retenue sans départage apparié.
+ *
+ * Le relevé de réglage écrivait `retenu` comme un fait, obtenu en prenant le maximum de cinq
+ * taux. Trois vainqueurs, trois marges de 12, 1 et 3 extractions sur 600, zéro test. Remesurés,
+ * aucun ne se sépare de son second. Ce test empêche qu'un fichier de ce dépôt renomme à nouveau
+ * un maximum en résultat : soit le départage est dans le fichier, soit une réfutation y renvoie.
+ */
+test("aucun réglage ne déclare une formulation retenue sans l'avoir départagée", () => {
+  const f = new URL("../prompts-par-palier.json", import.meta.url).pathname;
+  if (!existsSync(f)) return;
+  const reglage = JSON.parse(readFileSync(f, "utf8")) as {
+    retenu?: Record<string, string | null>;
+    depart?: Record<string, { decidable: boolean }>;
+    refutePar?: { fichier: string; quoi: string };
+  };
+
+  const nommes = Object.entries(reglage.retenu ?? {}).filter(([, v]) => v !== null);
+  let verifies = 0;
+  for (const [palier] of nommes) {
+    if (reglage.depart?.[palier]) {
+      assert.equal(reglage.depart[palier]!.decidable, true,
+        `${palier} nomme une formulation retenue que son propre départage ne tranche pas.`);
+      verifies++;
+      continue;
+    }
+    /* Pas de départage dans le fichier : il faut alors une réfutation qui pointe vers la mesure. */
+    assert.ok(reglage.refutePar?.fichier,
+      `${palier} déclare une formulation retenue sans départage et sans réfutation.\n`
+      + `  → soit le relevé est régénéré par un script qui départage,\n`
+      + `    soit il porte « refutePar » vers la mesure qui l'a réfuté.`);
+    const r = new URL(`../${reglage.refutePar!.fichier}`, import.meta.url).pathname;
+    assert.ok(existsSync(r), `« refutePar » désigne ${reglage.refutePar!.fichier}, qui n'existe pas.`);
+    const preuve = JSON.parse(readFileSync(r, "utf8")) as { resultats: Record<string, { decidable: boolean }> };
+    assert.ok(preuve.resultats[palier], `la réfutation ne dit rien de ${palier}.`);
+    assert.equal(preuve.resultats[palier]!.decidable, false,
+      `la réfutation de ${palier} montre un départage : ce n'est plus une réfutation.`);
+    verifies++;
+  }
+  assert.ok(verifies === nommes.length,
+    `${verifies} palier(s) vérifié(s) sur ${nommes.length} nommé(s).`);
+  assert.ok(nommes.length > 0 || reglage.refutePar,
+    "aucune formulation nommée et aucune réfutation : le relevé ne dit plus rien, et ce test ne vérifie rien.");
+});
