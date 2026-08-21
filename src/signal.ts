@@ -21,6 +21,7 @@ import { isMain } from "./cli.ts";
 import { journaux, lireJournal } from "./journal.ts";
 import { normaliserReponse, GENERATIFS_PUBLICS } from "./tiers.ts";
 import { rate, ENOUGH } from "./interval.ts";
+import { draw } from "./corpus.ts";
 import { corpusDur } from "./corpus-dur.ts";
 import { casAmbigus } from "./mesurer-dur.ts";
 
@@ -75,14 +76,15 @@ export type Verdict = {
  * construction une précision égale au taux d'erreur de base — donc si le nôtre ne le dépasse
  * pas, il ne sait rien que la moyenne ne sache déjà.
  */
-function temoin(n: number, fausses: number, declenche: number, tirages = 500) {
+function temoin(n: number, fausses: number, declenche: number, tirages = 500, graine = 20260821) {
+  const hasard = draw(graine);
   let p = 0, r = 0;
   for (let t = 0; t < tirages; t++) {
     /* Un tirage sans remise de `declenche` indices parmi `n`, dont `fausses` sont fausses. */
     let pris = 0, prisFaux = 0;
     for (let i = 0; i < n && pris < declenche; i++) {
       const restants = n - i, aPrendre = declenche - pris;
-      if (Math.random() < aPrendre / restants) { pris++; if (i < fausses) prisFaux++; }
+      if (hasard() < aPrendre / restants) { pris++; if (i < fausses) prisFaux++; }
     }
     p += pris ? prisFaux / pris : 0;
     r += fausses ? prisFaux / fausses : 0;
@@ -230,8 +232,9 @@ if (isMain(import.meta)) {
     const gagnesParSignal = designes.filter((e) => e.bas!.outcome !== "clean" && e.haut!.outcome === "clean").length;
     let hasard = 0;
     const tirages = 500;
+    const alea = draw(20260821);
     for (let k = 0; k < tirages; k++) {
-      const melange = [...communs].sort(() => Math.random() - 0.5).slice(0, designes.length);
+      const melange = [...communs].sort(() => alea() - 0.5).slice(0, designes.length);
       hasard += melange.filter((e) => e.bas!.outcome !== "clean" && e.haut!.outcome === "clean").length;
     }
     return {

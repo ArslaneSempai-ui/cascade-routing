@@ -1,6 +1,6 @@
 {
   "quoi": "Quels signaux annoncent une valeur inutilisable, sans la clé de réponses.",
-  "mesureLe": "2026-08-21T17:37:44.092Z",
+  "mesureLe": "2026-08-21T17:55:58.940Z",
   "journal": "tentatives/2026-08-21T16-54-14-816Z-dur.jsonl",
   "corpus": "hard-corpus",
   "denominateur": "toute valeur notée par un palier sur le corpus dur, blancs compris",
@@ -21,8 +21,8 @@
     "faussesAlertes": 0,
     "tauxDeFaussesAlertes": 0,
     "temoin": {
-      "precisionMoyenne": 0.6035,
-      "rappelMoyen": 0.6035,
+      "precisionMoyenne": 0.603,
+      "rappelMoyen": 0.603,
       "tirages": 500
     },
     "bat": true
@@ -40,8 +40,8 @@
       "faussesAlertes": 0,
       "tauxDeFaussesAlertes": 0,
       "temoin": {
-        "precisionMoyenne": 0.6035,
-        "rappelMoyen": 0.6035,
+        "precisionMoyenne": 0.603,
+        "rappelMoyen": 0.603,
         "tirages": 500
       },
       "bat": true
@@ -58,8 +58,8 @@
       "faussesAlertes": 36,
       "tauxDeFaussesAlertes": 0.0923,
       "temoin": {
-        "precisionMoyenne": 0.6036,
-        "rappelMoyen": 0.2134,
+        "precisionMoyenne": 0.6029,
+        "rappelMoyen": 0.2131,
         "tirages": 500
       },
       "bat": true
@@ -76,8 +76,8 @@
       "faussesAlertes": 109,
       "tauxDeFaussesAlertes": 0.2795,
       "temoin": {
-        "precisionMoyenne": 0.6032,
-        "rappelMoyen": 0.6276,
+        "precisionMoyenne": 0.603,
+        "rappelMoyen": 0.6274,
         "tirages": 500
       },
       "bat": true
@@ -94,8 +94,8 @@
       "faussesAlertes": 7,
       "tauxDeFaussesAlertes": 0.0179,
       "temoin": {
-        "precisionMoyenne": 0.605,
-        "rappelMoyen": 0.1345,
+        "precisionMoyenne": 0.6023,
+        "rappelMoyen": 0.1338,
         "tirages": 500
       },
       "bat": true
@@ -112,8 +112,8 @@
       "faussesAlertes": 9,
       "tauxDeFaussesAlertes": 0.0231,
       "temoin": {
-        "precisionMoyenne": 0.6034,
-        "rappelMoyen": 0.1219,
+        "precisionMoyenne": 0.6019,
+        "rappelMoyen": 0.1216,
         "tirages": 500
       },
       "bat": true
@@ -130,8 +130,8 @@
       "faussesAlertes": 13,
       "tauxDeFaussesAlertes": 0.0333,
       "temoin": {
-        "precisionMoyenne": 0.6045,
-        "rappelMoyen": 0.1934,
+        "precisionMoyenne": 0.6028,
+        "rappelMoyen": 0.1928,
         "tirages": 500
       },
       "bat": true
@@ -148,8 +148,8 @@
       "faussesAlertes": 0,
       "tauxDeFaussesAlertes": 0,
       "temoin": {
-        "precisionMoyenne": 0.5982,
-        "rappelMoyen": 0.0322,
+        "precisionMoyenne": 0.6041,
+        "rappelMoyen": 0.0325,
         "tirages": 500
       },
       "bat": true
@@ -171,8 +171,8 @@
         "faussesAlertes": 109,
         "tauxDeFaussesAlertes": 0.2795,
         "temoin": {
-          "precisionMoyenne": 0.5189,
-          "rappelMoyen": 0.5486,
+          "precisionMoyenne": 0.5177,
+          "rappelMoyen": 0.5473,
           "tirages": 500
         },
         "bat": true
@@ -189,8 +189,8 @@
         "faussesAlertes": 7,
         "tauxDeFaussesAlertes": 0.0179,
         "temoin": {
-          "precisionMoyenne": 0.5185,
-          "rappelMoyen": 0.163,
+          "precisionMoyenne": 0.5156,
+          "rappelMoyen": 0.162,
           "tirages": 500
         },
         "bat": true
@@ -207,8 +207,8 @@
         "faussesAlertes": 9,
         "tauxDeFaussesAlertes": 0.0231,
         "temoin": {
-          "precisionMoyenne": 0.5175,
-          "rappelMoyen": 0.1479,
+          "precisionMoyenne": 0.5183,
+          "rappelMoyen": 0.1481,
           "tirages": 500
         },
         "bat": true
@@ -225,8 +225,8 @@
         "faussesAlertes": 0,
         "tauxDeFaussesAlertes": 0,
         "temoin": {
-          "precisionMoyenne": 0.5199,
-          "rappelMoyen": 0.0396,
+          "precisionMoyenne": 0.5169,
+          "rappelMoyen": 0.0394,
           "tirages": 500
         },
         "bat": true
@@ -305,7 +305,7 @@
       },
       "temoinHasardMemeDepense": {
         "escalades": 72,
-        "gagnesMoyen": 7.23
+        "gagnesMoyen": 7.35
       },
       "batLeHasard": true
     },
@@ -323,7 +323,7 @@
       },
       "temoinHasardMemeDepense": {
         "escalades": 39,
-        "gagnesMoyen": 3.97
+        "gagnesMoyen": 3.98
       },
       "batLeHasard": true
     },
@@ -341,7 +341,7 @@
       },
       "temoinHasardMemeDepense": {
         "escalades": 29,
-        "gagnesMoyen": 8.59
+        "gagnesMoyen": 8.51
       },
       "batLeHasard": true
     }

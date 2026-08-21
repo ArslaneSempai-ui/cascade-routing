@@ -16,7 +16,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { issue, ouvrirJournal, lireJournal, apparie, parDocument, issues, desaccord, latences, accordEntreMachines } from "./journal.ts";
 import { correct } from "./tiers.ts";
-import { FIELDS, generateRecords } from "./corpus.ts";
+import { FIELDS, generateRecords, draw } from "./corpus.ts";
 
 import type { Tentative } from "./journal.ts";
 
@@ -489,8 +489,13 @@ test("le témoin négatif atteint le taux d'erreur de base, et un signal aveugle
     (t) => Number(t.caseId.slice(1)) % 5 === 1);
   assert.ok(Math.abs((aveugle.precision ?? 0) - 0.25) < 0.1,
     `un signal aveugle rend ${aveugle.precision} de précision au lieu du taux de base 0,25.`);
-  assert.equal(aveugle.bat, false,
-    "un signal qui ne regarde rien est déclaré meilleur que le hasard.");
+  /*
+   * Le témoin est tiré au sort : comparer strictement un signal aveugle à sa moyenne tombe
+   * une fois sur plusieurs, des deux côtés du seuil. Ce qu'on tient, c'est que l'écart soit
+   * négligeable — un signal qui n'a rien appris ne doit pas s'en écarter de plus d'un point.
+   */
+  assert.ok(Math.abs((aveugle.precision ?? 0) - aveugle.temoin.precisionMoyenne) < 0.01,
+    `un signal aveugle s'écarte de son témoin de ${(aveugle.precision ?? 0) - aveugle.temoin.precisionMoyenne}.`);
   assert.ok(Math.abs(aveugle.temoin.precisionMoyenne - 0.25) < 0.06,
     `le témoin rend ${aveugle.temoin.precisionMoyenne} au lieu du taux de base 0,25.`);
 
@@ -506,4 +511,31 @@ test("le témoin négatif atteint le taux d'erreur de base, et un signal aveugle
   assert.equal(muet.declenche, 0);
   assert.equal(muet.precision, null, "un signal qui ne tire jamais n'a pas de précision de 100 %.");
   assert.equal(muet.bat, null);
+});
+
+/*
+ * Un banc dont le témoin bouge entre deux exécutions n'est pas reproductible.
+ *
+ * Le témoin aléatoire et le routeur au hasard tiraient sur `Math.random()`. Leurs chiffres
+ * changeaient à chaque passe, et le test qui compare un signal aveugle à son témoin est tombé
+ * une fois sur plusieurs — non parce qu'il était capricieux, mais parce que la mesure l'était.
+ * Un chiffre publié qui ne se reproduit pas n'est pas un chiffre.
+ */
+test("les témoins aléatoires sont graines, pas tirés à chaque exécution", () => {
+  const dossier = new URL(".", import.meta.url).pathname;
+  for (const n of ["signal.ts", "escalade.ts"]) {
+    const src = readFileSync(join(dossier, n), "utf8");
+    assert.ok(!/Math\.random\(/.test(src),
+      `${n} tire sur Math.random : ses témoins ne se reproduisent pas d'une exécution à l'autre.`);
+    assert.ok(/draw\(/.test(src), `${n} ne prend pas de générateur graine.`);
+  }
+
+  /* Et la même graine doit rendre exactement la même suite. */
+  const a = draw(20260821), b = draw(20260821);
+  const suiteA = Array.from({ length: 8 }, () => a());
+  const suiteB = Array.from({ length: 8 }, () => b());
+  assert.deepEqual(suiteA, suiteB, "deux tirages de même graine divergent.");
+  const c = draw(1);
+  assert.notDeepEqual(Array.from({ length: 8 }, () => c()), suiteA,
+    "deux graines différentes rendent la même suite : la graine ne fait rien.");
 });

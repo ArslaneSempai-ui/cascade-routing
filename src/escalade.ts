@@ -36,7 +36,7 @@ import { FORME } from "./signal.ts";
 import { readProfiles } from "./measure.ts";
 import { ASSUMPTIONS, pricePerThousandExtractions } from "./assumptions.ts";
 import { optimiseExtraction, paliersMesures } from "./optimise.ts";
-import { FIELDS } from "./corpus.ts";
+import { FIELDS, draw } from "./corpus.ts";
 
 import type { Tentative } from "./journal.ts";
 import type { TierName } from "./paliers.ts";
@@ -165,11 +165,12 @@ if (isMain(import.meta)) {
   /* Témoin : escalader le même nombre de champs, tirés au sort. */
   const cible = guideeAvecBlancs.escalades;
   const tirages = 200;
+  const hasard0 = draw(20260821);
   let sommeEntiers = 0, sommePrix = 0, sommeMs = 0;
   for (let k = 0; k < tirages; k++) {
     const tous: string[] = [];
     for (const cas of complets) for (const c of FIELDS) tous.push(`${cas}|${c}`);
-    const choisis = new Set(tous.sort(() => Math.random() - 0.5).slice(0, cible));
+    const choisis = new Set(tous.sort(() => hasard0() - 0.5).slice(0, cible));
     const col = evaluerRoutage("hasard", routage, (t) => choisis.has(`${t.caseId}|${t.field}`));
     sommeEntiers += col.dossiersEntiers; sommePrix += col.prixParMille; sommeMs += col.msParDocument;
   }
