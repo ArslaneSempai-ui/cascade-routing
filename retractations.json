@@ -166,6 +166,16 @@
       "cost": "One pass re-run, seven minutes. The first version cost a day.",
       "heldBy": "le pied de page d'une passe dit la charge pendant, et si les durées valent quelque chose",
       "caughtBeforeAnyoneSawIt": true
+    },
+    {
+      "date": "2026-08-21",
+      "headline": "Two different documents were both called M1, and every paired query on the hard corpus compared them to each other.",
+      "claimed": "Nearly, and in the worse direction: that two runs of the same pass had produced different outputs on twenty-two fields — that the tiers were not deterministic after all, contradicting a result this repository already holds.",
+      "actually": "The runs are identical. Accuracy matches to the tenth for all six tiers, and every one of the twenty-two apparent divergences sits on the single case id `M1`, which names a German passport in the malformed file and a four-script United Nations travel document in the non-Latin one. The journal keyed rows on `field|caseId`, so the two collapsed into one and the comparison held a passport against a UN document while believing it held one tier against another. It returned no error. It returned a number, and five of a hundred and sixty-four fields vanished from every paired test without a word.",
+      "caughtBy": "Checking a surprising result before reporting it, rather than after — the divergences were all on one case id, which is not what a non-determinism looks like.",
+      "cost": "No published figure moves: the measurement loop visited both documents correctly and the rates are unaffected. Every paired and per-document query on this corpus ran on 159 fields instead of 164. Keys now carry their file, and the reader refuses two cases that share one.",
+      "heldBy": "aucune clé de cas dur n'en désigne deux",
+      "caughtBeforeAnyoneSawIt": true
     }
   ]
 }

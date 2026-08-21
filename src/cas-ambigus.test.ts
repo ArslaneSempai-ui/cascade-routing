@@ -107,3 +107,35 @@ test("toute lecture ajoutée porte sa date et sa raison", () => {
       `${a.case} déclare un ajout qui ne figure pas dans ses lectures.`);
   }
 });
+
+/*
+ * Deux cas ne peuvent pas partager leur clé.
+ *
+ * `M1` désignait deux documents : un passeport allemand chez les malformés, un titre de voyage
+ * onusien en quatre écritures chez les non-latins — deux fichiers écrits la même nuit sans se
+ * relire. Le journal indexait sur l'identifiant seul, donc toute requête appariée y comparait
+ * un passeport allemand à un document de l'ONU en croyant comparer deux paliers. Elle ne
+ * rendait pas d'erreur : elle rendait un chiffre, et cinq champs sur cent soixante-quatre
+ * disparaissaient de chaque appariement sans que rien ne le dise.
+ */
+test("aucune clé de cas dur n'en désigne deux", async () => {
+  const { corpusDur } = await import("./corpus-dur.ts");
+  const cas = corpusDur();
+  const vues = new Map<string, string>();
+  for (const c of cas) {
+    const deja = vues.get(c.cle);
+    assert.equal(deja, undefined,
+      `la clé ${c.cle} désigne un cas de ${deja} et un cas de ${c.source}.`);
+    vues.set(c.cle, c.source);
+  }
+  assert.equal(vues.size, cas.length);
+  assert.ok(cas.length >= 30, `${cas.length} cas : la lecture du corpus a échoué.`);
+
+  /* Et la clé doit vraiment porter son fichier, sinon deux `M1` se recroiseront. */
+  const doubles = cas.filter((c) => cas.filter((x) => x.id === c.id).length > 1);
+  assert.ok(doubles.length >= 2,
+    "aucun identifiant partagé dans le corpus : ce test ne vérifie plus rien.\n"
+    + "  → si le corpus a été renommé, retirer ce test ; tant qu'il y a deux M1, il tient.");
+  assert.equal(new Set(doubles.map((c) => c.cle)).size, doubles.length,
+    "des cas partagent leur identifiant et leur clé : la clé ne les sépare pas.");
+});

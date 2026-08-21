@@ -49,7 +49,18 @@ export type Attendu = {
 };
 
 export type CasDur = {
-  id: string; titre: string; source: string; texte: string;
+  id: string;
+  /**
+   * L'identifiant qui sert de clé, préfixé par son fichier.
+   *
+   * `M1` désigne deux documents : un passeport allemand dans les malformés, un titre de voyage
+   * onusien en quatre écritures dans les non-latins. Les deux corpus ont été écrits la même
+   * nuit sans se relire. Indexer sur `id` seul fait collisionner deux documents étrangers l'un
+   * à l'autre — et une requête qui compare deux documents différents en croyant comparer deux
+   * paliers ne rend pas une erreur : elle rend un chiffre.
+   */
+  cle: string;
+  titre: string; source: string; texte: string;
   attendus: Partial<Record<Field, Attendu>>;
 };
 
@@ -82,7 +93,8 @@ export function lireFichier(fichier: string): CasDur[] {
     const titre = /^### ([A-Z]+\d+) — (.+)$/.exec(l);
     if (titre) {
       if (courant) cas.push(courant);
-      courant = { id: titre[1]!, titre: titre[2]!, source: fichier, texte: "", attendus: {} };
+      courant = { id: titre[1]!, cle: `${fichier.replace(/\.md$/, "")}#${titre[1]!}`,
+        titre: titre[2]!, source: fichier, texte: "", attendus: {} };
       dansCode = false; texte = []; texteFige = false;
       return;
     }
@@ -120,6 +132,13 @@ export function corpusDur(): CasDur[] {
     .filter((n) => n === "documents-malformes.md" || n === "ecritures-non-latines.md")
     .sort();
   const cas = fichiers.flatMap(lireFichier);
+  /* Deux cas ne peuvent pas partager leur clé : la collision serait silencieuse et chiffrée. */
+  const vues = new Map<string, string>();
+  for (const c of cas) {
+    const deja = vues.get(c.cle);
+    if (deja) throw new CorpusIllisible(`la clé ${c.cle} désigne deux cas (${deja} et ${c.source}).`);
+    vues.set(c.cle, c.source);
+  }
   for (const c of cas) {
     if (!c.texte.trim()) throw new CorpusIllisible(`${c.source} ${c.id} : aucun document lu.`);
     const manquants = Object.values(CHAMPS).filter((f) => !c.attendus[f]);

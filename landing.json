@@ -1042,8 +1042,8 @@
     ]
   },
   "retractions": {
-    "total": 16,
-    "caughtBeforeAnyoneSawIt": 6,
+    "total": 17,
+    "caughtBeforeAnyoneSawIt": 7,
     "entries": [
       {
         "date": "2026-06-14",
@@ -1123,6 +1123,11 @@
       {
         "date": "2026-08-21",
         "headline": "Ran my own work during a measurement again, hours after writing the guard against it.",
+        "caughtBeforeAnyoneSawIt": true
+      },
+      {
+        "date": "2026-08-21",
+        "headline": "Two different documents were both called M1, and every paired query on the hard corpus compared them to each other.",
         "caughtBeforeAnyoneSawIt": true
       }
     ]

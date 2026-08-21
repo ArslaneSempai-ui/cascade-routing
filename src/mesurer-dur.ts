@@ -40,7 +40,7 @@ export function casAmbigus(): CasDur[] {
     const t = textes.get(c.id);
     if (!t) throw new Error(`le cas ${c.id} n'a pas de document dans la prose.`);
     /* Un seul champ par cas ambigu : les quatre autres ne sont pas déclarés, donc pas notés. */
-    return { id: c.id, titre: t.titre, source: "cas-ambigus.md", texte: t.texte,
+    return { id: c.id, cle: `cas-ambigus#${c.id}`, titre: t.titre, source: "cas-ambigus.md", texte: t.texte,
       attendus: { [c.field]: { lectures: c.readings, silence: false,
         ...(c.silenceAccepted ? { silenceAussi: true } : {}) } as Attendu & { silenceAussi?: boolean } } };
   });
@@ -88,7 +88,7 @@ if (isMain(import.meta)) {
     for (const c of tous) {
       for (const [champ, attendu] of Object.entries(c.attendus) as [Field, Attendu & { silenceAussi?: boolean }][]) {
         const t0 = performance.now();
-        const got = await extract(t, { id: c.id, text: c.texte, truth: {} as never }, champ);
+        const got = await extract(t, { id: c.cle, text: c.texte, truth: {} as never }, champ);
         const ms = performance.now() - t0;
         let note = noterDur(got, attendu);
         /* Certains cas ambigus acceptent aussi le silence : un blanc y est une lecture. */
@@ -102,7 +102,7 @@ if (isMain(import.meta)) {
         s.total++; if (note.outcome === "clean") s.clean++;
         par[t].parSource[c.source] = s;
         journal.ligne({
-          tier: t, field: champ, caseId: c.id, phrasing: "reference", split: "hard-corpus",
+          tier: t, field: champ, caseId: c.cle, phrasing: "reference", split: "hard-corpus",
           outcome: note.outcome, ms: Number(ms.toFixed(3)),
           value: got, expected: attendu.silence ? "(silence)" : attendu.lectures.join(" | "),
         });
