@@ -29,6 +29,7 @@ import { ASSUMPTIONS, UNITS, pricePerThousandExtractions, latency } from "./assu
 import { optimiseExtraction, evaluer, paliersMesures, pricePerThousandDocuments, justessePonderee } from "./optimise.ts";
 import { rate, CONFIANCE, distinguishable, pairedVerdict } from "./interval.ts";
 import { versLeBas } from "./sensitivity.ts";
+import { journaux, lireJournal } from "./journal.ts";
 
 import type { Field } from "./corpus.ts";
 import type { TierName } from "./paliers.ts";
@@ -360,6 +361,64 @@ function balayageDeCharge() {
   };
 }
 
+/**
+ * De combien la composition employée s'écarte du vrai total par document.
+ *
+ * Mesurable seulement là où les durées sont enregistrées tentative par tentative — les relevés
+ * du corpus propre sont antérieurs à ce format et n'en portent pas. La comparaison vient donc
+ * du corpus dur, sur les documents qui ont bien leurs cinq champs.
+ *
+ * Le résultat contredit l'intuition rassurante : sommer les percentiles n'est **pas** une borne
+ * supérieure. Elle surestime de 4 % sur deux paliers et **sous-estime de 5,8 %** sur `gen-4b`.
+ * Un lecteur qui traiterait le p90 publié comme un pire cas se tromperait dans le sens qui coûte.
+ */
+function compositionMesuree() {
+  const f = journaux().filter((x) => x.includes("-dur.jsonl")).pop();
+  if (!f) {
+    return { measured: false,
+      why: "aucun journal de tentatives : les relevés du corpus propre sont antérieurs au format "
+        + "qui enregistre chaque durée, donc l'écart n'est pas calculable depuis eux." };
+  }
+  const { tentatives } = lireJournal(f);
+  const q = (v: number[], part: number) => {
+    const t = [...v].sort((a, b) => a - b);
+    return t.length ? t[Math.min(t.length - 1, Math.floor(part * t.length))]! : NaN;
+  };
+  const paliersVus = [...new Set(tentatives.map((t) => t.tier))].filter((t) => t.startsWith("gen-"));
+  const parPalier = paliersVus.map((tier) => {
+    const v = tentatives.filter((x) => x.tier === tier);
+    const champs = new Map<string, number[]>();
+    const vus = new Map<string, Set<string>>();
+    for (const x of v) {
+      champs.set(x.field, [...(champs.get(x.field) ?? []), x.ms]);
+      vus.set(x.caseId, (vus.get(x.caseId) ?? new Set()).add(x.field));
+    }
+    const complets = [...vus.entries()].filter(([, f2]) => f2.size === FIELDS.length).map(([k]) => k);
+    const totaux = complets.map((c) =>
+      v.filter((x) => x.caseId === c).reduce((a, x) => a + x.ms, 0));
+    const sommePct = (part: number) => FIELDS.reduce((a, c) => a + q(champs.get(c) ?? [], part), 0);
+    const r0 = (x: number) => Number(x.toFixed(0));
+    return {
+      tier, documents: complets.length,
+      sumOfFieldPercentilesMs: { p10: r0(sommePct(0.1)), median: r0(sommePct(0.5)), p90: r0(sommePct(0.9)) },
+      percentilesOfRealTotalMs: { p10: r0(q(totaux, 0.1)), median: r0(q(totaux, 0.5)), p90: r0(q(totaux, 0.9)) },
+      p90ErrorPct: Number((100 * (sommePct(0.9) / q(totaux, 0.9) - 1)).toFixed(1)),
+    };
+  });
+  return {
+    measured: true, from: f.split("/").slice(-2).join("/"), corpus: "hard-corpus",
+    perTier: parPalier,
+    conservative: parPalier.every((x) => x.p90ErrorPct >= 0),
+    note: "Sommer les percentiles par champ n'est pas une borne supérieure du percentile du "
+      + "total : elle sous-estime sur au moins un palier. Un lecteur qui prendrait le p90 publié "
+      + "pour un pire cas se tromperait du côté qui coûte.",
+    limite: `Le p90 « réel » est estimé sur ${parPalier[0]?.documents ?? 0} documents, donc le `
+      + "vingt-septième d'entre eux : imprécis par construction. Ce bloc établit que les deux "
+      + "compositions diffèrent et dans quel ordre de grandeur, pas la valeur exacte de l'écart. "
+      + "Et il est mesuré sur le corpus dur, seul endroit où chaque durée est enregistrée.",
+  };
+}
+
 function decomposeErreurs(p: Profiles, routing: Routing) {
   const perThousand: Record<string, { tier: TierName; blank: number | null; wrong: number | null }> = {};
   let couverts = 0;
@@ -571,6 +630,17 @@ export function construire(p: Profiles): unknown {
     }),
 
     latencySpread: {
+      /*
+       * Laquelle des deux compositions, dite plutôt que devinée.
+       *
+       * Cinq latences par champ deviennent un total par document, et il y a deux façons de le
+       * faire : sommer les percentiles de chaque champ, ou prendre le percentile de la somme
+       * réelle. Elles ne donnent pas le même chiffre, et jusqu'ici le fichier n'annonçait pas
+       * laquelle il employait — ce qui laisse le lecteur en choisir une et se tromper sans le
+       * savoir.
+       */
+      composition: "sum of per-field percentiles",
+      compositionCheck: compositionMesuree(),
       perDoc: Object.fromEntries(paliers.map((t) => [t, dispersion(p, t)])),
       routed: optimum === null ? null : (() => {
         const somme = (cle: "latencyP10" | "latency" | "latencyP90") =>

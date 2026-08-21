@@ -645,6 +645,62 @@
     }
   ],
   "latencySpread": {
+    "composition": "sum of per-field percentiles",
+    "compositionCheck": {
+      "measured": true,
+      "from": "tentatives/2026-08-21T15-54-10-139Z-dur.jsonl",
+      "corpus": "hard-corpus",
+      "perTier": [
+        {
+          "tier": "gen-0.6b",
+          "documents": 30,
+          "sumOfFieldPercentilesMs": {
+            "p10": 948,
+            "median": 1082,
+            "p90": 1244
+          },
+          "percentilesOfRealTotalMs": {
+            "p10": 1025,
+            "median": 1080,
+            "p90": 1196
+          },
+          "p90ErrorPct": 4
+        },
+        {
+          "tier": "gen-4b",
+          "documents": 30,
+          "sumOfFieldPercentilesMs": {
+            "p10": 2948,
+            "median": 3421,
+            "p90": 4252
+          },
+          "percentilesOfRealTotalMs": {
+            "p10": 3124,
+            "median": 3404,
+            "p90": 4513
+          },
+          "p90ErrorPct": -5.8
+        },
+        {
+          "tier": "gen-8b",
+          "documents": 30,
+          "sumOfFieldPercentilesMs": {
+            "p10": 3817,
+            "median": 5166,
+            "p90": 7551
+          },
+          "percentilesOfRealTotalMs": {
+            "p10": 4261,
+            "median": 5297,
+            "p90": 7260
+          },
+          "p90ErrorPct": 4
+        }
+      ],
+      "conservative": false,
+      "note": "Sommer les percentiles par champ n'est pas une borne supérieure du percentile du total : elle sous-estime sur au moins un palier. Un lecteur qui prendrait le p90 publié pour un pire cas se tromperait du côté qui coûte.",
+      "limite": "Le p90 « réel » est estimé sur 30 documents, donc le vingt-septième d'entre eux : imprécis par construction. Ce bloc établit que les deux compositions diffèrent et dans quel ordre de grandeur, pas la valeur exacte de l'écart. Et il est mesuré sur le corpus dur, seul endroit où chaque durée est enregistrée."
+    },
     "perDoc": {
       "rules": {
         "p10": 0,

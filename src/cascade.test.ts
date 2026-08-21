@@ -1186,3 +1186,54 @@ test("le balayage vers le bas essaie des prix, et le dit", () => {
   assert.ok(/soixante pas|pas une preuve continue/.test(d.note),
     "le balayage ne dit pas que son verdict ne couvre que les points essayés.");
 });
+
+/*
+ * La règle de composition des latences est déclarée, et son écart est mesuré, pas supposé.
+ *
+ * Cinq latences par champ deviennent un total par document de deux façons — sommer les
+ * percentiles par champ, ou prendre le percentile de la somme réelle — et elles ne donnent pas
+ * le même chiffre. Le fichier n'annonçait aucune des deux, ce qui laisse le lecteur en choisir
+ * une et se tromper sans le savoir.
+ *
+ * Et le champ `conservative` doit rester honnête : sommer des percentiles n'est pas une borne
+ * supérieure. Un test qui ne vérifierait que la présence du mot laisserait le jour où la
+ * mesure dit « sous-estime » passer pour « prudente ».
+ */
+test("la composition des latences est nommée, et son écart au total réel est chiffré", () => {
+  const f = new URL("../landing.json", import.meta.url).pathname;
+  if (!existsSync(f)) return;
+  const ls = (JSON.parse(readFileSync(f, "utf8")) as {
+    latencySpread: { composition?: string; compositionCheck?: {
+      measured: boolean; conservative?: boolean; note?: string;
+      perTier?: { tier: string; p90ErrorPct: number; documents: number }[] } };
+  }).latencySpread;
+
+  assert.ok(ls.composition, "le relevé ne dit pas laquelle des deux compositions il emploie.");
+  assert.match(ls.composition!, /sum of per-field percentiles|percentiles of the real total/,
+    "la composition annoncée n'est aucune des deux règles connues.");
+  assert.ok(ls.compositionCheck, "aucun contrôle de l'écart entre les deux compositions.");
+
+  if (!ls.compositionCheck!.measured) {
+    assert.ok((ls.compositionCheck as { why?: string }).why,
+      "le contrôle n'a pas tourné et ne dit pas pourquoi.");
+    return;
+  }
+
+  const parPalier = ls.compositionCheck!.perTier ?? [];
+  assert.ok(parPalier.length >= 3, `${parPalier.length} palier(s) comparé(s) : trop peu.`);
+  for (const x of parPalier) {
+    assert.ok(x.documents >= 10, `${x.tier} compare sur ${x.documents} documents : trop peu pour un p90.`);
+    assert.ok(Number.isFinite(x.p90ErrorPct), `${x.tier} n'a pas d'écart chiffré.`);
+  }
+
+  /* `conservative` doit refléter les chiffres, pas les accompagner. */
+  const attendu = parPalier.every((x) => x.p90ErrorPct >= 0);
+  assert.equal(ls.compositionCheck!.conservative, attendu,
+    "le champ `conservative` ne suit pas les écarts mesurés : il annonce une borne que les\n"
+    + "  chiffres du même bloc démentent.");
+  if (!attendu) {
+    assert.match(ls.compositionCheck!.note ?? "", /sous-estime|pas une borne/,
+      "la composition sous-estime sur au moins un palier et la note ne le dit pas —\n"
+      + "  un lecteur prendrait le p90 publié pour un pire cas, du côté qui coûte.");
+  }
+});
