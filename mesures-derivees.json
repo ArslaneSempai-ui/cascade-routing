@@ -1,0 +1,135 @@
+{
+  "quoi": "Les blocs de landing.json calculés depuis les journaux de tentatives, figés parce que `data/` n'est pas versionné et qu'un clone frais doit pouvoir vérifier landing.json.",
+  "journal": "tentatives/2026-08-21T16-54-14-816Z-dur.jsonl",
+  "journalModifieLe": "2026-08-21T23:29:59.551Z",
+  "calculeLe": "2026-08-21T23:29:59.841Z",
+  "blocs": {
+    "compositionCheck": {
+      "measured": true,
+      "from": "tentatives/2026-08-21T16-54-14-816Z-dur.jsonl",
+      "corpus": "hard-corpus",
+      "perTier": [
+        {
+          "tier": "gen-0.6b",
+          "documents": 30,
+          "sumOfFieldPercentilesMs": {
+            "p10": 891,
+            "median": 1012,
+            "p90": 1512
+          },
+          "percentilesOfRealTotalMs": {
+            "p10": 929,
+            "median": 1031,
+            "p90": 1465
+          },
+          "p90ErrorPct": 3.2
+        },
+        {
+          "tier": "gen-4b",
+          "documents": 30,
+          "sumOfFieldPercentilesMs": {
+            "p10": 2629,
+            "median": 3038,
+            "p90": 3684
+          },
+          "percentilesOfRealTotalMs": {
+            "p10": 2796,
+            "median": 3013,
+            "p90": 3820
+          },
+          "p90ErrorPct": -3.6
+        },
+        {
+          "tier": "gen-8b",
+          "documents": 30,
+          "sumOfFieldPercentilesMs": {
+            "p10": 3374,
+            "median": 4458,
+            "p90": 6142
+          },
+          "percentilesOfRealTotalMs": {
+            "p10": 3740,
+            "median": 4526,
+            "p90": 6120
+          },
+          "p90ErrorPct": 0.4
+        }
+      ],
+      "conservative": false,
+      "note": "Sommer les percentiles par champ n'est pas une borne supérieure du percentile du total : elle sous-estime sur au moins un palier. Un lecteur qui prendrait le p90 publié pour un pire cas se tromperait du côté qui coûte.",
+      "limite": "Le p90 « réel » est estimé sur 30 documents, donc le vingt-septième d'entre eux : imprécis par construction. Ce bloc établit que les deux compositions diffèrent et dans quel ordre de grandeur, pas la valeur exacte de l'écart. Et il est mesuré sur le corpus dur, seul endroit où chaque durée est enregistrée."
+    },
+    "admissibleEscalation": {
+      "measured": true,
+      "corpus": "hard-corpus",
+      "escalatedField": "country",
+      "escalatedTo": "gen-8b",
+      "documents": 30,
+      "fields": 150,
+      "escalations": 30,
+      "fieldsCorrectBefore": 44,
+      "fieldsCorrectAfter": 70,
+      "paired": {
+        "gains": 26,
+        "losses": 0,
+        "decidable": true
+      },
+      "wholeDocumentsBefore": 0,
+      "wholeDocumentsAfter": 0,
+      "wholeDocumentsGained": 0,
+      "extraCostPerThousandDocuments": 0.2985,
+      "note": "Admissible, mesurable, et sans effet sur ce que le client consomme : l'exactitude par champ monte nettement, le nombre de dossiers livrables ne bouge pas."
+    },
+    "abstention": {
+      "measured": true,
+      "corpus": "hard-corpus",
+      "documents": 30,
+      "valuesMeasured": 150,
+      "baselinePrecisionPct": 29.3,
+      "baselinePrecisionInterval": [
+        22.6,
+        37.1
+      ],
+      "rules": [
+        {
+          "signalsRequired": 1,
+          "abstentions": 103,
+          "wrongRemoved": 91,
+          "correctSacrificed": 12,
+          "breakEvenCostRatio": 1.132,
+          "delivered": 47,
+          "deliveredCorrect": 32,
+          "deliveredPrecisionPct": 68.1,
+          "deliveredPrecisionInterval": [
+            53.8,
+            79.6
+          ],
+          "neverSacrificesInterval": [
+            80.7,
+            93.2
+          ]
+        },
+        {
+          "signalsRequired": 2,
+          "abstentions": 4,
+          "wrongRemoved": 4,
+          "correctSacrificed": 0,
+          "breakEvenCostRatio": 1,
+          "delivered": 146,
+          "deliveredCorrect": 44,
+          "deliveredPrecisionPct": 30.1,
+          "deliveredPrecisionInterval": [
+            23.3,
+            38
+          ],
+          "neverSacrificesInterval": [
+            51,
+            100
+          ]
+        }
+      ],
+      "declaredCostRatio": 1,
+      "note": "Le rapport de bascule est le prix d'une valeur inventée divisé par celui d'un trou, au-delà duquel se taire est rentable. Il ne dépend d'aucun des deux prix, seulement de leur rapport, donc il survit à un client qui remplace `assumptions` par les siennes. Au rapport déclaré, qui est l'égalité, aucune règle ne rapporte quoi que ce soit."
+    }
+  }
+}

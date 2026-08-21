@@ -21,7 +21,7 @@
  *      qui les affiche à côté d'exactitudes mesurées doit dire lesquels sont lesquels.
  */
 
-import { readFileSync, writeFileSync, existsSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, statSync } from "node:fs";
 import { isMain } from "./cli.ts";
 import { FIELDS } from "./corpus.ts";
 import { readProfiles } from "./measure.ts";
@@ -30,6 +30,17 @@ import { optimiseExtraction, evaluer, paliersMesures, pricePerThousandDocuments,
 import { rate, CONFIANCE, distinguishable, pairedVerdict } from "./interval.ts";
 import { versLeBas } from "./sensitivity.ts";
 import { journaux, lireJournal, issue } from "./journal.ts";
+import { lireDerivees, perime, FICHIER as FIGE } from "./derivees.ts";
+
+/**
+ * Ce que le dépôt a figé pour les blocs tirés des journaux.
+ *
+ * `data/` n'est pas versionné, donc un clone frais n'a pas les journaux. Sans ce fichier figé,
+ * `landing.ts --check` régénérait des blocs `measured: false` chez lui et `measured: true` ici,
+ * et la chaîne s'arrêtait sur un clone frais — un vert qui reposait sur des fichiers absents du
+ * dépôt. Le figé fait foi ; les journaux ne servent qu'à le recalculer, par `npm run derivees`.
+ */
+const fige = (nom: string): unknown => lireDerivees()?.blocs?.[nom] ?? null;
 import { normaliserReponse } from "./tiers.ts";
 import { FORME } from "./signal.ts";
 import { corpusDur } from "./corpus-dur.ts";
@@ -375,7 +386,7 @@ function balayageDeCharge() {
  * supérieure. Elle surestime de 4 % sur deux paliers et **sous-estime de 5,8 %** sur `gen-4b`.
  * Un lecteur qui traiterait le p90 publié comme un pire cas se tromperait dans le sens qui coûte.
  */
-function compositionMesuree() {
+export function compositionDepuisJournal() {
   const f = journaux().filter((x) => x.includes("-dur.jsonl")).pop();
   if (!f) {
     return { measured: false,
@@ -460,7 +471,7 @@ function plafondEtEscalade(p: Profiles, optimum: ReturnType<typeof optimiseExtra
      * nombres que les données ne portent pas est le défaut qu'on venait de corriger dans ce même
      * objet une heure plus tôt ; les recopier en constantes l'aurait seulement déplacé.
      */
-    admissibleEscalation: gainDeCountry(p, optimum, cible),
+    admissibleEscalation: fige("admissibleEscalation") ?? gainDeCountryDepuisJournal(p, optimum, cible),
     fieldsOverCeiling: parChamp.filter((x) => x.overCeiling).map((x) => x.field),
     fieldsUnderCeiling: parChamp.filter((x) => !x.overCeiling).map((x) => x.field),
     /*
@@ -487,7 +498,7 @@ function plafondEtEscalade(p: Profiles, optimum: ReturnType<typeof optimiseExtra
  * Sans journal du corpus dur — un clone frais n'en a pas, `data/` est ignoré par git — la clé
  * dit pourquoi elle est vide plutôt que de disparaître.
  */
-function gainDeCountry(p: Profiles, optimum: ReturnType<typeof optimiseExtraction>, cible: TierName) {
+export function gainDeCountryDepuisJournal(p: Profiles, optimum: ReturnType<typeof optimiseExtraction>, cible: TierName) {
   if (!optimum) return null;
   const f = journaux().filter((x) => x.includes("-dur.jsonl")).pop();
   if (!f) return { measured: false, why: "aucun journal du corpus dur : `data/` n'est pas versionné, "
@@ -555,7 +566,7 @@ function gainDeCountry(p: Profiles, optimum: ReturnType<typeof optimiseExtractio
  * Recalculé depuis les tentatives, jamais recopié : les chiffres d'un rapport écrits en dur ici
  * seraient faux à la première remesure sans que rien ne le dise.
  */
-function abstentionMesuree(p: Profiles, optimum: ReturnType<typeof optimiseExtraction>) {
+export function abstentionDepuisJournal(p: Profiles, optimum: ReturnType<typeof optimiseExtraction>) {
   if (!optimum) return null;
   const f = journaux().filter((x) => x.includes("-dur.jsonl")).pop();
   if (!f) return { measured: false, why: "aucun journal du corpus dur : `data/` n'est pas versionné. "
@@ -867,7 +878,7 @@ export function construire(p: Profiles): unknown {
        * savoir.
        */
       composition: "sum of per-field percentiles",
-      compositionCheck: compositionMesuree(),
+      compositionCheck: fige("compositionCheck") ?? compositionDepuisJournal(),
       /*
        * Le plafond, et de combien une seule escalade le dépasse.
        *
@@ -924,7 +935,7 @@ export function construire(p: Profiles): unknown {
      * celui d'un trou, et d'aucun des deux prix. Un client qui jette `assumptions` et met les
      * siens le garde tel quel.
      */
-    abstention: abstentionMesuree(p, optimum),
+    abstention: fige("abstention") ?? abstentionDepuisJournal(p, optimum),
 
     errorSplit: optimum === null ? null : decomposeErreurs(p, optimum.routing),
     cleanPerDocument: optimum === null ? null : dossiersPropres(p, optimum.routing),
@@ -1103,10 +1114,50 @@ export function rendre(p: Profiles): string {
 
 if (isMain(import.meta)) {
   const check = process.argv.includes("--check");
+  const geler = process.argv.includes("--derivees");
   const p = readProfiles();
 
   if (!p) {
     console.error("aucun relevé dans data/profiles.json — lancer `npm run measure` d'abord.");
+    process.exit(1);
+  }
+
+  /*
+   * Le gel des blocs tirés des journaux, avant tout le reste.
+   *
+   * Il s'écrit ici parce que les trois calculs y vivent ; le mettre dans `derivees.ts` fermait
+   * un cycle d'import qui bloquait le chargement sans erreur.
+   */
+  if (geler) {
+    const optimum0 = optimiseExtraction(p, ASSUMPTIONS);
+    const js = journaux().filter((x) => x.includes("-dur.jsonl"));
+    const dernier = js[js.length - 1] ?? null;
+    writeFileSync(FIGE, JSON.stringify({
+      quoi: "Les blocs de landing.json calculés depuis les journaux de tentatives, figés parce "
+        + "que `data/` n'est pas versionné et qu'un clone frais doit pouvoir vérifier landing.json.",
+      journal: dernier ? dernier.split("/").slice(-2).join("/") : null,
+      journalModifieLe: dernier ? new Date(statSync(dernier).mtimeMs).toISOString() : null,
+      calculeLe: new Date().toISOString(),
+      blocs: {
+        compositionCheck: compositionDepuisJournal(),
+        admissibleEscalation: gainDeCountryDepuisJournal(p, optimum0, "gen-8b" as TierName),
+        abstention: abstentionDepuisJournal(p, optimum0),
+      },
+    }, null, 2) + "\n");
+    console.log(`Figé depuis ${dernier?.split("/").pop() ?? "aucun journal"} dans ${FIGE.split("/").pop()}`);
+    process.exit(0);
+  }
+
+  /*
+   * Le produit ne doit jamais être plus vieux que sa source. Arrêt, pas avertissement.
+   *
+   * Un contrôle qui lit un artefact dépassé par ce qui le produit rend un vert sur du travail
+   * que personne n'a vu. Un avertissement dans une sortie qui défile est un avertissement qui
+   * n'existe pas — c'est un arrêt ou rien.
+   */
+  const age = perime();
+  if (age.perime) {
+    console.error(`\n${age.raison}\n`);
     process.exit(1);
   }
 

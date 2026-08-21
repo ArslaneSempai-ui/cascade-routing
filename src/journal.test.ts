@@ -539,3 +539,70 @@ test("les témoins aléatoires sont graines, pas tirés à chaque exécution", (
   assert.notDeepEqual(Array.from({ length: 8 }, () => c()), suiteA,
     "deux graines différentes rendent la même suite : la graine ne fait rien.");
 });
+
+/*
+ * Le dénominateur : combien de contrôles lisent un produit, sur combien examinés.
+ *
+ * Une suite entière braquée sur un fichier figé rend « tout passe » pendant qu'on édite la
+ * source. Le recensement est fait ici plutôt que de mémoire, et il compte les deux termes —
+ * un contrôle qui n'examine rien passe aussi.
+ */
+test("aucun contrôle ne lit un produit que rien ne vérifie avant lui", () => {
+  const racine = new URL("..", import.meta.url).pathname;
+  const dossier = new URL(".", import.meta.url).pathname;
+
+  /* Ce que le dépôt produit, et ce qui le vérifie avant que les tests le lisent. */
+  const produits: Record<string, string | null> = {
+    "landing.json": "node src/landing.ts --check, qui régénère en mémoire et compare le contenu",
+    "README.md": "node src/readme.ts --check, qui compare bloc par bloc",
+    "mesures-derivees.json": "perime(), qui arrête si un journal est plus récent",
+  };
+  /* Ceux-là sont des sources écrites à la main, pas des produits. */
+  const sources = ["retractations.json", "commits-reecrits.json", "cas-ambigus.json"];
+
+  const tests = readdirSync(dossier).filter((n) => n.endsWith(".test.ts"));
+  let examines = 0, lisentUnProduit = 0;
+  const nonCouverts: string[] = [];
+  for (const n of tests) {
+    const src = readFileSync(join(dossier, n), "utf8");
+    for (const fichier of [...Object.keys(produits), ...sources]) {
+      if (!src.includes(fichier)) continue;
+      examines++;
+      if (fichier in produits) {
+        lisentUnProduit++;
+        if (produits[fichier] === null) nonCouverts.push(`${n} lit ${fichier}`);
+      }
+    }
+  }
+
+  assert.ok(examines >= 4, `${examines} lecture(s) recensée(s) : le recensement a échoué.`);
+  assert.ok(lisentUnProduit >= 1,
+    "aucun test ne lit un produit : soit c'est vrai, soit le recensement ne regarde pas les bons noms.");
+  assert.deepEqual(nonCouverts, [],
+    `des contrôles lisent un produit que rien ne vérifie avant eux :\n  ${nonCouverts.join("\n  ")}`);
+
+  /* Et la chaîne doit réellement placer les deux vérifications avant les tests. */
+  const chaine = JSON.parse(readFileSync(join(racine, "package.json"), "utf8")).scripts.test as string;
+  assert.ok(chaine.indexOf("readme.ts --check") < chaine.indexOf("node --test"),
+    "le contrôle du README passe après les tests : ils liraient un README non vérifié.");
+  assert.ok(chaine.indexOf("landing.ts --check") < chaine.indexOf("node --test"),
+    "le contrôle de landing.json passe après les tests : ils liraient un produit non vérifié.");
+});
+
+test("un produit plus ancien que sa source arrête le contrôle au lieu de l'avertir", async () => {
+  const { perime, lireDerivees } = await import("./derivees.ts");
+  const d = lireDerivees();
+  if (!d) return;
+
+  const v = perime();
+  assert.ok(typeof v.perime === "boolean" && v.raison.length > 20,
+    "le verdict de péremption doit être rendu avec sa raison, pas seulement son booléen.");
+
+  /* La garde est câblée dans le contrôle, et elle sort au lieu d'avertir. */
+  const src = readFileSync(new URL("./landing.ts", import.meta.url).pathname, "utf8");
+  const i = src.indexOf("const age = perime();");
+  assert.notEqual(i, -1, "le contrôle n'appelle pas la garde de péremption.");
+  const bloc = src.slice(i, i + 200);
+  assert.match(bloc, /process\.exit\(1\)/,
+    "la garde avertit sans arrêter. Un avertissement dans une sortie qui défile n'existe pas.");
+});
