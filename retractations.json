@@ -156,6 +156,16 @@
       "cost": "None published. The field was being added because a page control asked for it, and the first shape would have answered the control with seven confirmations where there is one.",
       "heldBy": "l'égalité d'exactitude sous charge ne porte que sur les paliers réellement remesurés",
       "caughtBeforeAnyoneSawIt": true
+    },
+    {
+      "date": "2026-08-21",
+      "headline": "Ran my own work during a measurement again, hours after writing the guard against it.",
+      "claimed": "Nothing yet. The durations of the hard-corpus pass would have been published as measured on an idle machine.",
+      "actually": "Type-checking and a test file ran while that pass was recording per-attempt durations. Accuracy is unaffected — it does not depend on load — but every `ms` in that run is contaminated. The morning's version of this cost gen-8b 32 % of its latency and produced a page section that had to be retired twice.",
+      "caughtBy": "Noticing it while it was happening, and saying so before the pass returned.",
+      "cost": "One pass re-run, seven minutes. The first version cost a day.",
+      "heldBy": "le pied de page d'une passe dit la charge pendant, et si les durées valent quelque chose",
+      "caughtBeforeAnyoneSawIt": true
     }
   ]
 }

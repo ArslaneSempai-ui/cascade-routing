@@ -48,6 +48,13 @@ export type Conditions = {
   quoi: string; split: string; cases: number;
   commit?: string; sale?: boolean;
   coeurs: number; chargeAvant: number; plateforme: string;
+  /*
+   * Quelle machine. Sans ça, « ne mélange jamais les deux séries de latence » repose sur la
+   * mémoire de celui qui écrit la requête, et une seconde machine vient d'apparaître.
+   * `plateforme` ne suffit pas : deux Mac Apple Silicon rendent tous les deux `darwin-arm64`.
+   * Le modèle de processeur les sépare et ne désigne personne — pas de nom d'hôte ici.
+   */
+  machine: { cpu: string; coeurs: number };
   demarreLe: string;
 };
 
@@ -67,18 +74,30 @@ export function issue(got: string, expected: string): Issue {
 }
 
 /** Ouvre un journal et rend de quoi y écrire ligne à ligne. */
-export function ouvrirJournal(nom: string, conditions: Omit<Conditions, "plateforme" | "coeurs" | "demarreLe">) {
+export function ouvrirJournal(nom: string, conditions: Omit<Conditions, "plateforme" | "coeurs" | "machine" | "demarreLe">) {
   const run = `${new Date().toISOString().replace(/[:.]/g, "-")}-${nom}`;
   mkdirSync(DOSSIER, { recursive: true });
   const chemin = join(DOSSIER, `${run}.jsonl`);
   const entete: Conditions & { kind: "run"; run: string } = {
     kind: "run", run, ...conditions,
     coeurs: cpus().length, plateforme: `${platform()}-${arch()}`,
+    machine: { cpu: cpus()[0]?.model ?? "unknown", coeurs: cpus().length },
     demarreLe: new Date().toISOString(),
   };
   appendFileSync(chemin, JSON.stringify(entete) + "\n");
 
   let lignes = 0;
+  /*
+   * La charge **pendant**, échantillonnée, pas seulement avant.
+   *
+   * Une charge relevée au départ ne dit rien de ce qui a démarré ensuite — y compris par la
+   * main de celui qui a lancé la passe. C'est arrivé deux fois aujourd'hui, la seconde en
+   * écrivant du code pendant que la mesure tournait. Une durée dont on ne sait pas sous quelle
+   * charge elle a été prise a l'air valide et ne l'est pas.
+   */
+  const echantillons: number[] = [];
+  const sonde = setInterval(() => echantillons.push(loadavg()[0]!), 5_000);
+  sonde.unref?.();
   return {
     run, chemin,
     /* appendFileSync et non un flux : un flux tamponne, et une passe tuée perdrait son tampon. */
@@ -88,11 +107,21 @@ export function ouvrirJournal(nom: string, conditions: Omit<Conditions, "platefo
     },
     /* Pas de pied de page si la passe meurt — et cette absence dit qu'elle est incomplète. */
     fermer() {
+      clearInterval(sonde);
+      const pic = echantillons.length ? Math.max(...echantillons) : null;
       appendFileSync(chemin, JSON.stringify({
         kind: "fin", run, lignes, termineLe: new Date().toISOString(),
         chargeApres: Number(loadavg()[0]!.toFixed(2)),
+        chargePendant: pic === null ? null : {
+          pic: Number(pic.toFixed(2)),
+          moyenne: Number((echantillons.reduce((a, x) => a + x, 0) / echantillons.length).toFixed(2)),
+          echantillons: echantillons.length,
+          parCoeur: Number((pic / cpus().length).toFixed(2)),
+        },
+        /* Le seuil est celui de measure.ts : au-delà, une durée n'est pas une mesure. */
+        dureesUtilisables: pic === null ? null : pic / cpus().length <= 0.5,
       }) + "\n");
-      return { lignes, chemin };
+      return { lignes, chemin, chargePic: pic };
     },
   };
 }
@@ -107,6 +136,7 @@ export function ouvrirJournal(nom: string, conditions: Omit<Conditions, "platefo
 export function lireJournal(chemin: string) {
   const brut = readFileSync(chemin, "utf8").split("\n").filter((l) => l.trim().length > 0);
   let conditions: (Conditions & { run: string }) | undefined;
+  let fin: { chargePendant?: unknown; dureesUtilisables?: boolean | null } | undefined;
   let complet = false;
   const tentatives: Tentative[] = [];
   let tronquees = 0;
@@ -114,10 +144,10 @@ export function lireJournal(chemin: string) {
     let o: { kind?: string } & Record<string, unknown>;
     try { o = JSON.parse(l); } catch { tronquees++; continue; }
     if (o.kind === "run") conditions = o as never;
-    else if (o.kind === "fin") complet = true;
+    else if (o.kind === "fin") { complet = true; fin = o as never; }
     else if (o.kind === "t") tentatives.push(o as never);
   }
-  return { conditions, tentatives, complet, tronquees };
+  return { conditions, tentatives, complet, tronquees, fin };
 }
 
 export function journaux(): string[] {
@@ -238,5 +268,55 @@ export function desaccord(
     communs, tousDeuxJustes, justesEtDifferents,
     tauxParmiLesJustes: tousDeuxJustes ? justesEtDifferents / tousDeuxJustes : null,
     memeIssueValeursDifferentes, exemples,
+  };
+}
+
+/**
+ * Les latences, refusées dès qu'elles viennent de deux machines.
+ *
+ * Une latence n'est valide que pour la machine et la charge qui l'ont produite — la méthode le
+ * dit depuis le début, et jusqu'ici personne ne pouvait le mettre en défaut faute d'une seconde
+ * machine. Maintenant qu'il y en a une, la règle ne doit pas dépendre de la mémoire de celui
+ * qui écrit la requête : cette fonction refuse plutôt que de moyenner.
+ *
+ * L'exactitude, elle, n'a pas cette contrainte — mais ce n'est pas une raison de la supposer.
+ * `accordEntreMachines` la mesure au lieu de la croire, et exige l'identité stricte des sorties
+ * plutôt qu'une simple égalité de taux : deux machines peuvent afficher le même taux et se
+ * tromper sur des cas différents, et à décodage glouton avec les mêmes révisions les chaînes
+ * rendues doivent être identiques, pas seulement comparables.
+ */
+export function latences(lots: readonly { conditions?: { machine?: { cpu: string } }; tentatives: readonly Tentative[] }[]) {
+  const machines = new Set(lots.map((l) => l.conditions?.machine?.cpu ?? "inconnue"));
+  if (machines.size > 1) {
+    throw new Error(
+      `Refus de grouper des latences venues de ${machines.size} machines : ${[...machines].join(", ")}.\n`
+      + "  Une latence ne vaut que pour la machine qui l'a produite. Interrogez-les séparément.");
+  }
+  const ms = lots.flatMap((l) => l.tentatives.map((t) => t.ms)).sort((a, b) => a - b);
+  const q = (f: number) => ms.length ? ms[Math.min(ms.length - 1, Math.floor(f * ms.length))]! : null;
+  return { machine: [...machines][0]!, n: ms.length, p10: q(0.1), median: q(0.5), p90: q(0.9) };
+}
+
+/** Deux machines rendent-elles exactement les mêmes sorties sur les mêmes cas ? */
+export function accordEntreMachines(a: readonly Tentative[], b: readonly Tentative[]) {
+  const A = new Map(a.map((t) => [`${t.tier}|${t.phrasing}|${cle(t)}`, t]));
+  let communs = 0, memeIssue = 0, memeChaine = 0;
+  const divergences: { key: string; a: string; b: string }[] = [];
+  for (const tb of b) {
+    const ta = A.get(`${tb.tier}|${tb.phrasing}|${cle(tb)}`);
+    if (!ta) continue;
+    communs++;
+    if (ta.outcome === tb.outcome) memeIssue++;
+    if (ta.value === tb.value) memeChaine++;
+    else if (divergences.length < 10) divergences.push({ key: `${tb.tier}/${tb.field}/${tb.caseId}`, a: ta.value, b: tb.value });
+  }
+  return {
+    communs, memeIssue, memeChaine,
+    identique: communs > 0 && memeChaine === communs,
+    poolingJustifie: communs > 0 && memeChaine === communs,
+    divergences,
+    note: communs === 0 ? "aucun cas commun : rien n'est comparé, et rien n'autorise à mettre en commun."
+      : memeChaine === communs ? "sorties identiques au caractère : mettre les exactitudes en commun est fondé."
+      : "les sorties diffèrent : mettre les exactitudes en commun moyennerait deux comportements distincts.",
   };
 }

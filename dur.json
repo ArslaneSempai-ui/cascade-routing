@@ -5,16 +5,16 @@
   "decoupage": "hard-corpus",
   "cas": 44,
   "champs": 164,
-  "mesureLe": "2026-08-21T15:33:46.735Z",
+  "mesureLe": "2026-08-21T15:40:11.318Z",
   "code": {
-    "commit": "b5371ca",
+    "commit": "9bca719",
     "sale": false
   },
   "charge": {
-    "externalBefore": 5.12,
+    "externalBefore": 0.73,
     "coeurs": 10
   },
-  "journal": "tentatives/2026-08-21T15-33-32-775Z-dur.jsonl",
+  "journal": "tentatives/2026-08-21T15-35-02-373Z-dur.jsonl",
   "paliers": {
     "rules": {
       "clean": 30,
@@ -75,6 +75,69 @@
         },
         "cas-ambigus.md": {
           "clean": 10,
+          "total": 14
+        }
+      }
+    },
+    "gen-0.6b": {
+      "clean": 83,
+      "blank": 0,
+      "wrong": 81,
+      "overRefusal": 0,
+      "overAnswer": 21,
+      "parSource": {
+        "documents-malformes.md": {
+          "clean": 47,
+          "total": 90
+        },
+        "ecritures-non-latines.md": {
+          "clean": 25,
+          "total": 60
+        },
+        "cas-ambigus.md": {
+          "clean": 11,
+          "total": 14
+        }
+      }
+    },
+    "gen-4b": {
+      "clean": 95,
+      "blank": 0,
+      "wrong": 69,
+      "overRefusal": 0,
+      "overAnswer": 21,
+      "parSource": {
+        "documents-malformes.md": {
+          "clean": 46,
+          "total": 90
+        },
+        "ecritures-non-latines.md": {
+          "clean": 38,
+          "total": 60
+        },
+        "cas-ambigus.md": {
+          "clean": 11,
+          "total": 14
+        }
+      }
+    },
+    "gen-8b": {
+      "clean": 110,
+      "blank": 27,
+      "wrong": 27,
+      "overRefusal": 27,
+      "overAnswer": 8,
+      "parSource": {
+        "documents-malformes.md": {
+          "clean": 57,
+          "total": 90
+        },
+        "ecritures-non-latines.md": {
+          "clean": 42,
+          "total": 60
+        },
+        "cas-ambigus.md": {
+          "clean": 11,
           "total": 14
         }
       }

@@ -1042,8 +1042,8 @@
     ]
   },
   "retractions": {
-    "total": 15,
-    "caughtBeforeAnyoneSawIt": 5,
+    "total": 16,
+    "caughtBeforeAnyoneSawIt": 6,
     "entries": [
       {
         "date": "2026-06-14",
@@ -1118,6 +1118,11 @@
       {
         "date": "2026-08-21",
         "headline": "The loaded measurement was one tier re-run, and reading it as a second full pass would have made a tautology look like evidence.",
+        "caughtBeforeAnyoneSawIt": true
+      },
+      {
+        "date": "2026-08-21",
+        "headline": "Ran my own work during a measurement again, hours after writing the guard against it.",
         "caughtBeforeAnyoneSawIt": true
       }
     ]

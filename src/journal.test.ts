@@ -14,7 +14,7 @@ import { readFileSync, writeFileSync, mkdtempSync, rmSync, readdirSync, existsSy
 import { execFileSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { issue, lireJournal, apparie, parDocument, issues } from "./journal.ts";
+import { issue, ouvrirJournal, lireJournal, apparie, parDocument, issues, desaccord, latences, accordEntreMachines } from "./journal.ts";
 import { correct } from "./tiers.ts";
 import { FIELDS, generateRecords } from "./corpus.ts";
 
@@ -255,4 +255,121 @@ test("aucun relevé livré ne cite un commit introuvable", () => {
     `${verifies} citation(s) vérifiée(s) pour ${releves.length - sansCommit.length} relevé(s) avec provenance.`);
   assert.ok(verifies >= 3,
     `${verifies} commit(s) cité(s) vérifié(s) : trop peu pour que ce test ait regardé quoi que ce soit.`);
+});
+
+/*
+ * Deux paliers peuvent tous deux avoir raison et livrer deux dossiers différents.
+ *
+ * Le routage recommande le moins cher des paliers « indiscernables ». Indiscernable veut dire
+ * qu'ils **notent** pareil, pas qu'ils **répondent** pareil — et sur un cas à plusieurs lectures
+ * défendables l'écart est invisible dans les taux et bien visible dans les dossiers livrés.
+ */
+test("le désaccord entre deux paliers justes est compté, et n'entre dans aucun taux", () => {
+  const t = (tier: string, v: Record<string, [string, Tentative["outcome"]]>): Tentative[] =>
+    Object.entries(v).map(([caseId, [value, outcome]]) => ({
+      run: "r", tier, field: "birth", caseId, phrasing: "reference", split: "hard-corpus",
+      outcome, ms: 1, value, expected: "3 April 1990 | 4 March 1990",
+    }));
+
+  const rows = [
+    /* d1 : les deux justes, lectures différentes — un désaccord, pas une erreur. */
+    ...t("a", { d1: ["3 April 1990", "clean"], d2: ["x", "wrong"], d3: ["1 Jan 1990", "clean"] }),
+    ...t("b", { d1: ["4 March 1990", "clean"], d2: ["y", "wrong"], d3: ["1 Jan 1990", "clean"] }),
+  ];
+  const d = desaccord(rows, { tier: "a" }, { tier: "b" });
+  assert.equal(d.communs, 3);
+  assert.equal(d.tousDeuxJustes, 2, "d2 est faux des deux côtés : il ne compte pas comme accord");
+  assert.equal(d.justesEtDifferents, 1, "seul d1 est juste des deux côtés avec deux valeurs");
+  assert.equal(d.tauxParmiLesJustes, 0.5);
+  assert.equal(d.exemples[0]?.caseId, "d1");
+
+  /* Et il ne touche pas l'exactitude : les deux paliers restent à deux justes sur trois. */
+  assert.equal(issues(rows, { tier: "a" }).clean, 2);
+  assert.equal(issues(rows, { tier: "b" }).clean, 2);
+
+  /* Deux paliers faux tous les deux avec des valeurs différentes ne sont pas un désaccord
+     entre justes — c'est deux erreurs, et elles sont déjà dans le taux. */
+  assert.equal(d.memeIssueValeursDifferentes, 2, "d1 et d2 partagent leur issue et diffèrent");
+});
+
+/*
+ * « Ne mélange jamais les deux séries de latence » ne doit pas dépendre de la mémoire.
+ *
+ * Une seconde machine vient d'apparaître. La méthode affirme depuis le début qu'une latence ne
+ * vaut que pour la machine qui l'a produite, et personne n'avait pu la mettre en défaut faute
+ * d'une seconde machine. La règle devient donc une garde : la fonction refuse, elle ne moyenne pas.
+ *
+ * Et l'exactitude, qu'on dit transportable, est mesurée au lieu d'être supposée — à décodage
+ * glouton avec les mêmes révisions, les chaînes rendues doivent être identiques, pas seulement
+ * les taux. Deux machines peuvent afficher le même taux et se tromper sur des cas différents.
+ */
+test("des latences de deux machines sont refusées, pas moyennées", () => {
+  const lot = (cpu: string, ms: number[]) => ({
+    conditions: { machine: { cpu, coeurs: 10 } },
+    tentatives: ms.map((m, i) => ({
+      run: "r", tier: "gen-4b", field: "name", caseId: `d${i}`, phrasing: "reference",
+      split: "dev", outcome: "clean" as const, ms: m, value: "", expected: "",
+    })),
+  });
+
+  const seule = latences([lot("Apple M4 Pro", [10, 20, 30])]);
+  assert.equal(seule.n, 3);
+  assert.equal(seule.machine, "Apple M4 Pro", "la machine est nommée dans le résultat, pas seulement supposée");
+
+  assert.throws(() => latences([lot("Apple M4 Pro", [10]), lot("Apple M1 Pro", [40])]),
+    /Refus de grouper des latences venues de 2 machines/,
+    "deux machines ont été moyennées au lieu d'être refusées.");
+});
+
+test("mettre les exactitudes en commun demande des sorties identiques, pas des taux égaux", () => {
+  const t = (v: [string, Tentative["outcome"]][]): Tentative[] =>
+    v.map(([value, outcome], i) => ({
+      run: "r", tier: "gen-4b", field: "name", caseId: `d${i}`, phrasing: "reference",
+      split: "dev", outcome, ms: 1, value, expected: "",
+    }));
+
+  /* Même taux des deux côtés — deux justes sur trois — et pas les mêmes cas. */
+  const a = t([["ANNA", "clean"], ["ELENA", "clean"], ["", "blank"]]);
+  const b = t([["ANNA", "clean"], ["", "blank"], ["MARIA", "clean"]]);
+  const faux = accordEntreMachines(a, b);
+  assert.equal(faux.communs, 3);
+  assert.equal(faux.memeChaine, 1, "un seul cas rend la même chaîne");
+  assert.equal(faux.poolingJustifie, false,
+    "des taux égaux ont suffi à autoriser la mise en commun : c'est exactement l'erreur");
+  assert.ok(faux.divergences.length >= 2, "les divergences ne sont pas rapportées");
+
+  const vrai = accordEntreMachines(a, t([["ANNA", "clean"], ["ELENA", "clean"], ["", "blank"]]));
+  assert.equal(vrai.poolingJustifie, true);
+  assert.equal(vrai.memeChaine, vrai.communs);
+
+  /* Aucun cas commun ne doit jamais valoir accord. */
+  const vide = accordEntreMachines(a, []);
+  assert.equal(vide.communs, 0);
+  assert.equal(vide.poolingJustifie, false,
+    "zéro cas comparé a été lu comme un accord parfait — le vert vide dans sa forme la plus pure");
+});
+
+/*
+ * Une durée doit dire sous quelle charge elle a été prise — y compris quand c'est ma faute.
+ *
+ * Deux fois aujourd'hui, du travail à moi a tourné pendant une mesure : la première a gonflé
+ * gen-8b de 32 %, la seconde était l'écriture de ce fichier même, pendant la passe sur les cas
+ * durs. Une charge relevée au départ ne dit rien de ce qui démarre ensuite. Le pied de page
+ * porte donc le pic échantillonné et tranche lui-même si les durées sont utilisables.
+ */
+test("le pied de page d'une passe dit la charge pendant, et si les durées valent quelque chose", () => {
+  const dossier = mkdtempSync(join(tmpdir(), "journal-charge-"));
+  try {
+    const j = ouvrirJournal("essai-charge", { quoi: "essai", split: "dev", cases: 1, chargeAvant: 0 });
+    j.ligne({ tier: "rules", field: "name", caseId: "d0", phrasing: "reference", split: "dev",
+      outcome: "clean", ms: 1, value: "a", expected: "a" });
+    const { chemin } = j.fermer();
+    const lu = lireJournal(chemin);
+    assert.equal(lu.complet, true);
+    assert.ok(lu.fin, "le pied de page n'a pas été relu");
+    /* Une passe d'une milliseconde n'atteint aucun échantillon : `null` et non un faux zéro. */
+    assert.ok("chargePendant" in lu.fin!, "le pied de page ne porte pas la charge pendant la passe");
+    assert.ok("dureesUtilisables" in lu.fin!,
+      "rien ne dit si les durées de cette passe valent quelque chose — c'est le champ qui manquait.");
+  } finally { rmSync(dossier, { recursive: true, force: true }); }
 });
