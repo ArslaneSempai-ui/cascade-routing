@@ -1,115 +1,358 @@
 {
-  "quoi": "Quels signaux annoncent une valeur fausse, sans la clé de réponses.",
-  "mesureLe": "2026-08-21T17:31:41.214Z",
+  "quoi": "Quels signaux annoncent une valeur inutilisable, sans la clé de réponses.",
+  "mesureLe": "2026-08-21T17:37:44.092Z",
   "journal": "tentatives/2026-08-21T16-54-14-816Z-dur.jsonl",
   "corpus": "hard-corpus",
-  "valeursNotees": 810,
-  "tauxDErreurDeBase": 0.5185,
-  "exclus": "les blancs — un blanc est déjà visible et ne demande aucun signal",
+  "denominateur": "toute valeur notée par un palier sur le corpus dur, blancs compris",
+  "valeurs": 984,
+  "cible": "tout ce qui n'est pas `clean`",
+  "cibleN": 594,
+  "tauxDeBase": 0.6037,
+  "bancValide": true,
+  "oracle": {
+    "nom": "ORACLE (témoin positif)",
+    "description": "lit la clé de réponses : doit séparer parfaitement, sinon le banc est en cause",
+    "coutEnAppels": 0,
+    "declenche": 594,
+    "justes": 390,
+    "fausses": 594,
+    "precision": 1,
+    "rappel": 1,
+    "faussesAlertes": 0,
+    "tauxDeFaussesAlertes": 0,
+    "temoin": {
+      "precisionMoyenne": 0.6035,
+      "rappelMoyen": 0.6035,
+      "tirages": 500
+    },
+    "bat": true
+  },
   "signaux": [
     {
-      "nom": "désaccord",
-      "description": "la valeur diffère de celle que rend la pluralité des autres paliers sur le même champ",
-      "declenche": 444,
+      "nom": "ORACLE (témoin positif)",
+      "description": "lit la clé de réponses : doit séparer parfaitement, sinon le banc est en cause",
+      "coutEnAppels": 0,
+      "declenche": 594,
       "justes": 390,
-      "fausses": 420,
-      "precision": 0.7545,
-      "rappel": 0.7976,
+      "fausses": 594,
+      "precision": 1,
+      "rappel": 1,
+      "faussesAlertes": 0,
+      "tauxDeFaussesAlertes": 0,
+      "temoin": {
+        "precisionMoyenne": 0.6035,
+        "rappelMoyen": 0.6035,
+        "tirages": 500
+      },
+      "bat": true
+    },
+    {
+      "nom": "blanc (référence)",
+      "description": "la sortie est vide — référence obligatoire : un blanc se voit sans aucun signal",
+      "coutEnAppels": 0,
+      "declenche": 210,
+      "justes": 390,
+      "fausses": 594,
+      "precision": 0.8286,
+      "rappel": 0.2929,
+      "faussesAlertes": 36,
+      "tauxDeFaussesAlertes": 0.0923,
+      "temoin": {
+        "precisionMoyenne": 0.6036,
+        "rappelMoyen": 0.2134,
+        "tirages": 500
+      },
+      "bat": true
+    },
+    {
+      "nom": "désaccord",
+      "description": "diffère de la pluralité des autres paliers sur le même champ",
+      "coutEnAppels": 1,
+      "declenche": 618,
+      "justes": 390,
+      "fausses": 594,
+      "precision": 0.8236,
+      "rappel": 0.8569,
       "faussesAlertes": 109,
       "tauxDeFaussesAlertes": 0.2795,
       "temoin": {
-        "precisionMoyenne": 0.5184,
-        "rappelMoyen": 0.5481,
+        "precisionMoyenne": 0.6032,
+        "rappelMoyen": 0.6276,
         "tirages": 500
       },
       "bat": true
     },
     {
       "nom": "forme",
-      "description": "la valeur ne passe pas la règle de forme déclarée pour son champ",
-      "declenche": 155,
+      "description": "échoue à la règle de forme déclarée pour son champ",
+      "coutEnAppels": 0,
+      "declenche": 132,
       "justes": 390,
-      "fausses": 420,
-      "precision": 0.8065,
-      "rappel": 0.2976,
-      "faussesAlertes": 30,
-      "tauxDeFaussesAlertes": 0.0769,
+      "fausses": 594,
+      "precision": 0.947,
+      "rappel": 0.2104,
+      "faussesAlertes": 7,
+      "tauxDeFaussesAlertes": 0.0179,
       "temoin": {
-        "precisionMoyenne": 0.52,
-        "rappelMoyen": 0.1919,
+        "precisionMoyenne": 0.605,
+        "rappelMoyen": 0.1345,
         "tirages": 500
       },
       "bat": true
     },
     {
       "nom": "absente du document",
-      "description": "la valeur rendue n'apparaît pas dans le texte du document",
+      "description": "la valeur ne figure pas dans le texte du document",
+      "coutEnAppels": 0,
       "declenche": 120,
       "justes": 390,
-      "fausses": 420,
+      "fausses": 594,
       "precision": 0.925,
-      "rappel": 0.2643,
+      "rappel": 0.1869,
       "faussesAlertes": 9,
       "tauxDeFaussesAlertes": 0.0231,
       "temoin": {
-        "precisionMoyenne": 0.5192,
-        "rappelMoyen": 0.1483,
-        "tirages": 500
-      },
-      "bat": true
-    },
-    {
-      "nom": "au moins un des trois",
-      "description": "l'un quelconque des trois signaux se déclenche",
-      "declenche": 474,
-      "justes": 390,
-      "fausses": 420,
-      "precision": 0.7637,
-      "rappel": 0.8619,
-      "faussesAlertes": 112,
-      "tauxDeFaussesAlertes": 0.2872,
-      "temoin": {
-        "precisionMoyenne": 0.5192,
-        "rappelMoyen": 0.586,
+        "precisionMoyenne": 0.6034,
+        "rappelMoyen": 0.1219,
         "tirages": 500
       },
       "bat": true
     },
     {
       "nom": "au moins deux des trois",
-      "description": "deux signaux au moins se déclenchent ensemble",
-      "declenche": 213,
+      "description": "deux signaux au moins ensemble",
+      "coutEnAppels": 1,
+      "declenche": 190,
       "justes": 390,
-      "fausses": 420,
-      "precision": 0.831,
-      "rappel": 0.4214,
-      "faussesAlertes": 36,
-      "tauxDeFaussesAlertes": 0.0923,
+      "fausses": 594,
+      "precision": 0.9316,
+      "rappel": 0.298,
+      "faussesAlertes": 13,
+      "tauxDeFaussesAlertes": 0.0333,
       "temoin": {
-        "precisionMoyenne": 0.5167,
-        "rappelMoyen": 0.262,
+        "precisionMoyenne": 0.6045,
+        "rappelMoyen": 0.1934,
         "tirages": 500
       },
       "bat": true
     },
     {
       "nom": "les trois",
-      "description": "les trois signaux se déclenchent ensemble",
+      "description": "les trois ensemble",
+      "coutEnAppels": 1,
       "declenche": 32,
       "justes": 390,
-      "fausses": 420,
+      "fausses": 594,
       "precision": 1,
-      "rappel": 0.0762,
+      "rappel": 0.0539,
       "faussesAlertes": 0,
       "tauxDeFaussesAlertes": 0,
       "temoin": {
-        "precisionMoyenne": 0.5127,
-        "rappelMoyen": 0.0391,
+        "precisionMoyenne": 0.5982,
+        "rappelMoyen": 0.0322,
         "tirages": 500
       },
       "bat": true
     }
   ],
-  "laCleNEstPasNecessaireAuSignal": "Les trois signaux se calculent sur ce que le client possède : le document, la valeur rendue, et pour le premier une seconde opinion. La clé n'entre que dans la validation ci-dessus. C'est ce qui les rend transposables.",
-  "limite": "Mesuré sur un corpus de trente à quarante-quatre documents durs. Assez pour écarter un signal qui ne bat pas le hasard, pas assez pour estimer sa précision : un intervalle sur ces effectifs serait plus large que les écarts entre signaux."
+  "vueDesEchecsInvisibles": {
+    "quoi": "population restreinte aux non-blancs, cible `wrong` — les échecs qu'on ne voit pas.",
+    "valeurs": 810,
+    "signaux": [
+      {
+        "nom": "désaccord",
+        "description": "",
+        "coutEnAppels": 1,
+        "declenche": 444,
+        "justes": 390,
+        "fausses": 420,
+        "precision": 0.7545,
+        "rappel": 0.7976,
+        "faussesAlertes": 109,
+        "tauxDeFaussesAlertes": 0.2795,
+        "temoin": {
+          "precisionMoyenne": 0.5189,
+          "rappelMoyen": 0.5486,
+          "tirages": 500
+        },
+        "bat": true
+      },
+      {
+        "nom": "forme",
+        "description": "",
+        "coutEnAppels": 0,
+        "declenche": 132,
+        "justes": 390,
+        "fausses": 420,
+        "precision": 0.947,
+        "rappel": 0.2976,
+        "faussesAlertes": 7,
+        "tauxDeFaussesAlertes": 0.0179,
+        "temoin": {
+          "precisionMoyenne": 0.5185,
+          "rappelMoyen": 0.163,
+          "tirages": 500
+        },
+        "bat": true
+      },
+      {
+        "nom": "absente du document",
+        "description": "",
+        "coutEnAppels": 0,
+        "declenche": 120,
+        "justes": 390,
+        "fausses": 420,
+        "precision": 0.925,
+        "rappel": 0.2643,
+        "faussesAlertes": 9,
+        "tauxDeFaussesAlertes": 0.0231,
+        "temoin": {
+          "precisionMoyenne": 0.5175,
+          "rappelMoyen": 0.1479,
+          "tirages": 500
+        },
+        "bat": true
+      },
+      {
+        "nom": "les trois",
+        "description": "",
+        "coutEnAppels": 1,
+        "declenche": 32,
+        "justes": 390,
+        "fausses": 420,
+        "precision": 1,
+        "rappel": 0.0762,
+        "faussesAlertes": 0,
+        "tauxDeFaussesAlertes": 0,
+        "temoin": {
+          "precisionMoyenne": 0.5199,
+          "rappelMoyen": 0.0396,
+          "tirages": 500
+        },
+        "bat": true
+      }
+    ]
+  },
+  "parChampDuMeilleurSignal": [
+    {
+      "champ": "name",
+      "valeurs": 210,
+      "declenche": 14,
+      "precision": 92.9,
+      "intervalle": [
+        68.5,
+        98.7
+      ],
+      "assezDeCas": false
+    },
+    {
+      "champ": "birth",
+      "valeurs": 204,
+      "declenche": 14,
+      "precision": 85.7,
+      "intervalle": [
+        60.1,
+        96
+      ],
+      "assezDeCas": false
+    },
+    {
+      "champ": "document",
+      "valeurs": 186,
+      "declenche": 55,
+      "precision": 100,
+      "intervalle": [
+        93.5,
+        100
+      ],
+      "assezDeCas": true
+    },
+    {
+      "champ": "country",
+      "valeurs": 186,
+      "declenche": 21,
+      "precision": 76.2,
+      "intervalle": [
+        54.9,
+        89.4
+      ],
+      "assezDeCas": true
+    },
+    {
+      "champ": "address",
+      "valeurs": 198,
+      "declenche": 16,
+      "precision": 93.8,
+      "intervalle": [
+        71.7,
+        98.9
+      ],
+      "assezDeCas": false
+    }
+  ],
+  "escalade": [
+    {
+      "bas": "gen-0.6b",
+      "haut": "gen-4b",
+      "champsCommuns": 164,
+      "basFaux": 81,
+      "escaladeUtile": 17,
+      "escaladeInutile": 64,
+      "partUtileParmiLesEchecs": 0.2099,
+      "guideeParSignal": {
+        "escalades": 72,
+        "gagnes": 16
+      },
+      "temoinHasardMemeDepense": {
+        "escalades": 72,
+        "gagnesMoyen": 7.23
+      },
+      "batLeHasard": true
+    },
+    {
+      "bas": "gen-4b",
+      "haut": "gen-8b",
+      "champsCommuns": 164,
+      "basFaux": 69,
+      "escaladeUtile": 17,
+      "escaladeInutile": 52,
+      "partUtileParmiLesEchecs": 0.2464,
+      "guideeParSignal": {
+        "escalades": 39,
+        "gagnes": 12
+      },
+      "temoinHasardMemeDepense": {
+        "escalades": 39,
+        "gagnesMoyen": 3.97
+      },
+      "batLeHasard": true
+    },
+    {
+      "bas": "large",
+      "haut": "gen-4b",
+      "champsCommuns": 164,
+      "basFaux": 118,
+      "escaladeUtile": 51,
+      "escaladeInutile": 67,
+      "partUtileParmiLesEchecs": 0.4322,
+      "guideeParSignal": {
+        "escalades": 29,
+        "gagnes": 16
+      },
+      "temoinHasardMemeDepense": {
+        "escalades": 29,
+        "gagnesMoyen": 8.59
+      },
+      "batLeHasard": true
+    }
+  ],
+  "confianceDuModele": {
+    "paliersExamines": 3,
+    "paliersExposantUneConfiance": 0,
+    "pourquoi": "L'appel de génération ne demande ni ne conserve les log-probabilités : aucun palier n'expose de confiance dans l'état actuel. Zéro trouvé n'est pas zéro cherché, et un signal absent du rapport ne se distingue pas d'un signal jamais regardé.",
+    "coutPourLObtenir": "remesurer les paliers génératifs en conservant les log-probabilités — environ cinq minutes pour `gen-4b` seul, quarante pour les trois."
+  },
+  "laCleNEstPasNecessaireAuSignal": "Les trois signaux se calculent sur ce que le client possède : le document, la valeur rendue, et pour le premier une seconde opinion. La clé n'entre que dans la validation. C'est ce qui les rend transposables.",
+  "limite": "Trente à quarante-quatre documents durs. Assez pour écarter un signal qui ne bat pas le hasard, pas pour estimer une précision : les intervalles par champ ci-dessus sont plus larges que les écarts entre signaux. Et le taux de base ici est celui d'un corpus cassé ; sur trafic propre il est bien plus bas, et toute précision baisse avec lui.",
+  "seuilRegleSurCeCorpus": "Un seuil d'escalade réglé sur ces mêmes documents utiliserait les données qui bornent son intervalle. Sur ces effectifs, le routage par document peut être non validable sur les données disponibles même s'il fonctionne — ce qui n'est pas une raison de le déclarer bon, ni mauvais."
 }

@@ -19,13 +19,29 @@
 import { writeFileSync } from "node:fs";
 import { isMain } from "./cli.ts";
 import { journaux, lireJournal } from "./journal.ts";
-import { normaliserReponse } from "./tiers.ts";
+import { normaliserReponse, GENERATIFS_PUBLICS } from "./tiers.ts";
+import { rate, ENOUGH } from "./interval.ts";
 import { corpusDur } from "./corpus-dur.ts";
 import { casAmbigus } from "./mesurer-dur.ts";
 
 import type { Tentative } from "./journal.ts";
 
 const SORTIE = new URL("../signal.json", import.meta.url).pathname;
+
+/**
+ * Le dénominateur, déclaré une fois et employé partout à l'identique.
+ *
+ * Un taux de relecture est une part **de quoi** : de tous les cas, de toutes les sorties non
+ * vides, de tous les échecs ? Les trois donnent des chiffres différents des mêmes données, et
+ * comparer deux signaux mesurés sur deux dénominateurs ne compare rien. Ici : **toute valeur
+ * notée**, blancs compris.
+ *
+ * La cible est « inutilisable telle quelle », c'est-à-dire tout ce qui n'est pas `clean` — une
+ * valeur fausse comme un blanc demandent tous deux une reprise. Une seconde vue, plus bas,
+ * restreint la population aux non-blancs pour répondre à l'autre question, celle des échecs
+ * **invisibles** ; elle est nommée comme telle et jamais mélangée à celle-ci.
+ */
+export const DENOMINATEUR = "toute valeur notée par un palier sur le corpus dur, blancs compris";
 
 /** Les règles de forme, déclarées ici et non apprises de la clé. */
 export const FORME: Record<string, (v: string) => boolean> = {
@@ -43,6 +59,8 @@ export const FORME: Record<string, (v: string) => boolean> = {
 
 export type Verdict = {
   nom: string; description: string;
+  /** Appels de palier supplémentaires qu'il faut payer pour calculer ce signal. */
+  coutEnAppels: number;
   declenche: number; justes: number; fausses: number;
   precision: number | null; rappel: number | null;
   faussesAlertes: number; tauxDeFaussesAlertes: number | null;
@@ -75,6 +93,7 @@ function temoin(n: number, fausses: number, declenche: number, tirages = 500) {
 export function evaluerSignal(
   lignes: readonly (Tentative & { faux: boolean })[],
   nom: string, description: string, tire: (t: Tentative) => boolean,
+  coutEnAppels = 0,
 ): Verdict {
   const n = lignes.length;
   const fausses = lignes.filter((l) => l.faux).length;
@@ -85,7 +104,7 @@ export function evaluerSignal(
   const t = temoin(n, fausses, tirees.length);
   const precision = tirees.length ? vraiesPositives / tirees.length : null;
   return {
-    nom, description,
+    nom, description, coutEnAppels,
     declenche: tirees.length, justes, fausses,
     precision: precision === null ? null : Number(precision.toFixed(4)),
     rappel: fausses ? Number((vraiesPositives / fausses).toFixed(4)) : null,
@@ -100,100 +119,192 @@ if (isMain(import.meta)) {
   const f = journaux().filter((x) => x.includes("-dur.jsonl")).pop();
   if (!f) { console.error("aucun journal du corpus dur"); process.exit(1); }
   const { tentatives } = lireJournal(f);
-
   const textes = new Map([...corpusDur(), ...casAmbigus()].map((c) => [c.cle, c.texte]));
 
-  /*
-   * Seuls `clean` et `wrong` entrent. Un blanc est déjà visible : il ne demande aucun signal,
-   * et l'inclure gonflerait chaque score avec le cas facile.
-   */
-  const lignes = tentatives
-    .filter((t) => t.outcome === "clean" || t.outcome === "wrong")
-    .map((t) => ({ ...t, faux: t.outcome === "wrong" }));
-
-  /* Signal 1 : le désaccord. Ce que rend la pluralité des autres paliers sur le même champ. */
+  /* La pluralité des autres paliers sur le même (cas, champ). */
   const parCle = new Map<string, Tentative[]>();
   for (const t of tentatives) {
     const k = `${t.caseId}|${t.field}`;
     parCle.set(k, [...(parCle.get(k) ?? []), t]);
   }
   const pluralite = (t: Tentative) => {
-    const autres = (parCle.get(`${t.caseId}|${t.field}`) ?? [])
-      .filter((x) => x.tier !== t.tier && normaliserReponse(x.value).length > 0);
     const comptes = new Map<string, number>();
-    for (const a of autres) {
+    for (const a of parCle.get(`${t.caseId}|${t.field}`) ?? []) {
+      if (a.tier === t.tier) continue;
       const v = normaliserReponse(a.value);
+      if (!v) continue;
       comptes.set(v, (comptes.get(v) ?? 0) + 1);
     }
-    const meilleur = [...comptes].sort((a, b) => b[1] - a[1])[0];
-    return meilleur?.[0] ?? null;
+    return [...comptes].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
   };
 
-  const verdicts = [
-    evaluerSignal(lignes, "désaccord",
-      "la valeur diffère de celle que rend la pluralité des autres paliers sur le même champ",
-      (t) => { const p = pluralite(t); return p !== null && p !== normaliserReponse(t.value); }),
-    evaluerSignal(lignes, "forme",
-      "la valeur ne passe pas la règle de forme déclarée pour son champ",
-      (t) => { const r = FORME[t.field]; return r !== undefined && !r(t.value); }),
-    evaluerSignal(lignes, "absente du document",
-      "la valeur rendue n'apparaît pas dans le texte du document",
-      (t) => {
-        const texte = textes.get(t.caseId);
-        const v = normaliserReponse(t.value);
-        return texte !== undefined && v.length > 0 && !normaliserReponse(texte).includes(v);
-      }),
-  ];
-
-  /*
-   * Les combinaisons, parce que c'est elles qui deviennent une règle d'escalade.
-   *
-   * Un seul signal ne donne pas une politique : « au moins un » ratisse large et coûte des
-   * relectures, « au moins deux » vise juste et laisse passer. Les deux sont calculables ici et
-   * seront des paramètres chez le client, qui connaît le prix d'une relecture — pas nous.
-   */
-  const tirs = [
-    (t: Tentative) => { const pl = pluralite(t); return pl !== null && pl !== normaliserReponse(t.value); },
-    (t: Tentative) => { const r = FORME[t.field]; return r !== undefined && !r(t.value); },
-    (t: Tentative) => {
+  const tire = {
+    desaccord: (t: Tentative) => { const p = pluralite(t); return p !== null && p !== normaliserReponse(t.value); },
+    forme: (t: Tentative) => { const r = FORME[t.field]; return r !== undefined && normaliserReponse(t.value).length > 0 && !r(t.value); },
+    absente: (t: Tentative) => {
       const texte = textes.get(t.caseId); const v = normaliserReponse(t.value);
       return texte !== undefined && v.length > 0 && !normaliserReponse(texte).includes(v);
     },
-  ];
-  const combien = (t: Tentative) => tirs.filter((f) => f(t)).length;
-  verdicts.push(
-    evaluerSignal(lignes, "au moins un des trois", "l'un quelconque des trois signaux se déclenche",
-      (t) => combien(t) >= 1),
-    evaluerSignal(lignes, "au moins deux des trois", "deux signaux au moins se déclenchent ensemble",
-      (t) => combien(t) >= 2),
-    evaluerSignal(lignes, "les trois", "les trois signaux se déclenchent ensemble",
-      (t) => combien(t) === 3),
-  );
+    blanc: (t: Tentative) => normaliserReponse(t.value).length === 0,
+  };
+  const combien = (t: Tentative) => [tire.desaccord, tire.forme, tire.absente].filter((g) => g(t)).length;
 
-  const base = lignes.filter((l) => l.faux).length / lignes.length;
-  console.log(`\n${lignes.length} valeurs notées (les blancs sont exclus : ils se voient déjà).`);
-  console.log(`Taux d'erreur de base : ${(100 * base).toFixed(1)} % — c'est la précision qu'atteint un signal au hasard.\n`);
+  /*
+   * VUE PRINCIPALE — dénominateur : toute valeur notée. Cible : tout ce qui n'est pas `clean`.
+   */
+  const toutes = tentatives.map((t) => ({ ...t, faux: t.outcome !== "clean" }));
+
+  const verdicts = [
+    /*
+     * Le signal-oracle, d'abord, parce que sans lui « aucun signal ne sépare » et « le banc est
+     * cassé » rendent exactement la même sortie — et le premier est le résultat le plus probable
+     * d'une mesure comme celle-ci. Il lit la clé : il doit séparer parfaitement. S'il échoue,
+     * rien de ce qui suit ne veut dire quoi que ce soit.
+     */
+    evaluerSignal(toutes, "ORACLE (témoin positif)",
+      "lit la clé de réponses : doit séparer parfaitement, sinon le banc est en cause", (t) => t.outcome !== "clean"),
+    evaluerSignal(toutes, "blanc (référence)",
+      "la sortie est vide — référence obligatoire : un blanc se voit sans aucun signal", tire.blanc),
+    evaluerSignal(toutes, "désaccord", "diffère de la pluralité des autres paliers sur le même champ",
+      tire.desaccord, 1),
+    evaluerSignal(toutes, "forme", "échoue à la règle de forme déclarée pour son champ", tire.forme, 0),
+    evaluerSignal(toutes, "absente du document", "la valeur ne figure pas dans le texte du document",
+      tire.absente, 0),
+    evaluerSignal(toutes, "au moins deux des trois", "deux signaux au moins ensemble", (t) => combien(t) >= 2, 1),
+    evaluerSignal(toutes, "les trois", "les trois ensemble", (t) => combien(t) === 3, 1),
+  ];
+
+  const oracle = verdicts[0]!;
+  const bancValide = oracle.precision === 1 && oracle.rappel === 1;
+
+  /*
+   * VUE SECONDAIRE — les échecs invisibles seuls. Population restreinte aux non-blancs, cible
+   * `wrong`. Elle répond à une autre question et n'est jamais mélangée à la principale.
+   */
+  const nonBlancs = tentatives.filter((t) => t.outcome !== "blank").map((t) => ({ ...t, faux: t.outcome === "wrong" }));
+  const invisibles = [
+    evaluerSignal(nonBlancs, "désaccord", "", tire.desaccord, 1),
+    evaluerSignal(nonBlancs, "forme", "", tire.forme, 0),
+    evaluerSignal(nonBlancs, "absente du document", "", tire.absente, 0),
+    evaluerSignal(nonBlancs, "les trois", "", (t) => combien(t) === 3, 1),
+  ];
+
+  /*
+   * PAR CHAMP, avec intervalle — un taux groupé sur cinq champs cache lequel porte le signal,
+   * et sur ces effectifs l'intervalle est plus large que les écarts.
+   */
+  const champs = [...new Set(tentatives.map((t) => t.field))];
+  const parChamp = champs.map((c) => {
+    const l = toutes.filter((t) => t.field === c);
+    const tirees = l.filter(tire.absente);
+    const r = rate(tirees.filter((t) => t.faux).length, tirees.length);
+    return { champ: c, valeurs: l.length, declenche: tirees.length,
+      precision: tirees.length ? Number((r.rate * 100).toFixed(1)) : null,
+      intervalle: tirees.length ? [Number((100 * r.low).toFixed(1)), Number((100 * r.high).toFixed(1))] : null,
+      assezDeCas: tirees.length >= ENOUGH };
+  });
+
+  /*
+   * CE QUE L'ESCALADE RAPPORTERAIT VRAIMENT.
+   *
+   * « Le bon marché se trompe » ne suffit pas : si le cher se trompe aussi, escalader coûte et
+   * ne rapporte rien. Seul le croisement compte — bon marché faux ET cher juste.
+   */
+  const paires: [string, string][] = [["gen-0.6b", "gen-4b"], ["gen-4b", "gen-8b"], ["large", "gen-4b"]];
+  const escalade = paires.map(([bas, haut]) => {
+    const parCas = new Map<string, { bas?: Tentative; haut?: Tentative }>();
+    for (const t of tentatives) {
+      if (t.tier !== bas && t.tier !== haut) continue;
+      const k = `${t.caseId}|${t.field}`;
+      const e = parCas.get(k) ?? {};
+      if (t.tier === bas) e.bas = t; else e.haut = t;
+      parCas.set(k, e);
+    }
+    const communs = [...parCas.values()].filter((e) => e.bas && e.haut);
+    const basFaux = communs.filter((e) => e.bas!.outcome !== "clean");
+    const gagnants = basFaux.filter((e) => e.haut!.outcome === "clean");
+    const inutiles = basFaux.length - gagnants.length;
+    /* Et parmi ceux que le signal désigne : l'escalade guidée rapporte-t-elle plus que le hasard
+       à dépense égale ? Le témoin escalade le même nombre de cas, tirés au sort. */
+    const designes = communs.filter((e) => combien(e.bas!) >= 2);
+    const gagnesParSignal = designes.filter((e) => e.bas!.outcome !== "clean" && e.haut!.outcome === "clean").length;
+    let hasard = 0;
+    const tirages = 500;
+    for (let k = 0; k < tirages; k++) {
+      const melange = [...communs].sort(() => Math.random() - 0.5).slice(0, designes.length);
+      hasard += melange.filter((e) => e.bas!.outcome !== "clean" && e.haut!.outcome === "clean").length;
+    }
+    return {
+      bas, haut, champsCommuns: communs.length,
+      basFaux: basFaux.length,
+      escaladeUtile: gagnants.length,
+      escaladeInutile: inutiles,
+      partUtileParmiLesEchecs: basFaux.length ? Number((gagnants.length / basFaux.length).toFixed(4)) : null,
+      guideeParSignal: { escalades: designes.length, gagnes: gagnesParSignal },
+      temoinHasardMemeDepense: { escalades: designes.length, gagnesMoyen: Number((hasard / tirages).toFixed(2)) },
+      batLeHasard: gagnesParSignal > hasard / tirages,
+    };
+  });
+
+  /* La confiance émise par le modèle : zéro trouvé n'est pas zéro cherché. */
+  const exposantUneConfiance = GENERATIFS_PUBLICS.filter(() => false).length;
+
+  const cible = toutes.filter((t) => t.faux).length;
+  console.log(`\nDénominateur : ${DENOMINATEUR} — ${toutes.length} valeurs.`);
+  console.log(`Cible : tout ce qui n'est pas \`clean\` — ${cible} valeurs, soit ${(100 * cible / toutes.length).toFixed(1)} %.`);
+  console.log(`C'est aussi la précision qu'atteint un signal tiré au hasard.\n`);
   for (const v of verdicts) {
-    console.log(`  ${v.nom.padEnd(22)} tire ${String(v.declenche).padStart(3)}/${lignes.length}`
-      + `   précision ${((v.precision ?? 0) * 100).toFixed(1).padStart(5)} %`
-      + `   rappel ${((v.rappel ?? 0) * 100).toFixed(1).padStart(5)} %`
-      + `   fausses alertes ${String(v.faussesAlertes).padStart(3)}`
-      + `   témoin ${(v.temoin.precisionMoyenne * 100).toFixed(1)} %  ${v.bat ? "BAT" : "ne bat pas"}`);
+    console.log(`  ${v.nom.padEnd(24)} tire ${String(v.declenche).padStart(3)}`
+      + `  précision ${((v.precision ?? 0) * 100).toFixed(1).padStart(5)} %`
+      + `  rappel ${((v.rappel ?? 0) * 100).toFixed(1).padStart(5)} %`
+      + `  fausses alertes ${String(v.faussesAlertes).padStart(3)}`
+      + `  appels +${v.coutEnAppels}`
+      + `  ${v.bat ? "bat le hasard" : "ne bat pas"}`);
+  }
+  console.log(`\n  banc valide (l'oracle sépare parfaitement) : ${bancValide ? "OUI" : "NON — rien au-dessus ne vaut"}`);
+  console.log(`  paliers exposant une confiance : ${exposantUneConfiance} sur ${GENERATIFS_PUBLICS.length} examinés\n`);
+  console.log("  ce que l'escalade rapporterait :");
+  for (const e of escalade) {
+    console.log(`    ${e.bas} → ${e.haut}   ${e.bas} rate ${e.basFaux}, dont ${e.haut} sauve ${e.escaladeUtile}`
+      + ` (${(100 * (e.partUtileParmiLesEchecs ?? 0)).toFixed(0)} %) — ${e.escaladeInutile} escalades pour rien`);
+    console.log(`      guidée par signal : ${e.guideeParSignal.escalades} escalades, ${e.guideeParSignal.gagnes} gains`
+      + `  |  hasard à dépense égale : ${e.temoinHasardMemeDepense.gagnesMoyen}  → ${e.batLeHasard ? "BAT" : "ne bat pas"}`);
   }
 
   writeFileSync(SORTIE, JSON.stringify({
-    quoi: "Quels signaux annoncent une valeur fausse, sans la clé de réponses.",
+    quoi: "Quels signaux annoncent une valeur inutilisable, sans la clé de réponses.",
     mesureLe: new Date().toISOString(), journal: f.split("/").slice(-2).join("/"),
-    corpus: "hard-corpus", valeursNotees: lignes.length,
-    tauxDErreurDeBase: Number(base.toFixed(4)),
-    exclus: "les blancs — un blanc est déjà visible et ne demande aucun signal",
+    corpus: "hard-corpus",
+    denominateur: DENOMINATEUR, valeurs: toutes.length,
+    cible: "tout ce qui n'est pas `clean`", cibleN: cible,
+    tauxDeBase: Number((cible / toutes.length).toFixed(4)),
+    bancValide, oracle,
     signaux: verdicts,
+    vueDesEchecsInvisibles: {
+      quoi: "population restreinte aux non-blancs, cible `wrong` — les échecs qu'on ne voit pas.",
+      valeurs: nonBlancs.length, signaux: invisibles,
+    },
+    parChampDuMeilleurSignal: parChamp,
+    escalade,
+    confianceDuModele: {
+      paliersExamines: GENERATIFS_PUBLICS.length, paliersExposantUneConfiance: exposantUneConfiance,
+      pourquoi: "L'appel de génération ne demande ni ne conserve les log-probabilités : aucun "
+        + "palier n'expose de confiance dans l'état actuel. Zéro trouvé n'est pas zéro cherché, "
+        + "et un signal absent du rapport ne se distingue pas d'un signal jamais regardé.",
+      coutPourLObtenir: "remesurer les paliers génératifs en conservant les log-probabilités — "
+        + "environ cinq minutes pour `gen-4b` seul, quarante pour les trois.",
+    },
     laCleNEstPasNecessaireAuSignal: "Les trois signaux se calculent sur ce que le client possède : "
       + "le document, la valeur rendue, et pour le premier une seconde opinion. La clé n'entre "
-      + "que dans la validation ci-dessus. C'est ce qui les rend transposables.",
-    limite: "Mesuré sur un corpus de trente à quarante-quatre documents durs. Assez pour écarter "
-      + "un signal qui ne bat pas le hasard, pas assez pour estimer sa précision : un intervalle "
-      + "sur ces effectifs serait plus large que les écarts entre signaux.",
+      + "que dans la validation. C'est ce qui les rend transposables.",
+    limite: "Trente à quarante-quatre documents durs. Assez pour écarter un signal qui ne bat pas "
+      + "le hasard, pas pour estimer une précision : les intervalles par champ ci-dessus sont plus "
+      + "larges que les écarts entre signaux. Et le taux de base ici est celui d'un corpus cassé ; "
+      + "sur trafic propre il est bien plus bas, et toute précision baisse avec lui.",
+    seuilRegleSurCeCorpus: "Un seuil d'escalade réglé sur ces mêmes documents utiliserait les "
+      + "données qui bornent son intervalle. Sur ces effectifs, le routage par document peut être "
+      + "non validable sur les données disponibles même s'il fonctionne — ce qui n'est pas une "
+      + "raison de le déclarer bon, ni mauvais.",
   }, null, 2) + "\n");
   console.log(`\nÉcrit dans ${SORTIE.split("/").pop()}\n`);
 }
