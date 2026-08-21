@@ -39,9 +39,28 @@ document on the shipped relevé, and both generated files unchanged.
 Seven tiers by eight fields — where the previous solver died — takes ten seconds.
 Eight by eight, sixteen point eight million assignments, takes thirty-two.
 
-The 9×8 point was not run: estimated past the forty-five second ceiling from the
-point before it. Measuring a ten-minute point says nothing the previous one did
-not, and holds the machine.
+The 9×8 point was not run: estimated past the ceiling from the point before it.
+Measuring a ten-minute point says nothing the previous one did not, and holds the
+machine.
+
+**The declared budget is forty-five seconds per point**, and it is the only number
+with that role. The script's default is sixty; forty-five was passed on the
+command line. Where this report says "under a minute" it is describing the
+observed 32.3 s, not naming a budget — an ambiguity worth removing, since two
+numbers for one role is how a threshold gets chosen after the fact.
+
+**And it was fixed before the grid ran, not declared before it.** The distinction
+matters and the second is what the procedure asks for. The ceiling existed as a
+parameter before any timing: the only prior invocation returned 0 ms at every
+size, from a bug that filtered out the synthetic tiers, so no duration had been
+observed when forty-five was chosen. But `mur.ts` was not in version control at
+that moment — it entered git in the same commit as the results.
+
+So the substance is satisfied and the auditable form is not. "I chose it before,
+take my word" is precisely what a prior declaration exists to replace, and this
+repository does it properly elsewhere: the hard-corpus scoring rule was committed
+in its own pass before a single case was measured. This one was not, and a reader
+cannot tell the two apart from the history.
 
 ## Memory, measured rather than asserted
 
