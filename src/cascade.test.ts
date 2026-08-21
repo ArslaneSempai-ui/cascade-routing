@@ -1329,3 +1329,56 @@ test("l'appel génératif impose une sortie structurée, sinon le prix publié e
   assert.match(appel, /temperature:\s*0/,
     "la température n'est plus à zéro : les mesures cessent d'être reproductibles.");
 });
+
+/*
+ * La prose d'un relevé doit nommer l'exception que ses propres chiffres portent.
+ *
+ * `escalationCeiling` portait `everyFieldOverCeiling: false` et, dans le même objet, une note
+ * disant « dépasse le plafond, quel que soit le champ ». La donnée était juste et la phrase la
+ * démentait — dans le fichier que la page recopie, pas dans un commentaire. C'est la phrase
+ * qu'un lecteur emporte, donc c'est elle qui doit céder.
+ *
+ * Première version de ce contrôle : chercher les mots universels — « tous », « aucun », « quel
+ * que soit » — dans toute prose voisine d'un booléen faux. Elle a crié sur la note **corrigée**,
+ * dont le « ne complète aucun dossier entier » est juste et sans rapport avec le booléen. Un
+ * gardien qui crie à tort finit désactivé, ce qui est pire que pas de gardien.
+ *
+ * La bonne forme n'est pas de renifler des mots mais de vérifier un accord : le booléen doit
+ * suivre les listes émises à côté de lui, et si une exception existe, la prose doit la **nommer**.
+ * C'est mécanisable sans ambiguïté, et c'est exactement ce que la note fautive ne faisait pas —
+ * elle ne prononçait pas le mot « country ».
+ */
+test("la prose du plafond nomme l'exception que ses chiffres portent", () => {
+  const f = new URL("../landing.json", import.meta.url).pathname;
+  if (!existsSync(f)) return;
+  const bloc = (JSON.parse(readFileSync(f, "utf8")) as {
+    latencySpread: { escalationCeiling: null | {
+      perField: { field: string; overCeiling: boolean }[];
+      everyFieldOverCeiling: boolean; fieldsOverCeiling: string[]; fieldsUnderCeiling: string[];
+      note: string } };
+  }).latencySpread.escalationCeiling;
+  if (!bloc) return;
+
+  assert.ok(bloc.perField.length >= 5, `${bloc.perField.length} champ(s) chiffré(s) : trop peu.`);
+
+  /* Les listes doivent suivre les chiffres, et le booléen doit suivre les listes. */
+  const dessus = bloc.perField.filter((x) => x.overCeiling).map((x) => x.field).sort();
+  const dessous = bloc.perField.filter((x) => !x.overCeiling).map((x) => x.field).sort();
+  assert.deepEqual([...bloc.fieldsOverCeiling].sort(), dessus, "`fieldsOverCeiling` ne suit pas les chiffres.");
+  assert.deepEqual([...bloc.fieldsUnderCeiling].sort(), dessous, "`fieldsUnderCeiling` ne suit pas les chiffres.");
+  assert.equal(bloc.everyFieldOverCeiling, dessous.length === 0,
+    "`everyFieldOverCeiling` ne suit pas ses propres listes.");
+
+  /* Et s'il y a une exception, la prose doit la nommer. C'est la phrase qu'on recopie. */
+  if (dessous.length > 0) {
+    for (const champ of dessous) {
+      assert.ok(bloc.note.includes(champ),
+        `la note ne nomme pas « ${champ} », qui tient sous le plafond d'après les chiffres du même objet.\n`
+        + `  → note : « ${bloc.note.slice(0, 100)}… »\n`
+        + `  → un lecteur emporte la phrase, pas le tableau : une exception tue doit être écrite.`);
+    }
+  } else {
+    assert.ok(!/exception|excepté|sauf/i.test(bloc.note),
+      "la note annonce une exception alors qu'aucun champ ne tient sous le plafond.");
+  }
+});

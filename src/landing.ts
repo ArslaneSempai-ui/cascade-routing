@@ -450,9 +450,14 @@ function plafondEtEscalade(p: Profiles, optimum: ReturnType<typeof optimiseExtra
     composition: "sum of per-field medians — the same composition on both durations",
     perField: parChamp,
     everyFieldOverCeiling: parChamp.every((x) => x.overCeiling),
-    note: "Escalader un seul champ vers `gen-8b` dépasse le plafond, quel que soit le champ. "
-      + "Ce n'est donc pas une escalade trop chère, c'est une escalade inadmissible. Les paliers "
-      + "qui tiennent sous le plafond ne complètent aucun dossier de plus, oracle compris.",
+    fieldsOverCeiling: parChamp.filter((x) => x.overCeiling).map((x) => x.field),
+    fieldsUnderCeiling: parChamp.filter((x) => !x.overCeiling).map((x) => x.field),
+    note: "Escalader un champ vers `gen-8b` dépasse le plafond sur quatre champs sur cinq. "
+      + "`country` fait exception — le routage recommandé l'envoie à `rules`, dont la latence est "
+      + "nulle, donc le remplacer ne coûte que le temps de `gen-8b`. Cette escalade-là est donc "
+      + "admissible, et elle fait passer l'exactitude par champ de 44 à 70 sur cent cinquante "
+      + "(apparié 0–26) pour trente centimes de plus par millier. Elle ne complète aucun dossier "
+      + "entier de plus : les quatre autres champs continuent d'échouer.",
   };
 }
 
