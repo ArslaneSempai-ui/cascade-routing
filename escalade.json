@@ -1,11 +1,27 @@
 {
-  "quoi": "La cascade guidée vaut-elle son second appel ?",
-  "regle": "pour chaque champ : lancer le palier retenu ; si la valeur est absente du document ou implausible de forme, relancer sur le palier au-dessus ; garder la seconde. Aucun seuil.",
-  "sansParametre": "Les deux signaux sont binaires : rien à régler, donc rien à surajuster. L'objection du seuil réglé sur le corpus qui borne son propre intervalle ne s'applique pas.",
-  "mesureLe": "2026-08-21T17:51:23.651Z",
+  "quoi": "La courbe de l'escalade : combien de dossiers entiers par point de budget.",
+  "regle": "trier les champs candidats par nombre de signaux gratuits d'accord, escalader du plus sûr au moins sûr, s'arrêter au budget. Le budget est un pourcentage de champs, fixé du dehors comme le plafond de latence.",
+  "classement": "blanc, forme implausible, valeur absente du document — tous gratuits. Le désaccord entre paliers est exclu : le calculer exige un second appel, donc il ne peut pas décider s'il faut en faire un.",
+  "monotone": {
+    "deuxSignaux": {
+      "cas": 32,
+      "precision": 1
+    },
+    "unSignal": {
+      "cas": 398,
+      "precision": 0.869
+    },
+    "aucun": {
+      "cas": 554,
+      "precision": 0.39
+    },
+    "reserve": "Le 100 % du point le plus sûr porte sur trente-deux cas. C'est un chiffre sur trente-deux tirages, pas une garantie."
+  },
+  "mesureLe": "2026-08-21T17:59:36.492Z",
   "journal": "tentatives/2026-08-21T16-54-14-816Z-dur.jsonl",
   "documents": 30,
-  "echelle": [
+  "champs": 150,
+  "echelleDesPrix": [
     "rules",
     "gen-0.6b",
     "small",
@@ -20,57 +36,320 @@
     "country": "rules",
     "address": "gen-4b"
   },
-  "colonnes": [
+  "courbes": [
     {
-      "nom": "1. routage fixe actuel",
-      "dossiersEntiers": 0,
-      "escalades": 0,
-      "prixParMille": 1.8365,
-      "msParDocument": 967.7
+      "echelle": "un cran",
+      "points": [
+        {
+          "budgetDemandePct": 0,
+          "guidee": {
+            "budgetPct": 0,
+            "escalades": 0,
+            "dossiersEntiers": 0,
+            "prixParMille": 1.8365,
+            "msParDocument": 967.7
+          },
+          "hasard": {
+            "dossiersEntiers": 0,
+            "prixParMille": 1.8365
+          },
+          "oracle": {
+            "dossiersEntiers": 0,
+            "escalades": 0,
+            "candidatsUtiles": 40
+          }
+        },
+        {
+          "budgetDemandePct": 3,
+          "guidee": {
+            "budgetPct": 2.7,
+            "escalades": 4,
+            "dossiersEntiers": 0,
+            "prixParMille": 1.8855,
+            "msParDocument": 1148.8
+          },
+          "hasard": {
+            "dossiersEntiers": 0,
+            "prixParMille": 1.8511
+          },
+          "oracle": {
+            "dossiersEntiers": 0,
+            "escalades": 4,
+            "candidatsUtiles": 40
+          }
+        },
+        {
+          "budgetDemandePct": 10,
+          "guidee": {
+            "budgetPct": 9.3,
+            "escalades": 14,
+            "dossiersEntiers": 0,
+            "prixParMille": 1.9101,
+            "msParDocument": 1224.4
+          },
+          "hasard": {
+            "dossiersEntiers": 0,
+            "prixParMille": 1.8947
+          },
+          "oracle": {
+            "dossiersEntiers": 0,
+            "escalades": 15,
+            "candidatsUtiles": 40
+          }
+        },
+        {
+          "budgetDemandePct": 20,
+          "guidee": {
+            "budgetPct": 18.7,
+            "escalades": 28,
+            "dossiersEntiers": 0,
+            "prixParMille": 1.9447,
+            "msParDocument": 1332.4
+          },
+          "hasard": {
+            "dossiersEntiers": 0,
+            "prixParMille": 1.9531
+          },
+          "oracle": {
+            "dossiersEntiers": 0,
+            "escalades": 30,
+            "candidatsUtiles": 40
+          }
+        },
+        {
+          "budgetDemandePct": 100,
+          "guidee": {
+            "budgetPct": 60,
+            "escalades": 90,
+            "dossiersEntiers": 0,
+            "prixParMille": 2.1171,
+            "msParDocument": 1888.8
+          },
+          "hasard": {
+            "dossiersEntiers": 0,
+            "prixParMille": 2.2387
+          },
+          "oracle": {
+            "dossiersEntiers": 0,
+            "escalades": 40,
+            "candidatsUtiles": 40
+          }
+        }
+      ]
     },
     {
-      "nom": "2. cascade guidée (forme + absence)",
-      "dossiersEntiers": 0,
-      "escalades": 6,
-      "prixParMille": 1.91,
-      "msParDocument": 1239.3
-    },
-    {
-      "nom": "2b. cascade guidée, blancs compris",
-      "dossiersEntiers": 0,
-      "escalades": 90,
-      "prixParMille": 2.1171,
-      "msParDocument": 1888.8
-    },
-    {
-      "nom": "2c. cascade vers gen-8b, blancs compris",
-      "dossiersEntiers": 1,
-      "escalades": 103,
-      "prixParMille": 3.0969,
-      "msParDocument": 4960.4
-    },
-    {
-      "nom": "3. cascade au hasard, même nombre d'escalades que 2b",
-      "dossiersEntiers": 0,
-      "escalades": 90,
-      "prixParMille": 2.1892,
-      "msParDocument": 2201.6
-    },
-    {
-      "nom": "4. oracle (plafond)",
-      "dossiersEntiers": 0,
-      "escalades": 40,
-      "prixParMille": 1.9743,
-      "msParDocument": 1424.3
-    },
-    {
-      "nom": "5. meilleur routage fixe au même budget",
-      "dossiersEntiers": 2,
-      "escalades": 0,
-      "prixParMille": 0.9881,
-      "msParDocument": 3272.9
+      "echelle": "vers gen-8b",
+      "points": [
+        {
+          "budgetDemandePct": 0,
+          "guidee": {
+            "budgetPct": 0,
+            "escalades": 0,
+            "dossiersEntiers": 0,
+            "prixParMille": 1.8365,
+            "msParDocument": 967.7
+          },
+          "hasard": {
+            "dossiersEntiers": 0,
+            "prixParMille": 1.8365
+          },
+          "oracle": {
+            "dossiersEntiers": 0,
+            "escalades": 0,
+            "candidatsUtiles": 58
+          }
+        },
+        {
+          "budgetDemandePct": 3,
+          "guidee": {
+            "budgetPct": 2.7,
+            "escalades": 4,
+            "dossiersEntiers": 0,
+            "prixParMille": 1.8855,
+            "msParDocument": 1148.8
+          },
+          "hasard": {
+            "dossiersEntiers": 0.03,
+            "prixParMille": 1.8855
+          },
+          "oracle": {
+            "dossiersEntiers": 0,
+            "escalades": 4,
+            "candidatsUtiles": 58
+          }
+        },
+        {
+          "budgetDemandePct": 10,
+          "guidee": {
+            "budgetPct": 10,
+            "escalades": 15,
+            "dossiersEntiers": 0,
+            "prixParMille": 2.0201,
+            "msParDocument": 1562.8
+          },
+          "hasard": {
+            "dossiersEntiers": 0.12,
+            "prixParMille": 2.0201
+          },
+          "oracle": {
+            "dossiersEntiers": 0,
+            "escalades": 15,
+            "candidatsUtiles": 58
+          }
+        },
+        {
+          "budgetDemandePct": 20,
+          "guidee": {
+            "budgetPct": 20,
+            "escalades": 30,
+            "dossiersEntiers": 0,
+            "prixParMille": 2.2036,
+            "msParDocument": 2139.5
+          },
+          "hasard": {
+            "dossiersEntiers": 0.2,
+            "prixParMille": 2.2036
+          },
+          "oracle": {
+            "dossiersEntiers": 1,
+            "escalades": 30,
+            "candidatsUtiles": 58
+          }
+        },
+        {
+          "budgetDemandePct": 100,
+          "guidee": {
+            "budgetPct": 68.7,
+            "escalades": 103,
+            "dossiersEntiers": 1,
+            "prixParMille": 3.0969,
+            "msParDocument": 4960.4
+          },
+          "hasard": {
+            "dossiersEntiers": 0.69,
+            "prixParMille": 3.0969
+          },
+          "oracle": {
+            "dossiersEntiers": 1,
+            "escalades": 58,
+            "candidatsUtiles": 58
+          }
+        }
+      ]
     }
   ],
-  "doubleOrigine": "L'exactitude vient des lignes du corpus dur ; le prix et la latence viennent des latences du relevé publié, mesurées sur machine au repos. Les durées du corpus dur décrivent d'autres documents et ne serviraient pas ici.",
-  "limite": "Trente documents. Un écart d'un ou deux dossiers entiers n'est pas départageable sur cet effectif, et aucun taux n'est publiable depuis ces comptes."
+  "meilleurRoutageFixeAuMemeCout": {
+    "un cran|0": {
+      "routage": {
+        "name": "gen-0.6b",
+        "birth": "gen-8b",
+        "document": "gen-4b",
+        "country": "gen-4b",
+        "address": "gen-0.6b"
+      },
+      "entiers": 2,
+      "prix": 0.9881
+    },
+    "un cran|3": {
+      "routage": {
+        "name": "gen-0.6b",
+        "birth": "gen-8b",
+        "document": "gen-4b",
+        "country": "gen-4b",
+        "address": "gen-0.6b"
+      },
+      "entiers": 2,
+      "prix": 0.9881
+    },
+    "un cran|10": {
+      "routage": {
+        "name": "gen-0.6b",
+        "birth": "gen-8b",
+        "document": "gen-4b",
+        "country": "gen-4b",
+        "address": "gen-0.6b"
+      },
+      "entiers": 2,
+      "prix": 0.9881
+    },
+    "un cran|20": {
+      "routage": {
+        "name": "gen-0.6b",
+        "birth": "gen-8b",
+        "document": "gen-4b",
+        "country": "gen-4b",
+        "address": "gen-0.6b"
+      },
+      "entiers": 2,
+      "prix": 0.9881
+    },
+    "un cran|100": {
+      "routage": {
+        "name": "gen-0.6b",
+        "birth": "gen-8b",
+        "document": "gen-4b",
+        "country": "gen-4b",
+        "address": "gen-0.6b"
+      },
+      "entiers": 2,
+      "prix": 0.9881
+    },
+    "vers gen-8b|0": {
+      "routage": {
+        "name": "gen-0.6b",
+        "birth": "gen-8b",
+        "document": "gen-4b",
+        "country": "gen-4b",
+        "address": "gen-0.6b"
+      },
+      "entiers": 2,
+      "prix": 0.9881
+    },
+    "vers gen-8b|3": {
+      "routage": {
+        "name": "gen-0.6b",
+        "birth": "gen-8b",
+        "document": "gen-4b",
+        "country": "gen-4b",
+        "address": "gen-0.6b"
+      },
+      "entiers": 2,
+      "prix": 0.9881
+    },
+    "vers gen-8b|10": {
+      "routage": {
+        "name": "gen-0.6b",
+        "birth": "gen-8b",
+        "document": "gen-4b",
+        "country": "gen-4b",
+        "address": "gen-0.6b"
+      },
+      "entiers": 2,
+      "prix": 0.9881
+    },
+    "vers gen-8b|20": {
+      "routage": {
+        "name": "gen-0.6b",
+        "birth": "gen-8b",
+        "document": "gen-4b",
+        "country": "gen-4b",
+        "address": "gen-0.6b"
+      },
+      "entiers": 2,
+      "prix": 0.9881
+    },
+    "vers gen-8b|100": {
+      "routage": {
+        "name": "gen-0.6b",
+        "birth": "gen-8b",
+        "document": "gen-4b",
+        "country": "gen-4b",
+        "address": "gen-0.6b"
+      },
+      "entiers": 2,
+      "prix": 0.9881
+    }
+  },
+  "doubleOrigine": "L'exactitude vient des lignes du corpus dur ; le prix et la latence viennent des latences du relevé publié, prises sur machine au repos.",
+  "limite": "Trente documents et des comptes de dossiers entiers entre zéro et deux. Aucun écart n'est départageable, et aucun taux n'est publiable depuis ces comptes."
 }

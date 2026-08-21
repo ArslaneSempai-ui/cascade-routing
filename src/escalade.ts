@@ -23,6 +23,21 @@
  * cascade qui ne bat pas ce qu'on achèterait en montant simplement d'un palier ne vaut rien,
  * même si elle bat le routage d'origine.
  *
+ * Et ce n'est pas une cascade qu'on mesure mais une **courbe**. Le nombre de signaux d'accord
+ * est un classement, mesuré et monotone sur les signaux gratuits : deux signaux, 100 % de cas
+ * inutilisables sur trente-deux ; un seul, 86,9 % sur trois cent quatre-vingt-dix-huit ; aucun,
+ * 39 %. On peut donc trier les escalades candidates de la plus sûre à la moins sûre et s'arrêter
+ * quand un budget d'escalade — un pourcentage de champs, fixé du dehors comme le plafond de
+ * latence — est épuisé.
+ *
+ * Le désaccord entre paliers est **exclu du classement**, bien qu'il figure dans le banc : le
+ * calculer demande de lancer un second palier, donc il ne peut pas décider s'il faut en lancer
+ * un. Les trois qui restent — blanc, forme, absence — ne coûtent rien.
+ *
+ * Ce que la courbe doit dire : **où elle s'aplatit**. Si les dossiers entiers cessent de monter
+ * après 3 %, on vend « 3 % d'escalade, et voici ce que ça achète ». Si elle ne monte pas du
+ * tout, l'escalade ne vaut rien, et on l'aura su sans une seconde de GPU.
+ *
  *     npm run escalade
  */
 
@@ -62,171 +77,171 @@ if (isMain(import.meta)) {
   const { tentatives } = lireJournal(f);
   const textes = new Map([...corpusDur(), ...casAmbigus()].map((c) => [c.cle, c.texte]));
 
-  /* Réponses indexées : (palier, cas, champ). */
   const rep = new Map<string, Tentative>();
   for (const t of tentatives) rep.set(`${t.tier}|${t.caseId}|${t.field}`, t);
 
-  /* Seuls les documents à cinq champs : un dossier entier n'a de sens que complet. */
   const complets = corpusDur().filter((c) => Object.keys(c.attendus).length === FIELDS.length).map((c) => c.cle);
   const ordre = echelle(p);
   const suivant = (t: TierName) => ordre[Math.min(ordre.length - 1, ordre.indexOf(t) + 1)]!;
 
-  const suspect = (t: Tentative) => {
+  /** Combien de signaux gratuits s'accordent — le classement, de 0 à 2. */
+  const score = (t: Tentative) => {
     const v = normaliserReponse(t.value);
-    if (v.length === 0) return false;                      // un blanc n'est pas ce signal-ci
-    const texte = textes.get(t.caseId);
-    const absente = texte !== undefined && !normaliserReponse(texte).includes(v);
-    const regle = FORME[t.field];
-    const malForme = regle !== undefined && !regle(t.value);
-    return absente || malForme;
+    let n = 0;
+    if (v.length === 0) n++;
+    if (v.length > 0) {
+      const texte = textes.get(t.caseId);
+      if (texte !== undefined && !normaliserReponse(texte).includes(v)) n++;
+      const r = FORME[t.field];
+      if (r !== undefined && !r(t.value)) n++;
+    }
+    return n;
   };
 
-  /* Prix et latence par champ, pris du relevé publié — machine au repos, durées mesurées.
-     Les durées du corpus dur ne servent pas ici : elles décrivent d'autres documents. */
   const prix = (t: TierName) => pricePerThousandExtractions(t, ASSUMPTIONS, p.extraction[t][FIELDS[0]!]!.latency);
   const ms = (t: TierName, c: Field) => p.extraction[t][c]!.latency;
-
-  type Colonne = { nom: string; dossiersEntiers: number; escalades: number;
-    prixParMille: number; msParDocument: number };
-
-  const evaluerRoutage = (
-    nom: string, routage: Record<Field, TierName>, escalade?: (t: Tentative) => boolean,
-  ): Colonne => {
-    let entiers = 0, escalades = 0, cout = 0, duree = 0;
-    for (const cas of complets) {
-      let propre = true;
-      for (const c of FIELDS) {
-        const base = routage[c];
-        let r = rep.get(`${base}|${cas}|${c}`);
-        cout += prix(base) / 1000; duree += ms(base, c);
-        if (r && escalade && escalade(r)) {
-          const haut = suivant(base);
-          if (haut !== base) {
-            escalades++;
-            cout += prix(haut) / 1000; duree += ms(haut, c);
-            r = rep.get(`${haut}|${cas}|${c}`) ?? r;
-          }
-        }
-        if (!r || r.outcome !== "clean") propre = false;
-      }
-      if (propre) entiers++;
-    }
-    return { nom, dossiersEntiers: entiers, escalades,
-      prixParMille: Number((1000 * cout / complets.length).toFixed(4)),
-      msParDocument: Number((duree / complets.length).toFixed(1)) };
-  };
 
   const optimum = optimiseExtraction(p, ASSUMPTIONS);
   if (!optimum) { console.error("aucun routage admissible"); process.exit(1); }
   const routage = optimum.routing;
 
-  const fixe = evaluerRoutage("1. routage fixe actuel", routage);
-  const guidee = evaluerRoutage("2. cascade guidée (forme + absence)", routage, suspect);
+  /** Tous les champs du corpus complet, avec leur score et leur réponse de base. */
+  const champs = complets.flatMap((cas) => FIELDS.map((c) => {
+    const base = routage[c];
+    const r = rep.get(`${base}|${cas}|${c}`);
+    return { cas, champ: c, base, r, score: r ? score(r) : 0 };
+  }));
+  const total = champs.length;
 
-  /*
-   * La règle demandée ignore les blancs, et sur ce routage c'est presque tout l'échec.
-   *
-   * `rules` porte trois champs sur cinq et échoue 133 fois par blanc contre une seule fois par
-   * valeur fausse. Deux signaux qui ne regardent que les valeurs rendues ne peuvent rien y
-   * voir : la cascade guidée ne se déclenche que six fois sur cent cinquante. Or le blanc est
-   * le signal gratuit le plus précis du banc — 82,9 %. L'exclure de la règle n'était pas un
-   * choix, c'était l'angle mort de la règle.
-   */
-  const suspectOuVide = (t: Tentative) =>
-    normaliserReponse(t.value).length === 0 || suspect(t);
-  const guideeAvecBlancs = evaluerRoutage("2b. cascade guidée, blancs compris", routage, suspectOuVide);
+  type Point = { budgetPct: number; escalades: number; dossiersEntiers: number;
+    prixParMille: number; msParDocument: number };
 
-  /* Et une escalade qui monte au sommet plutôt que d'un cran : un cran depuis `rules` mène à
-     `gen-0.6b`, ce qui peut être trop court pour sauver quoi que ce soit. */
-  const sommet = ordre[ordre.length - 1]!;
-  const versLeSommet = (() => {
-    let entiers = 0, escalades = 0, cout = 0, duree = 0;
-    for (const cas of complets) {
-      let propre = true;
-      for (const c of FIELDS) {
-        const base = routage[c];
-        let r = rep.get(`${base}|${cas}|${c}`);
-        cout += prix(base) / 1000; duree += ms(base, c);
-        if (r && suspectOuVide(r) && base !== "gen-8b") {
+  /** Mesure un jeu d'escalades donné, quelle que soit la façon dont il a été choisi. */
+  const mesurer = (choisis: Set<string>, cible: (base: TierName) => TierName): Point => {
+    let cout = 0, duree = 0, escalades = 0;
+    const propre = new Map<string, boolean>(complets.map((c) => [c, true]));
+    for (const x of champs) {
+      cout += prix(x.base) / 1000; duree += ms(x.base, x.champ);
+      let r = x.r;
+      const k = `${x.cas}|${x.champ}`;
+      if (choisis.has(k)) {
+        const haut = cible(x.base);
+        if (haut !== x.base) {
           escalades++;
-          cout += prix("gen-8b" as TierName) / 1000; duree += ms("gen-8b" as TierName, c);
-          r = rep.get(`gen-8b|${cas}|${c}`) ?? r;
+          cout += prix(haut) / 1000; duree += ms(haut, x.champ);
+          r = rep.get(`${haut}|${x.cas}|${x.champ}`) ?? r;
         }
-        if (!r || r.outcome !== "clean") propre = false;
       }
-      if (propre) entiers++;
+      if (!r || r.outcome !== "clean") propre.set(x.cas, false);
     }
-    return { nom: "2c. cascade vers gen-8b, blancs compris", dossiersEntiers: entiers, escalades,
+    return { budgetPct: Number((100 * escalades / total).toFixed(1)), escalades,
+      dossiersEntiers: [...propre.values()].filter(Boolean).length,
       prixParMille: Number((1000 * cout / complets.length).toFixed(4)),
       msParDocument: Number((duree / complets.length).toFixed(1)) };
-  })();
-  void sommet;
-
-  /* Témoin : escalader le même nombre de champs, tirés au sort. */
-  const cible = guideeAvecBlancs.escalades;
-  const tirages = 200;
-  const hasard0 = draw(20260821);
-  let sommeEntiers = 0, sommePrix = 0, sommeMs = 0;
-  for (let k = 0; k < tirages; k++) {
-    const tous: string[] = [];
-    for (const cas of complets) for (const c of FIELDS) tous.push(`${cas}|${c}`);
-    const choisis = new Set(tous.sort(() => hasard0() - 0.5).slice(0, cible));
-    const col = evaluerRoutage("hasard", routage, (t) => choisis.has(`${t.caseId}|${t.field}`));
-    sommeEntiers += col.dossiersEntiers; sommePrix += col.prixParMille; sommeMs += col.msParDocument;
-  }
-  const hasard: Colonne = { nom: "3. cascade au hasard, même nombre d'escalades que 2b",
-    dossiersEntiers: Number((sommeEntiers / tirages).toFixed(2)), escalades: cible,
-    prixParMille: Number((sommePrix / tirages).toFixed(4)), msParDocument: Number((sommeMs / tirages).toFixed(1)) };
-
-  /* Oracle : escalader exactement quand le palier du dessus sauve la valeur. */
-  const oracle = evaluerRoutage("4. oracle (plafond)", routage, (t) => {
-    if (t.outcome === "clean") return false;
-    const haut = rep.get(`${suivant(t.tier as TierName)}|${t.caseId}|${t.field}`);
-    return haut?.outcome === "clean";
-  });
-
-  /* La colonne la plus dure : le meilleur routage FIXE au budget de la cascade guidée. */
-  let meilleurFixe: Colonne | null = null;
-  const tiers = ordre;
-  const parcours = (i: number, acc: Partial<Record<Field, TierName>>) => {
-    if (i === FIELDS.length) {
-      const col = evaluerRoutage("5. meilleur routage fixe au même budget", acc as Record<Field, TierName>);
-      if (col.prixParMille <= guidee.prixParMille
-        && (!meilleurFixe || col.dossiersEntiers > meilleurFixe.dossiersEntiers
-          || (col.dossiersEntiers === meilleurFixe.dossiersEntiers && col.prixParMille < meilleurFixe.prixParMille))) {
-        meilleurFixe = col;
-      }
-      return;
-    }
-    for (const t of tiers) parcours(i + 1, { ...acc, [FIELDS[i]!]: t });
   };
-  parcours(0, {});
 
-  const colonnes = [fixe, guidee, guideeAvecBlancs, versLeSommet, hasard, oracle,
-    ...(meilleurFixe ? [meilleurFixe as Colonne] : [])];
-  console.log(`\n${complets.length} documents à cinq champs, corpus dur. Échelle : ${ordre.join(" < ")}`);
+  /* Trié du plus sûr au moins sûr ; à score égal, ordre stable du corpus. */
+  const classe = [...champs].filter((x) => x.score > 0).sort((a, b) => b.score - a.score);
+  const alea = draw(20260821);
+
+  const budgets = [0, 3, 10, 20, 100];
+  const echelles: [string, (b: TierName) => TierName][] = [
+    ["un cran", suivant],
+    ["vers gen-8b", () => "gen-8b" as TierName],
+  ];
+
+  const courbes = echelles.map(([nomEchelle, cible]) => ({
+    echelle: nomEchelle,
+    points: budgets.map((b) => {
+      const n = b === 100 ? classe.length : Math.floor(total * b / 100);
+      const guidee = mesurer(new Set(classe.slice(0, n).map((x) => `${x.cas}|${x.champ}`)), cible);
+
+      /* Témoin : le même nombre d'escalades, tirées au sort parmi tous les champs. */
+      let sommeEntiers = 0, sommePrix = 0;
+      const tirages = 200;
+      for (let k = 0; k < tirages; k++) {
+        const melange = [...champs].sort(() => alea() - 0.5).slice(0, n);
+        const c2 = mesurer(new Set(melange.map((x) => `${x.cas}|${x.champ}`)), cible);
+        sommeEntiers += c2.dossiersEntiers; sommePrix += c2.prixParMille;
+      }
+      /* Oracle : parmi les champs où l'escalade sauverait vraiment, les n premiers. */
+      const utiles = champs.filter((x) => {
+        if (!x.r || x.r.outcome === "clean") return false;
+        return rep.get(`${cible(x.base)}|${x.cas}|${x.champ}`)?.outcome === "clean";
+      });
+      const oracle = mesurer(new Set(utiles.slice(0, n).map((x) => `${x.cas}|${x.champ}`)), cible);
+
+      return { budgetDemandePct: b, guidee,
+        hasard: { dossiersEntiers: Number((sommeEntiers / tirages).toFixed(2)),
+          prixParMille: Number((sommePrix / tirages).toFixed(4)) },
+        oracle: { dossiersEntiers: oracle.dossiersEntiers, escalades: oracle.escalades,
+          candidatsUtiles: utiles.length } };
+    }),
+  }));
+
+  /* La comparaison difficile : le meilleur routage FIXE au coût de chaque point guidé. */
+  const meilleurFixeAu = (budget: number) => {
+    let best: { routage: Record<Field, TierName>; entiers: number; prix: number } | null = null;
+    const parcours = (i: number, acc: Partial<Record<Field, TierName>>) => {
+      if (i === FIELDS.length) {
+        const r = acc as Record<Field, TierName>;
+        let cout = 0; const propre = new Map(complets.map((c) => [c, true]));
+        for (const cas of complets) for (const c of FIELDS) {
+          cout += prix(r[c]) / 1000;
+          if (rep.get(`${r[c]}|${cas}|${c}`)?.outcome !== "clean") propre.set(cas, false);
+        }
+        const prixMille = 1000 * cout / complets.length;
+        const entiers = [...propre.values()].filter(Boolean).length;
+        if (prixMille <= budget && (!best || entiers > best.entiers
+          || (entiers === best.entiers && prixMille < best.prix))) best = { routage: r, entiers, prix: Number(prixMille.toFixed(4)) };
+        return;
+      }
+      for (const t of ordre) parcours(i + 1, { ...acc, [FIELDS[i]!]: t });
+    };
+    parcours(0, {});
+    return best as { routage: Record<Field, TierName>; entiers: number; prix: number } | null;
+  };
+
+  console.log(`\n${complets.length} documents, ${total} champs. Classement par signaux gratuits (0 à 2).`);
   console.log(`Routage fixe : ${FIELDS.map((c) => `${c}→${routage[c]}`).join("  ")}\n`);
-  for (const col of colonnes) {
-    console.log(`  ${col.nom.padEnd(38)} ${String(col.dossiersEntiers).padStart(5)}/${complets.length} entiers`
-      + `   ${String(col.escalades).padStart(3)} escalades`
-      + `   ${col.prixParMille.toFixed(2).padStart(7)} €/1000`
-      + `   ${col.msParDocument.toFixed(0).padStart(6)} ms/doc`);
+  const dur: Record<string, unknown> = {};
+  for (const c of courbes) {
+    console.log(`  escalade « ${c.echelle} »`);
+    console.log(`    budget   escal.   entiers   hasard   oracle   €/1000   ms/doc   meilleur fixe au même coût`);
+    for (const pt of c.points) {
+      const mf = meilleurFixeAu(pt.guidee.prixParMille);
+      dur[`${c.echelle}|${pt.budgetDemandePct}`] = mf;
+      console.log(`    ${String(pt.budgetDemandePct).padStart(4)} %`
+        + `   ${String(pt.guidee.escalades).padStart(5)}`
+        + `   ${String(pt.guidee.dossiersEntiers).padStart(7)}`
+        + `   ${String(pt.hasard.dossiersEntiers).padStart(6)}`
+        + `   ${String(pt.oracle.dossiersEntiers).padStart(6)}`
+        + `   ${pt.guidee.prixParMille.toFixed(2).padStart(6)}`
+        + `   ${pt.guidee.msParDocument.toFixed(0).padStart(6)}`
+        + `   ${mf ? `${mf.entiers} à ${mf.prix.toFixed(2)} €` : "—"}`);
+    }
+    console.log();
   }
 
   writeFileSync(SORTIE, JSON.stringify({
-    quoi: "La cascade guidée vaut-elle son second appel ?",
-    regle: "pour chaque champ : lancer le palier retenu ; si la valeur est absente du document "
-      + "ou implausible de forme, relancer sur le palier au-dessus ; garder la seconde. Aucun seuil.",
-    sansParametre: "Les deux signaux sont binaires : rien à régler, donc rien à surajuster. "
-      + "L'objection du seuil réglé sur le corpus qui borne son propre intervalle ne s'applique pas.",
+    quoi: "La courbe de l'escalade : combien de dossiers entiers par point de budget.",
+    regle: "trier les champs candidats par nombre de signaux gratuits d'accord, escalader du plus "
+      + "sûr au moins sûr, s'arrêter au budget. Le budget est un pourcentage de champs, fixé du "
+      + "dehors comme le plafond de latence.",
+    classement: "blanc, forme implausible, valeur absente du document — tous gratuits. Le désaccord "
+      + "entre paliers est exclu : le calculer exige un second appel, donc il ne peut pas décider "
+      + "s'il faut en faire un.",
+    monotone: { deuxSignaux: { cas: 32, precision: 1.0 }, unSignal: { cas: 398, precision: 0.869 },
+      aucun: { cas: 554, precision: 0.39 },
+      reserve: "Le 100 % du point le plus sûr porte sur trente-deux cas. C'est un chiffre sur "
+        + "trente-deux tirages, pas une garantie." },
     mesureLe: new Date().toISOString(), journal: f.split("/").slice(-2).join("/"),
-    documents: complets.length, echelle: ordre, routageFixe: routage,
-    colonnes,
+    documents: complets.length, champs: total, echelleDesPrix: ordre, routageFixe: routage,
+    courbes, meilleurRoutageFixeAuMemeCout: dur,
     doubleOrigine: "L'exactitude vient des lignes du corpus dur ; le prix et la latence viennent "
-      + "des latences du relevé publié, mesurées sur machine au repos. Les durées du corpus dur "
-      + "décrivent d'autres documents et ne serviraient pas ici.",
-    limite: "Trente documents. Un écart d'un ou deux dossiers entiers n'est pas départageable "
-      + "sur cet effectif, et aucun taux n'est publiable depuis ces comptes.",
+      + "des latences du relevé publié, prises sur machine au repos.",
+    limite: "Trente documents et des comptes de dossiers entiers entre zéro et deux. Aucun écart "
+      + "n'est départageable, et aucun taux n'est publiable depuis ces comptes.",
   }, null, 2) + "\n");
-  console.log(`\nÉcrit dans ${SORTIE.split("/").pop()}\n`);
+  console.log(`Écrit dans ${SORTIE.split("/").pop()}\n`);
 }
