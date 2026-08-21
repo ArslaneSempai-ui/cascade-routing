@@ -719,8 +719,16 @@ test("chaque hypothèse porte son unité, dénominateur compris", () => {
   for (const cle of Object.keys(ASSUMPTIONS) as (keyof typeof ASSUMPTIONS)[]) {
     const u = UNITS[cle];
     assert.ok(u && u.trim().length > 0, `« ${cle} » n'a pas d'unité`);
-    /* Une grandeur sans rapport est admissible — une fraction n'a pas de dénominateur. */
-    if (u === "fraction") continue;
+    /*
+     * Il n'y a pas d'exemption, et il y en avait une.
+     *
+     * Ce test laissait passer « fraction » au motif qu'une fraction n'aurait pas de
+     * dénominateur. C'est faux : `humanAccuracy: 0.85` est un rapport — des champs justes par
+     * champ — et « fraction » ne dit pas fraction **de quoi**. La dispense n'était pas un angle
+     * mort, c'était une porte que j'avais ouverte, avec un raisonnement erroné écrit à côté.
+     * Elle a laissé sortir la valeur jusque dans `landing.json`, où un contrôle de la page l'a
+     * arrêtée — celui qui lit l'artefact voit ce que celui qui le fabrique a cessé de voir.
+     */
     assert.ok(u.includes("/"),
       `l'unité de « ${cle} » est « ${u} », sans dénominateur.\n`
       + `  → « usd » et « usd/1000 extractions » ne se lisent pas pareil, et c'est cette`
@@ -1265,5 +1273,30 @@ test("la composition des latences est nommée, et son écart au total réel est 
     assert.match(ls.compositionCheck!.note ?? "", /sous-estime|pas une borne/,
       "la composition sous-estime sur au moins un palier et la note ne le dit pas —\n"
       + "  un lecteur prendrait le p90 publié pour un pire cas, du côté qui coûte.");
+  }
+});
+
+/*
+ * L'unité doit survivre jusqu'au fichier publié, pas seulement exister dans le code.
+ *
+ * `UNITS` est vérifié à la source depuis longtemps ; ce qui manquait, c'est que le contrôle
+ * suive la valeur jusque dans `landing.json`, seul endroit que le lecteur voit. Une unité juste
+ * dans le code et absente de l'émission ne protège personne.
+ */
+test("chaque seuil publié porte son unité, dénominateur compris", () => {
+  const f = new URL("../landing.json", import.meta.url).pathname;
+  if (!existsSync(f)) return;
+  const seuils = (JSON.parse(readFileSync(f, "utf8")) as {
+    sensitivity: { thresholds: Record<string, { unit?: string }> };
+  }).sensitivity.thresholds;
+
+  const noms = Object.keys(seuils);
+  assert.ok(noms.length >= 5, `${noms.length} seuil(s) publié(s) : trop peu pour que ce test regarde.`);
+  for (const [nom, s] of Object.entries(seuils)) {
+    assert.ok(s.unit && s.unit.trim().length > 0, `le seuil « ${nom} » est publié sans unité.`);
+    assert.ok(s.unit!.includes("/"),
+      `l'unité publiée de « ${nom} » est « ${s.unit} », sans dénominateur.\n`
+      + `  → « fraction », « usd », « ms » ne disent pas de quoi. Le lecteur devine, et il a déjà\n`
+      + `    deviné faux une fois : quarante-cinq dollars la seconde pour un analyste.`);
   }
 });

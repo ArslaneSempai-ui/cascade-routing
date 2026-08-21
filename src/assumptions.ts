@@ -178,7 +178,7 @@ export const STATUSES: Record<keyof Assumptions, Provenance> = {
  * dénominateur est la moitié qui a déjà fait publier un chiffre faux d'un facteur cinq.
  */
 export const UNITS: Record<keyof Assumptions, string> = {
-  humanAccuracy: "fraction",
+  humanAccuracy: "correct fields/field",
   humanSeconds: "seconds/item",
   analystAnnualCost: "usd/year",
   productiveHoursPerDay: "hours/day",

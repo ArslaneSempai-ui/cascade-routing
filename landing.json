@@ -747,7 +747,7 @@
     "thresholds": {
       "humanAccuracy": {
         "inUse": 0.85,
-        "unit": "fraction",
+        "unit": "correct fields/field",
         "breaksAt": null,
         "factor": null,
         "moves": [],
