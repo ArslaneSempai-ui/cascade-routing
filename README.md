@@ -26,6 +26,7 @@ about two minutes.
 | `npm run prompt` | what rewording the prompt moves, against what changing tier moves |
 | `npm run regler` | pick each generative tier's formulation on the dev split, never on held-out |
 | `npm run apparier` | does the tier ranking depend on the prompt? McNemar on the same cases |
+| `npm run departager` | is each tuned formulation separable from its runner-up? refutes, never confirms |
 | `npm run figures` | regenerate every table on this page from the frozen profile |
 | `npm run landing` | regenerate landing.json — the figures a published page reads, with their provenance |
 | `npm run dossier` | the validation file a reviewer signs |

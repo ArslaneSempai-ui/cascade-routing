@@ -16,6 +16,7 @@
     "prompt": "node src/sensibilite-prompt.ts",
     "regler": "node src/regler-prompt.ts",
     "apparier": "node src/apparier-prompt.ts",
+    "departager": "node src/departager-reglage.ts",
     "start": "node src/server.ts",
     "pages": "tsc -p tsconfig.web.json && node src/pages.ts && node src/verifier-ecran.mjs . 2",
     "captures": "node src/capturer.mjs .",

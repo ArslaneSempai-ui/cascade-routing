@@ -338,6 +338,7 @@ const commandes = (() => {
     ["prompt", "what rewording the prompt moves, against what changing tier moves"],
     ["regler", "pick each generative tier's formulation on the dev split, never on held-out"],
     ["apparier", "does the tier ranking depend on the prompt? McNemar on the same cases"],
+    ["departager", "is each tuned formulation separable from its runner-up? refutes, never confirms"],
     ["figures", "regenerate every table on this page from the frozen profile"],
     ["landing", "regenerate landing.json — the figures a published page reads, with their provenance"],
     ["dossier", "the validation file a reviewer signs"],

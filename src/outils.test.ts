@@ -214,3 +214,34 @@ test("departager ne retient rien quand le vainqueur n'est pas séparable de son 
   assert.equal(nul.retenu, null, "aucun cas discordant : rien à retenir");
   assert.equal(nul.gains + nul.regressions, 0);
 });
+
+/*
+ * Le départage cible bien le second, pas un palier au hasard dans la table.
+ *
+ * C'est l'erreur qui a failli passer hier : deux p-values décisives calculées sur la mauvaise
+ * paire, `A-sans-exemple` contre `reference`, qui pour gen-4b oppose le vainqueur au troisième.
+ * La paire se lit donc dans la table des taux, et ce test tient cette lecture.
+ */
+test("la paire à départager est le vainqueur et son second, pas une paire commode", async () => {
+  const { pairesADepartager, PEUT_CONFIRMER } = await import("./departager-reglage.ts");
+
+  /* La table réellement mesurée le 20 août, où gen-4b se joue à 0,1 point. */
+  const paires = pairesADepartager({
+    "gen-0.6b": { reference: 81.5, "A-sans-exemple": 83.5, "B-exemple-apparie": 71.5, "C-minimal": 63.2 },
+    "gen-4b": { reference: 94.2, "A-sans-exemple": 99.3, "B-exemple-apparie": 88.3, "C-minimal": 99.2 },
+    "gen-8b": { reference: 96.2, "A-sans-exemple": 88.8, "B-exemple-apparie": 96.7, "C-minimal": 85.7 },
+  });
+  assert.equal(paires.length, 3, "les trois paliers génératifs sont couverts");
+
+  const par = Object.fromEntries(paires.map((p) => [p.palier, p]));
+  assert.equal(par["gen-4b"]!.second, "C-minimal",
+    "le second de gen-4b est C-minimal à 0,1 point, pas reference à 5,1 — c'est toute la question");
+  assert.equal(par["gen-4b"]!.ecartPoints, 0.1);
+  assert.equal(par["gen-8b"]!.vainqueur, "B-exemple-apparie", "le vainqueur de gen-8b n'est pas reference");
+  assert.equal(par["gen-8b"]!.second, "reference");
+  assert.equal(par["gen-0.6b"]!.vainqueur, "A-sans-exemple");
+  assert.equal(par["gen-0.6b"]!.second, "reference");
+
+  assert.equal(PEUT_CONFIRMER, false,
+    "un départage contre le second ne rend pas une formulation retenue : l'indiscernabilité n'est pas transitive");
+});
