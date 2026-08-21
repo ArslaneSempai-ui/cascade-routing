@@ -22,6 +22,7 @@
     "mur": "node src/mur.ts",
     "signal": "node src/signal.ts",
     "escalade": "node src/escalade.ts",
+    "abstention": "node src/abstention.ts",
     "start": "node src/server.ts",
     "pages": "tsc -p tsconfig.web.json && node src/pages.ts && node src/verifier-ecran.mjs . 2",
     "captures": "node src/capturer.mjs .",

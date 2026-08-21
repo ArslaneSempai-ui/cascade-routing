@@ -344,6 +344,7 @@ const commandes = (() => {
     ["mur", "how far the exhaustive solver goes, in fields and tiers, measured"],
     ["signal", "which key-free signals predict a wrong value, against a random control"],
     ["escalade", "does a guided cascade beat a fixed tier at the same budget?"],
+    ["abstention", "silence instead of a doubtful value: wrong ones removed per correct one lost"],
     ["figures", "regenerate every table on this page from the frozen profile"],
     ["landing", "regenerate landing.json — the figures a published page reads, with their provenance"],
     ["dossier", "the validation file a reviewer signs"],

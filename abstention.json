@@ -1,0 +1,127 @@
+{
+  "quoi": "Se taire plutôt que livrer une valeur douteuse : ce que l'échange coûte et rapporte.",
+  "pourquoi": "Escalader dépasse le plafond de latence sur quatre champs sur cinq, et la seule escalade admissible ne complète aucun dossier de plus. L'abstention ne coûte ni milliseconde ni euro.",
+  "echangeMesure": "faux éliminés par juste sacrifié. Une valeur fausse entre au dossier sans bruit ; un blanc se voit. L'abstention ne rend pas le système plus juste, elle échange de l'erreur invisible contre du trou visible.",
+  "mesureLe": "2026-08-21T19:16:28.008Z",
+  "journal": "tentatives/2026-08-21T16-54-14-816Z-dur.jsonl",
+  "corpus": "hard-corpus",
+  "documents": 30,
+  "champs": 150,
+  "routage": {
+    "name": "large",
+    "birth": "rules",
+    "document": "rules",
+    "country": "rules",
+    "address": "gen-4b"
+  },
+  "bilans": [
+    {
+      "regle": "aucune abstention",
+      "abstentions": 0,
+      "fauxElimines": 0,
+      "justesSacrifies": 0,
+      "echange": null,
+      "valeursLivrees": 150,
+      "justesParmiLesLivrees": 44,
+      "precisionLivree": 29.3,
+      "precisionLivreeIntervalle": [
+        22.6,
+        37.1
+      ],
+      "justesLivresEnMoins": 0,
+      "coutTotal": 62.22,
+      "dossiersSansErreurInvisible": 11,
+      "dossiersEntiers": 0
+    },
+    {
+      "regle": "se taire si au moins un signal",
+      "abstentions": 103,
+      "fauxElimines": 91,
+      "justesSacrifies": 12,
+      "echange": 7.58,
+      "valeursLivrees": 47,
+      "justesParmiLesLivrees": 32,
+      "precisionLivree": 68.1,
+      "precisionLivreeIntervalle": [
+        53.8,
+        79.6
+      ],
+      "justesLivresEnMoins": 12,
+      "coutTotal": 69.27,
+      "dossiersSansErreurInvisible": 17,
+      "dossiersEntiers": 0,
+      "temoinHasard": {
+        "abstentions": 103,
+        "fauxElimines": 73.2,
+        "justesSacrifies": 29.8,
+        "echange": 2.46
+      }
+    },
+    {
+      "regle": "se taire si les deux signaux",
+      "abstentions": 4,
+      "fauxElimines": 4,
+      "justesSacrifies": 0,
+      "echange": null,
+      "valeursLivrees": 146,
+      "justesParmiLesLivrees": 44,
+      "precisionLivree": 30.1,
+      "precisionLivreeIntervalle": [
+        23.3,
+        38
+      ],
+      "justesLivresEnMoins": 0,
+      "coutTotal": 62.22,
+      "dossiersSansErreurInvisible": 12,
+      "dossiersEntiers": 0,
+      "temoinHasard": {
+        "abstentions": 4,
+        "fauxElimines": 2.9,
+        "justesSacrifies": 1.1,
+        "echange": 2.6
+      }
+    }
+  ],
+  "oracle": {
+    "regle": "oracle — se taire exactement sur les fausses",
+    "abstentions": 106,
+    "fauxElimines": 106,
+    "justesSacrifies": 0,
+    "echange": null,
+    "valeursLivrees": 44,
+    "justesParmiLesLivrees": 44,
+    "precisionLivree": 100,
+    "precisionLivreeIntervalle": [
+      92,
+      100
+    ],
+    "justesLivresEnMoins": 0,
+    "coutTotal": 62.22,
+    "dossiersSansErreurInvisible": 30,
+    "dossiersEntiers": 0
+  },
+  "prixDeclares": {
+    "costWrongValue": 0.587,
+    "costBlankField": 0.587,
+    "rapport": 1,
+    "note": "Les deux sont à égalité dans les hypothèses, délibérément. À ce réglage l'abstention est nulle par construction — elle échange une erreur contre un trou au même prix, et sacrifie des justes en plus. La conclusion sur l'abstention est donc entièrement portée par ce rapport, que le client fixe et que nous ne savons pas fixer."
+  },
+  "pointDeBascule": [
+    {
+      "regle": "se taire si au moins un signal",
+      "rapportDeBascule": 1.132,
+      "lecture": "une valeur inventée doit coûter au moins ce rapport fois un trou pour que cette règle soit rentable"
+    },
+    {
+      "regle": "se taire si les deux signaux",
+      "rapportDeBascule": 1,
+      "lecture": "une valeur inventée doit coûter au moins ce rapport fois un trou pour que cette règle soit rentable"
+    },
+    {
+      "regle": "oracle — se taire exactement sur les fausses",
+      "rapportDeBascule": 1,
+      "lecture": "une valeur inventée doit coûter au moins ce rapport fois un trou pour que cette règle soit rentable"
+    }
+  ],
+  "limite": "Trente documents. Les comptes de dossiers entiers restent sous le plancher de 20 en dessous duquel ce dépôt ne publie pas de taux ; la précision livrée, elle, porte sur plus de cent valeurs et son intervalle est donné."
+}
