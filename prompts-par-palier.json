@@ -1,0 +1,46 @@
+{
+  "quoi": "La formulation retenue pour chaque palier génératif, choisie sur le découpage de réglage.",
+  "decoupage": "dev",
+  "cas": 120,
+  "mesureLe": "2026-08-20T23:59:27.231Z",
+  "code": {
+    "commit": "6d59b5c",
+    "sale": false
+  },
+  "limite": "Choisi sur `dev` et jamais sur `heldout` : les chiffres publiés viennent d'une autre moitié du corpus, que ce réglage n'a pas vue. Un réglage fait sur les cas de publication aurait produit un score flatteur et faux, ce qui est arrivé une fois à ce dépôt.",
+  "formulations": {
+    "reference": "Copy a single value out of a document, verbatim. Never rephrase, never reformat, never explain. If the value is absent, return an empty string.\n\nExample.\nDocument: Anna Petrova — dob 3 May 1990 — doc no ES-1234-A — Spain — lives 5 Calle Mayor, Madrid\nQuestion: What is the identity document number?\nAnswer: ES-1234-A\n\nNow the real one.\nDocument: <DOCUMENT>\nQuestion: What is the identity document number?\nAnswer:",
+    "A-sans-exemple": "Copy a single value out of a document, verbatim. Never rephrase, never reformat, never explain. If the value is absent, return an empty string.\n\nDocument: <DOCUMENT>\nQuestion: What is the identity document number?\nAnswer:",
+    "B-exemple-apparie": "Copy a single value out of a document, verbatim. Never rephrase, never reformat, never explain. If the value is absent, return an empty string.\n\nExample.\nDocument: Anna Petrova — dob 3 May 1990 — doc no ES-1234-A — Spain — lives 5 Calle Mayor, Madrid\nQuestion: What is the identity document number?\nAnswer: ES-1234-A\n\nNow the real one.\nDocument: <DOCUMENT>\nQuestion: What is the identity document number?\nAnswer:",
+    "C-minimal": "Extract the requested value from the document exactly as written. Return an empty string if it is not there.\n\nDocument: <DOCUMENT>\nQuestion: What is the identity document number?\nAnswer:",
+    "D-document-dabord": "Document: <DOCUMENT>\n\nQuestion: What is the identity document number?\n\nAnswer with the value exactly as it appears in the document above. Do not rephrase, reformat or explain. If it is absent, answer with an empty string.\n\nAnswer:"
+  },
+  "surDev": {
+    "gen-0.6b": {
+      "reference": 81.5,
+      "A-sans-exemple": 83.5,
+      "B-exemple-apparie": 71.5,
+      "C-minimal": 63.2,
+      "D-document-dabord": 49.5
+    },
+    "gen-4b": {
+      "reference": 94.2,
+      "A-sans-exemple": 99.3,
+      "B-exemple-apparie": 88.3,
+      "C-minimal": 99.2,
+      "D-document-dabord": 92.2
+    },
+    "gen-8b": {
+      "reference": 96.2,
+      "A-sans-exemple": 88.8,
+      "B-exemple-apparie": 96.7,
+      "C-minimal": 85.7,
+      "D-document-dabord": 75.3
+    }
+  },
+  "retenu": {
+    "gen-0.6b": "A-sans-exemple",
+    "gen-4b": "A-sans-exemple",
+    "gen-8b": "B-exemple-apparie"
+  }
+}

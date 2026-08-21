@@ -438,7 +438,10 @@ export async function measure(
       measuredAt: new Date().toISOString(),
       ...(options.malgreArbreSale ? { malgreArbreSale: options.malgreArbreSale } : {}),
       ...(options.malgreCharge ? { chargeFabriqueePar: options.malgreCharge } : {}),
-      ...(options.prompt && options.prompt !== "reference" ? { promptUtilise: options.prompt } : {}),
+      /* Toujours, y compris la référence : sans ça, « mesuré sous la référence » et
+         « formulation non enregistrée » se lisent pareil, ce qui est le défaut du `null`
+         qu'on corrige partout ailleurs. */
+      promptUtilise: options.prompt ?? "reference",
       charge: {
         externalBefore: chargeAvant,
         totalDuring: Number((echantillons.length
