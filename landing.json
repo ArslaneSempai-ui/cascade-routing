@@ -1102,6 +1102,57 @@
     "msPerDocComparable": false,
     "note": "Le point chargé n'est pas une passe complète : 1 palier(s) sur 7 y ont été remesurés (gen-0.6b). Les autres sont recopiés du point au repos, donc leur égalité est une copie et non un résultat. L'égalité au millième ne porte que sur les paliers remesurés. Le temps par document est identique aux deux points parce que le routage retenu n'emploie aucun palier remesuré — ce n'est pas une preuve que la charge est sans effet sur lui."
   },
+  "abstention": {
+    "measured": true,
+    "corpus": "hard-corpus",
+    "documents": 30,
+    "valuesMeasured": 150,
+    "baselinePrecisionPct": 29.3,
+    "baselinePrecisionInterval": [
+      22.6,
+      37.1
+    ],
+    "rules": [
+      {
+        "signalsRequired": 1,
+        "abstentions": 103,
+        "wrongRemoved": 91,
+        "correctSacrificed": 12,
+        "breakEvenCostRatio": 1.132,
+        "delivered": 47,
+        "deliveredCorrect": 32,
+        "deliveredPrecisionPct": 68.1,
+        "deliveredPrecisionInterval": [
+          53.8,
+          79.6
+        ],
+        "neverSacrificesInterval": [
+          80.7,
+          93.2
+        ]
+      },
+      {
+        "signalsRequired": 2,
+        "abstentions": 4,
+        "wrongRemoved": 4,
+        "correctSacrificed": 0,
+        "breakEvenCostRatio": 1,
+        "delivered": 146,
+        "deliveredCorrect": 44,
+        "deliveredPrecisionPct": 30.1,
+        "deliveredPrecisionInterval": [
+          23.3,
+          38
+        ],
+        "neverSacrificesInterval": [
+          51,
+          100
+        ]
+      }
+    ],
+    "declaredCostRatio": 1,
+    "note": "Le rapport de bascule est le prix d'une valeur inventée divisé par celui d'un trou, au-delà duquel se taire est rentable. Il ne dépend d'aucun des deux prix, seulement de leur rapport, donc il survit à un client qui remplace `assumptions` par les siennes. Au rapport déclaré, qui est l'égalité, aucune règle ne rapporte quoi que ce soit."
+  },
   "errorSplit": {
     "perThousand": {
       "name": {

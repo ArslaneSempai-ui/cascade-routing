@@ -549,6 +549,76 @@ function gainDeCountry(p: Profiles, optimum: ReturnType<typeof optimiseExtractio
   };
 }
 
+/**
+ * Ce que se taire coûte et rapporte, et à partir de quel rapport de prix.
+ *
+ * Recalculé depuis les tentatives, jamais recopié : les chiffres d'un rapport écrits en dur ici
+ * seraient faux à la première remesure sans que rien ne le dise.
+ */
+function abstentionMesuree(p: Profiles, optimum: ReturnType<typeof optimiseExtraction>) {
+  if (!optimum) return null;
+  const f = journaux().filter((x) => x.includes("-dur.jsonl")).pop();
+  if (!f) return { measured: false, why: "aucun journal du corpus dur : `data/` n'est pas versionné. "
+    + "`npm run dur` le produit, `npm run abstention` en tire ce bloc." };
+
+  const { tentatives } = lireJournal(f);
+  const rep = new Map(tentatives.map((t) => [`${t.tier}|${t.caseId}|${t.field}`, t]));
+  const durs = corpusDur().filter((c) => Object.keys(c.attendus).length === FIELDS.length);
+  const textes = new Map(durs.map((c) => [c.cle, c.texte]));
+
+  const score = (t: { value: string; field: string; caseId: string }) => {
+    const v = normaliserReponse(t.value);
+    if (v.length === 0) return 1;
+    let n = 0;
+    const texte = textes.get(t.caseId);
+    if (texte !== undefined && !normaliserReponse(texte).includes(v)) n++;
+    const r = FORME[t.field];
+    if (r !== undefined && !r(t.value)) n++;
+    return n;
+  };
+
+  const regle = (seuil: number) => {
+    let abst = 0, fauxElimines = 0, justesSacrifies = 0, livrees = 0, justesLivrees = 0;
+    for (const c of durs) for (const champ of FIELDS) {
+      const t = rep.get(`${optimum.routing[champ]}|${c.cle}|${champ}`);
+      if (!t) continue;
+      const juste = t.outcome === "clean";
+      if (score(t) >= seuil) { abst++; if (juste) justesSacrifies++; else fauxElimines++; continue; }
+      livrees++; if (juste) justesLivrees++;
+    }
+    const r = livrees ? rate(justesLivrees, livrees) : null;
+    /* Bascule : trous créés par erreur évitée. Sans dimension, donc transportable. */
+    const bascule = fauxElimines > 0 ? Number((abst / fauxElimines).toFixed(3)) : null;
+    return {
+      signalsRequired: seuil, abstentions: abst,
+      wrongRemoved: fauxElimines, correctSacrificed: justesSacrifies,
+      breakEvenCostRatio: bascule,
+      delivered: livrees, deliveredCorrect: justesLivrees,
+      deliveredPrecisionPct: r ? Number((100 * r.rate).toFixed(1)) : null,
+      deliveredPrecisionInterval: r ? [Number((100 * r.low).toFixed(1)), Number((100 * r.high).toFixed(1))] : null,
+      /* Ce que « n'en sacrifie aucune » vaut vraiment sur si peu d'abstentions. */
+      neverSacrificesInterval: abst > 0
+        ? [Number((100 * rate(fauxElimines, abst).low).toFixed(1)), Number((100 * rate(fauxElimines, abst).high).toFixed(1))]
+        : null,
+    };
+  };
+
+  const sans = regle(99);      // seuil inatteignable : aucune abstention
+  const base = rate(sans.deliveredCorrect, sans.delivered);
+  return {
+    measured: true, corpus: "hard-corpus", documents: durs.length,
+    valuesMeasured: sans.delivered,
+    baselinePrecisionPct: Number((100 * base.rate).toFixed(1)),
+    baselinePrecisionInterval: [Number((100 * base.low).toFixed(1)), Number((100 * base.high).toFixed(1))],
+    rules: [regle(1), regle(2)],
+    declaredCostRatio: Number((ASSUMPTIONS.costWrongValue / ASSUMPTIONS.costBlankField).toFixed(3)),
+    note: "Le rapport de bascule est le prix d'une valeur inventée divisé par celui d'un trou, "
+      + "au-delà duquel se taire est rentable. Il ne dépend d'aucun des deux prix, seulement de "
+      + "leur rapport, donc il survit à un client qui remplace `assumptions` par les siennes. "
+      + "Au rapport déclaré, qui est l'égalité, aucune règle ne rapporte quoi que ce soit.",
+  };
+}
+
 function decomposeErreurs(p: Profiles, routing: Routing) {
   const perThousand: Record<string, { tier: TierName; blank: number | null; wrong: number | null }> = {};
   let couverts = 0;
@@ -819,6 +889,15 @@ export function construire(p: Profiles): unknown {
      * fichier. Ici la comparaison est faite et son résultat écrit, y compris s'il dément.
      */
     loadSweep: balayageDeCharge(),
+
+    /*
+     * Le seul chiffre du dossier qui survive au remplacement de toutes nos hypothèses.
+     *
+     * Le point de bascule ne dépend que du **rapport** entre le prix d'une valeur inventée et
+     * celui d'un trou, et d'aucun des deux prix. Un client qui jette `assumptions` et met les
+     * siens le garde tel quel.
+     */
+    abstention: abstentionMesuree(p, optimum),
 
     errorSplit: optimum === null ? null : decomposeErreurs(p, optimum.routing),
     cleanPerDocument: optimum === null ? null : dossiersPropres(p, optimum.routing),
