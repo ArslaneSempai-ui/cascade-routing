@@ -29,6 +29,7 @@ about two minutes.
 | `npm run departager` | is each tuned formulation separable from its runner-up? refutes, never confirms |
 | `npm run tentatives` | query stored per-attempt outcomes — paired tests and clean rates, no GPU |
 | `npm run dur` | measure the hard corpus: broken documents, non-Latin scripts, ambiguous readings |
+| `npm run mur` | how far the exhaustive solver goes, in fields and tiers, measured |
 | `npm run figures` | regenerate every table on this page from the frozen profile |
 | `npm run landing` | regenerate landing.json — the figures a published page reads, with their provenance |
 | `npm run dossier` | the validation file a reviewer signs |

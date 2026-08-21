@@ -154,9 +154,11 @@ function decomposition(p: Profiles, tier: TierName, champ: Field): { vide: numbe
   return out;
 }
 
-export function evaluer(p: Profiles, h: Assumptions, routing: Routing): Solution {
+export function evaluer(
+  p: Profiles, h: Assumptions, routing: Routing, champs: readonly Field[] = FIELDS,
+): Solution {
   let sommeJustesse = 0, cost = 0, seconds = 0;
-  for (const c of FIELDS) {
+  for (const c of champs) {
     const e = routing[c];
     const profil = p.extraction[e][c];
     sommeJustesse += justessePonderee(p, h, e, c);
@@ -166,7 +168,7 @@ export function evaluer(p: Profiles, h: Assumptions, routing: Routing): Solution
   const latencyPerItem = (seconds * 1000) / h.volume;
   return {
     routing,
-    accuracy: sommeJustesse / FIELDS.length,
+    accuracy: sommeJustesse / champs.length,
     cost, seconds,
     budgetShare: h.budget === 0 ? Infinity : cost / h.budget,
     latencyPerItem,
@@ -265,11 +267,14 @@ function indiscernables(p: Profiles, a: Routing, b: Routing): boolean {
   return true;
 }
 
-export function optimiseExtraction(p: Profiles, h: Assumptions): Solution | null {
-  let best: Solution | null = null;
-
-  const evaluate = (routing: Routing): Solution => evaluer(p, h, routing);
-  const paliers = paliersMesures(p);
+export function optimiseExtraction(
+  p: Profiles, h: Assumptions, champs: readonly Field[] = FIELDS,
+  /* Injectables pour mesurer le mur du solveur sur des jeux plus grands que ceux du dépôt.
+     Par défaut, exactement les paliers réellement mesurés — le comportement publié. */
+  paliersDemandes?: readonly TierName[],
+): Solution | null {
+  const evaluate = (routing: Routing): Solution => evaluer(p, h, routing, champs);
+  const paliers = paliersDemandes ?? paliersMesures(p);
 
   /*
    * Deux passes, et non une, parce que « indiscernable » n'est pas transitif.
@@ -282,27 +287,51 @@ export function optimiseExtraction(p: Profiles, h: Assumptions): Solution | null
    * Passe 1 : la meilleure justesse atteignable dans le budget.
    * Passe 2 : parmi tout ce que l'échantillon ne distingue pas d'elle, la moins chère.
    */
-  const tenables: Solution[] = [];
-  const walk = (i: number, current: Partial<Routing>) => {
-    if (i === FIELDS.length) {
-      const s = evaluate(current as Routing);
-      if (s.cost > h.budget) return;             // hors budget : la solution n'existe pas
-      if (s.latencyPerItem > h.latencyBudgetMs) return;  // trop lente : elle n'existe pas non plus
-      tenables.push(s);
-      if (!best || s.accuracy > best.accuracy
-        || (s.accuracy === best.accuracy && s.cost < best.cost)) best = s;
-      return;
-    }
-    for (const e of paliers) walk(i + 1, { ...current, [FIELDS[i]]: e });
+  /*
+   * Deux énumérations, et non une énumération plus un tableau.
+   *
+   * La version précédente poussait chaque solution admissible dans `tenables` pour la
+   * refiltrer ensuite. Le commentaire ci-dessus disait déjà « deux passes » — il décrivait la
+   * logique en deux temps, pas l'implémentation, qui matérialisait tout. Un commentaire qui
+   * rassure sur une propriété que le code n'a pas.
+   *
+   * Le coût n'était pas le temps : sept paliers et sept champs font 823 543 affectations en
+   * un quart de seconde. C'était la mémoire, et l'outil ne ralentissait pas — il **plantait**,
+   * tas épuisé, à sept paliers et huit champs. Ici rien n'est retenu entre les deux passes que
+   * le sommet lui-même : mémoire constante, deux fois le temps, et le mur recule d'un ordre.
+   *
+   * Le routage est muté en place plutôt que recopié à chaque nœud : la copie allouait un objet
+   * par arête, ce qui n'est pas la fuite mais la nourrit.
+   */
+  const courant = {} as Routing;
+  const enumerer = (visite: (s: Solution) => void) => {
+    const walk = (i: number) => {
+      if (i === champs.length) {
+        const s = evaluate({ ...courant });
+        if (s.cost > h.budget) return;                      // hors budget : elle n'existe pas
+        if (s.latencyPerItem > h.latencyBudgetMs) return;   // trop lente : pas davantage
+        visite(s);
+        return;
+      }
+      for (const e of paliers) { courant[champs[i]!] = e; walk(i + 1); }
+    };
+    walk(0);
   };
-  walk(0, {});
-  if (!best) return null;
 
+  /* Passe 1 : la meilleure justesse atteignable dans les deux budgets. */
+  let best: Solution | null = null;
+  enumerer((s) => {
+    if (!best || s.accuracy > best.accuracy
+      || (s.accuracy === best.accuracy && s.cost < best.cost)) best = s;
+  });
+  if (!best) return null;
   const sommet: Solution = best;
+
+  /* Passe 2 : parmi tout ce que l'échantillon ne distingue pas d'elle, la moins chère. */
   let retenue: Solution = sommet;
-  for (const s of tenables) {
+  enumerer((s) => {
     if (s.cost < retenue.cost && indiscernables(p, s.routing, sommet.routing)) retenue = s;
-  }
+  });
   return retenue;
 }
 

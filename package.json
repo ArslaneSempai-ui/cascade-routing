@@ -19,6 +19,7 @@
     "departager": "node src/departager-reglage.ts",
     "tentatives": "node src/tentatives.ts",
     "dur": "node src/mesurer-dur.ts",
+    "mur": "node src/mur.ts",
     "start": "node src/server.ts",
     "pages": "tsc -p tsconfig.web.json && node src/pages.ts && node src/verifier-ecran.mjs . 2",
     "captures": "node src/capturer.mjs .",
