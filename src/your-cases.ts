@@ -91,6 +91,98 @@ export function lireCsv(texte: string): { champs: string[]; cas: Cas[] } {
 }
 
 /** Des règles fournies par le lecteur, en expressions régulières nommées par champ. */
+/**
+ * Ce que le client a produit lui-même — ses sorties, jamais son code.
+ *
+ * Un client fait tourner sa chaîne chez lui et nous envoie ce qu'elle a rendu, document par
+ * document et champ par champ. On le note exactement comme un palier : une valeur **fournie**
+ * au lieu d'une valeur trouvée. Sa technologie n'entre pas — modèle, API, script maison,
+ * chaîne propriétaire, prose : on ne voit que des valeurs.
+ *
+ * **Aucune porte d'exécution**, et c'est délibéré. « Trois cents lignes sans dépendance » et
+ * « un outil qui lance ce qu'on lui indique » ne s'approuvent pas par les mêmes personnes, et
+ * le premier est ce qui permet à un responsable conformité de dire oui. On ne l'échange pas
+ * contre de la commodité.
+ *
+ * Ce qu'on mesure de sa chaîne et ce qu'on ne mesure pas :
+ *
+ *   son exactitude — **mesurée** : on note ses valeurs contre ses réponses de référence,
+ *                    c'est un calcul fait ici, reproductible par lui.
+ *   son coût et sa latence — il les **déclare**. On ne les a pas vus.
+ *
+ * Or l'admissibilité se décide sur un plafond en millisecondes. Toute comparaison qui met sa
+ * chaîne en balance porte donc la provenance la plus faible de ses entrées, et ce n'est pas une
+ * faiblesse à cacher : c'est une phrase à écrire. Nous mesurons l'exactitude de votre chaîne
+ * sur vos cas ; son coût et sa latence sont ceux que vous nous donnez.
+ */
+export type SortiesFournies = {
+  /** Le nom que porte sa chaîne dans les tableaux. */
+  nom: string;
+  /** `valeurs[champ][id du cas]` — ce que sa chaîne a rendu. */
+  valeurs: Record<string, Record<string, string>>;
+  /** Déclarés par lui, jamais mesurés ici. */
+  declares?: { coutParMilleDocuments?: number; msParDocument?: number };
+};
+
+/**
+ * La provenance d'un chiffre déclaré par le client, dans le vocabulaire existant.
+ *
+ * `déclaré` n'est pas un mot de ce vocabulaire, et le vocabulaire est copié à l'identique dans
+ * cinq dépôts : en ajouter un cinquième terme ici les ferait diverger. Le terme juste existe
+ * déjà — `assumed`, « une entrée que personne ici ne peut connaître » — et c'est exactement ce
+ * qu'est un coût qu'un client nous donne. Ce que le mot ne dit pas, c'est **qui** l'a posée,
+ * alors `declarePar` le dit à côté au lieu d'inventer un rang.
+ */
+export const PROVENANCE_DES_DECLARES = {
+  provenance: "assumed" as const,
+  declarePar: "le client" as const,
+  pourquoi: "Un chiffre que le client nous donne est une entrée que personne ici ne peut "
+    + "vérifier. `assumed` est le rang existant pour ça ; ajouter « déclaré » au vocabulaire "
+    + "ferait diverger cinq dépôts qui le copient à l'identique.",
+};
+
+/**
+ * Comment une durée s'écrit selon d'où elle vient.
+ *
+ * Une durée mesurée ici et une durée que le client nous a donnée se ressemblent dans un
+ * tableau, et c'est exactement le défaut que la provenance existe pour empêcher. Celle du
+ * client porte donc sa marque à chaque ligne où elle apparaît, pas seulement dans un en-tête
+ * qu'on lit une fois.
+ */
+export function ecrireMs(ms: number, declaree: boolean): string {
+  if (!Number.isFinite(ms)) return "durée non déclarée";
+  return declaree ? `${ms.toFixed(0)} ms (déclaré)` : `${ms.toFixed(0)} ms`;
+}
+
+export function chargerSorties(chemin: string): SortiesFournies {
+  const brut = JSON.parse(readFileSync(chemin, "utf8")) as Partial<SortiesFournies>;
+  if (!brut.valeurs || typeof brut.valeurs !== "object") {
+    throw new Error(`${chemin} : pas de clé \`valeurs\`. Forme attendue : `
+      + `{ "nom": "…", "valeurs": { "<champ>": { "<id du cas>": "<valeur rendue>" } } }`);
+  }
+  return { nom: brut.nom ?? "votre chaîne", valeurs: brut.valeurs, declares: brut.declares };
+}
+
+/**
+ * Ce qui ne correspond pas entre son fichier et nos cas — compté et nommé, jamais sauté.
+ *
+ * Un document présent chez lui et absent chez nous, ou l'inverse, est la façon la plus simple
+ * de faire mentir une comparaison sans qu'aucun chiffre n'ait l'air faux : le taux se calcule
+ * sur ce qui reste, et ce qui reste s'est choisi tout seul.
+ */
+export function correspondance(cas: Cas[], champs: string[], s: SortiesFournies) {
+  const nos = new Set(cas.map((c) => c.id));
+  const manquants: Record<string, string[]> = {};
+  const inconnus: Record<string, string[]> = {};
+  for (const champ of champs) {
+    const siens = s.valeurs[champ] ?? {};
+    manquants[champ] = cas.filter((c) => !(c.id in siens)).map((c) => c.id);
+    inconnus[champ] = Object.keys(siens).filter((id) => !nos.has(id));
+  }
+  const total = champs.reduce((a, c) => a + manquants[c]!.length + inconnus[c]!.length, 0);
+  return { manquants, inconnus, total, champsSansAucuneValeur: champs.filter((c) => !s.valeurs[c]) };
+}
+
 function chargerRegles(chemin: string): Record<string, RegExp> {
   const brut = JSON.parse(readFileSync(chemin, "utf8")) as Record<string, string>;
   return Object.fromEntries(Object.entries(brut).map(([champ, motif]) => [champ, new RegExp(motif)]));
@@ -111,7 +203,7 @@ function chargerRegles(chemin: string): Record<string, RegExp> {
  */
 export async function mesurerVosCas(
   cas: Cas[], champs: string[], paliers: TierName[], regles?: Record<string, RegExp>,
-  journaliser = false,
+  journaliser = false, sorties?: SortiesFournies,
 ): Promise<Record<string, Record<TierName, { bons: number; sur: number; ms: number }>>> {
   const releve: Record<string, Record<TierName, { bons: number; sur: number; ms: number }>> = {};
   const journal = journaliser ? ouvrirJournal("vos-cas", {
@@ -121,6 +213,27 @@ export async function mesurerVosCas(
   }) : undefined;
   for (const champ of champs) {
     releve[champ] = {} as Record<TierName, { bons: number; sur: number; ms: number }>;
+
+    /*
+     * Le palier du client : ses valeurs, notre correcteur.
+     *
+     * Aucune durée n'est relevée ici — nous n'avons rien exécuté. Le `ms` qui apparaît vient
+     * de sa déclaration, ou vaut `null` s'il n'en a pas donné : mettre zéro le ferait passer
+     * pour instantané, ce qui est faux dans la seule direction qui l'avantage.
+     */
+    if (sorties) {
+      const siennes = sorties.valeurs[champ] ?? {};
+      let bons = 0, apparies = 0;
+      for (const c of cas) {
+        if (!(c.id in siennes)) continue;      // absent de son fichier : compté ailleurs, pas ici
+        apparies++;
+        if (correct(siennes[c.id]!, c.truth[champ]!)) bons++;
+      }
+      releve[champ]![sorties.nom as TierName] = {
+        bons, sur: apparies,
+        ms: sorties.declares?.msParDocument ?? Number.NaN,
+      };
+    }
 
     if (regles?.[champ]) {
       let bons = 0;
@@ -195,7 +308,7 @@ async function principal(): Promise<void> {
     console.log(`
 Measure your own cases, not mine.
 
-  npm run measure:yours -- --cases=your-file.csv [--rules=rules.json] [--llm]
+  npm run measure:yours -- --cases=your-file.csv [--rules=rules.json] [--sorties=vôtres.json] [--llm]
 
 The CSV wants an id, the input text, then one column per field to extract:
 
@@ -203,6 +316,12 @@ The CSV wants an id, the input text, then one column per field to extract:
   1,"Anna Petrova — dob 3 May 1990",Anna Petrova,3 May 1990
 
 --rules  a JSON of { "field": "regular expression" }, so your own free tier is measured too.
+--sorties  a JSON of what YOUR OWN chain produced: { "nom": "…", "valeurs": { "<field>":
+         { "<case id>": "<what your chain returned>" } }, "declares": { "coutParMilleDocuments":
+         …, "msParDocument": … } }. Your chain runs on your machine; we never see its code, and
+         nothing here executes anything you supply. We score its accuracy against your own
+         answers — that is measured. Its cost and latency are the ones you give us: assumed,
+         never measured here, and marked so everywhere they travel.
          Without it the routing is over models only, and will overstate what you need to pay.
 --llm    add the local generative tiers (needs Ollama and the models pulled).
 
@@ -228,6 +347,7 @@ Nothing leaves your machine: the models are local and this path makes no network
     cas = melange.slice(0, echantillon);
   }
   const regles = arg("rules") ? chargerRegles(arg("rules")!) : undefined;
+  const sorties = arg("sorties") ? chargerSorties(arg("sorties")!) : undefined;
   const avecLlm = process.argv.includes("--llm");
   const paliers = [
     ...ENCODEURS.filter((t) => t !== "rules" && t !== "human"),
@@ -256,7 +376,8 @@ Nothing leaves your machine: the models are local and this path makes no network
       const bat = x.r.low > majoritaire.taux ? "beats the majority baseline"
         : x.r.high < majoritaire.taux ? "WORSE than always guessing the commonest label"
         : "indistinguishable from the majority baseline";
-      console.log(`  ${x.palier.padEnd(10)} ${writeRate(x.r).padEnd(28)} ${x.ms.toFixed(0)} ms   ${bat}`);
+      console.log(`  ${x.palier.padEnd(10)} ${writeRate(x.r).padEnd(28)} `
+        + `${ecrireMs(x.ms, x.palier === sorties?.nom).padEnd(20)} ${bat}`);
     }
     console.log("");
     /*
@@ -270,7 +391,41 @@ Nothing leaves your machine: the models are local and this path makes no network
   }
 
   await loadExtractors();
-  const releve = await mesurerVosCas(cas, champs, paliers, regles, process.argv.includes("--journal"));
+  /*
+   * Ce qui ne correspond pas, dit avant les taux et non après.
+   *
+   * Un identifiant présent d'un côté et pas de l'autre fait un taux calculé sur ce qui reste,
+   * et ce qui reste s'est choisi tout seul. Annoncé ici, avant le tableau, pour qu'on ne le
+   * lise pas comme une note.
+   */
+  if (sorties) {
+    const corr = correspondance(cas, champs, sorties);
+    console.log(`\nVotre chaîne : « ${sorties.nom} ».`);
+    console.log(`  exactitude : mesurée ici, sur vos réponses de référence.`);
+    console.log(`  coût et latence : ${sorties.declares ? "déclarés par vous" : "non déclarés"}`
+      + ` — ${PROVENANCE_DES_DECLARES.provenance}, jamais mesurés ici.`);
+    if (corr.champsSansAucuneValeur.length) {
+      console.log(`  ⚠ aucun résultat fourni pour : ${corr.champsSansAucuneValeur.join(", ")}`);
+    }
+    if (corr.total > 0) {
+      console.log(`  ⚠ ${corr.total} identifiant(s) sans correspondance — le taux ci-dessous ne porte`
+        + ` que sur les cas appariés :`);
+      for (const champ of champs) {
+        const m = corr.manquants[champ]!.length, i = corr.inconnus[champ]!.length;
+        if (m || i) {
+          console.log(`      ${champ.padEnd(14)} ${m} de nos cas absents de votre fichier`
+            + `${m ? ` (${corr.manquants[champ]!.slice(0, 3).join(", ")}${m > 3 ? "…" : ""})` : ""}`
+            + `, ${i} des vôtres inconnus de nous`
+            + `${i ? ` (${corr.inconnus[champ]!.slice(0, 3).join(", ")}${i > 3 ? "…" : ""})` : ""}`);
+        }
+      }
+    } else {
+      console.log(`  tous les identifiants correspondent.`);
+    }
+  }
+
+  const releve = await mesurerVosCas(cas, champs, paliers, regles,
+    process.argv.includes("--journal"), sorties);
 
   console.log("\nACCURACY PER FIELD, with the interval at "
     + `${(CONFIANCE.niveau * 100).toFixed(0)} %\n`);
@@ -280,7 +435,8 @@ Nothing leaves your machine: the models are local and this path makes no network
       .sort((a, b) => b.r.rate - a.r.rate);
     console.log(`  ${champ}`);
     for (const x of rangs) {
-      console.log(`    ${x.palier.padEnd(10)} ${writeRate(x.r).padEnd(28)} ${x.ms.toFixed(0)} ms`);
+      console.log(`    ${x.palier.padEnd(10)} ${writeRate(x.r).padEnd(28)} `
+        + `${ecrireMs(x.ms, x.palier === sorties?.nom)}`);
     }
     /*
      * La phrase qui compte — et le refus de la prononcer sans échantillon.
@@ -309,7 +465,8 @@ Nothing leaves your machine: the models are local and this path makes no network
     champs.flatMap((champ) => Object.entries(releve[champ]!).map(([palier, r]) => {
       const q = rate(r.bons, r.sur);
       return [champ, palier, (q.rate * 100).toFixed(1) + " %",
-        `[${(q.low * 100).toFixed(0)}–${(q.high * 100).toFixed(0)}]`, q.n, r.ms.toFixed(0)];
+        `[${(q.low * 100).toFixed(0)}–${(q.high * 100).toFixed(0)}]`, q.n,
+        ecrireMs(r.ms, palier === sorties?.nom)];
     }))) + "\n");
   console.log(`Written to ${sortie}\n`);
   if (!regles) {

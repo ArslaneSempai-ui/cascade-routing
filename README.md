@@ -51,7 +51,7 @@ npm test           # types, README figures, landing.json, and the suite
 ```
 
 <!-- figures:tests -->
-**107 tests** across 8 files, counted from the sources rather than typed here.
+**112 tests** across 8 files, counted from the sources rather than typed here.
 <!-- /figures:tests -->
 
 ```
