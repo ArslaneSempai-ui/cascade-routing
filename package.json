@@ -32,7 +32,8 @@
     "fuite": "node src/fuite.ts",
     "benchmark": "node src/benchmark.ts",
     "egress": "node src/egress.ts",
-    "intake": "node src/intake.ts"
+    "intake": "node src/intake.ts",
+    "clone-neuf": "node src/clone-neuf.mjs"
   },
   "dependencies": {
     "@huggingface/transformers": "^3.0.0"
