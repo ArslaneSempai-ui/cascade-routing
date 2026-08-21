@@ -644,6 +644,13 @@
       "admissible": false
     }
   ],
+  "latencyFigures": {
+    "origin": "Toutes les durées de ce fichier sont dérivées d'un seul relevé mesuré, jamais mesurées à nouveau ici. Chacune est une somme de médianes par champ.",
+    "dispersionLivesIn": "latencySpread.perDoc",
+    "composition": "sum of per-field medians",
+    "countedVersusTimed": "Un compte de jetons ou de cas est un fait sur la sortie : il se compte, il se reproduit sur une autre machine, et il se publie tel quel. Une durée est un fait sur la machine, sa charge et l'instant : elle ne vaut que pour la passe qui l'a prise, et elle ne se publie qu'avec sa dispersion. Confondre les deux a coûté deux rétractations le 21 août.",
+    "noFreshTimingHere": true
+  },
   "latencySpread": {
     "composition": "sum of per-field percentiles",
     "compositionCheck": {

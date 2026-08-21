@@ -1402,3 +1402,44 @@ test("la prose du plafond nomme l'exception que ses chiffres portent", () => {
       "la note annonce une exception alors qu'aucun champ ne tient sous le plafond.");
   }
 });
+
+/*
+ * Toute durée publiée dérive d'un relevé qui porte sa dispersion, et le fichier le dit.
+ *
+ * Vingt-quatre chiffres en millisecondes sont publiés dans `landing.json` et aucun ne porte sa
+ * dispersion dans son propre objet. Un contrôle qui les flaguerait crierait vingt-quatre fois à
+ * tort — c'est la forme de gardien qu'on a déjà écrite et jetée ce soir. Ils dérivent tous du
+ * même relevé mesuré, dont la dispersion existe : ce qui manquait n'était pas la dispersion mais
+ * la **déclaration** de cette dérivation.
+ *
+ * Ce test tient les deux bouts : la déclaration existe, et l'endroit qu'elle désigne porte
+ * réellement des percentiles. Une déclaration qui pointe vers un objet vide serait pire que rien.
+ */
+test("toute durée publiée déclare d'où elle vient, et cet endroit porte des percentiles", () => {
+  const f = new URL("../landing.json", import.meta.url).pathname;
+  if (!existsSync(f)) return;
+  const vue = JSON.parse(readFileSync(f, "utf8")) as {
+    latencyFigures?: { origin: string; dispersionLivesIn: string; noFreshTimingHere: boolean;
+      countedVersusTimed: string };
+    latencySpread: { perDoc: Record<string, null | { p10: number; median: number; p90: number }> };
+  };
+  const ls = vue.latencySpread;
+  const d = vue.latencyFigures;
+  assert.ok(d, "aucune déclaration d'origine pour les durées publiées.");
+  assert.equal(d!.noFreshTimingHere, true,
+    "le fichier déclare contenir un chronométrage frais : il devrait alors porter sa dispersion.");
+  assert.match(d!.countedVersusTimed, /compte|counted/i,
+    "la déclaration ne distingue pas ce qui se compte de ce qui se chronomètre.");
+
+  /* L'endroit désigné doit exister et porter de vrais percentiles, sinon la déclaration ment. */
+  assert.equal(d!.dispersionLivesIn, "latencySpread.perDoc");
+  const porteurs = Object.entries(ls.perDoc).filter(([, v]) => v !== null);
+  assert.ok(porteurs.length >= 3,
+    `${porteurs.length} palier(s) avec dispersion : la déclaration pointe vers un objet presque vide.`);
+  for (const [tier, v] of porteurs) {
+    assert.ok(Number.isFinite(v!.p10) && Number.isFinite(v!.median) && Number.isFinite(v!.p90),
+      `${tier} n'a pas ses trois percentiles là où la déclaration les annonce.`);
+    assert.ok(v!.p10 <= v!.median && v!.median <= v!.p90,
+      `${tier} a des percentiles dans le désordre : p10 ${v!.p10}, médiane ${v!.median}, p90 ${v!.p90}.`);
+  }
+});

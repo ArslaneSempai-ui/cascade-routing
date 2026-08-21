@@ -71,6 +71,45 @@ by anything I have. What is supported:
 
 That is a narrower claim, and it is the one the data carries.
 
+## Which half survives, and the rule that decides it
+
+The two halves of this finding were measured in the same twenty calls, minutes
+apart, by the same script. One survived the scrutiny and the other did not, and
+the difference is not carefulness — it is what kind of fact each one is.
+
+| | what it is | survives? |
+|---|---|---|
+| **15.6 tokens against 200** | a fact about the model's output | **yes** |
+| 644 ms against 5,412 | a fact about the machine, its load, and the moment | no |
+
+**A count is counted. A duration is timed.**
+
+A token count is a property of what the model emitted. It reproduces on another
+machine, under another load, a week later. It can be published as it stands, and
+a buyer can check it in an afternoon without trusting us and without a stopwatch.
+
+A duration is a property of the machine, its load and the instant. It holds only
+for the pass that took it, and it is publishable only with its dispersion. This
+repository already says a latency does not transfer between machines; this is the
+same boundary seen from the other side, and it decided three times on 21 August
+what could be published.
+
+Two figures were withdrawn that night for confusing the two — this one, and a
+cost ratio between tiers by document length. Both were timings quoted as though
+they were properties.
+
+The corollary is a question worth asking of any figure, and it caught this one:
+**is this measured, or bounded by a limit I chose?** A mean of exactly 200.0
+against a `num_predict` of 200 is not a length; it is the cap. No automatic check
+finds that — only reading the number next to the setting.
+
+`landing.json` now declares once, at the top level, that every duration it
+publishes is derived from a single measured relevé whose dispersion lives in
+`latencySpread.perDoc`, and that nothing in the file is a fresh timing. A test
+holds the declaration and checks that the place it names really carries
+percentiles in order — a declaration pointing at an empty object would be worse
+than none.
+
 ## What would settle it
 
 One pass, no urgency, on an idle machine:

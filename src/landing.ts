@@ -829,6 +829,33 @@ export function construire(p: Profiles): unknown {
       };
     }),
 
+    /*
+     * D'où vient toute durée de ce fichier, dit une fois plutôt que vingt-quatre.
+     *
+     * Vingt-quatre chiffres en millisecondes sont publiés ici et aucun ne porte sa dispersion
+     * dans son propre objet. Ce n'est pas un oubli : aucun n'est une mesure fraîche, tous sont
+     * des sommes de médianes par champ tirées du même relevé, dont la dispersion vit dans
+     * `latencySpread.perDoc`. Le déclarer une fois vaut mieux que de le répéter, et surtout
+     * mieux qu'un contrôle qui reniflerait les noms de clés et crierait sur les vingt-quatre.
+     *
+     * La distinction qui gouverne : **un compte se compte, une durée se chronomètre.** Un
+     * nombre de jetons est un fait sur la sortie du modèle et se reproduit ailleurs ; une durée
+     * est un fait sur la machine, sa charge et l'instant, et ne se transporte pas. Deux chiffres
+     * ont dû être retirés cette nuit pour avoir confondu les deux.
+     */
+    latencyFigures: {
+      origin: "Toutes les durées de ce fichier sont dérivées d'un seul relevé mesuré, jamais "
+        + "mesurées à nouveau ici. Chacune est une somme de médianes par champ.",
+      dispersionLivesIn: "latencySpread.perDoc",
+      composition: "sum of per-field medians",
+      countedVersusTimed: "Un compte de jetons ou de cas est un fait sur la sortie : il se "
+        + "compte, il se reproduit sur une autre machine, et il se publie tel quel. Une durée "
+        + "est un fait sur la machine, sa charge et l'instant : elle ne vaut que pour la passe "
+        + "qui l'a prise, et elle ne se publie qu'avec sa dispersion. Confondre les deux a coûté "
+        + "deux rétractations le 21 août.",
+      noFreshTimingHere: true,
+    },
+
     latencySpread: {
       /*
        * Laquelle des deux compositions, dite plutôt que devinée.
