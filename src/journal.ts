@@ -191,3 +191,52 @@ export function issues(tentatives: readonly Tentative[], s?: { tier?: string; ph
   }
   return { ...c, total: c.clean + c.blank + c.wrong };
 }
+
+/**
+ * À quelle fréquence deux paliers indiscernables rendent des dossiers différents.
+ *
+ * L'indiscernabilité dit que deux paliers **notent** pareil. Elle ne dit pas qu'ils **répondent**
+ * pareil — et le routage recommande l'un pour l'autre en les traitant comme interchangeables.
+ * Sur un cas à plusieurs lectures défendables, les deux peuvent avoir raison et livrer au
+ * client deux valeurs différentes ; ce n'est pas une erreur, ça n'entre pas dans le taux, et
+ * c'est peut-être le chiffre le plus utile du lot.
+ *
+ * Gratuit depuis que les lignes portent la valeur rendue, et impossible avant.
+ */
+export function desaccord(
+  tentatives: readonly Tentative[],
+  a: { tier: string; phrasing?: string },
+  b: { tier: string; phrasing?: string },
+) {
+  const prendre = (s: { tier: string; phrasing?: string }) => {
+    const m = new Map<string, Tentative>();
+    for (const t of tentatives) {
+      if (t.tier !== s.tier) continue;
+      if (s.phrasing !== undefined && t.phrasing !== s.phrasing) continue;
+      m.set(cle(t), t);
+    }
+    return m;
+  };
+  const A = prendre(a), B = prendre(b);
+  let communs = 0, tousDeuxJustes = 0, justesEtDifferents = 0, memeIssueValeursDifferentes = 0;
+  const exemples: { field: string; caseId: string; a: string; b: string }[] = [];
+  for (const [k, ta] of A) {
+    const tb = B.get(k);
+    if (!tb) continue;
+    communs++;
+    const different = normaliserReponse(ta.value) !== normaliserReponse(tb.value);
+    if (ta.outcome === "clean" && tb.outcome === "clean") {
+      tousDeuxJustes++;
+      if (different) {
+        justesEtDifferents++;
+        if (exemples.length < 10) exemples.push({ field: ta.field, caseId: ta.caseId, a: ta.value, b: tb.value });
+      }
+    }
+    if (ta.outcome === tb.outcome && different) memeIssueValeursDifferentes++;
+  }
+  return {
+    communs, tousDeuxJustes, justesEtDifferents,
+    tauxParmiLesJustes: tousDeuxJustes ? justesEtDifferents / tousDeuxJustes : null,
+    memeIssueValeursDifferentes, exemples,
+  };
+}

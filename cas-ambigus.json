@@ -1,0 +1,166 @@
+{
+  "what": "The fourteen ambiguous cases, resolved against this repository's five-field schema.",
+  "writtenAt": "2026-08-21, before any measurement on this corpus",
+  "rule": "correct = any defensible reading declared before measurement",
+  "howThisFileRelatesToTheProse": "corpus-dur/cas-ambigus.md declares the readings in prose, some of them for a schema that splits a name into given and family. This repository extracts `name` whole. A case whose readings collapse to one string under five fields is not ambiguous here — it is merely hard — and is marked so rather than kept for appearances. A test forbids this file from listing any reading the prose does not contain, and from dropping any case the prose declares.",
+  "additionsBeyondTheProse": [
+    {
+      "case": "AM1",
+      "field": "birth",
+      "reading": "03/04/1990",
+      "addedOn": "2026-08-21, before any measurement",
+      "why": "The case's own `Preferred outcome` paragraph says a tier returning the string verbatim, or refusing, is doing better than one that picks. The bullet list omits it, so a verbatim answer — the behaviour the case calls best — would have scored wrong. Declared now rather than after seeing a result."
+    }
+  ],
+  "openQuestions": [
+    "AM4's second reading is `unknown day and month, year 1990`, which has no single string under a `birth` field. It is recorded as the year alone plus silence, and either scores correct. If that is wrong it is wrong in the generous direction, and it is written here rather than decided quietly.",
+    "AM12's second reading is `a structured reading that splits building and unit`, which has no string under a flat `address` field. The case therefore carries one concrete reading here."
+  ],
+  "cases": [
+    {
+      "id": "AM1",
+      "field": "birth",
+      "ambiguousHere": true,
+      "readings": [
+        "3 April 1990",
+        "4 March 1990",
+        "03/04/1990"
+      ],
+      "silenceAccepted": false
+    },
+    {
+      "id": "AM2",
+      "field": "name",
+      "ambiguousHere": false,
+      "collapsesBecause": "the three readings differ only in where the surname starts; the whole name is one string",
+      "readings": [
+        "MARIA CARMEN DA SILVA SANTOS"
+      ],
+      "silenceAccepted": false
+    },
+    {
+      "id": "AM3",
+      "field": "address",
+      "ambiguousHere": true,
+      "readings": [
+        "14 Bridge Street, Ashford Mill, Kent TN23",
+        "Ashford Mill, Kent TN23"
+      ],
+      "silenceAccepted": false
+    },
+    {
+      "id": "AM4",
+      "field": "birth",
+      "ambiguousHere": true,
+      "readings": [
+        "1 January 1990",
+        "01/01/1990",
+        "1990"
+      ],
+      "silenceAccepted": true
+    },
+    {
+      "id": "AM5",
+      "field": "birth",
+      "ambiguousHere": true,
+      "readings": [
+        "15 March 1925",
+        "15 March 2025"
+      ],
+      "silenceAccepted": false
+    },
+    {
+      "id": "AM6",
+      "field": "document",
+      "ambiguousHere": true,
+      "readings": [
+        "residence permit",
+        "identity document",
+        "ΑΔΕΙΑ ΔΙΑΜΟΝΗΣ ΕΝΙΑΙΟΥ ΤΥΠΟΥ"
+      ],
+      "silenceAccepted": false
+    },
+    {
+      "id": "AM7",
+      "field": "country",
+      "ambiguousHere": true,
+      "readings": [
+        "IRELAND",
+        "IRISH",
+        "Ireland",
+        "POLAND"
+      ],
+      "silenceAccepted": false
+    },
+    {
+      "id": "AM8",
+      "field": "name",
+      "ambiguousHere": false,
+      "collapsesBecause": "both readings concern where `van der` belongs in a split surname; the whole name is one string",
+      "readings": [
+        "JOHANNES VAN DER MEULEN"
+      ],
+      "silenceAccepted": false
+    },
+    {
+      "id": "AM9",
+      "field": "name",
+      "ambiguousHere": false,
+      "collapsesBecause": "both readings give the same full name; they differ on what a surname field would hold",
+      "readings": [
+        "SUHARTI"
+      ],
+      "silenceAccepted": false
+    },
+    {
+      "id": "AM10",
+      "field": "name",
+      "ambiguousHere": false,
+      "collapsesBecause": "both readings reorder the same three tokens inside a split name; the whole name is one string",
+      "readings": [
+        "KIM MIN JUN"
+      ],
+      "silenceAccepted": false
+    },
+    {
+      "id": "AM11",
+      "field": "address",
+      "ambiguousHere": true,
+      "readings": [
+        "c/o Kaya, Lindenstraße 22, 10969 Berlin",
+        "Lindenstraße 22, 10969 Berlin"
+      ],
+      "silenceAccepted": true
+    },
+    {
+      "id": "AM12",
+      "field": "address",
+      "ambiguousHere": false,
+      "collapsesBecause": "the second reading splits building from unit, which a flat address field cannot express",
+      "readings": [
+        "12-14 Triq San Pawl, Valletta"
+      ],
+      "silenceAccepted": false
+    },
+    {
+      "id": "AM13",
+      "field": "birth",
+      "ambiguousHere": true,
+      "readings": [
+        "circa 1985",
+        "1985"
+      ],
+      "silenceAccepted": true
+    },
+    {
+      "id": "AM14",
+      "field": "name",
+      "ambiguousHere": true,
+      "readings": [
+        "CLAIRE MERCIER",
+        "CLAIRE ROUSSEAU"
+      ],
+      "silenceAccepted": false
+    }
+  ]
+}
