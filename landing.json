@@ -1236,8 +1236,8 @@
     ]
   },
   "retractions": {
-    "total": 26,
-    "caughtBeforeAnyoneSawIt": 9,
+    "total": 27,
+    "caughtBeforeAnyoneSawIt": 10,
     "entries": [
       {
         "date": "2026-06-14",
@@ -1368,6 +1368,11 @@
         "date": "2026-08-22",
         "headline": "Refuted another session's result on three points that were wrong, after truncating the search that would have shown it.",
         "caughtBeforeAnyoneSawIt": false
+      },
+      {
+        "date": "2026-08-22",
+        "headline": "A unit error in the new reimbursement threshold made every routing inadmissible, and its output read as a finding about the clause.",
+        "caughtBeforeAnyoneSawIt": true
       }
     ]
   },

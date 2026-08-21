@@ -270,6 +270,16 @@
       "heldBy": null,
       "notHeld": "No test holds this one. Nothing in a repository can detect that a view of the data was truncated where the answer lay — the output looks complete because truncation is silent by design.",
       "caughtBeforeAnyoneSawIt": false
+    },
+    {
+      "date": "2026-08-22",
+      "headline": "A unit error in the new reimbursement threshold made every routing inadmissible, and its output read as a finding about the clause.",
+      "claimed": "Nearly: that no admissible routing matches an incumbent field by field, so the cost threshold does not exist. The function said so in words designed to be quoted in a letter.",
+      "actually": "`latency()` already returns milliseconds and the code multiplied by a thousand, so every routing exceeded a 2,000 ms ceiling by three orders of magnitude and was rejected before its accuracy was examined. The failure looked exactly like a substantive result rather than a broken comparison, because the message it produced was about the clause and not about the units.",
+      "caughtBy": "Naming by hand a routing that should have satisfied the clause, and finding the function disagreed. Checking the prediction rather than the output.",
+      "cost": "None outside the session; the code was minutes old and unreleased. What it nearly cost is a sentence in a signed letter saying the clause can never be satisfied.",
+      "heldBy": "le plafond de latence est comparé en millisecondes, pas en millisecondes fois mille",
+      "caughtBeforeAnyoneSawIt": true
     }
   ]
 }
