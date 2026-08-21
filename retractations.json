@@ -186,6 +186,16 @@
       "cost": "None. It was built and broken within the same hour, and the first pass it judged was the one that exposed it. The footer now judges the external load before the pass and reports the rise during it without pretending to attribute it.",
       "heldBy": "le pied de page d'une passe dit la charge pendant, et si les durées valent quelque chose",
       "caughtBeforeAnyoneSawIt": true
+    },
+    {
+      "date": "2026-08-21",
+      "headline": "A field called `dureesUtilisables` claimed a verdict no pass can reach from inside itself.",
+      "claimed": "That the hard-corpus run's durations were usable. The footer said so, and the field's name said it plainly.",
+      "actually": "Another session downloaded a 1.36 GB model during the last 71 seconds of that pass — established from the blob's own timestamps, created 15:58:51Z and finished 16:01:04Z against a pass ending at 16:00:02Z, not from the report of it. The field said true. Its first version, judging total load during the pass, said false on every pass including idle ones. Neither version was right, because a machine cannot tell its own load from an intruder's, and the name promised exactly that separation. Renamed to what it measures: whether external load before the pass was under the threshold. Nothing in a journal now claims to know whether durations are reusable.",
+      "caughtBy": "Being told a model had been pulled, and checking the timestamps rather than taking the window on trust.",
+      "cost": "None published. Accuracy is untouched — this repository measured that across 984 attempts at two loads earlier the same hour. The affected pass carries an appended note; not one measured value was rewritten.",
+      "heldBy": "le pied de page d'une passe dit la charge pendant, et si les durées valent quelque chose",
+      "caughtBeforeAnyoneSawIt": true
     }
   ]
 }

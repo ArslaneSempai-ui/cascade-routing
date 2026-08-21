@@ -131,12 +131,22 @@ export function ouvrirJournal(nom: string, conditions: Omit<Conditions, "platefo
          * est monté. La montée ne se décompose pas — on ne sait pas ce qui, du travail de la
          * passe ou d'un intrus, l'a produite — donc elle est rapportée et non jugée.
          */
-        dureesUtilisables: conditions.chargeAvant / cpus().length <= 0.5,
+        /*
+         * Nommé pour ce qu'il mesure, et pas plus.
+         *
+         * Il s'est d'abord appelé `dureesUtilisables`, ce qui promet un verdict que ce fichier
+         * ne peut pas rendre : une machine ne distingue pas sa propre charge de celle d'un
+         * intrus. Une heure après la correction, une autre session a tiré 1,4 Go de modèle
+         * pendant les 71 dernières secondes d'une passe, et le champ disait `true`. Ni la
+         * version stricte ni la version large n'avait raison — c'était le **nom** qui mentait.
+         */
+        chargeExterneAvantSousLeSeuil: conditions.chargeAvant / cpus().length <= 0.5,
         montéePendant: pic === null ? null : Number((pic - conditions.chargeAvant).toFixed(2)),
-        commentLire: "`dureesUtilisables` juge la charge externe avant la passe. `chargePendant` "
-          + "inclut le travail de la passe elle-même et ne se décompose pas : une montée forte "
-          + "peut venir d'elle ou d'un autre travail lancé en route, et ce fichier ne sait pas "
-          + "lequel.",
+        commentLire: "Aucun champ ici ne dit si les durées sont réutilisables : de l'intérieur "
+          + "d'une passe, sa propre charge ne se distingue pas de celle d'un intrus. "
+          + "`chargeExterneAvantSousLeSeuil` ne juge que le départ. Un travail lancé en cours de "
+          + "route ne se voit pas ici — il se voit du dehors, et s'annote après coup avec un "
+          + "enregistrement `note` ajouté au journal.",
       }) + "\n");
       return { lignes, chemin, chargePic: pic };
     },
@@ -153,7 +163,8 @@ export function ouvrirJournal(nom: string, conditions: Omit<Conditions, "platefo
 export function lireJournal(chemin: string) {
   const brut = readFileSync(chemin, "utf8").split("\n").filter((l) => l.trim().length > 0);
   let conditions: (Conditions & { run: string }) | undefined;
-  let fin: { chargePendant?: unknown; dureesUtilisables?: boolean | null } | undefined;
+  let fin: { chargePendant?: unknown; chargeExterneAvantSousLeSeuil?: boolean | null } | undefined;
+  const notes: { at: string; par: string; quoi: string; fenetre?: [string, string] }[] = [];
   let complet = false;
   const tentatives: Tentative[] = [];
   let tronquees = 0;
@@ -163,8 +174,9 @@ export function lireJournal(chemin: string) {
     if (o.kind === "run") conditions = o as never;
     else if (o.kind === "fin") { complet = true; fin = o as never; }
     else if (o.kind === "t") tentatives.push(o as never);
+    else if (o.kind === "note") notes.push(o as never);
   }
-  return { conditions, tentatives, complet, tronquees, fin };
+  return { conditions, tentatives, complet, tronquees, fin, notes };
 }
 
 export function journaux(): string[] {
@@ -336,4 +348,16 @@ export function accordEntreMachines(a: readonly Tentative[], b: readonly Tentati
       : memeChaine === communs ? "sorties identiques au caractère : mettre les exactitudes en commun est fondé."
       : "les sorties diffèrent : mettre les exactitudes en commun moyennerait deux comportements distincts.",
   };
+}
+
+/**
+ * Annoter une passe déjà écrite, sans toucher à ce qu'elle a mesuré.
+ *
+ * Un journal est un fichier en ajout seul : c'est ce qui permet d'y consigner après coup un
+ * fait qu'on ignorait pendant la passe — qu'un autre travail tournait, qu'une machine a
+ * changé — sans réécrire une seule valeur mesurée. Corriger un relevé et l'annoter ne sont pas
+ * la même chose, et seule la seconde est honnête.
+ */
+export function annoter(chemin: string, note: { par: string; quoi: string; fenetre?: [string, string] }) {
+  appendFileSync(chemin, JSON.stringify({ kind: "note", at: new Date().toISOString(), ...note }) + "\n");
 }

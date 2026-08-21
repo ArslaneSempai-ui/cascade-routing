@@ -1042,8 +1042,8 @@
     ]
   },
   "retractions": {
-    "total": 18,
-    "caughtBeforeAnyoneSawIt": 8,
+    "total": 19,
+    "caughtBeforeAnyoneSawIt": 9,
     "entries": [
       {
         "date": "2026-06-14",
@@ -1133,6 +1133,11 @@
       {
         "date": "2026-08-21",
         "headline": "A guard against contaminated durations condemned every pass, including the clean ones, by judging each pass on the load it produces itself.",
+        "caughtBeforeAnyoneSawIt": true
+      },
+      {
+        "date": "2026-08-21",
+        "headline": "A field called `dureesUtilisables` claimed a verdict no pass can reach from inside itself.",
         "caughtBeforeAnyoneSawIt": true
       }
     ]
