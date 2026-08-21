@@ -1229,7 +1229,7 @@
     ]
   },
   "retractions": {
-    "total": 24,
+    "total": 25,
     "caughtBeforeAnyoneSawIt": 9,
     "entries": [
       {
@@ -1351,6 +1351,11 @@
         "date": "2026-08-21",
         "headline": "Said escalation to gen-8b breaks the ceiling for any field. One field fits, and escalating it gains twenty-six of a hundred and fifty.",
         "caughtBeforeAnyoneSawIt": false
+      },
+      {
+        "date": "2026-08-21",
+        "headline": "Published a price ratio of 8.4 from twenty timings with no spread, on a machine whose single-call spread is fivefold — hours after retracting the same defect.",
+        "caughtBeforeAnyoneSawIt": false
       }
     ]
   },
@@ -1371,7 +1376,7 @@
     "Les paliers ne sont pas mesurés au même n : les encodeurs sur l'échantillon complet, les génératifs sur ses premiers cas seulement. Chaque chiffre porte son propre n.",
     "Aucun prix n'est mesuré. Tous sortent de `assumptions`, que le lecteur remplace.",
     "Le routage est calibré à la taille de document du corpus — 166 caractères en moyenne, environ 185 jetons d'entrée — et le rapport de coût entre paliers bouge avec la longueur d'entrée. Deux balayages du 21 août donnent des rapports différents sur les mêmes points, parce que la dispersion d'un appel isolé y est large : à 200 jetons, `gen-0.6b` va de 167 à 802 ms sur cinq répétitions. Ce qui est établi est que le rapport bouge et qu'un client aux documents nettement plus longs doit recalibrer ; aucune valeur de ce rapport n'est publiée, faute d'un échantillon qui la tienne. Les latences par palier du relevé, elles, portent sur cent vingt appels et leur p10/p90.",
-    "Le prix des paliers génératifs est du temps machine, donc il dépend de la configuration de l'appel autant que du modèle. La sortie est contrainte par un schéma JSON : sans cette contrainte, `gen-4b` consomme tous les jetons autorisés et raisonne à voix haute — 644 ms deviennent 5 412 sur vingt extractions mesurées le 21 août, soit un facteur 8,4 sur le prix. Le prix publié suppose la contrainte.",
+    "Le prix des paliers génératifs est du temps machine, donc il dépend de la configuration de l'appel autant que du modèle. La sortie est contrainte par un schéma JSON, et le prix publié suppose cette contrainte : sans elle, `gen-4b` produit 200 jetons contre 15,6 — c'est-à-dire exactement le plafond `num_predict`, donc sa longueur réelle n'est pas observée mais seulement minorée — et rend du raisonnement au lieu d'une valeur. Aucun rapport de prix n'est publié pour cet écart : les vingt durées qui le chiffraient ont été prises sans leur dispersion, sur une machine dont un appel isolé varie d'un facteur cinq. Ce qui est établi est le compte de jetons, qui se compte au lieu de se chronométrer, et sur un seul palier.",
     "La latence est mesurée un élément à la fois sur une machine au repos ; rien ici ne dit ce qu'elle devient sous charge.",
     "Ces chiffres sont ceux de la chaîne d'extraction. La chaîne de classification range les paliers dans l'ordre inverse, ce qui interdit d'en tirer un classement général.",
     "Un routage expire : il est calculé sur des révisions épinglées et un échantillon figé. Une dérive du trafic ou une mise à jour de modèle l'invalide sans lever d'erreur.",

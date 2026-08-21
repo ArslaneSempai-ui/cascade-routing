@@ -1307,8 +1307,11 @@ test("chaque seuil publié porte son unité, dénominateur compris", () => {
  * Sans `format`, `gen-4b` ne s'arrête pas : il consomme les deux cents jetons autorisés à chaque
  * champ et se met à raisonner à voix haute — « We are given a document string and a question ».
  * Mesuré le 21 août sur vingt extractions : 15,6 jetons et 644 ms avec le schéma, 200 jetons et
- * 5 412 ms sans. **Un facteur 8,4 sur la durée, donc sur le prix**, puisque le coût d'un palier
- * génératif est du temps machine.
+ * 5 412 ms sans — mais ces durées ont été prises sans leur dispersion, et le chiffre de jetons
+ * est celui qui tient : **200,0 de moyenne, c'est-à-dire exactement le plafond**, donc la
+ * longueur réelle n'est pas mesurée mais minorée par un plafond qu'on a choisi. Ce que ce test
+ * protège n'est donc pas un rapport de prix : c'est le fait que sans la contrainte, la réponse
+ * n'est plus une valeur du tout — le parseur JSON échoue sur de la prose et le champ sort vide.
  *
  * Le prix publié suppose donc la contrainte de sortie, et cette dépendance n'était tenue par
  * rien : quelqu'un qui retire `format` en croyant simplifier multiplie le coût réel par huit

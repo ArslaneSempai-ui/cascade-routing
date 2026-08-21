@@ -956,10 +956,14 @@ export function construire(p: Profiles): unknown {
       + "aucune valeur de ce rapport n'est publiée, faute d'un échantillon qui la tienne. Les "
       + "latences par palier du relevé, elles, portent sur cent vingt appels et leur p10/p90.",
       "Le prix des paliers génératifs est du temps machine, donc il dépend de la configuration "
-      + "de l'appel autant que du modèle. La sortie est contrainte par un schéma JSON : sans "
-      + "cette contrainte, `gen-4b` consomme tous les jetons autorisés et raisonne à voix haute "
-      + "— 644 ms deviennent 5 412 sur vingt extractions mesurées le 21 août, soit un facteur "
-      + "8,4 sur le prix. Le prix publié suppose la contrainte.",
+      + "de l'appel autant que du modèle. La sortie est contrainte par un schéma JSON, et le "
+      + "prix publié suppose cette contrainte : sans elle, `gen-4b` produit 200 jetons contre "
+      + "15,6 — c'est-à-dire exactement le plafond `num_predict`, donc sa longueur réelle n'est "
+      + "pas observée mais seulement minorée — et rend du raisonnement au lieu d'une valeur. "
+      + "Aucun rapport de prix n'est publié pour cet écart : les vingt durées qui le chiffraient "
+      + "ont été prises sans leur dispersion, sur une machine dont un appel isolé varie d'un "
+      + "facteur cinq. Ce qui est établi est le compte de jetons, qui se compte au lieu de se "
+      + "chronométrer, et sur un seul palier.",
       "La latence est mesurée un élément à la fois sur une machine au repos ; rien ici ne dit "
       + "ce qu'elle devient sous charge.",
       "Ces chiffres sont ceux de la chaîne d'extraction. La chaîne de classification range les "
