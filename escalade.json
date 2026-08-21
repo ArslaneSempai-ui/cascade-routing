@@ -1,0 +1,76 @@
+{
+  "quoi": "La cascade guidée vaut-elle son second appel ?",
+  "regle": "pour chaque champ : lancer le palier retenu ; si la valeur est absente du document ou implausible de forme, relancer sur le palier au-dessus ; garder la seconde. Aucun seuil.",
+  "sansParametre": "Les deux signaux sont binaires : rien à régler, donc rien à surajuster. L'objection du seuil réglé sur le corpus qui borne son propre intervalle ne s'applique pas.",
+  "mesureLe": "2026-08-21T17:51:23.651Z",
+  "journal": "tentatives/2026-08-21T16-54-14-816Z-dur.jsonl",
+  "documents": 30,
+  "echelle": [
+    "rules",
+    "gen-0.6b",
+    "small",
+    "gen-4b",
+    "gen-8b",
+    "large"
+  ],
+  "routageFixe": {
+    "name": "large",
+    "birth": "rules",
+    "document": "rules",
+    "country": "rules",
+    "address": "gen-4b"
+  },
+  "colonnes": [
+    {
+      "nom": "1. routage fixe actuel",
+      "dossiersEntiers": 0,
+      "escalades": 0,
+      "prixParMille": 1.8365,
+      "msParDocument": 967.7
+    },
+    {
+      "nom": "2. cascade guidée (forme + absence)",
+      "dossiersEntiers": 0,
+      "escalades": 6,
+      "prixParMille": 1.91,
+      "msParDocument": 1239.3
+    },
+    {
+      "nom": "2b. cascade guidée, blancs compris",
+      "dossiersEntiers": 0,
+      "escalades": 90,
+      "prixParMille": 2.1171,
+      "msParDocument": 1888.8
+    },
+    {
+      "nom": "2c. cascade vers gen-8b, blancs compris",
+      "dossiersEntiers": 1,
+      "escalades": 103,
+      "prixParMille": 3.0969,
+      "msParDocument": 4960.4
+    },
+    {
+      "nom": "3. cascade au hasard, même nombre d'escalades que 2b",
+      "dossiersEntiers": 0,
+      "escalades": 90,
+      "prixParMille": 2.1892,
+      "msParDocument": 2201.6
+    },
+    {
+      "nom": "4. oracle (plafond)",
+      "dossiersEntiers": 0,
+      "escalades": 40,
+      "prixParMille": 1.9743,
+      "msParDocument": 1424.3
+    },
+    {
+      "nom": "5. meilleur routage fixe au même budget",
+      "dossiersEntiers": 2,
+      "escalades": 0,
+      "prixParMille": 0.9881,
+      "msParDocument": 3272.9
+    }
+  ],
+  "doubleOrigine": "L'exactitude vient des lignes du corpus dur ; le prix et la latence viennent des latences du relevé publié, mesurées sur machine au repos. Les durées du corpus dur décrivent d'autres documents et ne serviraient pas ici.",
+  "limite": "Trente documents. Un écart d'un ou deux dossiers entiers n'est pas départageable sur cet effectif, et aucun taux n'est publiable depuis ces comptes."
+}

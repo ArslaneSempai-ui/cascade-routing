@@ -343,6 +343,7 @@ const commandes = (() => {
     ["dur", "measure the hard corpus: broken documents, non-Latin scripts, ambiguous readings"],
     ["mur", "how far the exhaustive solver goes, in fields and tiers, measured"],
     ["signal", "which key-free signals predict a wrong value, against a random control"],
+    ["escalade", "does a guided cascade beat a fixed tier at the same budget?"],
     ["figures", "regenerate every table on this page from the frozen profile"],
     ["landing", "regenerate landing.json — the figures a published page reads, with their provenance"],
     ["dossier", "the validation file a reviewer signs"],
