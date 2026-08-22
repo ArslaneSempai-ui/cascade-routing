@@ -10,9 +10,13 @@
  *
  * Trois pièges connus, évités ici :
  *
- *   — **`git archive`, pas `git clone <chemin>`.** Un clone local peut hériter d'objets qu'un
- *     clone distant n'aurait pas. L'archive rend exactement les fichiers suivis à HEAD, ce que
- *     reçoit quelqu'un qui clone depuis un dépôt distant.
+ *   — **`git clone --no-local`, pas `git archive`, et pas un clone local nu.** Un clone local
+ *     ordinaire peut lier en dur des objets qu'un clone distant n'aurait pas ; `--no-local`
+ *     force le transport normal et l'évite. La première version employait `git archive`, qui
+ *     rend les fichiers suivis **et aucun historique** : un test qui demande à git quel commit
+ *     introduit un drapeau échouait alors, non parce que le dépôt est cassé mais parce que
+ *     l'archive n'est pas un clone. Le contrôle accusait le dépôt de sa propre approximation,
+ *     ce qui est la pire panne qu'un contrôle puisse avoir.
  *   — **`node_modules` n'est jamais partagé.** L'installation est refaite dans le clone ; un
  *     lien vers celle du dossier de travail ferait hériter d'un état que le client n'a pas.
  *   — **la durée est mesurée et affichée.** Un contrôle de deux minutes finit désactivé, donc
@@ -68,10 +72,14 @@ const etape = (nom, fn) => {
 try {
   console.log(`\nClone neuf depuis HEAD — seulement ce que git transporte.\n`);
 
-  etape("git archive HEAD → dossier vide", () => {
-    execFileSync("bash", ["-c",
-      `mkdir -p '${clone}' && git -C '${racine}' archive HEAD | tar -x -C '${clone}'`],
-      { stdio: "pipe" });
+  etape("git clone --no-local", () => {
+    execFileSync("git", ["clone", "--no-local", "--quiet", racine, clone], { stdio: "pipe" });
+  });
+
+  etape("l'historique est bien là", () => {
+    /* Un clone porte son historique ; une archive non. Des tests interrogent git, et sans cette
+       vérification le contrôle imputerait au dépôt une lacune de sa propre méthode d'extraction. */
+    execFileSync("git", ["-C", clone, "rev-parse", "HEAD"], { stdio: "pipe" });
   });
 
   etape("aucun node_modules hérité", () => {
