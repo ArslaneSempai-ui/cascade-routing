@@ -5,7 +5,13 @@
  * mon propre `num_predict` de 200 : la moyenne non contrainte valait exactement 200,0, donc ce
  * n'était pas une longueur mais le plafond. Ce banc lève le plafond assez haut pour que la
  * longueur soit **observée**, et un pilote l'a vérifié avant de fixer la valeur : à 4 000
- * jetons autorisés, les trois paliers s'arrêtent d'eux-mêmes.
+ * jetons autorisés, un appel des trois paliers s'arrête de lui-même.
+ *
+ * **Le pilote était un seul appel, et il avait tort.** Sur vingt, `gen-4b` atteint le plafond
+ * de 4 000 cinq fois, aux deux passes. Sa médiane de 2 480 est réelle ; son maximum est encore
+ * mon réglage. C'est la même faute que le chiffre qu'on remplace — une longueur qui est en fait
+ * un plafond — un ordre de grandeur plus loin. `plafondAtteint` est émis à côté de la longueur
+ * pour que le lecteur voie que le maximum est le réglage.
  *
  * **Et le pilote a déplacé la question.** Sans schéma, `gen-0.6b` rend 8 jetons et `gen-8b` en
  * rend 6 — ils s'arrêtent seuls. Seul `gen-4b` s'emballe, à 3 508 jetons. Ce n'est donc pas

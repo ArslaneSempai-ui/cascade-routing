@@ -1236,8 +1236,8 @@
     ]
   },
   "retractions": {
-    "total": 27,
-    "caughtBeforeAnyoneSawIt": 10,
+    "total": 28,
+    "caughtBeforeAnyoneSawIt": 11,
     "entries": [
       {
         "date": "2026-06-14",
@@ -1372,6 +1372,11 @@
       {
         "date": "2026-08-22",
         "headline": "A unit error in the new reimbursement threshold made every routing inadmissible, and its output read as a finding about the clause.",
+        "caughtBeforeAnyoneSawIt": true
+      },
+      {
+        "date": "2026-08-22",
+        "headline": "Called one call a pilot, and concluded the token cap does not bind. It binds on a quarter of them.",
         "caughtBeforeAnyoneSawIt": true
       }
     ]

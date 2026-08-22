@@ -280,6 +280,17 @@
       "cost": "None outside the session; the code was minutes old and unreleased. What it nearly cost is a sentence in a signed letter saying the clause can never be satisfied.",
       "heldBy": "le plafond de latence est comparé en millisecondes, pas en millisecondes fois mille",
       "caughtBeforeAnyoneSawIt": true
+    },
+    {
+      "date": "2026-08-22",
+      "headline": "Called one call a pilot, and concluded the token cap does not bind. It binds on a quarter of them.",
+      "claimed": "That at 4,000 permitted tokens all three tiers stop of their own accord, so the unconstrained length is observed rather than clipped. Written into a commit message and a source comment as the reason for choosing that cap.",
+      "actually": "Over twenty calls per pass, `gen-4b` hits the 4,000 cap on five of them, in both passes. Its median of 2,480 is real; its maximum is my cap again, so the unconstrained length is still bounded below rather than observed. The pilot was a single call that happened to stop at 3,508.",
+      "caughtBy": "The bench itself, on its first real run, reporting `plafondAtteint 5/20` — a field added precisely because the previous version of this figure had been bounded by a cap without saying so.",
+      "cost": "Nothing published. But it is the same error as the figure it was built to replace — a length that is really a ceiling — one order of magnitude further out, and made an hour after retracting the first.",
+      "heldBy": null,
+      "notHeld": "No test holds this one. What caught it was emitting the count of calls that reached the cap beside the length, so the reader can see that the maximum is the setting. A single call cannot be made to report that it is a single call.",
+      "caughtBeforeAnyoneSawIt": true
     }
   ]
 }
