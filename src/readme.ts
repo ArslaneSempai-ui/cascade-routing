@@ -343,6 +343,7 @@ const commandes = (() => {
     ["tentatives", "query stored per-attempt outcomes — paired tests and clean rates, no GPU"],
     ["dur", "measure the hard corpus: broken documents, non-Latin scripts, ambiguous readings"],
     ["clone-neuf", "clone from HEAD, install fresh, run the suite — the buyer's first action"],
+    ["contrainte", "what the output constraint buys, at a token cap shown not to bind"],
     ["mur", "how far the exhaustive solver goes, in fields and tiers, measured"],
     ["signal", "which key-free signals predict a wrong value, against a random control"],
     ["escalade", "does a guided cascade beat a fixed tier at the same budget?"],

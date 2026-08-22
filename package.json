@@ -33,7 +33,8 @@
     "benchmark": "node src/benchmark.ts",
     "egress": "node src/egress.ts",
     "intake": "node src/intake.ts",
-    "clone-neuf": "node src/clone-neuf.mjs"
+    "clone-neuf": "node src/clone-neuf.mjs",
+    "contrainte": "node src/contrainte.ts"
   },
   "dependencies": {
     "@huggingface/transformers": "^3.0.0"
