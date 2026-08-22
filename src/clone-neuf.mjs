@@ -33,6 +33,9 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const racine = fileURLToPath(new URL("..", import.meta.url));
+/* Une référence au choix, pour éprouver une branche avant de la fondre — et pour poser le
+   témoin de ce contrôle sans committer sur `main` un état qu'on sait cassé. */
+const ref = process.argv.find((a) => a.startsWith("--ref="))?.split("=")[1] ?? null;
 const t0 = Date.now();
 const dossier = mkdtempSync(join(tmpdir(), "cascade-clone-neuf-"));
 const clone = join(dossier, "cascade");
@@ -70,10 +73,11 @@ const etape = (nom, fn) => {
 };
 
 try {
-  console.log(`\nClone neuf depuis HEAD — seulement ce que git transporte.\n`);
+  console.log(`\nClone neuf depuis ${ref ?? "HEAD"} — seulement ce que git transporte.\n`);
 
-  etape("git clone --no-local", () => {
-    execFileSync("git", ["clone", "--no-local", "--quiet", racine, clone], { stdio: "pipe" });
+  etape(`git clone --no-local${ref ? ` (${ref})` : ""}`, () => {
+    execFileSync("git", ["clone", "--no-local", "--quiet",
+      ...(ref ? ["--branch", ref] : []), racine, clone], { stdio: "pipe" });
   });
 
   etape("l'historique est bien là", () => {
