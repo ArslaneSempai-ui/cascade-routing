@@ -153,9 +153,21 @@ if (isMain(import.meta)) {
         const bas = (v: number[]) => Math.min(...v), haut = (v: number[]) => Math.max(...v);
         lignes.push({
           passe, tier, schema: avecSchema, n: jetons.length,
+          /*
+           * Le qualificatif appartient au nom, jamais à la clé d'à côté.
+           *
+           * `msMediane` accompagné d'un `dureesTransportables: false` voisin est un chiffre qui
+           * perd sa réserve dès qu'on le cite seul — et un chiffre voyage seul. Les durées de ce
+           * banc sont prises sous famine mémoire ; elles s'appellent donc ainsi, et personne ne
+           * peut les recopier sans recopier ce qu'elles valent.
+           */
           jetonsMediane: med(jetons), jetonsMin: bas(jetons), jetonsMax: haut(jetons),
-          msMediane: Number(med(ms).toFixed(0)), msMin: Number(bas(ms).toFixed(0)),
-          msMax: Number(haut(ms).toFixed(0)),
+          ...(etat.dureesTransportables
+            ? { msMediane: Number(med(ms).toFixed(0)), msMin: Number(bas(ms).toFixed(0)),
+                msMax: Number(haut(ms).toFixed(0)) }
+            : { msMedianeNonTransportableFamineMemoire: Number(med(ms).toFixed(0)),
+                msMinNonTransportableFamineMemoire: Number(bas(ms).toFixed(0)),
+                msMaxNonTransportableFamineMemoire: Number(haut(ms).toFixed(0)) }),
           justes, exactitude: Number((justes / jetons.length).toFixed(4)),
           vides, plafondAtteint: plafonds,
           memoireLibreMoAuDepart: etat.memoireLibreMo,
@@ -163,7 +175,8 @@ if (isMain(import.meta)) {
         });
         console.log(`    ${tier.padEnd(9)} ${avecSchema ? "avec schéma " : "sans schéma "}`
           + `jetons ${String(med(jetons)).padStart(5)} [${bas(jetons)}–${haut(jetons)}]   `
-          + `${String(med(ms).toFixed(0)).padStart(6)} ms [${bas(ms).toFixed(0)}–${haut(ms).toFixed(0)}]   `
+          + `${String(med(ms).toFixed(0)).padStart(6)} ms${etat.dureesTransportables ? "" : "*"} `
+          + `[${bas(ms).toFixed(0)}–${haut(ms).toFixed(0)}]   `
           + `juste ${(100 * justes / jetons.length).toFixed(0)} %   plafond atteint ${plafonds}/${jetons.length}`);
       }
     }

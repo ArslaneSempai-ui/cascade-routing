@@ -25,15 +25,15 @@
       "jetonsMediane": 13,
       "jetonsMin": 8,
       "jetonsMax": 18,
-      "msMediane": 235,
-      "msMin": 171,
-      "msMax": 1164,
       "justes": 19,
       "exactitude": 0.95,
       "vides": 0,
       "plafondAtteint": 0,
       "memoireLibreMoAuDepart": 343,
-      "dureesTransportables": false
+      "dureesTransportables": false,
+      "msMedianeNonTransportableFamineMemoire": 235,
+      "msMinNonTransportableFamineMemoire": 171,
+      "msMaxNonTransportableFamineMemoire": 1164
     },
     {
       "passe": 1,
@@ -43,15 +43,15 @@
       "jetonsMediane": 8,
       "jetonsMin": 3,
       "jetonsMax": 8,
-      "msMediane": 176,
-      "msMin": 145,
-      "msMax": 185,
       "justes": 4,
       "exactitude": 0.2,
       "vides": 0,
       "plafondAtteint": 0,
       "memoireLibreMoAuDepart": 343,
-      "dureesTransportables": false
+      "dureesTransportables": false,
+      "msMedianeNonTransportableFamineMemoire": 176,
+      "msMinNonTransportableFamineMemoire": 145,
+      "msMaxNonTransportableFamineMemoire": 185
     },
     {
       "passe": 1,
@@ -61,15 +61,15 @@
       "jetonsMediane": 16,
       "jetonsMin": 11,
       "jetonsMax": 19,
-      "msMediane": 789,
-      "msMin": 614,
-      "msMax": 2132,
       "justes": 17,
       "exactitude": 0.85,
       "vides": 0,
       "plafondAtteint": 0,
       "memoireLibreMoAuDepart": 343,
-      "dureesTransportables": false
+      "dureesTransportables": false,
+      "msMedianeNonTransportableFamineMemoire": 789,
+      "msMinNonTransportableFamineMemoire": 614,
+      "msMaxNonTransportableFamineMemoire": 2132
     },
     {
       "passe": 1,
@@ -79,15 +79,15 @@
       "jetonsMediane": 2480,
       "jetonsMin": 398,
       "jetonsMax": 4000,
-      "msMediane": 120004,
-      "msMin": 15871,
-      "msMax": 208885,
       "justes": 9,
       "exactitude": 0.45,
       "vides": 0,
       "plafondAtteint": 5,
       "memoireLibreMoAuDepart": 343,
-      "dureesTransportables": false
+      "dureesTransportables": false,
+      "msMedianeNonTransportableFamineMemoire": 120004,
+      "msMinNonTransportableFamineMemoire": 15871,
+      "msMaxNonTransportableFamineMemoire": 208885
     },
     {
       "passe": 1,
@@ -97,15 +97,15 @@
       "jetonsMediane": 13,
       "jetonsMin": 8,
       "jetonsMax": 16,
-      "msMediane": 1676,
-      "msMin": 1105,
-      "msMax": 6159,
       "justes": 20,
       "exactitude": 1,
       "vides": 0,
       "plafondAtteint": 0,
       "memoireLibreMoAuDepart": 343,
-      "dureesTransportables": false
+      "dureesTransportables": false,
+      "msMedianeNonTransportableFamineMemoire": 1676,
+      "msMinNonTransportableFamineMemoire": 1105,
+      "msMaxNonTransportableFamineMemoire": 6159
     },
     {
       "passe": 1,
@@ -115,15 +115,15 @@
       "jetonsMediane": 8,
       "jetonsMin": 3,
       "jetonsMax": 11,
-      "msMediane": 1122,
-      "msMin": 725,
-      "msMax": 1370,
       "justes": 20,
       "exactitude": 1,
       "vides": 0,
       "plafondAtteint": 0,
       "memoireLibreMoAuDepart": 343,
-      "dureesTransportables": false
+      "dureesTransportables": false,
+      "msMedianeNonTransportableFamineMemoire": 1122,
+      "msMinNonTransportableFamineMemoire": 725,
+      "msMaxNonTransportableFamineMemoire": 1370
     },
     {
       "passe": 2,
@@ -133,15 +133,15 @@
       "jetonsMediane": 13,
       "jetonsMin": 8,
       "jetonsMax": 18,
-      "msMediane": 348,
-      "msMin": 259,
-      "msMax": 1871,
       "justes": 19,
       "exactitude": 0.95,
       "vides": 0,
       "plafondAtteint": 0,
       "memoireLibreMoAuDepart": 113,
-      "dureesTransportables": false
+      "dureesTransportables": false,
+      "msMedianeNonTransportableFamineMemoire": 348,
+      "msMinNonTransportableFamineMemoire": 259,
+      "msMaxNonTransportableFamineMemoire": 1871
     },
     {
       "passe": 2,
@@ -151,15 +151,15 @@
       "jetonsMediane": 8,
       "jetonsMin": 3,
       "jetonsMax": 8,
-      "msMediane": 281,
-      "msMin": 226,
-      "msMax": 335,
       "justes": 4,
       "exactitude": 0.2,
       "vides": 0,
       "plafondAtteint": 0,
       "memoireLibreMoAuDepart": 113,
-      "dureesTransportables": false
+      "dureesTransportables": false,
+      "msMedianeNonTransportableFamineMemoire": 281,
+      "msMinNonTransportableFamineMemoire": 226,
+      "msMaxNonTransportableFamineMemoire": 335
     },
     {
       "passe": 2,
@@ -169,15 +169,15 @@
       "jetonsMediane": 16,
       "jetonsMin": 11,
       "jetonsMax": 19,
-      "msMediane": 1072,
-      "msMin": 777,
-      "msMax": 2929,
       "justes": 17,
       "exactitude": 0.85,
       "vides": 0,
       "plafondAtteint": 0,
       "memoireLibreMoAuDepart": 113,
-      "dureesTransportables": false
+      "dureesTransportables": false,
+      "msMedianeNonTransportableFamineMemoire": 1072,
+      "msMinNonTransportableFamineMemoire": 777,
+      "msMaxNonTransportableFamineMemoire": 2929
     },
     {
       "passe": 2,
@@ -187,15 +187,15 @@
       "jetonsMediane": 2480,
       "jetonsMin": 398,
       "jetonsMax": 4000,
-      "msMediane": 101124,
-      "msMin": 20815,
-      "msMax": 227514,
       "justes": 9,
       "exactitude": 0.45,
       "vides": 0,
       "plafondAtteint": 5,
       "memoireLibreMoAuDepart": 113,
-      "dureesTransportables": false
+      "dureesTransportables": false,
+      "msMedianeNonTransportableFamineMemoire": 101124,
+      "msMinNonTransportableFamineMemoire": 20815,
+      "msMaxNonTransportableFamineMemoire": 227514
     },
     {
       "passe": 2,
@@ -205,15 +205,15 @@
       "jetonsMediane": 13,
       "jetonsMin": 8,
       "jetonsMax": 16,
-      "msMediane": 1290,
-      "msMin": 871,
-      "msMax": 3513,
       "justes": 20,
       "exactitude": 1,
       "vides": 0,
       "plafondAtteint": 0,
       "memoireLibreMoAuDepart": 113,
-      "dureesTransportables": false
+      "dureesTransportables": false,
+      "msMedianeNonTransportableFamineMemoire": 1290,
+      "msMinNonTransportableFamineMemoire": 871,
+      "msMaxNonTransportableFamineMemoire": 3513
     },
     {
       "passe": 2,
@@ -223,15 +223,16 @@
       "jetonsMediane": 8,
       "jetonsMin": 3,
       "jetonsMax": 11,
-      "msMediane": 899,
-      "msMin": 594,
-      "msMax": 1086,
       "justes": 20,
       "exactitude": 1,
       "vides": 0,
       "plafondAtteint": 0,
       "memoireLibreMoAuDepart": 113,
-      "dureesTransportables": false
+      "dureesTransportables": false,
+      "msMedianeNonTransportableFamineMemoire": 899,
+      "msMinNonTransportableFamineMemoire": 594,
+      "msMaxNonTransportableFamineMemoire": 1086
     }
-  ]
+  ],
+  "surLeNommage": "Le qualificatif est dans le nom et non dans une clé voisine : un chiffre voyage seul, et `msMediane` accompagné d'un drapeau d'à côté perd sa réserve à la première citation. Les durées de ce banc ont été prises sous famine mémoire et s'appellent ainsi."
 }
