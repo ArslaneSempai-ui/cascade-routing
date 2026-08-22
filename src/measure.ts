@@ -225,9 +225,18 @@ let refReferenceAnnoncee = false;
  * Le repli comble ça, mais il s'annonce, et c'est la moitié qui compte. Un repli silencieux
  * ferait croire à quelqu'un qu'il lit *ses* mesures alors qu'il relit les nôtres — le pire
  * mensonge que cet outil puisse produire, puisqu'il porterait exactement sur la distinction
- * qu'il vend. La référence est choisie par sa date et non par son nom, pour qu'une passe
- * future n'ait pas à mettre un chemin à jour.
+ * qu'il vend.
+ *
+ * **La référence est nommée, et elle l'était par sa date.** « La plus récente » semblait éviter
+ * d'avoir à mettre un chemin à jour ; ça choisissait en réalité `profiles-2026-08-20-charge-8`,
+ * un relevé pris **sous une charge fabriquée exprès** et conservé comme pièce à conviction. Un
+ * clone lisait donc d'autres latences que celles dont le README et `landing.json` ont été
+ * engendrés, et leurs blocs ne concordaient plus — c'est-à-dire que « quiconque clone reproduit
+ * les chiffres ci-dessous » était faux, et le seul contrôle qui pouvait le voir n'existait pas
+ * encore. Une référence se déclare ; la trier par date fait entrer n'importe quelle mesure
+ * ultérieure, y compris celles qu'on garde justement parce qu'elles sont mauvaises.
  */
+export const RELEVE_DE_REFERENCE = "profiles-2026-08-20-coeur-rendu.json";
 export function readProfiles(): Profiles | null {
   if (existsSync(FICHIER)) return JSON.parse(readFileSync(FICHIER, "utf8"));
 
@@ -241,8 +250,13 @@ export function readProfiles(): Profiles | null {
     .filter((x): x is { f: string; p: Profiles } => Boolean(x?.p?.measuredAt))
     .sort((a, b) => b.p.measuredAt.localeCompare(a.p.measuredAt));
 
-  const ref = livres[0];
+  /* Le relevé nommé d'abord ; la date ne sert que s'il a disparu, et le repli se dit. */
+  const ref = livres.find((x) => x.f === RELEVE_DE_REFERENCE) ?? livres[0];
   if (!ref) return null;
+  if (ref.f !== RELEVE_DE_REFERENCE && !refReferenceAnnoncee) {
+    console.warn(`\n⚠ ${RELEVE_DE_REFERENCE} est introuvable : repli sur ${ref.f}, dont les`);
+    console.warn(`  chiffres ne sont pas ceux dont le README et landing.json ont été engendrés.\n`);
+  }
   if (!refReferenceAnnoncee) {
     refReferenceAnnoncee = true;
     console.warn(`\n⚠ Aucune mesure à vous dans data/profiles.json.`);

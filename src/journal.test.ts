@@ -16,6 +16,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { issue, ouvrirJournal, lireJournal, apparie, parDocument, issues, desaccord, latences, accordEntreMachines } from "./journal.ts";
 import { correct } from "./tiers.ts";
+import { RELEVE_DE_REFERENCE } from "./measure.ts";
 import { FIELDS, generateRecords, draw } from "./corpus.ts";
 
 import type { Tentative } from "./journal.ts";
@@ -605,4 +606,41 @@ test("un produit plus ancien que sa source arrête le contrôle au lieu de l'ave
   const bloc = src.slice(i, i + 200);
   assert.match(bloc, /process\.exit\(1\)/,
     "la garde avertit sans arrêter. Un avertissement dans une sortie qui défile n'existe pas.");
+});
+
+/*
+ * Un clone doit lire le relevé dont les artefacts publiés ont été engendrés.
+ *
+ * Le repli choisissait « le plus récent par date ». Cela désignait
+ * `profiles-2026-08-20-charge-8.json` — un relevé pris sous une charge fabriquée exprès et
+ * conservé comme pièce à conviction. Un clone lisait donc d'autres latences que celles du README
+ * et de `landing.json`, leurs blocs ne concordaient plus, et « quiconque clone reproduit les
+ * chiffres ci-dessous » était faux.
+ *
+ * Ce test tient les deux moitiés : la référence nommée existe, et le tri par date aurait
+ * désigné quelqu'un d'autre. Sans la seconde, le test resterait vert le jour où l'on revient
+ * au tri — puisqu'il n'aurait rien à distinguer.
+ */
+test("le relevé de référence est nommé, et le tri par date aurait choisi un autre", () => {
+  const racine = new URL("..", import.meta.url).pathname;
+  const livres = readdirSync(racine)
+    .filter((n) => /^profiles-.*\.json$/.test(n))
+    .map((n) => ({ n, p: JSON.parse(readFileSync(join(racine, n), "utf8")) as { measuredAt?: string } }))
+    .filter((x) => Boolean(x.p.measuredAt))
+    .sort((a, b) => b.p.measuredAt!.localeCompare(a.p.measuredAt!));
+
+  assert.ok(livres.length >= 3, `${livres.length} relevé(s) livré(s) : la lecture a échoué.`);
+  assert.ok(livres.some((x) => x.n === RELEVE_DE_REFERENCE),
+    `${RELEVE_DE_REFERENCE} n'est pas livré : un clone n'aurait pas les chiffres publiés.`);
+
+  assert.notEqual(livres[0]!.n, RELEVE_DE_REFERENCE,
+    "le plus récent par date est aussi la référence nommée, donc ce test ne distingue plus rien.\n"
+    + `  → si c'est devenu vrai, dire ici pourquoi la référence a changé ; sinon le tri par date\n`
+    + `    est revenu et un clone lira ${livres[0]!.n}.`);
+
+  /* Et la référence doit être celle prise machine au repos, pas celle prise sous charge. */
+  assert.match(RELEVE_DE_REFERENCE, /coeur-rendu/,
+    "la référence n'est plus le relevé au repos : les chiffres publiés changeraient de sens.");
+  assert.match(livres[0]!.n, /charge/,
+    "le plus récent n'est plus le relevé chargé — la raison d'être du nommage a changé, l'écrire.");
 });
