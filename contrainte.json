@@ -234,5 +234,38 @@
       "msMaxNonTransportableFamineMemoire": 1086
     }
   ],
-  "surLeNommage": "Le qualificatif est dans le nom et non dans une clé voisine : un chiffre voyage seul, et `msMediane` accompagné d'un drapeau d'à côté perd sa réserve à la première citation. Les durées de ce banc ont été prises sous famine mémoire et s'appellent ainsi."
+  "surLeNommage": "Le qualificatif est dans le nom et non dans une clé voisine : un chiffre voyage seul, et `msMediane` accompagné d'un drapeau d'à côté perd sa réserve à la première citation. Les durées de ce banc ont été prises sous famine mémoire et s'appellent ainsi.",
+  "pourPublication": {
+    "quoi": "Les chiffres de ce banc sous la forme où ils doivent être cités, nommés par qui les a mesurés. Chaque nom porte ce qu'il faut savoir pour le lire ; aucun ne dépend d'une phrase voisine.",
+    "jetonsEmisMedianeSansContrainteDeSortie": {
+      "gen-0.6b": 8,
+      "gen-4b": 2480,
+      "gen-8b": 8
+    },
+    "jetonsEmisMedianeAvecContrainteDeSortie": {
+      "gen-0.6b": 13,
+      "gen-4b": 16,
+      "gen-8b": 13
+    },
+    "exactitudeSansContrainteDeSortieLueParExtracteurDeProse": {
+      "gen-0.6b": 0.2,
+      "gen-4b": 0.45,
+      "gen-8b": 1
+    },
+    "exactitudeAvecContrainteDeSortie": {
+      "gen-0.6b": 0.95,
+      "gen-4b": 0.85,
+      "gen-8b": 1
+    },
+    "appelsAyantAtteintLePlafondSur20": {
+      "gen-0.6b": 0,
+      "gen-4b": 5,
+      "gen-8b": 0
+    },
+    "phraseDuTitre": "Sans contrainte de sortie, un palier génératif sur trois ne s'arrête pas : `gen-4b` émet 2 480 jetons de médiane contre 16 avec elle, tandis que `gen-0.6b` et `gen-8b` en émettent 8 et s'arrêtent d'eux-mêmes.",
+    "reserveQuiVaAvecLExactitude": "Le bras sans contrainte est lu par un extracteur de prose déclaré avant la mesure ; ses échecs comptent contre ce bras. Les taux sans contrainte mêlent donc « le modèle a répondu autrement » et « notre lecteur n'a pas trouvé la réponse ».",
+    "reserveQuiVaAvecLaLongueur": "La médiane de `gen-4b` est réelle ; son maximum est le plafond de 4 000 jetons, atteint sur 5 appels de 20 aux deux passes. Sa longueur non contrainte est donc minorée et non observée.",
+    "aucuneDureeNEstPubliable": "Les deux passes s'accordent au chiffre près sur les comptes et divergent de 16 à 60 % sur les médianes de durée, machine sous famine mémoire. Rien de chronométré ici ne sort de cette machine.",
+    "empreinteDeCeBloc": "4e5258b284aa9ec3"
+  }
 }
