@@ -648,18 +648,18 @@ function decomposeErreurs(p: Profiles, routing: Routing) {
   for (const c of FIELDS) {
     const t = routing[c];
     const q = p.extraction[t][c];
-    if (!q.sorties || !q.reussites || q.reussites.length !== q.sorties.length) {
-      perThousand[c] = { tier: t, blank: null, wrong: null };
-      continue;
-    }
+    /*
+     * Passer par `decompositionDe`, qui sait retomber sur la table gelée.
+     *
+     * Cette boucle relisait `q.sorties` elle-même, en double du solveur. Le repli ajouté à
+     * l'autre ne l'atteignait donc pas, et un clone continuait de rendre `null` sur les cinq
+     * champs — la correction avait l'air faite et ne l'était qu'à moitié. Deux lectures de la
+     * même donnée finissent toujours par diverger ; celle-ci a divergé sur un correctif.
+     */
+    const d = decompositionDe(p, t, c);
+    if (!d) { perThousand[c] = { tier: t, blank: null, wrong: null }; continue; }
     couverts++;
-    let vide = 0, faux = 0;
-    for (let i = 0; i < q.sorties.length; i++) {
-      if (q.reussites[i] === "1") continue;
-      if ((q.sorties[i] ?? "").trim() === "") vide++; else faux++;
-    }
-    const n = q.sorties.length;
-    perThousand[c] = { tier: t, blank: Math.round((1000 * vide) / n), wrong: Math.round((1000 * faux) / n) };
+    perThousand[c] = { tier: t, blank: Math.round(d.vide * 1000), wrong: Math.round(d.faux * 1000) };
   }
   return { perThousand, coverage: { fields: couverts, of: FIELDS.length } };
 }
