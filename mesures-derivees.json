@@ -2,7 +2,7 @@
   "quoi": "Les blocs de landing.json calculés depuis les journaux de tentatives, figés parce que `data/` n'est pas versionné et qu'un clone frais doit pouvoir vérifier landing.json.",
   "journal": "tentatives/2026-08-21T16-54-14-816Z-dur.jsonl",
   "journalModifieLe": "2026-08-21T23:29:59.551Z",
-  "calculeLe": "2026-08-22T00:20:06.499Z",
+  "calculeLe": "2026-08-22T00:38:00.817Z",
   "blocs": {
     "compositionCheck": {
       "measured": true,
@@ -59,137 +59,146 @@
       "note": "Sommer les percentiles par champ n'est pas une borne supérieure du percentile du total : elle sous-estime sur au moins un palier. Un lecteur qui prendrait le p90 publié pour un pire cas se tromperait du côté qui coûte.",
       "limite": "Le p90 « réel » est estimé sur 30 documents, donc le vingt-septième d'entre eux : imprécis par construction. Ce bloc établit que les deux compositions diffèrent et dans quel ordre de grandeur, pas la valeur exacte de l'écart. Et il est mesuré sur le corpus dur, seul endroit où chaque durée est enregistrée."
     },
-    "errorSplit": {
-      "perThousand": {
-        "name": {
-          "tier": "large",
-          "blank": 0,
-          "wrong": 34
-        },
-        "birth": {
-          "tier": "rules",
-          "blank": 0,
-          "wrong": 0
-        },
-        "document": {
-          "tier": "rules",
-          "blank": 203,
-          "wrong": 0
-        },
-        "country": {
-          "tier": "rules",
-          "blank": 0,
-          "wrong": 0
-        },
-        "address": {
-          "tier": "gen-4b",
-          "blank": 0,
-          "wrong": 42
-        }
+    "decomposition": {
+      "rules|name": {
+        "vide": 1,
+        "faux": 0
       },
-      "coverage": {
-        "fields": 5,
-        "of": 5
-      }
-    },
-    "thresholds": {
-      "humanAccuracy": {
-        "inUse": 0.85,
-        "unit": "correct fields/field",
-        "breaksAt": null,
-        "factor": null,
-        "moves": [],
-        "reason": "tier priced out"
+      "rules|birth": {
+        "vide": 0,
+        "faux": 0
       },
-      "humanSeconds": {
-        "inUse": 45,
-        "unit": "seconds/item",
-        "breaksAt": null,
-        "factor": null,
-        "moves": [],
-        "reason": "tier priced out"
+      "rules|document": {
+        "vide": 0.203,
+        "faux": 0
       },
-      "analystAnnualCost": {
-        "inUse": 62000,
-        "unit": "usd/year",
-        "breaksAt": null,
-        "factor": null,
-        "moves": [],
-        "reason": "tier priced out"
+      "rules|country": {
+        "vide": 0,
+        "faux": 0
       },
-      "productiveHoursPerDay": {
-        "inUse": 6,
-        "unit": "hours/day",
-        "breaksAt": null,
-        "factor": null,
-        "moves": [],
-        "reason": "tier priced out"
+      "rules|address": {
+        "vide": 0.806,
+        "faux": 0.194
       },
-      "workingDaysPerYear": {
-        "inUse": 220,
-        "unit": "days/year",
-        "breaksAt": null,
-        "factor": null,
-        "moves": [],
-        "reason": "tier priced out"
+      "small|name": {
+        "vide": 0,
+        "faux": 0.534
       },
-      "pricePerThousandSmall": {
-        "inUse": 0.2,
-        "unit": "usd/1000 extractions",
-        "breaksAt": null,
-        "factor": null,
-        "moves": [],
-        "reason": "tier not selected"
+      "small|birth": {
+        "vide": 0,
+        "faux": 0.021
       },
-      "pricePerThousandLarge": {
-        "inUse": 1.6,
-        "unit": "usd/1000 extractions",
-        "breaksAt": 39.69,
-        "factor": 24.8,
-        "moves": [
-          {
-            "field": "name",
-            "from": "large",
-            "to": "gen-4b"
-          }
-        ],
-        "reason": "moves the routing"
+      "small|document": {
+        "vide": 0,
+        "faux": 0.423
       },
-      "machineHourlyCost": {
-        "inUse": 1.2,
-        "unit": "usd/hour",
-        "breaksAt": 150.3,
-        "factor": 125,
-        "moves": [
-          {
-            "field": "address",
-            "from": "gen-4b",
-            "to": "gen-0.6b"
-          }
-        ],
-        "reason": "moves the routing"
+      "small|country": {
+        "vide": 0,
+        "faux": 0
       },
-      "costWrongValue": {
-        "inUse": 0.587,
-        "unit": "usd/wrong value",
-        "breaksAt": 17.26,
-        "factor": 29.4,
-        "moves": [
-          {
-            "field": "name",
-            "from": "large",
-            "to": "rules"
-          }
-        ],
-        "reason": "moves the routing"
+      "small|address": {
+        "vide": 0,
+        "faux": 0.57
       },
-      "costBlankField": {
-        "inUse": 0.587,
-        "unit": "usd/blank field",
-        "breaksAt": null,
-        "factor": null,
-        "moves": [],
-        "reason": "genuinely insensitive"
+      "large|name": {
+        "vide": 0,
+        "faux": 0.034
+      },
+      "large|birth": {
+        "vide": 0,
+        "faux": 0
+      },
+      "large|document": {
+        "vide": 0,
+        "faux": 0.356
+      },
+      "large|country": {
+        "vide": 0,
+        "faux": 0
+      },
+      "large|address": {
+        "vide": 0,
+        "faux": 0.672
+      },
+      "gen-0.6b|name": {
+        "vide": 0,
+        "faux": 0.19166666666666668
+      },
+      "gen-0.6b|birth": {
+        "vide": 0,
+        "faux": 0.125
+      },
+      "gen-0.6b|document": {
+        "vide": 0,
+        "faux": 0.3
+      },
+      "gen-0.6b|country": {
+        "vide": 0,
+        "faux": 0.16666666666666666
+      },
+      "gen-0.6b|address": {
+        "vide": 0,
+        "faux": 0.25
+      },
+      "gen-4b|name": {
+        "vide": 0,
+        "faux": 0.10833333333333334
+      },
+      "gen-4b|birth": {
+        "vide": 0,
+        "faux": 0.008333333333333333
+      },
+      "gen-4b|document": {
+        "vide": 0,
+        "faux": 0.20833333333333334
+      },
+      "gen-4b|country": {
+        "vide": 0,
+        "faux": 0
+      },
+      "gen-4b|address": {
+        "vide": 0,
+        "faux": 0.041666666666666664
+      },
+      "gen-8b|name": {
+        "vide": 0,
+        "faux": 0.08333333333333333
+      },
+      "gen-8b|birth": {
+        "vide": 0,
+        "faux": 0
+      },
+      "gen-8b|document": {
+        "vide": 0,
+        "faux": 0.16666666666666666
+      },
+      "gen-8b|country": {
+        "vide": 0,
+        "faux": 0
+      },
+      "gen-8b|address": {
+        "vide": 0.11666666666666667,
+        "faux": 0.058333333333333334
+      },
+      "human|name": {
+        "vide": 0,
+        "faux": 0
+      },
+      "human|birth": {
+        "vide": 0,
+        "faux": 0
+      },
+      "human|document": {
+        "vide": 0,
+        "faux": 0
+      },
+      "human|country": {
+        "vide": 0,
+        "faux": 0
+      },
+      "human|address": {
+        "vide": 0,
+        "faux": 0
       }
     },
     "admissibleEscalation": {

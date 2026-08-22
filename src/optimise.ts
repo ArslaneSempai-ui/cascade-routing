@@ -20,6 +20,8 @@ import { rate, distinguishable, pairedVerdict } from "./interval.ts";
 import type { TierName } from "./paliers.ts";
 import type { Field } from "./corpus.ts";
 import type { Assumptions } from "./assumptions.ts";
+import { lireDerivees } from "./derivees.ts";
+
 import type { Profiles } from "./measure.ts";
 
 export type Routing = Record<Field, TierName>;
@@ -134,14 +136,33 @@ export function justessePonderee(p: Profiles, h: Assumptions, tier: TierName, ch
  * ait à s'en souvenir.
  */
 const CACHE = new Map<string, { vide: number; faux: number } | null>();
+
+/**
+ * Le repli sur les comptes gelés, quand le relevé n'a pas ses sorties brutes.
+ *
+ * Les relevés livrés à la racine en sont dépourvus depuis qu'on a sorti 1,4 Mo de sorties de
+ * git. Un clone rendait donc `null` partout, la décomposition des erreurs disparaissait, et les
+ * deux seuils qui les tarifent avec elle. Le figé porte la même donnée sous une forme cent fois
+ * plus petite : trente-cinq couples de comptes au lieu de trente-cinq mille chaînes.
+ */
+function fige(tier: TierName, champ: Field): { vide: number; faux: number } | null {
+  const t = lireDerivees()?.blocs?.decomposition as Record<string, { vide: number; faux: number }> | undefined;
+  return t?.[`${tier}|${champ}`] ?? null;
+}
+
+/** Exporté pour que le gel puisse constituer la table depuis un relevé qui a ses sorties. */
+export function decompositionDe(p: Profiles, tier: TierName, champ: Field) {
+  return decomposition(p, tier, champ);
+}
+
 function decomposition(p: Profiles, tier: TierName, champ: Field): { vide: number; faux: number } | null {
   const cle = `${p.measuredAt}|${tier}|${champ}`;
   const connu = CACHE.get(cle);
   if (connu !== undefined) return connu;
 
   const profil = p.extraction[tier][champ];
-  let out: { vide: number; faux: number } | null = null;
-  if (profil.sorties && profil.reussites && profil.reussites.length === profil.sorties.length) {
+  let out: { vide: number; faux: number } | null = fige(tier, champ);
+  if (!out && profil.sorties && profil.reussites && profil.reussites.length === profil.sorties.length) {
     let vide = 0, faux = 0;
     for (let i = 0; i < profil.sorties.length; i++) {
       if (profil.reussites[i] === "1") continue;

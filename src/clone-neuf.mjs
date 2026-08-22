@@ -38,8 +38,25 @@ const etape = (nom, fn) => {
   process.stdout.write(`  ${nom.padEnd(34)}`);
   try { fn(); } catch (e) {
     console.log(`ÉCHEC  (${((Date.now() - t) / 1000).toFixed(0)} s)`);
-    const sortie = [e.stdout, e.stderr].filter(Boolean).map(String).join("\n").trim();
-    console.error(`\n${sortie.split("\n").slice(-25).join("\n")}\n`);
+    /*
+     * Montrer ce qui a échoué, pas les vingt-cinq dernières lignes.
+     *
+     * La première version collait stdout et stderr puis gardait la fin. La fin était
+     * l'avertissement de repli, imprimé par chaque commande de la chaîne, et l'erreur réelle
+     * était au-dessus. Un contrôle qui trouve une panne et ne sait pas la nommer coûte autant
+     * qu'une panne non trouvée, à ceci près qu'il donne l'impression d'avoir travaillé.
+     */
+    const err = String(e.stderr ?? "").trim();
+    const out = String(e.stdout ?? "").trim();
+    const bruit = /^(⚠|  Lecture du relevé|  Ce sont NOS|dtype not specified|$)/;
+    const utile = (t2) => t2.split("\n").filter((l) => !bruit.test(l));
+    if (err) { console.error(`\n  — sortie d'erreur —`); console.error(utile(err).join("\n")); }
+    if (out) {
+      const l = utile(out);
+      console.error(`\n  — sortie standard (${l.length} lignes utiles) —`);
+      console.error(l.slice(-60).join("\n"));
+    }
+    console.error("");
     console.error(`Le clone est resté dans ${clone} pour inspection.`);
     console.error(`\nLa lettre promet « vous clonez l'outil, vous le lancez ». Ce n'est pas une`);
     console.error(`gêne de développement : c'est le premier geste de l'acheteur, et il échoue.`);

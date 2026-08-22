@@ -26,7 +26,7 @@ import { isMain } from "./cli.ts";
 import { FIELDS } from "./corpus.ts";
 import { readProfiles } from "./measure.ts";
 import { ASSUMPTIONS, UNITS, pricePerThousandExtractions, latency } from "./assumptions.ts";
-import { optimiseExtraction, evaluer, paliersMesures, pricePerThousandDocuments, justessePonderee } from "./optimise.ts";
+import { optimiseExtraction, evaluer, paliersMesures, pricePerThousandDocuments, justessePonderee, decompositionDe } from "./optimise.ts";
 import { rate, CONFIANCE, distinguishable, pairedVerdict } from "./interval.ts";
 import { versLeBas } from "./sensitivity.ts";
 import { journaux, lireJournal, issue } from "./journal.ts";
@@ -630,6 +630,18 @@ export function abstentionDepuisJournal(p: Profiles, optimum: ReturnType<typeof 
   };
 }
 
+/** Les trente-cinq comptes que les sorties brutes fournissent, pour les geler. */
+function tableDeDecomposition(p: Profiles) {
+  const t: Record<string, { vide: number; faux: number }> = {};
+  for (const tier of paliersMesures(p)) {
+    for (const c of FIELDS) {
+      const d = decompositionDe(p, tier, c);
+      if (d) t[`${tier}|${c}`] = d;
+    }
+  }
+  return t;
+}
+
 function decomposeErreurs(p: Profiles, routing: Routing) {
   const perThousand: Record<string, { tier: TierName; blank: number | null; wrong: number | null }> = {};
   let couverts = 0;
@@ -901,7 +913,7 @@ export function construire(p: Profiles): unknown {
     sensitivity: {
       measuredAt: p.measuredAt,
       method: "bisection",
-      thresholds: (fige("thresholds") as ReturnType<typeof seuils> | null) ?? seuils(p, ASSUMPTIONS),
+      thresholds: seuils(p, ASSUMPTIONS),
       /*
        * L'affirmation inverse, enregistrée plutôt que crue.
        *
@@ -945,7 +957,7 @@ export function construire(p: Profiles): unknown {
      * 1,4 Mo de sorties de git, donc un clone rendait `null` partout et divergeait du fichier
      * livré. Les deux seuils qui tarifent ces erreurs tombaient avec lui.
      */
-    errorSplit: fige("errorSplit") ?? (optimum === null ? null : decomposeErreurs(p, optimum.routing)),
+    errorSplit: optimum === null ? null : decomposeErreurs(p, optimum.routing),
     cleanPerDocument: optimum === null ? null : dossiersPropres(p, optimum.routing),
     paired: egalitesTranchees(p),
 
@@ -1148,8 +1160,18 @@ if (isMain(import.meta)) {
       calculeLe: new Date().toISOString(),
       blocs: {
         compositionCheck: compositionDepuisJournal(),
-        errorSplit: optimum0 === null ? null : decomposeErreurs(p, optimum0.routing),
-        thresholds: seuils(p, ASSUMPTIONS),
+        /*
+         * L'ENTRÉE, pas la sortie.
+         *
+         * Geler `errorSplit` et `thresholds` mettait le générateur en contradiction avec son
+         * propre invariant : il publiait des seuils figés et vérifiait en direct qu'ils
+         * encadrent une vraie bascule, ce qu'un clone ne peut pas faire faute de sorties
+         * brutes. Il refusait donc d'écrire, à juste titre. Ce qui manque à un clone n'est pas
+         * le résultat mais la donnée dont il sort : trente-cinq comptes de blancs et de faux,
+         * par palier et par champ. Gelés, tout le reste se recalcule et l'invariant tourne
+         * pour de vrai.
+         */
+        decomposition: tableDeDecomposition(p),
         admissibleEscalation: gainDeCountryDepuisJournal(p, optimum0, "gen-8b" as TierName),
         abstention: abstentionDepuisJournal(p, optimum0),
       },
