@@ -23,6 +23,17 @@
  *     celui-ci ne tourne pas à chaque `npm test` : il tourne avant de livrer, et le README dit
  *     quand.
  *
+ * **Le témoin, et il est gardé plutôt que balayé.** La branche `temoin-gitignore` ne diffère de
+ * `main` que par une ligne de `.gitignore` et le retrait de `mesures-derivees.json` de l'index —
+ * un fichier dont la suite dépend. Le contrôle pointé dessus **échoue**, sur `landing.json` qui
+ * ne correspond plus au relevé gelé :
+ *
+ *     npm run clone-neuf -- --ref=temoin-gitignore     → ÉCHEC en 389 s
+ *     npm run clone-neuf                               → passe en 433 s
+ *
+ * La branche reste dans le dépôt. Un témoin effacé est un témoin qu'il faut croire sur parole,
+ * et celui-ci se rejoue en une commande.
+ *
  *     npm run clone-neuf
  */
 
