@@ -2,7 +2,7 @@
   "quoi": "Les blocs de landing.json calculés depuis les journaux de tentatives, figés parce que `data/` n'est pas versionné et qu'un clone frais doit pouvoir vérifier landing.json.",
   "journal": "tentatives/2026-08-21T16-54-14-816Z-dur.jsonl",
   "journalModifieLe": "2026-08-21T23:29:59.551Z",
-  "calculeLe": "2026-08-21T23:29:59.841Z",
+  "calculeLe": "2026-08-22T00:20:06.499Z",
   "blocs": {
     "compositionCheck": {
       "measured": true,
@@ -58,6 +58,139 @@
       "conservative": false,
       "note": "Sommer les percentiles par champ n'est pas une borne supérieure du percentile du total : elle sous-estime sur au moins un palier. Un lecteur qui prendrait le p90 publié pour un pire cas se tromperait du côté qui coûte.",
       "limite": "Le p90 « réel » est estimé sur 30 documents, donc le vingt-septième d'entre eux : imprécis par construction. Ce bloc établit que les deux compositions diffèrent et dans quel ordre de grandeur, pas la valeur exacte de l'écart. Et il est mesuré sur le corpus dur, seul endroit où chaque durée est enregistrée."
+    },
+    "errorSplit": {
+      "perThousand": {
+        "name": {
+          "tier": "large",
+          "blank": 0,
+          "wrong": 34
+        },
+        "birth": {
+          "tier": "rules",
+          "blank": 0,
+          "wrong": 0
+        },
+        "document": {
+          "tier": "rules",
+          "blank": 203,
+          "wrong": 0
+        },
+        "country": {
+          "tier": "rules",
+          "blank": 0,
+          "wrong": 0
+        },
+        "address": {
+          "tier": "gen-4b",
+          "blank": 0,
+          "wrong": 42
+        }
+      },
+      "coverage": {
+        "fields": 5,
+        "of": 5
+      }
+    },
+    "thresholds": {
+      "humanAccuracy": {
+        "inUse": 0.85,
+        "unit": "correct fields/field",
+        "breaksAt": null,
+        "factor": null,
+        "moves": [],
+        "reason": "tier priced out"
+      },
+      "humanSeconds": {
+        "inUse": 45,
+        "unit": "seconds/item",
+        "breaksAt": null,
+        "factor": null,
+        "moves": [],
+        "reason": "tier priced out"
+      },
+      "analystAnnualCost": {
+        "inUse": 62000,
+        "unit": "usd/year",
+        "breaksAt": null,
+        "factor": null,
+        "moves": [],
+        "reason": "tier priced out"
+      },
+      "productiveHoursPerDay": {
+        "inUse": 6,
+        "unit": "hours/day",
+        "breaksAt": null,
+        "factor": null,
+        "moves": [],
+        "reason": "tier priced out"
+      },
+      "workingDaysPerYear": {
+        "inUse": 220,
+        "unit": "days/year",
+        "breaksAt": null,
+        "factor": null,
+        "moves": [],
+        "reason": "tier priced out"
+      },
+      "pricePerThousandSmall": {
+        "inUse": 0.2,
+        "unit": "usd/1000 extractions",
+        "breaksAt": null,
+        "factor": null,
+        "moves": [],
+        "reason": "tier not selected"
+      },
+      "pricePerThousandLarge": {
+        "inUse": 1.6,
+        "unit": "usd/1000 extractions",
+        "breaksAt": 39.69,
+        "factor": 24.8,
+        "moves": [
+          {
+            "field": "name",
+            "from": "large",
+            "to": "gen-4b"
+          }
+        ],
+        "reason": "moves the routing"
+      },
+      "machineHourlyCost": {
+        "inUse": 1.2,
+        "unit": "usd/hour",
+        "breaksAt": 150.3,
+        "factor": 125,
+        "moves": [
+          {
+            "field": "address",
+            "from": "gen-4b",
+            "to": "gen-0.6b"
+          }
+        ],
+        "reason": "moves the routing"
+      },
+      "costWrongValue": {
+        "inUse": 0.587,
+        "unit": "usd/wrong value",
+        "breaksAt": 17.26,
+        "factor": 29.4,
+        "moves": [
+          {
+            "field": "name",
+            "from": "large",
+            "to": "rules"
+          }
+        ],
+        "reason": "moves the routing"
+      },
+      "costBlankField": {
+        "inUse": 0.587,
+        "unit": "usd/blank field",
+        "breaksAt": null,
+        "factor": null,
+        "moves": [],
+        "reason": "genuinely insensitive"
+      }
     },
     "admissibleEscalation": {
       "measured": true,

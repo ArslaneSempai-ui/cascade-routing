@@ -901,7 +901,7 @@ export function construire(p: Profiles): unknown {
     sensitivity: {
       measuredAt: p.measuredAt,
       method: "bisection",
-      thresholds: seuils(p, ASSUMPTIONS),
+      thresholds: (fige("thresholds") as ReturnType<typeof seuils> | null) ?? seuils(p, ASSUMPTIONS),
       /*
        * L'affirmation inverse, enregistrée plutôt que crue.
        *
@@ -937,7 +937,15 @@ export function construire(p: Profiles): unknown {
      */
     abstention: fige("abstention") ?? abstentionDepuisJournal(p, optimum),
 
-    errorSplit: optimum === null ? null : decomposeErreurs(p, optimum.routing),
+    /*
+     * Gelé pour la même raison que les blocs de journal : il ne se recalcule pas d'un clone.
+     *
+     * `decomposeErreurs` distingue un blanc d'une valeur fausse, ce qui demande les **sorties
+     * brutes par cas**. Les relevés livrés à la racine en sont dépourvus depuis qu'on a sorti
+     * 1,4 Mo de sorties de git, donc un clone rendait `null` partout et divergeait du fichier
+     * livré. Les deux seuils qui tarifent ces erreurs tombaient avec lui.
+     */
+    errorSplit: fige("errorSplit") ?? (optimum === null ? null : decomposeErreurs(p, optimum.routing)),
     cleanPerDocument: optimum === null ? null : dossiersPropres(p, optimum.routing),
     paired: egalitesTranchees(p),
 
@@ -1140,6 +1148,8 @@ if (isMain(import.meta)) {
       calculeLe: new Date().toISOString(),
       blocs: {
         compositionCheck: compositionDepuisJournal(),
+        errorSplit: optimum0 === null ? null : decomposeErreurs(p, optimum0.routing),
+        thresholds: seuils(p, ASSUMPTIONS),
         admissibleEscalation: gainDeCountryDepuisJournal(p, optimum0, "gen-8b" as TierName),
         abstention: abstentionDepuisJournal(p, optimum0),
       },
