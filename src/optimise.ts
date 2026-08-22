@@ -107,16 +107,23 @@ export function pricePerThousandDocuments(p: Profiles, h: Assumptions, tier: Tie
  * l'exactitude d'avant. Introduire ces deux hypothèses ne peut donc rien déplacer tant que
  * personne n'a choisi de les séparer.
  *
- * Un palier dont les sorties brutes ne sont pas conservées retombe sur son exactitude nue :
- * on ne peut pas peser ce qu'on n'a pas décomposé, et supposer une répartition serait
- * inventer le chiffre que cette fonction existe pour mesurer.
+ * Un palier dont la décomposition est introuvable retombe sur son exactitude nue : on ne peut
+ * pas peser ce qu'on n'a pas décomposé, et supposer une répartition serait inventer le chiffre
+ * que cette fonction existe pour mesurer.
+ *
+ * **« Introuvable » et « sorties brutes absentes » ne sont plus la même chose.** La garde
+ * testait `profil.sorties` et sortait avant d'appeler la décomposition, donc le repli sur la
+ * table gelée ne l'atteignait pas : dans un clone, les deux coûts d'erreur ne déplaçaient plus
+ * rien, le balayage les jugeait sans effet et ne publiait pas leurs seuils. C'était la
+ * troisième lecture directe de `sorties` dans ce dépôt, et le correctif en a trouvé une par
+ * tour. On demande maintenant à la décomposition, qui sait d'où elle vient.
  */
 export function justessePonderee(p: Profiles, h: Assumptions, tier: TierName, champ: Field): number {
   const profil = p.extraction[tier][champ];
   if (tier === "human") return accuracy(tier, profil.accuracy, h);
 
   const pire = Math.max(h.costWrongValue, h.costBlankField);
-  if (!profil.sorties || pire <= 0) return profil.accuracy;
+  if (pire <= 0) return profil.accuracy;
 
   const part = decomposition(p, tier, champ);
   if (!part) return profil.accuracy;

@@ -644,3 +644,36 @@ test("le relevé de référence est nommé, et le tri par date aurait choisi un 
   assert.match(livres[0]!.n, /charge/,
     "le plus récent n'est plus le relevé chargé — la raison d'être du nommage a changé, l'écrire.");
 });
+
+/*
+ * La même donnée ne doit pas être lue à trois endroits.
+ *
+ * La décomposition blanc/faux était lue directement depuis `profil.sorties` dans trois
+ * fonctions : le cache du solveur, la décomposition publiée, et la pondération des erreurs. Le
+ * repli sur la table gelée a été ajouté au premier, et le contrôle de clone a mis un tour de
+ * sept minutes à révéler chacun des deux autres. Ce test les empêche de repousser.
+ */
+test("les sorties brutes ne sont lues qu'à un seul endroit", () => {
+  const dossier = new URL(".", import.meta.url).pathname;
+  const fichiers = readdirSync(dossier).filter((n) => n.endsWith(".ts") && !n.endsWith(".test.ts"));
+
+  const lecteurs: string[] = [];
+  for (const n of fichiers) {
+    const src = readFileSync(join(dossier, n), "utf8");
+    /* Écrire les sorties est le travail de la mesure ; les *décomposer* est ce qui doit rester
+       unique, et ça se reconnaît à ce qu'on regarde une sortie vide. */
+    if (/\.sorties\[[^\]]*\][^\n]*trim\(\)\s*===\s*""/.test(src)) lecteurs.push(n);
+  }
+  assert.deepEqual(lecteurs, ["optimise.ts"],
+    `la décomposition blanc/faux est lue dans ${lecteurs.length} fichier(s) : ${lecteurs.join(", ")}.\n`
+    + `  → une seule doit la faire, sinon un repli ajouté à l'une manque les autres et la\n`
+    + `    correction a l'air faite sans l'être. C'est arrivé deux fois de suite.`);
+
+  /* Et rien ne doit court-circuiter la décomposition en testant `sorties` avant de l'appeler. */
+  const opt = readFileSync(join(dossier, "optimise.ts"), "utf8");
+  const i = opt.indexOf("export function justessePonderee");
+  const corps = opt.slice(i, opt.indexOf("\n}\n", i));
+  assert.ok(!/if\s*\(!profil\.sorties/.test(corps),
+    "`justessePonderee` sort avant d'appeler la décomposition quand les sorties manquent :\n"
+    + "  le repli sur la table gelée ne l'atteint pas, et les coûts d'erreur cessent de peser.");
+});
