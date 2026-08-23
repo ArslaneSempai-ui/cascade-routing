@@ -1,5 +1,8 @@
 # What the forced output schema is actually worth
 
+*Written 21 August 2026. This report is a dated snapshot: it is not regenerated, and
+the figures in it are those of that day.*
+
 Three questions were asked of the ×8.4 figure I wrote in passing. The answers are
 weaker than the figure sounded, and the weakness is one I retracted a few hours
 earlier on a different measurement.

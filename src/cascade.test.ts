@@ -2877,3 +2877,44 @@ test("le tableau d'extraction publie la précision, pas seulement la taille d'é
   assert.match(bloc!, /widest half-interval/,
     "la colonne ± n'est plus définie. Trois lecteurs lui donneront trois sens.");
 });
+
+
+/*
+ * UN RELEVÉ DATÉ QUI NE PORTE PAS SA DATE SE LIT COMME ACTUEL.
+ *
+ * `rapports/` contient neuf instantanés — « mesuré le 21 août 2026 depuis les lignes
+ * enregistrées ». Ils ne sont PAS régénérés, et c'est voulu : leur valeur est d'être datés,
+ * comme les deux pré-enregistrements. Le cliquet des taux tapés ne les regarde donc pas, à
+ * juste titre.
+ *
+ * Mais TROIS DES NEUF ne portaient leur date que dans le NOM DU FICHIER. Un lecteur qui ouvre
+ * le fichier la voit dans son onglet ; un lecteur qui reçoit le texte, qui le lit dans une
+ * revue de code ou qui le colle ailleurs, ne la voit plus du tout. Et alors un relevé de deux
+ * jours se lit exactement comme la mesure d'aujourd'hui — ce qui est le mal que ce dépôt passe
+ * son temps à combattre partout ailleurs.
+ *
+ * La date est dans le nom, donc dérivable : le contrôle compare les deux plutôt que d'exiger
+ * seulement une date quelconque, sinon un rapport pourrait porter la date d'un autre jour.
+ */
+test("chaque rapport daté porte sa date dans son contenu, et c'est celle de son nom", () => {
+  const racine = fileURLToPath(new URL("../rapports", import.meta.url));
+  if (!existsSync(racine)) return;
+  const MOIS = ["January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"];
+
+  const fichiers = readdirSync(racine).filter((f) => f.endsWith(".md"));
+  assert.ok(fichiers.length > 0,
+    "aucun rapport trouvé : ce contrôle rendrait zéro sans rien regarder.");
+
+  for (const f of fichiers) {
+    const m = f.match(/^(\d{4})-(\d{2})-(\d{2})-/);
+    assert.ok(m, `${f} ne porte pas de date dans son nom : la convention du dossier est rompue.`);
+    const [, an, mois, jour] = m!;
+    const attendue = `${Number(jour)} ${MOIS[Number(mois) - 1]} ${an}`;
+    const texte = readFileSync(join(racine, f), "utf8");
+    assert.ok(texte.includes(attendue) || texte.includes(`${an}-${mois}-${jour}`),
+      `${f} ne dit nulle part qu'il date du ${attendue}. Sa date n'existe que dans le nom du `
+      + `fichier : un lecteur qui reçoit le texte, le relit dans une revue ou le colle ailleurs `
+      + `lit un relevé périmé comme s'il était d'aujourd'hui.`);
+  }
+});

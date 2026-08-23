@@ -1,5 +1,8 @@
 # Trying to break the two-machine result
 
+*Written 22 August 2026. This report is a dated snapshot: it is not regenerated, and
+the figures in it are those of that day.*
+
 **Three of the six points below are withdrawn.** They were wrong, and the
 corrections came from the session I was refuting. What survives is at the end,
 and it is less than what I claimed.

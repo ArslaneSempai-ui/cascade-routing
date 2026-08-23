@@ -1,5 +1,8 @@
 # Two things owed at the resumption, written during the pause
 
+*Written 22 August 2026. This report is a dated snapshot: it is not regenerated, and
+the figures in it are those of that day.*
+
 No code is changed here and nothing is run — the machine is held for three bench
 passes that need it idle. This is the design, so the work starts rather than
 begins at the resumption.

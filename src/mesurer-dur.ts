@@ -181,17 +181,42 @@ if (isMain(import.meta)) {
   /*
    * Le plafond d'un routage par document, et il est bas.
    *
-   * `gen-4b` et `gen-8b` rendent douze dossiers entiers chacun — et onze sont **les mêmes**.
-   * Les neuf points d'exactitude par champ qui séparent les deux se dispersent sur des champs
-   * qui ne suffisent jamais à sauver un dossier de plus. Router par document entre eux gagne un
-   * dossier sur quarante-quatre.
+   * L'oracle — le meilleur des six paliers pour CHAQUE document, choisi après coup, donc
+   * irréalisable — rend un certain nombre de dossiers entiers. Le meilleur palier seul en rend
+   * un autre. L'écart entre les deux est TOUT ce qu'un routage par document peut rapporter
+   * ici, quelle que soit l'ingéniosité du routeur, et il se mesure avant d'écrire la moindre
+   * ligne. Sur ce corpus il est petit : les paliers se trompent largement sur les mêmes
+   * documents, et les points d'exactitude qui les séparent se dispersent sur des champs qui ne
+   * suffisent pas à sauver un dossier de plus.
    *
-   * Et l'oracle — le meilleur des six paliers pour chaque document, choisi après coup, donc
-   * irréalisable — en rend quinze. Trois de plus que le meilleur palier seul. C'est le plafond
-   * de tout ce que le routage par document peut rapporter ici, et il se mesure avant d'écrire
-   * la moindre ligne de routeur.
+   * CE COMMENTAIRE NE CITE PLUS SES CHIFFRES, ET C'EST DÉLIBÉRÉ. Il en citait trois — « douze
+   * dossiers chacun, dont onze les mêmes », « un sur quarante-quatre », « l'oracle en rend
+   * quinze, trois de plus ». Les trois étaient faux au 23 août 2026 : la mesure rend 2 contre
+   * 1 sur 30. Ils n'étaient pas faux à l'écriture ; le corpus et les paliers ont bougé, et
+   * personne ne relit un commentaire pour y répercuter une remesure.
+   *
+   * Les chiffres exacts vivent dans `dur.json`, sous `plafondDuRoutageParDocument`, et la
+   * sortie console les imprime à chaque passe. Un commentaire porte le RAISONNEMENT, qui ne
+   * rouille pas ; les nombres appartiennent au relevé, qui se refait.
    */
   const oracle = new Set([...entiers.values()].flatMap((s) => [...s]));
+
+  /*
+   * ET ON L'IMPRIME, parce que le commentaire ci-dessus renvoie ici.
+   *
+   * En retirant les chiffres périmés du commentaire, j'ai écrit que « la sortie console les
+   * imprime à chaque passe ». C'était faux : rien ne les imprimait. La phrase qui corrigeait
+   * une affirmation fausse en introduisait une autre, dans le même geste.
+   *
+   * Affaiblir la phrase aurait été le réflexe. La rendre vraie coûte trois lignes, et ce
+   * chiffre est le plus décisif de la passe : il borne tout ce qu'un routeur peut rapporter,
+   * avant qu'on en écrive un.
+   */
+  const meilleurSeul = Math.max(...[...entiers.values()].map((s) => s.size));
+  console.log(`\nPlafond du routage par document : l'oracle rend ${oracle.size} dossier(s) entier(s) `
+    + `sur ${completsAttendus}, le meilleur palier seul ${meilleurSeul}.`);
+  console.log(`  Tout routeur par document est borné par cet écart de ${oracle.size - meilleurSeul}, `
+    + `et l'oracle choisit après coup : il n'est pas réalisable.\n`);
 
   const j = journal.fermer();
   writeFileSync(SORTIE, JSON.stringify({
