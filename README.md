@@ -131,13 +131,15 @@ same scorer were run against a local Qwen3 ladder at 0.6B, 4B and 8B parameters.
 <!-- figures:echelles -->
 | Field | `rules` | `small` | `large` | `gen-0.6b` | `gen-4b` | `gen-8b` | Best |
 |---|---|---|---|---|---|---|---|
-| `name` | 0.0 % | 46.6 % | **96.6 %** | 80.8 % | 89.2 % | 91.7 % | `large` |
-| `birth` | **100.0 %** | 97.9 % | 100.0 % | 87.5 % | 99.2 % | 100.0 % | `rules` |
-| `document` | 79.7 % | 57.7 % | 64.4 % | 70.0 % | 79.2 % | **83.3 %** | `gen-8b` |
-| `country` | **100.0 %** | 100.0 % | 100.0 % | 83.3 % | 100.0 % | 100.0 % | `rules` |
+| `name` | 0.0 % | 46.6 % | 96.6 % | 80.8 % | 89.2 % | 91.7 % | `large` = `gen-8b` |
+| `birth` | 100.0 % | 97.9 % | 100.0 % | 87.5 % | 99.2 % | 100.0 % | `rules` = `large` |
+| `document` | 79.7 % | 57.7 % | 64.4 % | 70.0 % | 79.2 % | 83.3 % | `gen-8b` = `rules` |
+| `country` | 100.0 % | 100.0 % | 100.0 % | 83.3 % | 100.0 % | 100.0 % | `rules` = `small` |
 | `address` | 0.0 % | 43.0 % | 32.8 % | 75.0 % | **95.8 %** | 82.5 % | `gen-4b` |
 
 Cases behind each column — `rules` 1000 · `small` 1000 · `large` 1000 · `gen-0.6b` 120 · `gen-4b` 120 · `gen-8b` 120.
+
+**On 4 of 5 fields the leading tier is not separable from the runner-up** at this sample size — written `a` = `b`, and left unbolded. Picking the higher number there would be picking noise; the two are interchangeable on accuracy and the choice belongs to cost or latency.
 <!-- /figures:echelles -->
 
 **No family wins everywhere, and that is the entire finding.** A specialised extractive head

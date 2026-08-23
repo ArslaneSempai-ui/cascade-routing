@@ -209,20 +209,49 @@ const echelles = (() => {
     return "The generative ladder is not in this profile. `npm run measure -- --llm` adds it "
       + "— it needs Ollama and about eight gigabytes of models, which is why it is optional.";
   }
+  /*
+   * « BEST » ÉTAIT UN ARGMAX, ET UN ARGMAX N'EST PAS UN RÉSULTAT.
+   *
+   * La colonne nommait le taux le plus haut et le tableau le mettait en gras. Sur QUATRE
+   * CHAMPS SUR CINQ, ce vainqueur n'est pas séparable de son second : `large` 96,6 [95–98]
+   * contre `gen-8b` 91,7 [85–95], `rules` 79,7 [77–82] contre `gen-8b` 83,3 [76–89] — où le
+   * « meilleur » a même le taux le plus bas des deux bornes basses. Le gras affirmait une
+   * supériorité que l'échantillon ne porte pas, dans le tableau le plus lu de la page, sur un
+   * produit dont c'est exactement le service vendu.
+   *
+   * Le remède n'est pas de retirer la colonne : le lecteur a besoin de savoir où regarder.
+   * C'est de ne couronner que ce qui se sépare, et de NOMMER l'égalité quand il y en a une —
+   * « ces deux-là, cet échantillon ne les distingue pas » est une information, pas une
+   * absence d'information.
+   */
+  let indistincts = 0;
   const lignes = FIELDS.map((c) => {
-    const meilleur = mesures.reduce((a, b) =>
-      p!.extraction[b][c].accuracy > p!.extraction[a][c].accuracy ? b : a);
+    const classe = mesures
+      .map((t) => ({ t, q: p!.extraction[t][c] }))
+      .sort((a, b) => b.q.accuracy - a.q.accuracy);
+    const [premier, second] = classe;
+    const r1 = rate(Math.round(premier!.q.accuracy * premier!.q.items), premier!.q.items);
+    const r2 = second ? rate(Math.round(second.q.accuracy * second.q.items), second.q.items) : r1;
+    const separe = !!second && distinguishable(r1, r2);
+    if (!separe) indistincts++;
+    const meilleur = premier!.t;
     return [`\`${c}\``, ...mesures.map((e) =>
-      (e === meilleur ? "**" : "") + pc(p!.extraction[e][c].accuracy) + (e === meilleur ? "**" : "")),
-      `\`${meilleur}\``];
+      (separe && e === meilleur ? "**" : "") + pc(p!.extraction[e][c].accuracy) + (separe && e === meilleur ? "**" : "")),
+      separe ? `\`${meilleur}\`` : `\`${meilleur}\` = \`${second!.t}\``];
   });
   /* L'EFFECTIF VARIE PAR COLONNE, PAS PAR LIGNE — donc pas de colonne « n »
      possible ici, et c'est pour ça que ce tableau était le dernier sans. Une
      ligne de pied le porte : trente taux publiés sans savoir sur combien de cas
      chacun repose, et l'écart va de 1 000 à 120. */
   const effectifs = mesures.map((e) => `\`${e}\` ${p!.extraction[e][FIELDS[0]!].items}`).join(" · ");
+  const note = indistincts
+    ? `\n\n**On ${indistincts} of ${FIELDS.length} fields the leading tier is not separable from `
+      + `the runner-up** at this sample size — written \`a\` = \`b\`, and left unbolded. Picking `
+      + `the higher number there would be picking noise; the two are interchangeable on `
+      + `accuracy and the choice belongs to cost or latency.`
+    : "";
   return table(["Field", ...mesures.map((e) => `\`${e}\``), "Best"], lignes)
-    + `\n\nCases behind each column — ${effectifs}.`;
+    + `\n\nCases behind each column — ${effectifs}.` + note;
 })();
 
 /*
