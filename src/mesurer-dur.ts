@@ -16,7 +16,7 @@
  *     npm run dur -- --tiers=…    un sous-ensemble de paliers
  */
 
-import { writeFileSync, readFileSync } from "node:fs";
+import { writeFileSync, readFileSync, writeSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { loadavg, cpus } from "node:os";
 import { CHARGE_MAX_PAR_COEUR } from "./measure.ts";
@@ -221,7 +221,18 @@ if (isMain(import.meta)) {
   }, null, 2) + "\n");
   console.log(`\n${j.lignes} tentatives enregistrées. Écrit dans ${SORTIE.split("/").pop()}\n`);
   } catch (e) {
-    console.error(`\n${e instanceof Error ? e.message : String(e)}\n`);
+    /*
+     * ÉCRIRE EN SYNCHRONE, PUIS SORTIR SANS RENDRE LA MAIN.
+     *
+     * `console.error` suivi de `process.exit(1)` laissait encore sortir un code 134 : le
+     * runtime natif des encodeurs abandonne dans son propre fil pendant qu'on écrit, et son
+     * SIGABRT gagne la course. Un appelant lit alors 134 — « le processus a planté » — pour un
+     * refus parfaitement propre, et une chaîne d'intégration le classe en incident.
+     *
+     * `writeSync` sur le descripteur 2 ne repasse pas par la boucle d'événements, donc il n'y
+     * a plus d'intervalle où l'autre fil puisse tomber avant la sortie.
+     */
+    writeSync(2, `\n${e instanceof Error ? e.message : String(e)}\n\n`);
     process.exit(1);
   }
 }
