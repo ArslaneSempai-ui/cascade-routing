@@ -2740,3 +2740,60 @@ test("chaque route du serveur existe et répond, et une origine étrangère est 
     enfant.kill();
   }
 });
+
+
+/*
+ * ÉCRIRE DANS UN DOSSIER QUE GIT NE TRANSPORTE PAS.
+ *
+ * `npm run intake` est LE PREMIER GESTE que le README documente pour un client. Sur un clone
+ * frais il affichait tout son rapport, correctement, puis mourait sur
+ * `ENOENT: open 'data/hypotheses-client.json'` avec une trace de pile — parce que `data/` est
+ * ignoré par git et n'existe que si une mesure l'a créé, ce que le client n'a pas encore fait.
+ *
+ * L'ordre est le pire : le rapport passe, la confiance est faite, l'échec arrive après. Le
+ * client conclut que l'outil est fragile au moment précis où il venait de bien marcher.
+ *
+ * LE CONTRÔLE PORTE SUR LA PROPRIÉTÉ, PAS SUR LE CAS. Un onzième outil qui écrirait dans
+ * `data/` demain referait la même chose, et une correction ponctuelle ne l'attraperait pas.
+ *
+ * Mesuré en écrivant ce contrôle : onze autres fichiers écrivent sans `mkdirSync` — et les
+ * onze visent la RACINE du dépôt, qui existe toujours. Ce sont onze faux positifs, et c'est
+ * pour ça que le motif regarde la cible et pas la seule absence de `mkdirSync`.
+ */
+test("aucun outil n'écrit dans un dossier que git ne transporte pas sans le créer", () => {
+  const racine = fileURLToPath(new URL("..", import.meta.url));
+  const ignores = readFileSync(join(racine, ".gitignore"), "utf8")
+    .split("\n").map((l) => l.trim().replace(/\/$/, ""))
+    .filter((l) => l && !l.startsWith("#") && !l.startsWith("*"));
+  assert.ok(ignores.includes("data"),
+    "`data` n'est plus dans .gitignore : ce contrôle a perdu son objet, vérifier pourquoi.");
+
+  /*
+   * CE CONTRÔLE A D'ABORD ÉTÉ UN VERT VIDE, ET J'ALLAIS LE COMMITER.
+   *
+   * Sa première version cherchait `"data/"` DANS L'ARGUMENT de `writeFileSync`. Or l'argument
+   * est une variable — `writeFileSync(sortie, …)` — et le littéral vit vingt lignes plus haut.
+   * Le motif ne regardait donc rien : `intake.ts` privé de son `mkdirSync` passait au vert.
+   *
+   * Il a fallu l'éprouver sur le fichier falsifié pour le voir, et c'est la seule raison pour
+   * laquelle je le sais. Un contrôle qui ne démontre pas qu'il bascule est indiscernable d'un
+   * contrôle qui ne cherche pas.
+   *
+   * On regarde donc le FICHIER, pas l'argument : un littéral qui désigne un dossier ignoré,
+   * une écriture, et aucune création de dossier.
+   */
+  const fautifs: string[] = [];
+  for (const f of readdirSync(join(racine, "src"))) {
+    if (!/\.(ts|mjs)$/.test(f) || /\.test\./.test(f)) continue;
+    const src = sansMentions(readFileSync(join(racine, "src", f), "utf8"));
+    if (!/writeFileSync\(/.test(src) || /mkdirSync/.test(src)) continue;
+    for (const d of ignores) {
+      const litteral = src.match(new RegExp(`["'\`](${d}/[^"'\`]*)["'\`]`));
+      if (litteral) fautifs.push(`${f}  ->  ${litteral[1]}`);
+    }
+  }
+  assert.deepEqual(fautifs, [],
+    `écriture(s) vers un dossier ignoré par git, sans création préalable :\n  ${fautifs.join("\n  ")}\n`
+    + `  Sur un clone frais le dossier n'existe pas, et l'outil meurt sur ENOENT après avoir\n`
+    + `  fait tout son travail. Ajouter mkdirSync(dirname(cible), { recursive: true }).`);
+});

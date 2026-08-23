@@ -10,7 +10,8 @@
  * défaut du dépôt — jamais un chiffre du client inventé pour combler un trou.
  */
 
-import { readFileSync, writeFileSync, existsSync } from "node:fs";
+import { dirname } from "node:path";
+import { mkdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
 import { isMain } from "./cli.ts";
 import { ASSUMPTIONS, BOUNDS } from "./assumptions.ts";
 
@@ -123,6 +124,18 @@ if (isMain(import.meta)) {
    * omission.
    */
   const sortie = "data/hypotheses-client.json";
+  /*
+   * `data/` EST IGNORÉ PAR GIT, DONC ABSENT D'UN CLONE FRAIS.
+   *
+   * Cet outil est LE PREMIER GESTE que le README documente pour un client. Il affichait tout
+   * son rapport, correctement, puis mourait sur `ENOENT: open 'data/hypotheses-client.json'`
+   * avec une trace de pile — parce que le dossier n'existe pas tant que rien ne l'a créé, et
+   * que ce qui le crée d'habitude est une mesure que le client n'a pas encore lancée.
+   *
+   * Le pire est l'ordre : le rapport passe, la confiance est faite, et l'échec arrive après.
+   * Un client conclut que l'outil est fragile au moment précis où il venait de bien marcher.
+   */
+  mkdirSync(dirname(sortie), { recursive: true });
   writeFileSync(sortie, JSON.stringify({
     etabliLe: new Date().toISOString(),
     source: fichier,
