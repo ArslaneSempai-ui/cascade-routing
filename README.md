@@ -295,7 +295,7 @@ wrong way round: a percentage is a claim you take on trust, while a named input 
 model's actual output beside the expected one is something you can check.
 
 <!-- figures:gallery -->
-552 failures across the machine tiers, grouped by what actually went wrong:
+552 failures across 3 of the 6 measured tiers, grouped by what actually went wrong.
 
 | Failures | Tier · field · what kind of wrong |
 |---|---|
@@ -305,6 +305,8 @@ model's actual output beside the expected one is something you can check.
 | 39 | small · name · wrong span |
 | 38 | small · address · wrong span |
 | 27 | large · document · over-long |
+
+Shown above: the 6 most common of 20 kinds. Below: 5 of them with their input and output. Not here at all — `gen-0.6b`, `gen-4b`, `gen-8b`: the generative ladder is measured only with `npm run measure -- --llm`. `npm run failures` prints every case of the tiers it runs.
 
 ```
 rules · name · empty   [D-0001]
@@ -572,7 +574,7 @@ proves nothing until a decision reads it.
 | The split | A test fails if training and held-out phrasings share a shape |
 | Every assumption | The values we guessed are declared in the inventory and swept, with "priced out" told apart from "irrelevant". The three inputs *you* set — volume, budget, latency ceiling — are not in that sweep: the ceiling has its own table above and the budget has the shadow price, and a test fails if a fourth ever joins them unannounced |
 | The routing | Exhaustive over every combination of the measured tiers — no heuristic, nothing tuned |
-| Every failure | Published in full, by kind, rather than summarised into a rate |
+| Every failure | Counted by kind rather than summarised into a rate, with the examples shown alongside their input and output. The gallery states which tiers it covers and which it does not; `npm run failures` prints every case of the tiers it runs |
 
 ---
 

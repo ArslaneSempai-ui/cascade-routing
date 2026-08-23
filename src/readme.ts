@@ -141,7 +141,26 @@ const gallery = (() => {
     `  expected  ${JSON.stringify(x.expected)}\n` +
     `  got       ${JSON.stringify(x.got)}\n` + "```").join("\n\n");
 
-  return `${f.length} failures across the machine tiers, grouped by what actually went wrong:\n\n${counts}\n\n${examples}`;
+  /* CE QUE LA GALERIE COUVRE, ET CE QU'ELLE NE COUVRE PAS. Le tableau des garanties
+     annonçait « every failure published in full » ; mesuré, c'est faux trois fois — trois
+     paliers sur les six mesurés (l'échelle générative demande `--llm`), les six premiers
+     genres seulement, et cinq exemples. Aucun de ces trois écrêtages n'était dit.
+     Un relevé qui résulte d'une sélection porte le compte de ce qu'il a écarté, ou il ne
+     se publie pas : c'est la même règle que le seuil qui refuse un taux sous vingt cas.
+     Les nombres se calculent — ils ne peuvent donc pas vieillir quand un palier s'ajoute. */
+  const paliersVus = [...new Set(f.map((x) => x.tier))];
+  const paliersMesuresSansHumain = paliersMesures(p!).filter((t) => t !== "human");
+  const absents = paliersMesuresSansHumain.filter((t) => !paliersVus.includes(t));
+  const genres = shape(f).length;
+  return `${f.length} failures across ${paliersVus.length} of the ${paliersMesuresSansHumain.length} measured tiers`
+    + `, grouped by what actually went wrong.\n\n${counts}\n\n`
+    + `Shown above: the ${Math.min(6, genres)} most common of ${genres} kinds. Below: `
+    + `${six.length} of them with their input and output. `
+    + (absents.length
+        ? `Not here at all — ${absents.map((t) => `\`${t}\``).join(", ")}: the generative ladder is `
+          + `measured only with \`npm run measure -- --llm\`. `
+        : "")
+    + `\`npm run failures\` prints every case of the tiers it runs.\n\n${examples}`;
 })();
 
 /*
