@@ -58,7 +58,7 @@ npm test           # types, README figures, landing.json, and the suite
 ```
 
 <!-- figures:tests -->
-**150 tests** across 9 files, counted from the sources rather than typed here.
+**151 tests** across 9 files, counted from the sources rather than typed here.
 <!-- /figures:tests -->
 
 Everything runs locally. No API key, nothing leaves the machine, and anyone who clones this
@@ -291,8 +291,9 @@ No budget buys better: the ceiling is in the tiers available.
 
 That last sentence is the one worth carrying into a budget meeting. The instinct in the
 room is "we need a bigger model" or "we need more budget". The measurement says the money
-is not the constraint — no available tier can read an address, and the only thing that
-fixes it costs a step, not a slope.
+is not the constraint — no ENCODER tier can read an address, and what fixes it is a step to
+another family, not more budget. That prediction has since been paid out: a local 4B
+generative model reads it, and the encoders' extra euros never would have.
 
 **The two chains want opposite things.** Chain A puts three fields on free rules and needs
 the large model exactly once. Chain B finds rules useless and the *small* model better
@@ -303,7 +304,7 @@ selling you someone else's.
 
 ## What it gets wrong
 
-Every tool in this set reported an aggregate accuracy and not one failure. That is the
+Measurement tools report an aggregate accuracy and not one failure. That is the
 wrong way round: a percentage is a claim you take on trust, while a named input with the
 model's actual output beside the expected one is something you can check.
 

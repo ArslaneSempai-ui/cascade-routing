@@ -2918,3 +2918,49 @@ test("chaque rapport daté porte sa date dans son contenu, et c'est celle de son
       + `lit un relevé périmé comme s'il était d'aujourd'hui.`);
   }
 });
+
+
+/*
+ * LA PHRASE QU'ON EMPORTE EN RÉUNION DE BUDGET.
+ *
+ * Le README disait : « no available tier can read an address ». Elle était vraie quand seuls
+ * les encodeurs étaient mesurés. Depuis que l'échelle générative est dans le profil, LE MÊME
+ * DOCUMENT publie `gen-4b` à 95,8 % sur ce champ — un acheteur qui lit la phrase puis le
+ * tableau voit la contradiction sans rien chercher.
+ *
+ * La conclusion, elle, n'a pas bougé et elle s'est même vérifiée : ce qui répare l'adresse est
+ * un CHANGEMENT DE FAMILLE, pas plus de budget. C'était une prédiction faite sur les encodeurs
+ * seuls, et l'échelle générative l'a encaissée. La phrase dit maintenant cela.
+ *
+ * Ce témoin tient sa prémisse : le jour où un encodeur lit l'adresse, « no ENCODER tier can
+ * read an address » devient fausse à son tour, et il faudra réécrire l'argument plutôt que de
+ * le laisser rouiller une seconde fois.
+ */
+test("aucun palier encodeur ne lit l'adresse, ce qui est la prémisse de l'argument de budget", () => {
+  const p = readProfiles();
+  assert.ok(p, "pas de profil gelé.");
+  const readme = readFileSync(fileURLToPath(new URL("../README.md", import.meta.url)), "utf8");
+
+  const ENCODEURS_MESURES = ["rules", "small", "large"] as const;
+  const lus = ENCODEURS_MESURES.map((t) => {
+    const q = (p as never as Record<string, Record<string, Record<string, { accuracy: number; items: number }>>>)
+      .extraction[t]!.address!;
+    return { t, taux: q.accuracy };
+  });
+  const meilleur = lus.reduce((a, b) => (b.taux > a.taux ? b : a));
+
+  /* Le seuil est celui d'un champ utilisable en production, pas une valeur ronde choisie ici :
+     en dessous, la moitié des adresses est fausse et personne ne livre ça. */
+  assert.ok(meilleur.taux < 0.5,
+    `\`${meilleur.t}\` lit maintenant l'adresse à ${(meilleur.taux * 100).toFixed(1)} %. La phrase `
+    + `« no ENCODER tier can read an address » du README est devenue fausse, et avec elle tout `
+    + `l'argument « le budget n'est pas la contrainte ». Réécrire l'argument, pas le seuil.`);
+
+  /* ET LA PHRASE DOIT NOMMER LA FAMILLE. « no available tier » était vrai des encodeurs et
+     faux du document entier : le même README publie un palier génératif qui y arrive. */
+  assert.doesNotMatch(readme, /no available tier can read an address/,
+    "le README est revenu à « no available tier », que son propre tableau contredit — il publie "
+    + "un palier génératif au-dessus de 95 % sur ce champ.");
+  assert.match(readme, /no ENCODER tier can read an address/,
+    "la phrase ne nomme plus la famille dont elle parle.");
+});
