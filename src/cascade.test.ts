@@ -15,6 +15,7 @@ import { classify, empreinteDesEntrees, modulesAtteints, cleDeLaGalerieLivree, c
 import { comparer } from "./diff.ts";
 import { sonde } from "./sonde.ts";
 import { appliquerHypotheses } from "./server.ts";
+import { INVENTORY } from "./inventory.ts";
 import { lireCsv } from "./your-cases.ts";
 import { corpusDur } from "./corpus-dur.ts";
 import { comparerPopulations, plancherDeBruit, longueur, GRAINES_DE_BRUIT } from "./entree.ts";
@@ -2963,4 +2964,51 @@ test("aucun palier encodeur ne lit l'adresse, ce qui est la prémisse de l'argum
     + "un palier génératif au-dessus de 95 % sur ce champ.");
   assert.match(readme, /no ENCODER tier can read an address/,
     "la phrase ne nomme plus la famille dont elle parle.");
+});
+
+
+/*
+ * LE README PROMETTAIT CE TEST. IL N'EXISTAIT PAS.
+ *
+ * « Where every number comes from » dit : *It is generated from the code now, and a test fails
+ * if anything the tool runs on is missing from it.* Le seul test qui touchait au sujet vérifie
+ * que toute hypothèse est BALAYÉE ou déclarée comme entrée du client — ce qui est autre chose.
+ * Rien ne vérifiait que l'inventaire de provenance soit complet.
+ *
+ * Mesuré au moment de l'écrire : les treize hypothèses y sont toutes, et dix autres entrées
+ * couvrent les constantes décisives. L'inventaire était complet — PAR CHANCE, comme le dit le
+ * commentaire du dossier signé, et « juste par chance » est indiscernable de « juste par
+ * construction » jusqu'au jour où ça ne l'est plus.
+ *
+ * Écrire le test plutôt que retirer la phrase : c'est la même règle que partout ailleurs ici —
+ * rendre la promesse vraie coûte moins cher que d'expliquer pourquoi elle ne l'est pas.
+ */
+test("tout ce sur quoi l'outil tourne figure dans l'inventaire de provenance", () => {
+  const declarees = new Set(INVENTORY.map((f) => f.name));
+
+  const manquantes = Object.keys(ASSUMPTIONS).filter((k) => !declarees.has(k));
+  assert.deepEqual(manquantes, [],
+    `hypothèse(s) absente(s) de l'inventaire : ${manquantes.join(", ")}.\n`
+    + `  La section « Where every number comes from » promet qu'un test tombe dans ce cas. Ce\n`
+    + `  test est celui-là. Ajouter l'entrée avec sa provenance — retrieved, measured, assumed\n`
+    + `  ou chosen — et la phrase qui dit ce qu'un lecteur a le droit d'en demander.`);
+
+  /* L'INVERSE COMPTE AUTANT : une entrée qui ne correspond plus à rien fait grossir un
+     inventaire qui a l'air complet, et déclarer une figure qui n'existe plus est une autre
+     façon de mentir sur la provenance. */
+  const orphelines = INVENTORY.filter((f) => f.provenance === "assumed" && !(f.name in ASSUMPTIONS));
+  assert.deepEqual(orphelines.map((f) => f.name), [],
+    `entrée(s) déclarée(s) « assumed » qui ne sont plus des hypothèses du code : `
+    + `${orphelines.map((f) => f.name).join(", ")}.`);
+
+  /* LE VOCABULAIRE A QUATRE TERMES ET L'INVENTAIRE N'EN EMPLOIE QUE TROIS. Ce n'est pas un
+     défaut en soi — on n'invente pas une figure retrouvée pour compléter un tableau — mais le
+     dépôt PORTE des données retrouvées : `regulations.ts` cite dix textes du CFR avec leur
+     URL, et n'est importé par personne. Une source retrouvée qu'aucune décision ne lit est
+     exactement ce que la dernière ligne du README reproche à une colonne d'un fichier. C'est
+     écrit ici plutôt que corrigé : brancher ou retirer ce module est une décision, pas une
+     correction d'audit. */
+  const genres = new Set(INVENTORY.map((f) => f.provenance));
+  assert.ok(genres.size >= 3,
+    `l'inventaire n'emploie plus que ${genres.size} genre(s) de provenance : ${[...genres].join(", ")}.`);
 });
