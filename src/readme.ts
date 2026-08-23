@@ -16,7 +16,7 @@ import { collect, shape } from "./failures.ts";
 import { FIELDS } from "./corpus.ts";
 import { TIERS } from "./tiers.ts";
 import { run as emit, table } from "./figures.ts";
-import { rate, writeRate, distinguishable } from "./interval.ts";
+import { rate, writeRate, distinguishable, precision } from "./interval.ts";
 import { GENERATIFS } from "./paliers.ts";
 import { majorityClass, uniformGuess, verdict } from "./baselines.ts";
 import { generateAlerts } from "./corpus.ts";
@@ -42,11 +42,32 @@ const euro = (n: number) => "$" + Math.round(n).toLocaleString("en-GB");
    l'échelle générative. Cet écart d'un facteur huit est lui-même l'information
    qui manquait : il dit pourquoi les taux génératifs bougent plus, et il se
    voyait nulle part. */
+/*
+ * TRENTE TAUX AVEC LEUR `n` ET SANS LEUR INTERVALLE.
+ *
+ * Le tableau le plus lu de la page portait la taille d'échantillon — ce qui est déjà mieux que
+ * la plupart — et laissait au lecteur le soin d'en déduire la précision. Personne ne le fait.
+ * Résultat : `gen-4b` à 79,2 % et `rules` à 79,7 % se lisent comme un écart, alors qu'à ces
+ * effectifs-là aucun des deux ne sait où il est à sept points près.
+ *
+ * Mettre l'intervalle dans chaque cellule rendrait six colonnes illisibles. On publie donc la
+ * PIRE DEMI-LARGEUR DU PALIER — celle du champ dont l'intervalle est le plus large — parce que
+ * c'est le seul résumé qui ne flatte jamais : si le lecteur s'y fie, il se trompe toujours du
+ * côté prudent.
+ *
+ * Mesuré : ±2,5 à ±3,1 points pour les encodeurs à mille cas, ±6,8 à ±8,1 pour l'échelle
+ * générative à cent vingt. C'est l'information qui manquait, et elle change la lecture de la
+ * moitié du tableau.
+ */
 const extraction = table(
-  ["Tier", ...FIELDS, "Latency", "n"],
+  ["Tier", ...FIELDS, "Latency", "n", "±"],
   mesures.map((t) => {
     const n = FIELDS.map((f) => p.extraction[t][f].items);
     const memeN = n.every((x) => x === n[0]);
+    const demies = FIELDS.map((f) => {
+      const q = p.extraction[t][f];
+      return precision(Math.round(q.accuracy * q.items), q.items);
+    });
     return [
       `\`${t}\``,
       ...FIELDS.map((f) => pc(p.extraction[t][f].accuracy)),
@@ -54,9 +75,15 @@ const extraction = table(
       /* si un jour les champs cessent d'être mesurés sur le même échantillon,
          la colonne le DIT au lieu d'afficher le premier et de taire les autres */
       memeN ? String(n[0]) : n.join(" / "),
+      `±${Math.max(...demies).toFixed(1)}`,
     ];
   }),
-);
+) + `\n\n**The \`±\` column is the widest half-interval on that row**, at 95 %, taken over the `
+  + `five fields — so it never flatters. Two rates on the same row that differ by less than `
+  + `twice it are not separated by this sample, and the generative tiers carry roughly `
+  + `${Math.max(...FIELDS.map((f) => precision(Math.round(p!.extraction["gen-4b"]![f]!.accuracy * p!.extraction["gen-4b"]![f]!.items), p!.extraction["gen-4b"]![f]!.items))).toFixed(0)} `
+  + `points of it against ${Math.max(...FIELDS.map((f) => precision(Math.round(p!.extraction["large"]![f]!.accuracy * p!.extraction["large"]![f]!.items), p!.extraction["large"]![f]!.items))).toFixed(0)} `
+  + `for the encoders, because they were measured on fewer cases.`;
 
 const classification = table(
   ["Tier", "Accuracy", "95 % interval", "Latency", "n"],

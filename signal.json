@@ -1,7 +1,7 @@
 {
   "quoi": "Quels signaux annoncent une valeur inutilisable, sans la clé de réponses.",
-  "mesureLe": "2026-08-21T17:55:58.940Z",
-  "journal": "tentatives/2026-08-21T16-54-14-816Z-dur.jsonl",
+  "mesureLe": "2026-08-23T20:46:22.748Z",
+  "journal": "tentatives/2026-08-23T20-37-27-283Z-dur.jsonl",
   "corpus": "hard-corpus",
   "denominateur": "toute valeur notée par un palier sur le corpus dur, blancs compris",
   "valeurs": 984,
@@ -16,10 +16,29 @@
     "declenche": 594,
     "justes": 390,
     "fausses": 594,
-    "precision": 1,
-    "rappel": 1,
+    "precision": {
+      "taux": 1,
+      "bas": 0.9936,
+      "haut": 1,
+      "n": 594,
+      "rapportable": true
+    },
+    "rappel": {
+      "taux": 1,
+      "bas": 0.9936,
+      "haut": 1,
+      "n": 594,
+      "rapportable": true
+    },
     "faussesAlertes": 0,
-    "tauxDeFaussesAlertes": 0,
+    "tauxDeFaussesAlertes": {
+      "taux": 0,
+      "bas": 0,
+      "haut": 0.0098,
+      "n": 390,
+      "rapportable": true
+    },
+    "seuilDeRapportabilite": 20,
     "temoin": {
       "precisionMoyenne": 0.603,
       "rappelMoyen": 0.603,
@@ -35,10 +54,29 @@
       "declenche": 594,
       "justes": 390,
       "fausses": 594,
-      "precision": 1,
-      "rappel": 1,
+      "precision": {
+        "taux": 1,
+        "bas": 0.9936,
+        "haut": 1,
+        "n": 594,
+        "rapportable": true
+      },
+      "rappel": {
+        "taux": 1,
+        "bas": 0.9936,
+        "haut": 1,
+        "n": 594,
+        "rapportable": true
+      },
       "faussesAlertes": 0,
-      "tauxDeFaussesAlertes": 0,
+      "tauxDeFaussesAlertes": {
+        "taux": 0,
+        "bas": 0,
+        "haut": 0.0098,
+        "n": 390,
+        "rapportable": true
+      },
+      "seuilDeRapportabilite": 20,
       "temoin": {
         "precisionMoyenne": 0.603,
         "rappelMoyen": 0.603,
@@ -53,10 +91,29 @@
       "declenche": 210,
       "justes": 390,
       "fausses": 594,
-      "precision": 0.8286,
-      "rappel": 0.2929,
+      "precision": {
+        "taux": 0.8286,
+        "bas": 0.7718,
+        "haut": 0.8735,
+        "n": 210,
+        "rapportable": true
+      },
+      "rappel": {
+        "taux": 0.2929,
+        "bas": 0.2578,
+        "haut": 0.3308,
+        "n": 594,
+        "rapportable": true
+      },
       "faussesAlertes": 36,
-      "tauxDeFaussesAlertes": 0.0923,
+      "tauxDeFaussesAlertes": {
+        "taux": 0.0923,
+        "bas": 0.0674,
+        "haut": 0.1251,
+        "n": 390,
+        "rapportable": true
+      },
+      "seuilDeRapportabilite": 20,
       "temoin": {
         "precisionMoyenne": 0.6029,
         "rappelMoyen": 0.2131,
@@ -71,10 +128,29 @@
       "declenche": 618,
       "justes": 390,
       "fausses": 594,
-      "precision": 0.8236,
-      "rappel": 0.8569,
+      "precision": {
+        "taux": 0.8236,
+        "bas": 0.7916,
+        "haut": 0.8516,
+        "n": 618,
+        "rapportable": true
+      },
+      "rappel": {
+        "taux": 0.8569,
+        "bas": 0.8264,
+        "haut": 0.8828,
+        "n": 594,
+        "rapportable": true
+      },
       "faussesAlertes": 109,
-      "tauxDeFaussesAlertes": 0.2795,
+      "tauxDeFaussesAlertes": {
+        "taux": 0.2795,
+        "bas": 0.2373,
+        "haut": 0.326,
+        "n": 390,
+        "rapportable": true
+      },
+      "seuilDeRapportabilite": 20,
       "temoin": {
         "precisionMoyenne": 0.603,
         "rappelMoyen": 0.6274,
@@ -89,10 +165,29 @@
       "declenche": 132,
       "justes": 390,
       "fausses": 594,
-      "precision": 0.947,
-      "rappel": 0.2104,
+      "precision": {
+        "taux": 0.947,
+        "bas": 0.8946,
+        "haut": 0.9741,
+        "n": 132,
+        "rapportable": true
+      },
+      "rappel": {
+        "taux": 0.2104,
+        "bas": 0.1796,
+        "haut": 0.245,
+        "n": 594,
+        "rapportable": true
+      },
       "faussesAlertes": 7,
-      "tauxDeFaussesAlertes": 0.0179,
+      "tauxDeFaussesAlertes": {
+        "taux": 0.0179,
+        "bas": 0.0087,
+        "haut": 0.0366,
+        "n": 390,
+        "rapportable": true
+      },
+      "seuilDeRapportabilite": 20,
       "temoin": {
         "precisionMoyenne": 0.6023,
         "rappelMoyen": 0.1338,
@@ -107,10 +202,29 @@
       "declenche": 120,
       "justes": 390,
       "fausses": 594,
-      "precision": 0.925,
-      "rappel": 0.1869,
+      "precision": {
+        "taux": 0.925,
+        "bas": 0.8636,
+        "haut": 0.96,
+        "n": 120,
+        "rapportable": true
+      },
+      "rappel": {
+        "taux": 0.1869,
+        "bas": 0.1576,
+        "haut": 0.2202,
+        "n": 594,
+        "rapportable": true
+      },
       "faussesAlertes": 9,
-      "tauxDeFaussesAlertes": 0.0231,
+      "tauxDeFaussesAlertes": {
+        "taux": 0.0231,
+        "bas": 0.0122,
+        "haut": 0.0433,
+        "n": 390,
+        "rapportable": true
+      },
+      "seuilDeRapportabilite": 20,
       "temoin": {
         "precisionMoyenne": 0.6019,
         "rappelMoyen": 0.1216,
@@ -125,10 +239,29 @@
       "declenche": 190,
       "justes": 390,
       "fausses": 594,
-      "precision": 0.9316,
-      "rappel": 0.298,
+      "precision": {
+        "taux": 0.9316,
+        "bas": 0.8865,
+        "haut": 0.9596,
+        "n": 190,
+        "rapportable": true
+      },
+      "rappel": {
+        "taux": 0.298,
+        "bas": 0.2626,
+        "haut": 0.336,
+        "n": 594,
+        "rapportable": true
+      },
       "faussesAlertes": 13,
-      "tauxDeFaussesAlertes": 0.0333,
+      "tauxDeFaussesAlertes": {
+        "taux": 0.0333,
+        "bas": 0.0196,
+        "haut": 0.0562,
+        "n": 390,
+        "rapportable": true
+      },
+      "seuilDeRapportabilite": 20,
       "temoin": {
         "precisionMoyenne": 0.6028,
         "rappelMoyen": 0.1928,
@@ -143,10 +276,29 @@
       "declenche": 32,
       "justes": 390,
       "fausses": 594,
-      "precision": 1,
-      "rappel": 0.0539,
+      "precision": {
+        "taux": 1,
+        "bas": 0.8928,
+        "haut": 1,
+        "n": 32,
+        "rapportable": true
+      },
+      "rappel": {
+        "taux": 0.0539,
+        "bas": 0.0384,
+        "haut": 0.0751,
+        "n": 594,
+        "rapportable": true
+      },
       "faussesAlertes": 0,
-      "tauxDeFaussesAlertes": 0,
+      "tauxDeFaussesAlertes": {
+        "taux": 0,
+        "bas": 0,
+        "haut": 0.0098,
+        "n": 390,
+        "rapportable": true
+      },
+      "seuilDeRapportabilite": 20,
       "temoin": {
         "precisionMoyenne": 0.6041,
         "rappelMoyen": 0.0325,
@@ -166,10 +318,29 @@
         "declenche": 444,
         "justes": 390,
         "fausses": 420,
-        "precision": 0.7545,
-        "rappel": 0.7976,
+        "precision": {
+          "taux": 0.7545,
+          "bas": 0.7124,
+          "haut": 0.7922,
+          "n": 444,
+          "rapportable": true
+        },
+        "rappel": {
+          "taux": 0.7976,
+          "bas": 0.7566,
+          "haut": 0.8333,
+          "n": 420,
+          "rapportable": true
+        },
         "faussesAlertes": 109,
-        "tauxDeFaussesAlertes": 0.2795,
+        "tauxDeFaussesAlertes": {
+          "taux": 0.2795,
+          "bas": 0.2373,
+          "haut": 0.326,
+          "n": 390,
+          "rapportable": true
+        },
+        "seuilDeRapportabilite": 20,
         "temoin": {
           "precisionMoyenne": 0.5177,
           "rappelMoyen": 0.5473,
@@ -184,10 +355,29 @@
         "declenche": 132,
         "justes": 390,
         "fausses": 420,
-        "precision": 0.947,
-        "rappel": 0.2976,
+        "precision": {
+          "taux": 0.947,
+          "bas": 0.8946,
+          "haut": 0.9741,
+          "n": 132,
+          "rapportable": true
+        },
+        "rappel": {
+          "taux": 0.2976,
+          "bas": 0.2559,
+          "haut": 0.343,
+          "n": 420,
+          "rapportable": true
+        },
         "faussesAlertes": 7,
-        "tauxDeFaussesAlertes": 0.0179,
+        "tauxDeFaussesAlertes": {
+          "taux": 0.0179,
+          "bas": 0.0087,
+          "haut": 0.0366,
+          "n": 390,
+          "rapportable": true
+        },
+        "seuilDeRapportabilite": 20,
         "temoin": {
           "precisionMoyenne": 0.5156,
           "rappelMoyen": 0.162,
@@ -202,10 +392,29 @@
         "declenche": 120,
         "justes": 390,
         "fausses": 420,
-        "precision": 0.925,
-        "rappel": 0.2643,
+        "precision": {
+          "taux": 0.925,
+          "bas": 0.8636,
+          "haut": 0.96,
+          "n": 120,
+          "rapportable": true
+        },
+        "rappel": {
+          "taux": 0.2643,
+          "bas": 0.2244,
+          "haut": 0.3085,
+          "n": 420,
+          "rapportable": true
+        },
         "faussesAlertes": 9,
-        "tauxDeFaussesAlertes": 0.0231,
+        "tauxDeFaussesAlertes": {
+          "taux": 0.0231,
+          "bas": 0.0122,
+          "haut": 0.0433,
+          "n": 390,
+          "rapportable": true
+        },
+        "seuilDeRapportabilite": 20,
         "temoin": {
           "precisionMoyenne": 0.5183,
           "rappelMoyen": 0.1481,
@@ -220,10 +429,29 @@
         "declenche": 32,
         "justes": 390,
         "fausses": 420,
-        "precision": 1,
-        "rappel": 0.0762,
+        "precision": {
+          "taux": 1,
+          "bas": 0.8928,
+          "haut": 1,
+          "n": 32,
+          "rapportable": true
+        },
+        "rappel": {
+          "taux": 0.0762,
+          "bas": 0.0545,
+          "haut": 0.1056,
+          "n": 420,
+          "rapportable": true
+        },
         "faussesAlertes": 0,
-        "tauxDeFaussesAlertes": 0,
+        "tauxDeFaussesAlertes": {
+          "taux": 0,
+          "bas": 0,
+          "haut": 0.0098,
+          "n": 390,
+          "rapportable": true
+        },
+        "seuilDeRapportabilite": 20,
         "temoin": {
           "precisionMoyenne": 0.5169,
           "rappelMoyen": 0.0394,

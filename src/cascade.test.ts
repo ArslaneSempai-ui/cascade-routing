@@ -6,6 +6,7 @@ import assert from "node:assert/strict";
 import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { execFileSync, spawn } from "node:child_process";
+import { createServer } from "node:http";
 import { generateRecords, generateAlerts, FIELDS, TYPOLOGIES } from "./corpus.ts";
 import { correct, TIERS, estLocal, OLLAMA, MODELES_LOCAUX, digestsQuiDivergent,
   DELAI_DE_GENERATION_MS, DELAI_DE_CHARGEMENT_MS, CHARGEMENTS_MESURES_MS } from "./tiers.ts";
@@ -21,7 +22,7 @@ import { SEUIL_DE_L_INDUSTRIE, OBSERVATIONS_MINIMALES } from "./psi.ts";
 import { readProfiles, empreinteDuReleve, RELEVE_DE_REFERENCE, type Profile, type ProvenanceDuPalier, type Provenance } from "./measure.ts";
 import { optimiseExtraction, optimiseClassification, budgetShadowPrice, latenceRepresentative, paliersMesures, evaluer, pricePerThousandDocuments } from "./optimise.ts";
 import { ASSUMPTIONS, UNITS, BOUNDS, pricePerThousandExtractions, accuracy } from "./assumptions.ts";
-import { wilson, rate, distinguishable } from "./interval.ts";
+import { wilson, rate, distinguishable, precision } from "./interval.ts";
 import { PLAUSIBLE, bands, ETIQUETTE, advise } from "./sensitivity.ts";
 
 /* ── the split, which is the whole reason the measurement means anything ── */
@@ -2681,7 +2682,27 @@ test("la démo publiée porte la même garde que le serveur", () => {
  * appel de fonction, et c'est la seule chose qui aurait vu ce que j'ai cassé.
  */
 test("chaque route du serveur existe et répond, et une origine étrangère est refusée", async () => {
-  const PORT = 4771;
+  /*
+   * LE PORT VIENT DU NOYAU, PAS D'UNE CONSTANTE.
+   *
+   * La première version écrivait 4771. Un port choisi à la main entre en collision le jour où
+   * quelqu'un d'autre l'utilise, et le témoin devient rouge pour une raison qui n'a rien à voir
+   * avec ce qu'il mesure. Une session voisine s'est payée la variante aléatoire : un tour sur
+   * trois échouait sur un 500 dû à deux serveurs sur le même port.
+   *
+   * UN TÉMOIN INSTABLE EST PIRE QUE PAS DE TÉMOIN : il apprend à celui qui le voit rouge à le
+   * relancer plutôt qu'à regarder — et le jour où il rougit pour une vraie raison, personne ne
+   * regardera non plus.
+   *
+   * On demande donc le port 0, que le noyau remplace par un port libre, et on lit celui qu'il a
+   * réellement donné. Au passage, c'est aussi ce qui prouve le mieux la garde d'origine : elle
+   * accepte l'écran sur un port QUE PERSONNE N'A ÉCRIT, ce qu'une liste en dur refuserait.
+   */
+  const sonde = createServer();
+  await new Promise<void>((r) => sonde.listen(0, "127.0.0.1", () => r()));
+  const PORT = (sonde.address() as { port: number }).port;
+  await new Promise<void>((r) => sonde.close(() => r()));
+
   const enfant = spawn("node", [fileURLToPath(new URL("./server.ts", import.meta.url))], {
     env: { ...process.env, PORT: String(PORT) }, stdio: ["ignore", "ignore", "ignore"],
   });
@@ -2808,4 +2829,51 @@ test("aucun outil n'écrit dans un dossier que git ne transporte pas sans le cr�
     `écriture(s) vers un dossier ignoré par git, sans création préalable :\n  ${fautifs.join("\n  ")}\n`
     + `  Sur un clone frais le dossier n'existe pas, et l'outil meurt sur ENOENT après avoir\n`
     + `  fait tout son travail. Ajouter mkdirSync(dirname(cible), { recursive: true }).`);
+});
+
+
+/*
+ * LE `n` SEUL DEMANDE UN CALCUL QUE PERSONNE NE FAIT.
+ *
+ * Le tableau le plus lu de la page portait la taille d'échantillon — déjà mieux que la
+ * plupart — et laissait le lecteur en déduire la précision. Résultat : `gen-4b` à 79,2 % et
+ * `rules` à 79,7 % se lisent comme un écart, alors qu'à ces effectifs-là aucun des deux ne
+ * sait où il est à sept points près.
+ *
+ * La colonne `±` publie la PIRE demi-largeur de la ligne, jamais la typique : si le lecteur
+ * s'y fie, il se trompe toujours du côté prudent. Un résumé qui flatte serait pire que pas de
+ * résumé du tout, puisqu'il aurait l'autorité d'un intervalle sans en avoir la garantie.
+ */
+test("le tableau d'extraction publie la précision, pas seulement la taille d'échantillon", () => {
+  const readme = readFileSync(fileURLToPath(new URL("../README.md", import.meta.url)), "utf8");
+  const bloc = readme.match(/<!-- figures:extraction -->([\s\S]*?)<!-- \/figures:extraction -->/)?.[1];
+  assert.ok(bloc, "le bloc d'extraction a disparu du README.");
+
+  const p = readProfiles();
+  assert.ok(p, "pas de profil gelé.");
+
+  for (const ligne of bloc!.split("\n").filter((l) => /^\| `/.test(l))) {
+    const palier = ligne.match(/^\| `([^`]+)`/)![1]!;
+    const publie = ligne.match(/±([\d.]+)/)?.[1];
+    assert.ok(publie,
+      `la ligne \`${palier}\` ne porte pas de colonne ± : le lecteur doit calculer lui-même la `
+      + `précision depuis le n, et il ne le fera pas.`);
+
+    /* RECALCULÉ PAR UN CHEMIN INDÉPENDANT de celui du générateur : on relit le profil plutôt
+       que de refaire confiance à ce que la page affiche. */
+    const attendu = Math.max(...FIELDS.map((f) => {
+      const q = (p as never as Record<string, Record<string, Record<string, { accuracy: number; items: number }>>>)
+        .extraction[palier]![f]!;
+      return precision(Math.round(q.accuracy * q.items), q.items);
+    }));
+    assert.equal(Number(publie), Number(attendu.toFixed(1)),
+      `\`${palier}\` publie ±${publie} alors que la pire demi-largeur de ses cinq champs vaut `
+      + `±${attendu.toFixed(1)}. Une marge sous-estimée est pire qu'aucune marge : elle a `
+      + `l'autorité d'un intervalle sans en avoir la garantie.`);
+  }
+
+  /* ET LA PHRASE QUI L'EXPLIQUE DOIT RESTER : une colonne « ± » sans sa définition se lit comme
+     un écart-type, une erreur standard ou une tolérance — trois choses différentes. */
+  assert.match(bloc!, /widest half-interval/,
+    "la colonne ± n'est plus définie. Trois lecteurs lui donneront trois sens.");
 });

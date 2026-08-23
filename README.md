@@ -58,7 +58,7 @@ npm test           # types, README figures, landing.json, and the suite
 ```
 
 <!-- figures:tests -->
-**148 tests** across 9 files, counted from the sources rather than typed here.
+**149 tests** across 9 files, counted from the sources rather than typed here.
 <!-- /figures:tests -->
 
 Everything runs locally. No API key, nothing leaves the machine, and anyone who clones this
@@ -87,14 +87,16 @@ The corpus is now split: the rules were developed on one set of phrasings and ar
 on another they never saw. Measured honestly, they collapse.
 
 <!-- figures:extraction -->
-| Tier | name | birth | document | country | address | Latency | n |
-|---|---|---|---|---|---|---|---|
-| `rules` | 0.0 % | 100.0 % | 79.7 % | 100.0 % | 0.0 % | 0.0 ms | 1000 |
-| `small` | 46.6 % | 97.9 % | 57.7 % | 100.0 % | 43.0 % | 19.1 ms | 1000 |
-| `large` | 96.6 % | 100.0 % | 64.4 % | 100.0 % | 32.8 % | 45.2 ms | 1000 |
-| `gen-0.6b` | 80.8 % | 87.5 % | 70.0 % | 83.3 % | 75.0 % | 233.4 ms | 120 |
-| `gen-4b` | 89.2 % | 99.2 % | 79.2 % | 100.0 % | 95.8 % | 788.0 ms | 120 |
-| `gen-8b` | 91.7 % | 100.0 % | 83.3 % | 100.0 % | 82.5 % | 1194.5 ms | 120 |
+| Tier | name | birth | document | country | address | Latency | n | ± |
+|---|---|---|---|---|---|---|---|---|
+| `rules` | 0.0 % | 100.0 % | 79.7 % | 100.0 % | 0.0 % | 0.0 ms | 1000 | ±2.5 |
+| `small` | 46.6 % | 97.9 % | 57.7 % | 100.0 % | 43.0 % | 19.1 ms | 1000 | ±3.1 |
+| `large` | 96.6 % | 100.0 % | 64.4 % | 100.0 % | 32.8 % | 45.2 ms | 1000 | ±3.0 |
+| `gen-0.6b` | 80.8 % | 87.5 % | 70.0 % | 83.3 % | 75.0 % | 233.4 ms | 120 | ±8.1 |
+| `gen-4b` | 89.2 % | 99.2 % | 79.2 % | 100.0 % | 95.8 % | 788.0 ms | 120 | ±7.2 |
+| `gen-8b` | 91.7 % | 100.0 % | 83.3 % | 100.0 % | 82.5 % | 1194.5 ms | 120 | ±6.8 |
+
+**The `±` column is the widest half-interval on that row**, at 95 %, taken over the five fields — so it never flatters. Two rates on the same row that differ by less than twice it are not separated by this sample, and the generative tiers carry roughly 7 points of it against 3 for the encoders, because they were measured on fewer cases.
 <!-- /figures:extraction -->
 
 Two things fall out of that table, and neither is guessable:
