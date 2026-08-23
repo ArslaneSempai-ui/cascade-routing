@@ -443,7 +443,13 @@ const commandes = (() => {
        On ne remet pas de chiffre ici : ce dépôt s'interdit les nombres tapés à
        la main, et la taille est déjà publiée plus bas, mesurée. On dit le fait
        et on laisse le chiffre où il est vérifiable. */
-    ["test", "types, figures and the suite — start here; the first run downloads the two extraction models and caches them (sizes below)"],
+    /* LA PROMESSE EST REDEVENUE VRAIE, donc on la remet — mais bornée. `collect()` sert
+       désormais une galerie mise en cache et scellée sur ses entrées, y compris le texte
+       des modules qui la produisent : tant que le code ne bouge pas, aucun modèle n'est
+       chargé et la suite tombe de 103 s à 22 s. Quand la clé diffère, l'outil recalcule et
+       le dit — et c'est là qu'il télécharge. Le libellé porte cette borne : une promesse
+       sans sa condition est la même faute qu'avant, écrite dans l'autre sens. */
+    ["test", "types, figures and the suite — start here; downloads nothing while the cached failure gallery matches the code"],
     ["measure", "measure the encoder tiers and freeze the profile (1.26 GB on the first run)"],
     ["optimise", "the routing, and what the next improvement would cost"],
     ["failures", "every case it gets wrong, with its input and its output"],

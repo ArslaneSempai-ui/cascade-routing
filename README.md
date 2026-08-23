@@ -18,7 +18,7 @@ about two minutes.
 <!-- figures:commandes -->
 | Command | What it does, in the order that makes sense |
 |---|---|
-| `npm run test` | types, figures and the suite — start here; the first run downloads the two extraction models and caches them (sizes below) |
+| `npm run test` | types, figures and the suite — start here; downloads nothing while the cached failure gallery matches the code |
 | `npm run measure` | measure the encoder tiers and freeze the profile (1.26 GB on the first run) |
 | `npm run optimise` | the routing, and what the next improvement would cost |
 | `npm run failures` | every case it gets wrong, with its input and its output |
@@ -55,7 +55,7 @@ npm test           # types, README figures, landing.json, and the suite
 ```
 
 <!-- figures:tests -->
-**125 tests** across 9 files, counted from the sources rather than typed here.
+**126 tests** across 9 files, counted from the sources rather than typed here.
 <!-- /figures:tests -->
 
 ```

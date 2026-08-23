@@ -1,4 +1,5 @@
 import { test } from "node:test";
+import { createHash } from "node:crypto";
 import { PREMIER_COMMIT_MULTI_FORMULATION } from "./landing.ts";
 import assert from "node:assert/strict";
 import { readFileSync, existsSync, readdirSync } from "node:fs";
@@ -1530,4 +1531,40 @@ test("le relevé livré correspond à son empreinte, et une valeur changée la f
   for (const k of Object.keys(brut).reverse()) remue[k] = brut[k];
   assert.equal(empreinteDuReleve(remue), empreinteDuReleve(brut),
     "l'empreinte dépend de l'ordre des clés : elle signalera des faux positifs.");
+});
+
+
+/*
+ * LE CACHE DE LA GALERIE PORTE L'EMPREINTE DE SES ENTRÉES — LE CODE COMPRIS.
+ *
+ * `collect()` faisait 1 800 appels de modèle à chaque exécution, y compris en `--check` :
+ * c'est ce qui faisait télécharger 722 Mo à la première commande recommandée et coûtait
+ * 59 des 103 secondes de la suite. Le résultat est déterministe, donc le cache est
+ * légitime — et c'est précisément ce qui le rend dangereux. Un cache dont la clé ne couvre
+ * pas tout ce qui décide du résultat est un générateur de faux résultats REPRODUCTIBLES :
+ * il rend toujours la même chose, donc on lui fait confiance, et il peut être périmé depuis
+ * des semaines sans que rien ne le dise.
+ *
+ * Le piège que ce test ferme : une clé qui couvrirait les révisions de modèles et la graine
+ * du corpus mais PAS le code. Changer une règle d'extraction change la galerie sans changer
+ * un seul paramètre, et le README publierait une galerie qui ne correspond plus à ce qu'il
+ * décrit. On éprouve donc l'invalidation, pas seulement la présence.
+ */
+test("la galerie en cache s'invalide quand le code qui la produit change", () => {
+  const chemin = new URL("../failures-reference.json", import.meta.url).pathname;
+  assert.ok(existsSync(chemin),
+    "failures-reference.json manque : « npm run failures » le reconstruit.");
+  const c = JSON.parse(readFileSync(chemin, "utf8")) as { entrees?: string; echecs?: unknown[] };
+  assert.equal(typeof c.entrees, "string", "le cache ne porte pas la clé de ses entrées.");
+  assert.ok(Array.isArray(c.echecs) && c.echecs.length > 0, "le cache est vide.");
+
+  /* CONTRE-ÉPREUVE : la clé doit dépendre du texte des modules. Sans elle, une clé
+     constante passerait l'assertion du dessus sans rien garantir. On recalcule la même
+     empreinte que `failures.ts`, une fois telle quelle et une fois avec une source
+     modifiée d'un caractère, et les deux doivent différer. */
+  const sources = ["tiers.ts", "corpus.ts", "failures.ts"]
+    .map((f) => readFileSync(new URL(`./${f}`, import.meta.url).pathname, "utf8")).join("\u0000");
+  const h = (x: string) => createHash("sha256").update(x).digest("hex");
+  assert.notEqual(h(sources), h(sources + " "),
+    "l'empreinte du code ne bouge pas quand le code bouge : la clé ne protège rien.");
 });

@@ -1,0 +1,4975 @@
+{
+  "entrees": "8f8fa00c6d87169e",
+  "quoi": "Galerie des échecs, mise en cache. La clé « entrees » couvre le corpus, les révisions de modèles et le texte des modules qui produisent ce résultat. Si elle ne correspond pas, l'outil recalcule au lieu de servir ceci.",
+  "calculeeLe": "2026-08-23T10:48:04.211Z",
+  "echecs": [
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0001",
+      "text": "Marcus Ferreira — dob 21 October 1961 — doc no FR-1856-M — Portugal — lives 106 Odos Ermou, Rotterdam (updated by branch",
+      "expected": "Marcus Ferreira",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0002",
+      "text": "KYC REVIEW ⏎ Subject ......... Leila Haddad ⏎ Birth ........... 10/07/1987 ⏎ Document ........ IT-5560-K ⏎ Citizenship .",
+      "expected": "Leila Haddad",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0003",
+      "text": "KYC REVIEW ⏎ Subject ......... Sofia Rossi ⏎ Birth ........... 26/01/1976 ⏎ Document ........ PL-7451-M ⏎ Citizenship ..",
+      "expected": "Sofia Rossi",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0004",
+      "text": "KYC REVIEW ⏎ Subject ......... Nadia Mbeki ⏎ Birth ........... 1 August 1955 ⏎ Document ........ IT-3621-K ⏎ Citizenship",
+      "expected": "Nadia Mbeki",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0005",
+      "text": "KYC REVIEW ⏎ Subject ......... Tomas Novak ⏎ Birth ........... 5 January 1955 ⏎ Document ........ IT-7212-M ⏎ Citizenshi",
+      "expected": "Tomas Novak",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0006",
+      "text": "KYC REVIEW ⏎ Subject ......... Viktor Chen ⏎ Birth ........... 15/08/1988 ⏎ Document ........ FR-3855-T ⏎ Citizenship ..",
+      "expected": "Viktor Chen",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0007",
+      "text": "Further to our call: the person concerned is Viktor Mbeki. We hold FR-9637-T on file. Born 11 August 1974. Their postal ",
+      "expected": "Viktor Mbeki",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0008",
+      "text": "re Viktor Vasquez / Italy — address 125 rue Victor Hugo, Lyon — idIT-2390-X — born 17 April 1968 — file opened pending r",
+      "expected": "Viktor Vasquez",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0009",
+      "text": "Piotr Novak — dob 03/05/1991 — doc no PT-8733-K — France — lives 188 avenue des Fleurs, Lyon (updated by branch staff, n",
+      "expected": "Piotr Novak",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0010",
+      "text": "Leila Okonkwo — dob 10 October 1967 — doc no IT-1946-K — Netherlands — lives 89 Odos Ermou, Rotterdam (updated by branch",
+      "expected": "Leila Okonkwo",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0011",
+      "text": "KYC REVIEW ⏎ Subject ......... Tomas Mbeki ⏎ Birth ........... 25/05/1984 ⏎ Document ........ PL-2033-M ⏎ Citizenship ..",
+      "expected": "Tomas Mbeki",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0012",
+      "text": "Further to our call: the person concerned is Tomas Morozov. We hold PT-2299-M on file. Born 9 August 1959. Their postal ",
+      "expected": "Tomas Morozov",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0013",
+      "text": "re Amina Vasquez / Portugal — address 172 Rua da Prata, Lyon — idIT-7286-M — born 27 February 1965 — file opened pending",
+      "expected": "Amina Vasquez",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0014",
+      "text": "Piotr Lindqvist — dob 19/06/1981 — doc no PT-5149-M — Poland — lives 178 ulica Nowy Świat, Valencia (updated by branch s",
+      "expected": "Piotr Lindqvist",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0015",
+      "text": "Application received from Sofia Morozov of 9 ulica Nowy Świat, Milan; the identity reference supplied was PL-4345-K and ",
+      "expected": "Sofia Morozov",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0016",
+      "text": "Application received from Marcus Lindqvist of 192 avenue des Fleurs, Valencia; the identity reference supplied was PT-85",
+      "expected": "Marcus Lindqvist",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0017",
+      "text": "re Amina Okonkwo / Italy — address 9 rue Victor Hugo, Rotterdam — idIT-4463-M — born 23/09/1973 — file opened pending re",
+      "expected": "Amina Okonkwo",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0018",
+      "text": "Further to our call: the person concerned is Viktor Lindqvist. We hold FR-7844-M on file. Born 13 January 1994. Their po",
+      "expected": "Viktor Lindqvist",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0019",
+      "text": "Viktor Vasquez — dob 15/08/2001 — doc no PT-7753-K — Germany — lives 120 ulica Nowy Świat, Paris (updated by branch staf",
+      "expected": "Viktor Vasquez",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0020",
+      "text": "Tomas Haddad — dob 27 November 1980 — doc no FR-5223-K — Poland — lives 20 ulica Nowy Świat, Valencia (updated by branch",
+      "expected": "Tomas Haddad",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0021",
+      "text": "Application received from Viktor Novak of 152 via Garibaldi, Valencia; the identity reference supplied was PT-1561-T and",
+      "expected": "Viktor Novak",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0022",
+      "text": "Further to our call: the person concerned is Ines Okonkwo. We hold IT-3273-X on file. Born 28 December 1963. Their posta",
+      "expected": "Ines Okonkwo",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0023",
+      "text": "Application received from Amina Mbeki of 113 Odos Ermou, Lisbon; the identity reference supplied was FR-8412-X and the s",
+      "expected": "Amina Mbeki",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0024",
+      "text": "Further to our call: the person concerned is Karim Vasquez. We hold IT-9885-M on file. Born 20 February 1958. Their post",
+      "expected": "Karim Vasquez",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0025",
+      "text": "Further to our call: the person concerned is Tomas Chen. We hold IT-9786-T on file. Born 8 April 1969. Their postal addr",
+      "expected": "Tomas Chen",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0026",
+      "text": "Further to our call: the person concerned is Ines Chen. We hold FR-8951-T on file. Born 2 June 1991. Their postal addres",
+      "expected": "Ines Chen",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0027",
+      "text": "re Sofia Haddad / France — address 76 rue Victor Hugo, Milan — idPT-6548-X — born 03/10/1956 — file opened pending revie",
+      "expected": "Sofia Haddad",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0028",
+      "text": "Further to our call: the person concerned is Amina Haddad. We hold PL-4801-K on file. Born 5 January 1960. Their postal ",
+      "expected": "Amina Haddad",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0029",
+      "text": "re Karim Lindqvist / Portugal — address 73 Rua da Prata, Valencia — idGR-1222-K — born 16/06/1958 — file opened pending ",
+      "expected": "Karim Lindqvist",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0030",
+      "text": "Further to our call: the person concerned is Piotr Vasquez. We hold IT-7435-K on file. Born 26/08/1955. Their postal add",
+      "expected": "Piotr Vasquez",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0031",
+      "text": "Application received from Amina Haddad of 146 ulica Nowy Świat, Lisbon; the identity reference supplied was PT-9822-T an",
+      "expected": "Amina Haddad",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0032",
+      "text": "Application received from Marcus Mbeki of 3 ulica Nowy Świat, Warsaw; the identity reference supplied was GR-2602-T and ",
+      "expected": "Marcus Mbeki",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0033",
+      "text": "KYC REVIEW ⏎ Subject ......... Nadia Novak ⏎ Birth ........... 28 March 1996 ⏎ Document ........ PT-2368-K ⏎ Citizenship",
+      "expected": "Nadia Novak",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0034",
+      "text": "Karim Haddad — dob 25/07/1967 — doc no PL-1424-T — Italy — lives 99 avenue des Fleurs, Milan (updated by branch staff, n",
+      "expected": "Karim Haddad",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0035",
+      "text": "Piotr Chen — dob 23 June 2004 — doc no FR-9868-K — Greece — lives 35 ulica Nowy Świat, Paris (updated by branch staff, n",
+      "expected": "Piotr Chen",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0036",
+      "text": "re Marcus Ferreira / Greece — address 162 Rua da Prata, Valencia — idIT-9114-X — born 21 September 1969 — file opened pe",
+      "expected": "Marcus Ferreira",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0037",
+      "text": "Further to our call: the person concerned is Amina Novak. We hold IT-3300-T on file. Born 07/09/2002. Their postal addre",
+      "expected": "Amina Novak",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0038",
+      "text": "Further to our call: the person concerned is Ines Vasquez. We hold PT-6432-K on file. Born 28/12/1969. Their postal addr",
+      "expected": "Ines Vasquez",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0039",
+      "text": "Further to our call: the person concerned is Amina Mbeki. We hold IT-2198-T on file. Born 7 September 1996. Their postal",
+      "expected": "Amina Mbeki",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0040",
+      "text": "Leila Rossi — dob 14/04/1957 — doc no FR-9514-X — Netherlands — lives 27 avenue des Fleurs, Rotterdam (updated by branch",
+      "expected": "Leila Rossi",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0041",
+      "text": "KYC REVIEW ⏎ Subject ......... Sofia Morozov ⏎ Birth ........... 23/07/1990 ⏎ Document ........ PL-5725-K ⏎ Citizenship ",
+      "expected": "Sofia Morozov",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0042",
+      "text": "Sofia Okonkwo — dob 16 September 1976 — doc no PT-4519-X — Germany — lives 62 via Garibaldi, Athens (updated by branch s",
+      "expected": "Sofia Okonkwo",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0043",
+      "text": "Further to our call: the person concerned is Viktor Novak. We hold PT-4874-T on file. Born 10 March 1975. Their postal a",
+      "expected": "Viktor Novak",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0044",
+      "text": "re Nadia Okonkwo / Poland — address 109 rue Victor Hugo, Milan — idPT-6884-M — born 21/12/1988 — file opened pending rev",
+      "expected": "Nadia Okonkwo",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0045",
+      "text": "Further to our call: the person concerned is Karim Vasquez. We hold IT-4511-M on file. Born 12 December 1973. Their post",
+      "expected": "Karim Vasquez",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0046",
+      "text": "Further to our call: the person concerned is Leila Morozov. We hold GR-1811-K on file. Born 11 May 2004. Their postal ad",
+      "expected": "Leila Morozov",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0047",
+      "text": "re Nadia Lindqvist / Italy — address 97 Odos Ermou, Lyon — idPT-6646-T — born 16 June 1955 — file opened pending review",
+      "expected": "Nadia Lindqvist",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0048",
+      "text": "Application received from Amina Morozov of 19 via Garibaldi, Paris; the identity reference supplied was IT-9503-T and th",
+      "expected": "Amina Morozov",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0049",
+      "text": "re Tomas Chen / Germany — address 94 via Garibaldi, Warsaw — idIT-5462-K — born 14 September 1988 — file opened pending ",
+      "expected": "Tomas Chen",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0050",
+      "text": "KYC REVIEW ⏎ Subject ......... Viktor Rossi ⏎ Birth ........... 17/10/1977 ⏎ Document ........ IT-1791-M ⏎ Citizenship .",
+      "expected": "Viktor Rossi",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0051",
+      "text": "Application received from Karim Haddad of 114 Odos Ermou, Lisbon; the identity reference supplied was PL-2444-M and the ",
+      "expected": "Karim Haddad",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0052",
+      "text": "KYC REVIEW ⏎ Subject ......... Marcus Novak ⏎ Birth ........... 09/08/1970 ⏎ Document ........ IT-9510-X ⏎ Citizenship .",
+      "expected": "Marcus Novak",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0053",
+      "text": "KYC REVIEW ⏎ Subject ......... Sofia Haddad ⏎ Birth ........... 20/08/1989 ⏎ Document ........ PT-4398-K ⏎ Citizenship .",
+      "expected": "Sofia Haddad",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0054",
+      "text": "Application received from Leila Mbeki of 23 rue Victor Hugo, Rotterdam; the identity reference supplied was PL-5605-M an",
+      "expected": "Leila Mbeki",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0055",
+      "text": "Ines Lindqvist — dob 07/01/1965 — doc no PL-6425-X — France — lives 86 via Garibaldi, Athens (updated by branch staff, n",
+      "expected": "Ines Lindqvist",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0056",
+      "text": "re Viktor Novak / France — address 130 ulica Nowy Świat, Rotterdam — idFR-6783-X — born 25 May 1976 — file opened pendin",
+      "expected": "Viktor Novak",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0057",
+      "text": "Amina Chen — dob 24 July 1969 — doc no GR-7832-T — Netherlands — lives 178 rue Victor Hugo, Valencia (updated by branch ",
+      "expected": "Amina Chen",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0058",
+      "text": "Application received from Amina Mbeki of 171 Rua da Prata, Milan; the identity reference supplied was FR-8857-M and the ",
+      "expected": "Amina Mbeki",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0059",
+      "text": "Application received from Sofia Mbeki of 80 rue Victor Hugo, Paris; the identity reference supplied was PT-6986-X and th",
+      "expected": "Sofia Mbeki",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0060",
+      "text": "KYC REVIEW ⏎ Subject ......... Ines Ferreira ⏎ Birth ........... 25/03/1977 ⏎ Document ........ PL-8149-X ⏎ Citizenship ",
+      "expected": "Ines Ferreira",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0061",
+      "text": "Application received from Leila Ferreira of 23 Odos Ermou, Warsaw; the identity reference supplied was PL-6793-T and the",
+      "expected": "Leila Ferreira",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0062",
+      "text": "re Viktor Vasquez / Portugal — address 107 via Garibaldi, Lisbon — idPL-2630-K — born 23 October 1995 — file opened pend",
+      "expected": "Viktor Vasquez",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0063",
+      "text": "Further to our call: the person concerned is Ines Haddad. We hold PL-1411-K on file. Born 18 May 1998. Their postal addr",
+      "expected": "Ines Haddad",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0064",
+      "text": "Further to our call: the person concerned is Nadia Ferreira. We hold PT-6279-T on file. Born 02/02/1982. Their postal ad",
+      "expected": "Nadia Ferreira",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0065",
+      "text": "Application received from Tomas Novak of 139 ulica Nowy Świat, Milan; the identity reference supplied was GR-6593-K and ",
+      "expected": "Tomas Novak",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0066",
+      "text": "Leila Rossi — dob 9 March 1987 — doc no GR-6724-M — Netherlands — lives 91 Rua da Prata, Paris (updated by branch staff,",
+      "expected": "Leila Rossi",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0067",
+      "text": "re Leila Mbeki / Greece — address 182 Odos Ermou, Lisbon — idIT-7078-T — born 21/12/1987 — file opened pending review",
+      "expected": "Leila Mbeki",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0068",
+      "text": "Piotr Mbeki — dob 19/01/1996 — doc no PL-7881-K — Spain — lives 68 rue Victor Hugo, Warsaw (updated by branch staff, no ",
+      "expected": "Piotr Mbeki",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0069",
+      "text": "KYC REVIEW ⏎ Subject ......... Karim Okonkwo ⏎ Birth ........... 6 May 2000 ⏎ Document ........ PT-1584-M ⏎ Citizenship ",
+      "expected": "Karim Okonkwo",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0070",
+      "text": "KYC REVIEW ⏎ Subject ......... Ines Ferreira ⏎ Birth ........... 18/02/1971 ⏎ Document ........ GR-3338-K ⏎ Citizenship ",
+      "expected": "Ines Ferreira",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0071",
+      "text": "Further to our call: the person concerned is Piotr Ferreira. We hold FR-2396-M on file. Born 17 December 1963. Their pos",
+      "expected": "Piotr Ferreira",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0072",
+      "text": "Application received from Tomas Novak of 70 via Garibaldi, Valencia; the identity reference supplied was GR-3057-X and t",
+      "expected": "Tomas Novak",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0073",
+      "text": "Karim Lindqvist — dob 07/03/1962 — doc no PL-2193-X — Italy — lives 140 rue Victor Hugo, Valencia (updated by branch sta",
+      "expected": "Karim Lindqvist",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0074",
+      "text": "Application received from Marcus Vasquez of 53 Rua da Prata, Valencia; the identity reference supplied was PL-1678-K and",
+      "expected": "Marcus Vasquez",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0075",
+      "text": "re Marcus Novak / France — address 157 ulica Nowy Świat, Milan — idPL-4902-X — born 27/05/1968 — file opened pending rev",
+      "expected": "Marcus Novak",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0076",
+      "text": "Application received from Marcus Lindqvist of 125 Rua da Prata, Lisbon; the identity reference supplied was GR-3917-M an",
+      "expected": "Marcus Lindqvist",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0077",
+      "text": "Sofia Chen — dob 23/10/1986 — doc no FR-7804-T — Germany — lives 38 Rua da Prata, Valencia (updated by branch staff, no ",
+      "expected": "Sofia Chen",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0078",
+      "text": "KYC REVIEW ⏎ Subject ......... Piotr Lindqvist ⏎ Birth ........... 16/10/1979 ⏎ Document ........ PL-7240-T ⏎ Citizenshi",
+      "expected": "Piotr Lindqvist",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0079",
+      "text": "Application received from Piotr Haddad of 150 ulica Nowy Świat, Rotterdam; the identity reference supplied was GR-1177-K",
+      "expected": "Piotr Haddad",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0080",
+      "text": "KYC REVIEW ⏎ Subject ......... Viktor Mbeki ⏎ Birth ........... 21 February 2000 ⏎ Document ........ PT-3826-M ⏎ Citizen",
+      "expected": "Viktor Mbeki",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0081",
+      "text": "Nadia Lindqvist — dob 24/12/1990 — doc no GR-1255-M — Germany — lives 4 Odos Ermou, Warsaw (updated by branch staff, no ",
+      "expected": "Nadia Lindqvist",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0082",
+      "text": "Application received from Leila Okonkwo of 79 Rua da Prata, Warsaw; the identity reference supplied was FR-4733-K and th",
+      "expected": "Leila Okonkwo",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0083",
+      "text": "Further to our call: the person concerned is Sofia Rossi. We hold IT-3507-K on file. Born 9 January 1993. Their postal a",
+      "expected": "Sofia Rossi",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0084",
+      "text": "Further to our call: the person concerned is Sofia Vasquez. We hold IT-7884-K on file. Born 6 March 1996. Their postal a",
+      "expected": "Sofia Vasquez",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0085",
+      "text": "Further to our call: the person concerned is Piotr Vasquez. We hold PT-7025-K on file. Born 01/12/1987. Their postal add",
+      "expected": "Piotr Vasquez",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0086",
+      "text": "Nadia Morozov — dob 17/09/1995 — doc no IT-2889-X — Spain — lives 72 via Garibaldi, Rotterdam (updated by branch staff, ",
+      "expected": "Nadia Morozov",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0087",
+      "text": "Application received from Piotr Mbeki of 19 avenue des Fleurs, Athens; the identity reference supplied was GR-6474-X and",
+      "expected": "Piotr Mbeki",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0088",
+      "text": "Nadia Ferreira — dob 5 December 1963 — doc no PT-8498-T — Germany — lives 80 Rua da Prata, Lisbon (updated by branch sta",
+      "expected": "Nadia Ferreira",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0089",
+      "text": "KYC REVIEW ⏎ Subject ......... Viktor Haddad ⏎ Birth ........... 18 May 1981 ⏎ Document ........ FR-5383-M ⏎ Citizenship",
+      "expected": "Viktor Haddad",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0090",
+      "text": "re Ines Haddad / Poland — address 101 Rua da Prata, Rotterdam — idGR-2645-X — born 4 June 1960 — file opened pending rev",
+      "expected": "Ines Haddad",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0091",
+      "text": "KYC REVIEW ⏎ Subject ......... Leila Novak ⏎ Birth ........... 23/02/1984 ⏎ Document ........ PT-5873-X ⏎ Citizenship ..",
+      "expected": "Leila Novak",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0092",
+      "text": "Piotr Haddad — dob 10/07/1971 — doc no PT-7165-X — Spain — lives 140 avenue des Fleurs, Lyon (updated by branch staff, n",
+      "expected": "Piotr Haddad",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0093",
+      "text": "KYC REVIEW ⏎ Subject ......... Amina Okonkwo ⏎ Birth ........... 24 May 1982 ⏎ Document ........ PT-1067-X ⏎ Citizenship",
+      "expected": "Amina Okonkwo",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0094",
+      "text": "Application received from Tomas Novak of 122 avenue des Fleurs, Warsaw; the identity reference supplied was PT-4421-X an",
+      "expected": "Tomas Novak",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0095",
+      "text": "re Marcus Haddad / Italy — address 101 Odos Ermou, Valencia — idPT-1654-K — born 15 January 1985 — file opened pending r",
+      "expected": "Marcus Haddad",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0096",
+      "text": "Nadia Mbeki — dob 8 October 1974 — doc no IT-5809-K — France — lives 88 avenue des Fleurs, Lisbon (updated by branch sta",
+      "expected": "Nadia Mbeki",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0097",
+      "text": "Application received from Sofia Okonkwo of 64 avenue des Fleurs, Warsaw; the identity reference supplied was IT-7274-T a",
+      "expected": "Sofia Okonkwo",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0098",
+      "text": "re Sofia Vasquez / Portugal — address 51 Rua da Prata, Lisbon — idPT-1490-T — born 20 November 1971 — file opened pendin",
+      "expected": "Sofia Vasquez",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0099",
+      "text": "re Viktor Haddad / Germany — address 124 via Garibaldi, Valencia — idIT-7793-T — born 07/07/1998 — file opened pending r",
+      "expected": "Viktor Haddad",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0100",
+      "text": "Application received from Ines Lindqvist of 156 ulica Nowy Świat, Lisbon; the identity reference supplied was IT-1302-K ",
+      "expected": "Ines Lindqvist",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0101",
+      "text": "KYC REVIEW ⏎ Subject ......... Marcus Vasquez ⏎ Birth ........... 15/02/1972 ⏎ Document ........ PL-5020-M ⏎ Citizenship",
+      "expected": "Marcus Vasquez",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0102",
+      "text": "re Viktor Ferreira / Italy — address 66 Odos Ermou, Athens — idGR-7666-K — born 03/12/2000 — file opened pending review",
+      "expected": "Viktor Ferreira",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0103",
+      "text": "Further to our call: the person concerned is Sofia Ferreira. We hold PL-4268-T on file. Born 24 April 1961. Their postal",
+      "expected": "Sofia Ferreira",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0104",
+      "text": "Nadia Vasquez — dob 24 August 1962 — doc no PT-1006-X — Spain — lives 58 rue Victor Hugo, Lyon (updated by branch staff,",
+      "expected": "Nadia Vasquez",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0105",
+      "text": "Ines Mbeki — dob 10 September 1997 — doc no PT-3152-K — Portugal — lives 184 rue Victor Hugo, Athens (updated by branch ",
+      "expected": "Ines Mbeki",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0106",
+      "text": "Application received from Sofia Novak of 9 Rua da Prata, Rotterdam; the identity reference supplied was IT-7802-K and th",
+      "expected": "Sofia Novak",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0107",
+      "text": "KYC REVIEW ⏎ Subject ......... Amina Haddad ⏎ Birth ........... 10 June 2001 ⏎ Document ........ PT-2567-K ⏎ Citizenship",
+      "expected": "Amina Haddad",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0108",
+      "text": "KYC REVIEW ⏎ Subject ......... Sofia Okonkwo ⏎ Birth ........... 8 October 1958 ⏎ Document ........ PL-7466-M ⏎ Citizens",
+      "expected": "Sofia Okonkwo",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0109",
+      "text": "Tomas Lindqvist — dob 2 March 1965 — doc no IT-2578-T — Italy — lives 120 via Garibaldi, Lisbon (updated by branch staff",
+      "expected": "Tomas Lindqvist",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0110",
+      "text": "Application received from Amina Haddad of 97 avenue des Fleurs, Lisbon; the identity reference supplied was PL-9818-M an",
+      "expected": "Amina Haddad",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0111",
+      "text": "re Karim Morozov / Germany — address 138 Odos Ermou, Rotterdam — idIT-2397-X — born 5 September 1964 — file opened pendi",
+      "expected": "Karim Morozov",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0112",
+      "text": "KYC REVIEW ⏎ Subject ......... Tomas Okonkwo ⏎ Birth ........... 7 September 1985 ⏎ Document ........ PT-3596-X ⏎ Citize",
+      "expected": "Tomas Okonkwo",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0113",
+      "text": "Piotr Mbeki — dob 23 November 1990 — doc no PT-3499-X — Greece — lives 128 Rua da Prata, Lyon (updated by branch staff, ",
+      "expected": "Piotr Mbeki",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0114",
+      "text": "re Nadia Vasquez / Poland — address 8 Rua da Prata, Lisbon — idGR-1271-X — born 04/04/1968 — file opened pending review",
+      "expected": "Nadia Vasquez",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0115",
+      "text": "Nadia Novak — dob 20 January 2000 — doc no GR-6509-M — Portugal — lives 44 Rua da Prata, Athens (updated by branch staff",
+      "expected": "Nadia Novak",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0116",
+      "text": "Viktor Chen — dob 27 December 1975 — doc no PL-7982-T — France — lives 66 via Garibaldi, Valencia (updated by branch sta",
+      "expected": "Viktor Chen",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0117",
+      "text": "Nadia Novak — dob 28/03/2000 — doc no GR-7686-K — Greece — lives 15 rue Victor Hugo, Lisbon (updated by branch staff, no",
+      "expected": "Nadia Novak",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0118",
+      "text": "Further to our call: the person concerned is Ines Mbeki. We hold FR-2665-M on file. Born 6 December 1963. Their postal a",
+      "expected": "Ines Mbeki",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0119",
+      "text": "Application received from Sofia Chen of 88 rue Victor Hugo, Milan; the identity reference supplied was PL-1822-X and the",
+      "expected": "Sofia Chen",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "name",
+      "recordId": "D-0120",
+      "text": "Application received from Piotr Lindqvist of 11 avenue des Fleurs, Athens; the identity reference supplied was PL-2153-K",
+      "expected": "Piotr Lindqvist",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "document",
+      "recordId": "D-0008",
+      "text": "re Viktor Vasquez / Italy — address 125 rue Victor Hugo, Lyon — idIT-2390-X — born 17 April 1968 — file opened pending r",
+      "expected": "IT-2390-X",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "document",
+      "recordId": "D-0013",
+      "text": "re Amina Vasquez / Portugal — address 172 Rua da Prata, Lyon — idIT-7286-M — born 27 February 1965 — file opened pending",
+      "expected": "IT-7286-M",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "document",
+      "recordId": "D-0017",
+      "text": "re Amina Okonkwo / Italy — address 9 rue Victor Hugo, Rotterdam — idIT-4463-M — born 23/09/1973 — file opened pending re",
+      "expected": "IT-4463-M",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "document",
+      "recordId": "D-0027",
+      "text": "re Sofia Haddad / France — address 76 rue Victor Hugo, Milan — idPT-6548-X — born 03/10/1956 — file opened pending revie",
+      "expected": "PT-6548-X",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "document",
+      "recordId": "D-0029",
+      "text": "re Karim Lindqvist / Portugal — address 73 Rua da Prata, Valencia — idGR-1222-K — born 16/06/1958 — file opened pending ",
+      "expected": "GR-1222-K",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "document",
+      "recordId": "D-0036",
+      "text": "re Marcus Ferreira / Greece — address 162 Rua da Prata, Valencia — idIT-9114-X — born 21 September 1969 — file opened pe",
+      "expected": "IT-9114-X",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "document",
+      "recordId": "D-0044",
+      "text": "re Nadia Okonkwo / Poland — address 109 rue Victor Hugo, Milan — idPT-6884-M — born 21/12/1988 — file opened pending rev",
+      "expected": "PT-6884-M",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "document",
+      "recordId": "D-0047",
+      "text": "re Nadia Lindqvist / Italy — address 97 Odos Ermou, Lyon — idPT-6646-T — born 16 June 1955 — file opened pending review",
+      "expected": "PT-6646-T",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "document",
+      "recordId": "D-0049",
+      "text": "re Tomas Chen / Germany — address 94 via Garibaldi, Warsaw — idIT-5462-K — born 14 September 1988 — file opened pending ",
+      "expected": "IT-5462-K",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "document",
+      "recordId": "D-0056",
+      "text": "re Viktor Novak / France — address 130 ulica Nowy Świat, Rotterdam — idFR-6783-X — born 25 May 1976 — file opened pendin",
+      "expected": "FR-6783-X",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "document",
+      "recordId": "D-0062",
+      "text": "re Viktor Vasquez / Portugal — address 107 via Garibaldi, Lisbon — idPL-2630-K — born 23 October 1995 — file opened pend",
+      "expected": "PL-2630-K",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "document",
+      "recordId": "D-0067",
+      "text": "re Leila Mbeki / Greece — address 182 Odos Ermou, Lisbon — idIT-7078-T — born 21/12/1987 — file opened pending review",
+      "expected": "IT-7078-T",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "document",
+      "recordId": "D-0075",
+      "text": "re Marcus Novak / France — address 157 ulica Nowy Świat, Milan — idPL-4902-X — born 27/05/1968 — file opened pending rev",
+      "expected": "PL-4902-X",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "document",
+      "recordId": "D-0090",
+      "text": "re Ines Haddad / Poland — address 101 Rua da Prata, Rotterdam — idGR-2645-X — born 4 June 1960 — file opened pending rev",
+      "expected": "GR-2645-X",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "document",
+      "recordId": "D-0095",
+      "text": "re Marcus Haddad / Italy — address 101 Odos Ermou, Valencia — idPT-1654-K — born 15 January 1985 — file opened pending r",
+      "expected": "PT-1654-K",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "document",
+      "recordId": "D-0098",
+      "text": "re Sofia Vasquez / Portugal — address 51 Rua da Prata, Lisbon — idPT-1490-T — born 20 November 1971 — file opened pendin",
+      "expected": "PT-1490-T",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "document",
+      "recordId": "D-0099",
+      "text": "re Viktor Haddad / Germany — address 124 via Garibaldi, Valencia — idIT-7793-T — born 07/07/1998 — file opened pending r",
+      "expected": "IT-7793-T",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "document",
+      "recordId": "D-0102",
+      "text": "re Viktor Ferreira / Italy — address 66 Odos Ermou, Athens — idGR-7666-K — born 03/12/2000 — file opened pending review",
+      "expected": "GR-7666-K",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "document",
+      "recordId": "D-0111",
+      "text": "re Karim Morozov / Germany — address 138 Odos Ermou, Rotterdam — idIT-2397-X — born 5 September 1964 — file opened pendi",
+      "expected": "IT-2397-X",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "document",
+      "recordId": "D-0114",
+      "text": "re Nadia Vasquez / Poland — address 8 Rua da Prata, Lisbon — idGR-1271-X — born 04/04/1968 — file opened pending review",
+      "expected": "GR-1271-X",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0001",
+      "text": "Marcus Ferreira — dob 21 October 1961 — doc no FR-1856-M — Portugal — lives 106 Odos Ermou, Rotterdam (updated by branch",
+      "expected": "106 Odos Ermou, Rotterdam",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0002",
+      "text": "KYC REVIEW ⏎ Subject ......... Leila Haddad ⏎ Birth ........... 10/07/1987 ⏎ Document ........ IT-5560-K ⏎ Citizenship .",
+      "expected": "61 Rua da Prata, Valencia",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0003",
+      "text": "KYC REVIEW ⏎ Subject ......... Sofia Rossi ⏎ Birth ........... 26/01/1976 ⏎ Document ........ PL-7451-M ⏎ Citizenship ..",
+      "expected": "144 ulica Nowy Świat, Paris",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0004",
+      "text": "KYC REVIEW ⏎ Subject ......... Nadia Mbeki ⏎ Birth ........... 1 August 1955 ⏎ Document ........ IT-3621-K ⏎ Citizenship",
+      "expected": "37 Odos Ermou, Milan",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0005",
+      "text": "KYC REVIEW ⏎ Subject ......... Tomas Novak ⏎ Birth ........... 5 January 1955 ⏎ Document ........ IT-7212-M ⏎ Citizenshi",
+      "expected": "124 via Garibaldi, Rotterdam",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0006",
+      "text": "KYC REVIEW ⏎ Subject ......... Viktor Chen ⏎ Birth ........... 15/08/1988 ⏎ Document ........ FR-3855-T ⏎ Citizenship ..",
+      "expected": "36 ulica Nowy Świat, Paris",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0007",
+      "text": "Further to our call: the person concerned is Viktor Mbeki. We hold FR-9637-T on file. Born 11 August 1974. Their postal ",
+      "expected": "47 ulica Nowy Świat, Paris",
+      "got": "reads 47 ulica Nowy Świat, Paris and they present themselves as a national of Germany",
+      "mode": "over-long"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0008",
+      "text": "re Viktor Vasquez / Italy — address 125 rue Victor Hugo, Lyon — idIT-2390-X — born 17 April 1968 — file opened pending r",
+      "expected": "125 rue Victor Hugo, Lyon",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0009",
+      "text": "Piotr Novak — dob 03/05/1991 — doc no PT-8733-K — France — lives 188 avenue des Fleurs, Lyon (updated by branch staff, n",
+      "expected": "188 avenue des Fleurs, Lyon",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0010",
+      "text": "Leila Okonkwo — dob 10 October 1967 — doc no IT-1946-K — Netherlands — lives 89 Odos Ermou, Rotterdam (updated by branch",
+      "expected": "89 Odos Ermou, Rotterdam",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0011",
+      "text": "KYC REVIEW ⏎ Subject ......... Tomas Mbeki ⏎ Birth ........... 25/05/1984 ⏎ Document ........ PL-2033-M ⏎ Citizenship ..",
+      "expected": "126 Rua da Prata, Warsaw",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0012",
+      "text": "Further to our call: the person concerned is Tomas Morozov. We hold PT-2299-M on file. Born 9 August 1959. Their postal ",
+      "expected": "189 via Garibaldi, Paris",
+      "got": "reads 189 via Garibaldi, Paris and they present themselves as a national of Netherlands",
+      "mode": "over-long"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0013",
+      "text": "re Amina Vasquez / Portugal — address 172 Rua da Prata, Lyon — idIT-7286-M — born 27 February 1965 — file opened pending",
+      "expected": "172 Rua da Prata, Lyon",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0014",
+      "text": "Piotr Lindqvist — dob 19/06/1981 — doc no PT-5149-M — Poland — lives 178 ulica Nowy Świat, Valencia (updated by branch s",
+      "expected": "178 ulica Nowy Świat, Valencia",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0015",
+      "text": "Application received from Sofia Morozov of 9 ulica Nowy Świat, Milan; the identity reference supplied was PL-4345-K and ",
+      "expected": "9 ulica Nowy Świat, Milan",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0016",
+      "text": "Application received from Marcus Lindqvist of 192 avenue des Fleurs, Valencia; the identity reference supplied was PT-85",
+      "expected": "192 avenue des Fleurs, Valencia",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0017",
+      "text": "re Amina Okonkwo / Italy — address 9 rue Victor Hugo, Rotterdam — idIT-4463-M — born 23/09/1973 — file opened pending re",
+      "expected": "9 rue Victor Hugo, Rotterdam",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0018",
+      "text": "Further to our call: the person concerned is Viktor Lindqvist. We hold FR-7844-M on file. Born 13 January 1994. Their po",
+      "expected": "110 ulica Nowy Świat, Warsaw",
+      "got": "reads 110 ulica Nowy Świat, Warsaw and they present themselves as a national of Spain",
+      "mode": "over-long"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0019",
+      "text": "Viktor Vasquez — dob 15/08/2001 — doc no PT-7753-K — Germany — lives 120 ulica Nowy Świat, Paris (updated by branch staf",
+      "expected": "120 ulica Nowy Świat, Paris",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0020",
+      "text": "Tomas Haddad — dob 27 November 1980 — doc no FR-5223-K — Poland — lives 20 ulica Nowy Świat, Valencia (updated by branch",
+      "expected": "20 ulica Nowy Świat, Valencia",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0021",
+      "text": "Application received from Viktor Novak of 152 via Garibaldi, Valencia; the identity reference supplied was PT-1561-T and",
+      "expected": "152 via Garibaldi, Valencia",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0022",
+      "text": "Further to our call: the person concerned is Ines Okonkwo. We hold IT-3273-X on file. Born 28 December 1963. Their posta",
+      "expected": "193 rue Victor Hugo, Lisbon",
+      "got": "reads 193 rue Victor Hugo, Lisbon and they present themselves as a national of Italy",
+      "mode": "over-long"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0023",
+      "text": "Application received from Amina Mbeki of 113 Odos Ermou, Lisbon; the identity reference supplied was FR-8412-X and the s",
+      "expected": "113 Odos Ermou, Lisbon",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0024",
+      "text": "Further to our call: the person concerned is Karim Vasquez. We hold IT-9885-M on file. Born 20 February 1958. Their post",
+      "expected": "161 ulica Nowy Świat, Milan",
+      "got": "reads 161 ulica Nowy Świat, Milan and they present themselves as a national of France",
+      "mode": "over-long"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0025",
+      "text": "Further to our call: the person concerned is Tomas Chen. We hold IT-9786-T on file. Born 8 April 1969. Their postal addr",
+      "expected": "94 avenue des Fleurs, Paris",
+      "got": "reads 94 avenue des Fleurs, Paris and they present themselves as a national of France",
+      "mode": "over-long"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0026",
+      "text": "Further to our call: the person concerned is Ines Chen. We hold FR-8951-T on file. Born 2 June 1991. Their postal addres",
+      "expected": "100 Rua da Prata, Lyon",
+      "got": "reads 100 Rua da Prata, Lyon and they present themselves as a national of Spain",
+      "mode": "over-long"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0027",
+      "text": "re Sofia Haddad / France — address 76 rue Victor Hugo, Milan — idPT-6548-X — born 03/10/1956 — file opened pending revie",
+      "expected": "76 rue Victor Hugo, Milan",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0028",
+      "text": "Further to our call: the person concerned is Amina Haddad. We hold PL-4801-K on file. Born 5 January 1960. Their postal ",
+      "expected": "120 via Garibaldi, Lisbon",
+      "got": "reads 120 via Garibaldi, Lisbon and they present themselves as a national of Portugal",
+      "mode": "over-long"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0029",
+      "text": "re Karim Lindqvist / Portugal — address 73 Rua da Prata, Valencia — idGR-1222-K — born 16/06/1958 — file opened pending ",
+      "expected": "73 Rua da Prata, Valencia",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0030",
+      "text": "Further to our call: the person concerned is Piotr Vasquez. We hold IT-7435-K on file. Born 26/08/1955. Their postal add",
+      "expected": "154 avenue des Fleurs, Paris",
+      "got": "reads 154 avenue des Fleurs, Paris and they present themselves as a national of Portugal",
+      "mode": "over-long"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0031",
+      "text": "Application received from Amina Haddad of 146 ulica Nowy Świat, Lisbon; the identity reference supplied was PT-9822-T an",
+      "expected": "146 ulica Nowy Świat, Lisbon",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0032",
+      "text": "Application received from Marcus Mbeki of 3 ulica Nowy Świat, Warsaw; the identity reference supplied was GR-2602-T and ",
+      "expected": "3 ulica Nowy Świat, Warsaw",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0033",
+      "text": "KYC REVIEW ⏎ Subject ......... Nadia Novak ⏎ Birth ........... 28 March 1996 ⏎ Document ........ PT-2368-K ⏎ Citizenship",
+      "expected": "140 avenue des Fleurs, Milan",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0034",
+      "text": "Karim Haddad — dob 25/07/1967 — doc no PL-1424-T — Italy — lives 99 avenue des Fleurs, Milan (updated by branch staff, n",
+      "expected": "99 avenue des Fleurs, Milan",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0035",
+      "text": "Piotr Chen — dob 23 June 2004 — doc no FR-9868-K — Greece — lives 35 ulica Nowy Świat, Paris (updated by branch staff, n",
+      "expected": "35 ulica Nowy Świat, Paris",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0036",
+      "text": "re Marcus Ferreira / Greece — address 162 Rua da Prata, Valencia — idIT-9114-X — born 21 September 1969 — file opened pe",
+      "expected": "162 Rua da Prata, Valencia",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0037",
+      "text": "Further to our call: the person concerned is Amina Novak. We hold IT-3300-T on file. Born 07/09/2002. Their postal addre",
+      "expected": "192 avenue des Fleurs, Athens",
+      "got": "reads 192 avenue des Fleurs, Athens and they present themselves as a national of Portugal",
+      "mode": "over-long"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0038",
+      "text": "Further to our call: the person concerned is Ines Vasquez. We hold PT-6432-K on file. Born 28/12/1969. Their postal addr",
+      "expected": "62 Rua da Prata, Milan",
+      "got": "reads 62 Rua da Prata, Milan and they present themselves as a national of Spain",
+      "mode": "over-long"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0039",
+      "text": "Further to our call: the person concerned is Amina Mbeki. We hold IT-2198-T on file. Born 7 September 1996. Their postal",
+      "expected": "17 Rua da Prata, Paris",
+      "got": "reads 17 Rua da Prata, Paris and they present themselves as a national of Spain",
+      "mode": "over-long"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0040",
+      "text": "Leila Rossi — dob 14/04/1957 — doc no FR-9514-X — Netherlands — lives 27 avenue des Fleurs, Rotterdam (updated by branch",
+      "expected": "27 avenue des Fleurs, Rotterdam",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0041",
+      "text": "KYC REVIEW ⏎ Subject ......... Sofia Morozov ⏎ Birth ........... 23/07/1990 ⏎ Document ........ PL-5725-K ⏎ Citizenship ",
+      "expected": "71 Odos Ermou, Rotterdam",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0042",
+      "text": "Sofia Okonkwo — dob 16 September 1976 — doc no PT-4519-X — Germany — lives 62 via Garibaldi, Athens (updated by branch s",
+      "expected": "62 via Garibaldi, Athens",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0043",
+      "text": "Further to our call: the person concerned is Viktor Novak. We hold PT-4874-T on file. Born 10 March 1975. Their postal a",
+      "expected": "165 ulica Nowy Świat, Milan",
+      "got": "reads 165 ulica Nowy Świat, Milan and they present themselves as a national of Germany",
+      "mode": "over-long"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0044",
+      "text": "re Nadia Okonkwo / Poland — address 109 rue Victor Hugo, Milan — idPT-6884-M — born 21/12/1988 — file opened pending rev",
+      "expected": "109 rue Victor Hugo, Milan",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0045",
+      "text": "Further to our call: the person concerned is Karim Vasquez. We hold IT-4511-M on file. Born 12 December 1973. Their post",
+      "expected": "19 ulica Nowy Świat, Warsaw",
+      "got": "reads 19 ulica Nowy Świat, Warsaw and they present themselves as a national of Poland",
+      "mode": "over-long"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0046",
+      "text": "Further to our call: the person concerned is Leila Morozov. We hold GR-1811-K on file. Born 11 May 2004. Their postal ad",
+      "expected": "81 rue Victor Hugo, Warsaw",
+      "got": "reads 81 rue Victor Hugo, Warsaw and they present themselves as a national of Germany",
+      "mode": "over-long"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0047",
+      "text": "re Nadia Lindqvist / Italy — address 97 Odos Ermou, Lyon — idPT-6646-T — born 16 June 1955 — file opened pending review",
+      "expected": "97 Odos Ermou, Lyon",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0048",
+      "text": "Application received from Amina Morozov of 19 via Garibaldi, Paris; the identity reference supplied was IT-9503-T and th",
+      "expected": "19 via Garibaldi, Paris",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0049",
+      "text": "re Tomas Chen / Germany — address 94 via Garibaldi, Warsaw — idIT-5462-K — born 14 September 1988 — file opened pending ",
+      "expected": "94 via Garibaldi, Warsaw",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0050",
+      "text": "KYC REVIEW ⏎ Subject ......... Viktor Rossi ⏎ Birth ........... 17/10/1977 ⏎ Document ........ IT-1791-M ⏎ Citizenship .",
+      "expected": "162 via Garibaldi, Paris",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0051",
+      "text": "Application received from Karim Haddad of 114 Odos Ermou, Lisbon; the identity reference supplied was PL-2444-M and the ",
+      "expected": "114 Odos Ermou, Lisbon",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0052",
+      "text": "KYC REVIEW ⏎ Subject ......... Marcus Novak ⏎ Birth ........... 09/08/1970 ⏎ Document ........ IT-9510-X ⏎ Citizenship .",
+      "expected": "172 avenue des Fleurs, Lisbon",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0053",
+      "text": "KYC REVIEW ⏎ Subject ......... Sofia Haddad ⏎ Birth ........... 20/08/1989 ⏎ Document ........ PT-4398-K ⏎ Citizenship .",
+      "expected": "135 Odos Ermou, Lyon",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0054",
+      "text": "Application received from Leila Mbeki of 23 rue Victor Hugo, Rotterdam; the identity reference supplied was PL-5605-M an",
+      "expected": "23 rue Victor Hugo, Rotterdam",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0055",
+      "text": "Ines Lindqvist — dob 07/01/1965 — doc no PL-6425-X — France — lives 86 via Garibaldi, Athens (updated by branch staff, n",
+      "expected": "86 via Garibaldi, Athens",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0056",
+      "text": "re Viktor Novak / France — address 130 ulica Nowy Świat, Rotterdam — idFR-6783-X — born 25 May 1976 — file opened pendin",
+      "expected": "130 ulica Nowy Świat, Rotterdam",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0057",
+      "text": "Amina Chen — dob 24 July 1969 — doc no GR-7832-T — Netherlands — lives 178 rue Victor Hugo, Valencia (updated by branch ",
+      "expected": "178 rue Victor Hugo, Valencia",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0058",
+      "text": "Application received from Amina Mbeki of 171 Rua da Prata, Milan; the identity reference supplied was FR-8857-M and the ",
+      "expected": "171 Rua da Prata, Milan",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0059",
+      "text": "Application received from Sofia Mbeki of 80 rue Victor Hugo, Paris; the identity reference supplied was PT-6986-X and th",
+      "expected": "80 rue Victor Hugo, Paris",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0060",
+      "text": "KYC REVIEW ⏎ Subject ......... Ines Ferreira ⏎ Birth ........... 25/03/1977 ⏎ Document ........ PL-8149-X ⏎ Citizenship ",
+      "expected": "141 ulica Nowy Świat, Lyon",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0061",
+      "text": "Application received from Leila Ferreira of 23 Odos Ermou, Warsaw; the identity reference supplied was PL-6793-T and the",
+      "expected": "23 Odos Ermou, Warsaw",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0062",
+      "text": "re Viktor Vasquez / Portugal — address 107 via Garibaldi, Lisbon — idPL-2630-K — born 23 October 1995 — file opened pend",
+      "expected": "107 via Garibaldi, Lisbon",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0063",
+      "text": "Further to our call: the person concerned is Ines Haddad. We hold PL-1411-K on file. Born 18 May 1998. Their postal addr",
+      "expected": "178 rue Victor Hugo, Paris",
+      "got": "reads 178 rue Victor Hugo, Paris and they present themselves as a national of Poland",
+      "mode": "over-long"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0064",
+      "text": "Further to our call: the person concerned is Nadia Ferreira. We hold PT-6279-T on file. Born 02/02/1982. Their postal ad",
+      "expected": "139 Odos Ermou, Athens",
+      "got": "reads 139 Odos Ermou, Athens and they present themselves as a national of Netherlands",
+      "mode": "over-long"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0065",
+      "text": "Application received from Tomas Novak of 139 ulica Nowy Świat, Milan; the identity reference supplied was GR-6593-K and ",
+      "expected": "139 ulica Nowy Świat, Milan",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0066",
+      "text": "Leila Rossi — dob 9 March 1987 — doc no GR-6724-M — Netherlands — lives 91 Rua da Prata, Paris (updated by branch staff,",
+      "expected": "91 Rua da Prata, Paris",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0067",
+      "text": "re Leila Mbeki / Greece — address 182 Odos Ermou, Lisbon — idIT-7078-T — born 21/12/1987 — file opened pending review",
+      "expected": "182 Odos Ermou, Lisbon",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0068",
+      "text": "Piotr Mbeki — dob 19/01/1996 — doc no PL-7881-K — Spain — lives 68 rue Victor Hugo, Warsaw (updated by branch staff, no ",
+      "expected": "68 rue Victor Hugo, Warsaw",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0069",
+      "text": "KYC REVIEW ⏎ Subject ......... Karim Okonkwo ⏎ Birth ........... 6 May 2000 ⏎ Document ........ PT-1584-M ⏎ Citizenship ",
+      "expected": "114 Odos Ermou, Milan",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0070",
+      "text": "KYC REVIEW ⏎ Subject ......... Ines Ferreira ⏎ Birth ........... 18/02/1971 ⏎ Document ........ GR-3338-K ⏎ Citizenship ",
+      "expected": "174 ulica Nowy Świat, Athens",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0071",
+      "text": "Further to our call: the person concerned is Piotr Ferreira. We hold FR-2396-M on file. Born 17 December 1963. Their pos",
+      "expected": "149 rue Victor Hugo, Milan",
+      "got": "reads 149 rue Victor Hugo, Milan and they present themselves as a national of France",
+      "mode": "over-long"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0072",
+      "text": "Application received from Tomas Novak of 70 via Garibaldi, Valencia; the identity reference supplied was GR-3057-X and t",
+      "expected": "70 via Garibaldi, Valencia",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0073",
+      "text": "Karim Lindqvist — dob 07/03/1962 — doc no PL-2193-X — Italy — lives 140 rue Victor Hugo, Valencia (updated by branch sta",
+      "expected": "140 rue Victor Hugo, Valencia",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0074",
+      "text": "Application received from Marcus Vasquez of 53 Rua da Prata, Valencia; the identity reference supplied was PL-1678-K and",
+      "expected": "53 Rua da Prata, Valencia",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0075",
+      "text": "re Marcus Novak / France — address 157 ulica Nowy Świat, Milan — idPL-4902-X — born 27/05/1968 — file opened pending rev",
+      "expected": "157 ulica Nowy Świat, Milan",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0076",
+      "text": "Application received from Marcus Lindqvist of 125 Rua da Prata, Lisbon; the identity reference supplied was GR-3917-M an",
+      "expected": "125 Rua da Prata, Lisbon",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0077",
+      "text": "Sofia Chen — dob 23/10/1986 — doc no FR-7804-T — Germany — lives 38 Rua da Prata, Valencia (updated by branch staff, no ",
+      "expected": "38 Rua da Prata, Valencia",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0078",
+      "text": "KYC REVIEW ⏎ Subject ......... Piotr Lindqvist ⏎ Birth ........... 16/10/1979 ⏎ Document ........ PL-7240-T ⏎ Citizenshi",
+      "expected": "167 via Garibaldi, Warsaw",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0079",
+      "text": "Application received from Piotr Haddad of 150 ulica Nowy Świat, Rotterdam; the identity reference supplied was GR-1177-K",
+      "expected": "150 ulica Nowy Świat, Rotterdam",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0080",
+      "text": "KYC REVIEW ⏎ Subject ......... Viktor Mbeki ⏎ Birth ........... 21 February 2000 ⏎ Document ........ PT-3826-M ⏎ Citizen",
+      "expected": "175 Rua da Prata, Lisbon",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0081",
+      "text": "Nadia Lindqvist — dob 24/12/1990 — doc no GR-1255-M — Germany — lives 4 Odos Ermou, Warsaw (updated by branch staff, no ",
+      "expected": "4 Odos Ermou, Warsaw",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0082",
+      "text": "Application received from Leila Okonkwo of 79 Rua da Prata, Warsaw; the identity reference supplied was FR-4733-K and th",
+      "expected": "79 Rua da Prata, Warsaw",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0083",
+      "text": "Further to our call: the person concerned is Sofia Rossi. We hold IT-3507-K on file. Born 9 January 1993. Their postal a",
+      "expected": "155 Rua da Prata, Lyon",
+      "got": "reads 155 Rua da Prata, Lyon and they present themselves as a national of Poland",
+      "mode": "over-long"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0084",
+      "text": "Further to our call: the person concerned is Sofia Vasquez. We hold IT-7884-K on file. Born 6 March 1996. Their postal a",
+      "expected": "13 Odos Ermou, Warsaw",
+      "got": "reads 13 Odos Ermou, Warsaw and they present themselves as a national of Germany",
+      "mode": "over-long"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0085",
+      "text": "Further to our call: the person concerned is Piotr Vasquez. We hold PT-7025-K on file. Born 01/12/1987. Their postal add",
+      "expected": "96 avenue des Fleurs, Rotterdam",
+      "got": "reads 96 avenue des Fleurs, Rotterdam and they present themselves as a national of France",
+      "mode": "over-long"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0086",
+      "text": "Nadia Morozov — dob 17/09/1995 — doc no IT-2889-X — Spain — lives 72 via Garibaldi, Rotterdam (updated by branch staff, ",
+      "expected": "72 via Garibaldi, Rotterdam",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0087",
+      "text": "Application received from Piotr Mbeki of 19 avenue des Fleurs, Athens; the identity reference supplied was GR-6474-X and",
+      "expected": "19 avenue des Fleurs, Athens",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0088",
+      "text": "Nadia Ferreira — dob 5 December 1963 — doc no PT-8498-T — Germany — lives 80 Rua da Prata, Lisbon (updated by branch sta",
+      "expected": "80 Rua da Prata, Lisbon",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0089",
+      "text": "KYC REVIEW ⏎ Subject ......... Viktor Haddad ⏎ Birth ........... 18 May 1981 ⏎ Document ........ FR-5383-M ⏎ Citizenship",
+      "expected": "136 rue Victor Hugo, Paris",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0090",
+      "text": "re Ines Haddad / Poland — address 101 Rua da Prata, Rotterdam — idGR-2645-X — born 4 June 1960 — file opened pending rev",
+      "expected": "101 Rua da Prata, Rotterdam",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0091",
+      "text": "KYC REVIEW ⏎ Subject ......... Leila Novak ⏎ Birth ........... 23/02/1984 ⏎ Document ........ PT-5873-X ⏎ Citizenship ..",
+      "expected": "62 rue Victor Hugo, Milan",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0092",
+      "text": "Piotr Haddad — dob 10/07/1971 — doc no PT-7165-X — Spain — lives 140 avenue des Fleurs, Lyon (updated by branch staff, n",
+      "expected": "140 avenue des Fleurs, Lyon",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0093",
+      "text": "KYC REVIEW ⏎ Subject ......... Amina Okonkwo ⏎ Birth ........... 24 May 1982 ⏎ Document ........ PT-1067-X ⏎ Citizenship",
+      "expected": "140 via Garibaldi, Athens",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0094",
+      "text": "Application received from Tomas Novak of 122 avenue des Fleurs, Warsaw; the identity reference supplied was PT-4421-X an",
+      "expected": "122 avenue des Fleurs, Warsaw",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0095",
+      "text": "re Marcus Haddad / Italy — address 101 Odos Ermou, Valencia — idPT-1654-K — born 15 January 1985 — file opened pending r",
+      "expected": "101 Odos Ermou, Valencia",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0096",
+      "text": "Nadia Mbeki — dob 8 October 1974 — doc no IT-5809-K — France — lives 88 avenue des Fleurs, Lisbon (updated by branch sta",
+      "expected": "88 avenue des Fleurs, Lisbon",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0097",
+      "text": "Application received from Sofia Okonkwo of 64 avenue des Fleurs, Warsaw; the identity reference supplied was IT-7274-T a",
+      "expected": "64 avenue des Fleurs, Warsaw",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0098",
+      "text": "re Sofia Vasquez / Portugal — address 51 Rua da Prata, Lisbon — idPT-1490-T — born 20 November 1971 — file opened pendin",
+      "expected": "51 Rua da Prata, Lisbon",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0099",
+      "text": "re Viktor Haddad / Germany — address 124 via Garibaldi, Valencia — idIT-7793-T — born 07/07/1998 — file opened pending r",
+      "expected": "124 via Garibaldi, Valencia",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0100",
+      "text": "Application received from Ines Lindqvist of 156 ulica Nowy Świat, Lisbon; the identity reference supplied was IT-1302-K ",
+      "expected": "156 ulica Nowy Świat, Lisbon",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0101",
+      "text": "KYC REVIEW ⏎ Subject ......... Marcus Vasquez ⏎ Birth ........... 15/02/1972 ⏎ Document ........ PL-5020-M ⏎ Citizenship",
+      "expected": "66 rue Victor Hugo, Lyon",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0102",
+      "text": "re Viktor Ferreira / Italy — address 66 Odos Ermou, Athens — idGR-7666-K — born 03/12/2000 — file opened pending review",
+      "expected": "66 Odos Ermou, Athens",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0103",
+      "text": "Further to our call: the person concerned is Sofia Ferreira. We hold PL-4268-T on file. Born 24 April 1961. Their postal",
+      "expected": "182 ulica Nowy Świat, Lyon",
+      "got": "reads 182 ulica Nowy Świat, Lyon and they present themselves as a national of Portugal",
+      "mode": "over-long"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0104",
+      "text": "Nadia Vasquez — dob 24 August 1962 — doc no PT-1006-X — Spain — lives 58 rue Victor Hugo, Lyon (updated by branch staff,",
+      "expected": "58 rue Victor Hugo, Lyon",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0105",
+      "text": "Ines Mbeki — dob 10 September 1997 — doc no PT-3152-K — Portugal — lives 184 rue Victor Hugo, Athens (updated by branch ",
+      "expected": "184 rue Victor Hugo, Athens",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0106",
+      "text": "Application received from Sofia Novak of 9 Rua da Prata, Rotterdam; the identity reference supplied was IT-7802-K and th",
+      "expected": "9 Rua da Prata, Rotterdam",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0107",
+      "text": "KYC REVIEW ⏎ Subject ......... Amina Haddad ⏎ Birth ........... 10 June 2001 ⏎ Document ........ PT-2567-K ⏎ Citizenship",
+      "expected": "85 via Garibaldi, Rotterdam",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0108",
+      "text": "KYC REVIEW ⏎ Subject ......... Sofia Okonkwo ⏎ Birth ........... 8 October 1958 ⏎ Document ........ PL-7466-M ⏎ Citizens",
+      "expected": "63 Rua da Prata, Warsaw",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0109",
+      "text": "Tomas Lindqvist — dob 2 March 1965 — doc no IT-2578-T — Italy — lives 120 via Garibaldi, Lisbon (updated by branch staff",
+      "expected": "120 via Garibaldi, Lisbon",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0110",
+      "text": "Application received from Amina Haddad of 97 avenue des Fleurs, Lisbon; the identity reference supplied was PL-9818-M an",
+      "expected": "97 avenue des Fleurs, Lisbon",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0111",
+      "text": "re Karim Morozov / Germany — address 138 Odos Ermou, Rotterdam — idIT-2397-X — born 5 September 1964 — file opened pendi",
+      "expected": "138 Odos Ermou, Rotterdam",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0112",
+      "text": "KYC REVIEW ⏎ Subject ......... Tomas Okonkwo ⏎ Birth ........... 7 September 1985 ⏎ Document ........ PT-3596-X ⏎ Citize",
+      "expected": "26 Rua da Prata, Lyon",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0113",
+      "text": "Piotr Mbeki — dob 23 November 1990 — doc no PT-3499-X — Greece — lives 128 Rua da Prata, Lyon (updated by branch staff, ",
+      "expected": "128 Rua da Prata, Lyon",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0114",
+      "text": "re Nadia Vasquez / Poland — address 8 Rua da Prata, Lisbon — idGR-1271-X — born 04/04/1968 — file opened pending review",
+      "expected": "8 Rua da Prata, Lisbon",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0115",
+      "text": "Nadia Novak — dob 20 January 2000 — doc no GR-6509-M — Portugal — lives 44 Rua da Prata, Athens (updated by branch staff",
+      "expected": "44 Rua da Prata, Athens",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0116",
+      "text": "Viktor Chen — dob 27 December 1975 — doc no PL-7982-T — France — lives 66 via Garibaldi, Valencia (updated by branch sta",
+      "expected": "66 via Garibaldi, Valencia",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0117",
+      "text": "Nadia Novak — dob 28/03/2000 — doc no GR-7686-K — Greece — lives 15 rue Victor Hugo, Lisbon (updated by branch staff, no",
+      "expected": "15 rue Victor Hugo, Lisbon",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0118",
+      "text": "Further to our call: the person concerned is Ines Mbeki. We hold FR-2665-M on file. Born 6 December 1963. Their postal a",
+      "expected": "42 ulica Nowy Świat, Rotterdam",
+      "got": "reads 42 ulica Nowy Świat, Rotterdam and they present themselves as a national of Germany",
+      "mode": "over-long"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0119",
+      "text": "Application received from Sofia Chen of 88 rue Victor Hugo, Milan; the identity reference supplied was PL-1822-X and the",
+      "expected": "88 rue Victor Hugo, Milan",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "rules",
+      "field": "address",
+      "recordId": "D-0120",
+      "text": "Application received from Piotr Lindqvist of 11 avenue des Fleurs, Athens; the identity reference supplied was PL-2153-K",
+      "expected": "11 avenue des Fleurs, Athens",
+      "got": "",
+      "mode": "empty"
+    },
+    {
+      "tier": "small",
+      "field": "name",
+      "recordId": "D-0002",
+      "text": "KYC REVIEW ⏎ Subject ......... Leila Haddad ⏎ Birth ........... 10/07/1987 ⏎ Document ........ IT-5560-K ⏎ Citizenship .",
+      "expected": "Leila Haddad",
+      "got": "Leila Haddad Birth........... 10 / 07 / 1987 Document........ IT - 5560 - K Citizenship..... Netherlands Postal",
+      "mode": "over-long"
+    },
+    {
+      "tier": "small",
+      "field": "name",
+      "recordId": "D-0003",
+      "text": "KYC REVIEW ⏎ Subject ......... Sofia Rossi ⏎ Birth ........... 26/01/1976 ⏎ Document ........ PL-7451-M ⏎ Citizenship ..",
+      "expected": "Sofia Rossi",
+      "got": "Sofia Rossi Birth........... 26 / 01 / 1976 Document........ PL - 7451 - M Citizenship..... Netherlands Postal",
+      "mode": "over-long"
+    },
+    {
+      "tier": "small",
+      "field": "name",
+      "recordId": "D-0004",
+      "text": "KYC REVIEW ⏎ Subject ......... Nadia Mbeki ⏎ Birth ........... 1 August 1955 ⏎ Document ........ IT-3621-K ⏎ Citizenship",
+      "expected": "Nadia Mbeki",
+      "got": "Netherlands Postal",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "name",
+      "recordId": "D-0005",
+      "text": "KYC REVIEW ⏎ Subject ......... Tomas Novak ⏎ Birth ........... 5 January 1955 ⏎ Document ........ IT-7212-M ⏎ Citizenshi",
+      "expected": "Tomas Novak",
+      "got": "Spain Postal",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "name",
+      "recordId": "D-0006",
+      "text": "KYC REVIEW ⏎ Subject ......... Viktor Chen ⏎ Birth ........... 15/08/1988 ⏎ Document ........ FR-3855-T ⏎ Citizenship ..",
+      "expected": "Viktor Chen",
+      "got": "Portugal Postal",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "name",
+      "recordId": "D-0008",
+      "text": "re Viktor Vasquez / Italy — address 125 rue Victor Hugo, Lyon — idIT-2390-X — born 17 April 1968 — file opened pending r",
+      "expected": "Viktor Vasquez",
+      "got": "Italy",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "name",
+      "recordId": "D-0011",
+      "text": "KYC REVIEW ⏎ Subject ......... Tomas Mbeki ⏎ Birth ........... 25/05/1984 ⏎ Document ........ PL-2033-M ⏎ Citizenship ..",
+      "expected": "Tomas Mbeki",
+      "got": "KYC REVIEW Subject",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "name",
+      "recordId": "D-0013",
+      "text": "re Amina Vasquez / Portugal — address 172 Rua da Prata, Lyon — idIT-7286-M — born 27 February 1965 — file opened pending",
+      "expected": "Amina Vasquez",
+      "got": "Amina Vasquez / Portugal",
+      "mode": "over-long"
+    },
+    {
+      "tier": "small",
+      "field": "name",
+      "recordId": "D-0015",
+      "text": "Application received from Sofia Morozov of 9 ulica Nowy Świat, Milan; the identity reference supplied was PL-4345-K and ",
+      "expected": "Sofia Morozov",
+      "got": "Sofia Morozov of 9 ulica Nowy Świat, Milan ; the identity reference supplied was PL - 4345 - K",
+      "mode": "over-long"
+    },
+    {
+      "tier": "small",
+      "field": "name",
+      "recordId": "D-0016",
+      "text": "Application received from Marcus Lindqvist of 192 avenue des Fleurs, Valencia; the identity reference supplied was PT-85",
+      "expected": "Marcus Lindqvist",
+      "got": "PT - 8507 - T",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "name",
+      "recordId": "D-0017",
+      "text": "re Amina Okonkwo / Italy — address 9 rue Victor Hugo, Rotterdam — idIT-4463-M — born 23/09/1973 — file opened pending re",
+      "expected": "Amina Okonkwo",
+      "got": "Italy",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "name",
+      "recordId": "D-0021",
+      "text": "Application received from Viktor Novak of 152 via Garibaldi, Valencia; the identity reference supplied was PT-1561-T and",
+      "expected": "Viktor Novak",
+      "got": "PT - 1561 - T",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "name",
+      "recordId": "D-0027",
+      "text": "re Sofia Haddad / France — address 76 rue Victor Hugo, Milan — idPT-6548-X — born 03/10/1956 — file opened pending revie",
+      "expected": "Sofia Haddad",
+      "got": "Haddad",
+      "mode": "fragment"
+    },
+    {
+      "tier": "small",
+      "field": "name",
+      "recordId": "D-0029",
+      "text": "re Karim Lindqvist / Portugal — address 73 Rua da Prata, Valencia — idGR-1222-K — born 16/06/1958 — file opened pending ",
+      "expected": "Karim Lindqvist",
+      "got": "Karim Lindqvist / Portugal",
+      "mode": "over-long"
+    },
+    {
+      "tier": "small",
+      "field": "name",
+      "recordId": "D-0031",
+      "text": "Application received from Amina Haddad of 146 ulica Nowy Świat, Lisbon; the identity reference supplied was PT-9822-T an",
+      "expected": "Amina Haddad",
+      "got": "PT - 9822 - T",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "name",
+      "recordId": "D-0032",
+      "text": "Application received from Marcus Mbeki of 3 ulica Nowy Świat, Warsaw; the identity reference supplied was GR-2602-T and ",
+      "expected": "Marcus Mbeki",
+      "got": "GR - 2602 - T",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "name",
+      "recordId": "D-0033",
+      "text": "KYC REVIEW ⏎ Subject ......... Nadia Novak ⏎ Birth ........... 28 March 1996 ⏎ Document ........ PT-2368-K ⏎ Citizenship",
+      "expected": "Nadia Novak",
+      "got": "Portugal Postal",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "name",
+      "recordId": "D-0036",
+      "text": "re Marcus Ferreira / Greece — address 162 Rua da Prata, Valencia — idIT-9114-X — born 21 September 1969 — file opened pe",
+      "expected": "Marcus Ferreira",
+      "got": "Greece",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "name",
+      "recordId": "D-0041",
+      "text": "KYC REVIEW ⏎ Subject ......... Sofia Morozov ⏎ Birth ........... 23/07/1990 ⏎ Document ........ PL-5725-K ⏎ Citizenship ",
+      "expected": "Sofia Morozov",
+      "got": "Sofia Morozov Birth........... 23 / 07 / 1990 Document........ PL - 5725 - K Citizenship..... France Postal",
+      "mode": "over-long"
+    },
+    {
+      "tier": "small",
+      "field": "name",
+      "recordId": "D-0044",
+      "text": "re Nadia Okonkwo / Poland — address 109 rue Victor Hugo, Milan — idPT-6884-M — born 21/12/1988 — file opened pending rev",
+      "expected": "Nadia Okonkwo",
+      "got": "Nadia Okonkwo / Poland",
+      "mode": "over-long"
+    },
+    {
+      "tier": "small",
+      "field": "name",
+      "recordId": "D-0047",
+      "text": "re Nadia Lindqvist / Italy — address 97 Odos Ermou, Lyon — idPT-6646-T — born 16 June 1955 — file opened pending review",
+      "expected": "Nadia Lindqvist",
+      "got": "Italy",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "name",
+      "recordId": "D-0048",
+      "text": "Application received from Amina Morozov of 19 via Garibaldi, Paris; the identity reference supplied was IT-9503-T and th",
+      "expected": "Amina Morozov",
+      "got": "IT - 9503 - T",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "name",
+      "recordId": "D-0049",
+      "text": "re Tomas Chen / Germany — address 94 via Garibaldi, Warsaw — idIT-5462-K — born 14 September 1988 — file opened pending ",
+      "expected": "Tomas Chen",
+      "got": "re Tomas Chen / Germany",
+      "mode": "over-long"
+    },
+    {
+      "tier": "small",
+      "field": "name",
+      "recordId": "D-0050",
+      "text": "KYC REVIEW ⏎ Subject ......... Viktor Rossi ⏎ Birth ........... 17/10/1977 ⏎ Document ........ IT-1791-M ⏎ Citizenship .",
+      "expected": "Viktor Rossi",
+      "got": "France Postal",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "name",
+      "recordId": "D-0051",
+      "text": "Application received from Karim Haddad of 114 Odos Ermou, Lisbon; the identity reference supplied was PL-2444-M and the ",
+      "expected": "Karim Haddad",
+      "got": "PL - 2444 - M",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "name",
+      "recordId": "D-0052",
+      "text": "KYC REVIEW ⏎ Subject ......... Marcus Novak ⏎ Birth ........... 09/08/1970 ⏎ Document ........ IT-9510-X ⏎ Citizenship .",
+      "expected": "Marcus Novak",
+      "got": "Germany Postal",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "name",
+      "recordId": "D-0053",
+      "text": "KYC REVIEW ⏎ Subject ......... Sofia Haddad ⏎ Birth ........... 20/08/1989 ⏎ Document ........ PT-4398-K ⏎ Citizenship .",
+      "expected": "Sofia Haddad",
+      "got": "Sofia Haddad Birth",
+      "mode": "over-long"
+    },
+    {
+      "tier": "small",
+      "field": "name",
+      "recordId": "D-0056",
+      "text": "re Viktor Novak / France — address 130 ulica Nowy Świat, Rotterdam — idFR-6783-X — born 25 May 1976 — file opened pendin",
+      "expected": "Viktor Novak",
+      "got": "re Viktor Novak / France",
+      "mode": "over-long"
+    },
+    {
+      "tier": "small",
+      "field": "name",
+      "recordId": "D-0059",
+      "text": "Application received from Sofia Mbeki of 80 rue Victor Hugo, Paris; the identity reference supplied was PT-6986-X and th",
+      "expected": "Sofia Mbeki",
+      "got": "PT - 6986 - X",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "name",
+      "recordId": "D-0060",
+      "text": "KYC REVIEW ⏎ Subject ......... Ines Ferreira ⏎ Birth ........... 25/03/1977 ⏎ Document ........ PL-8149-X ⏎ Citizenship ",
+      "expected": "Ines Ferreira",
+      "got": "KYC REVIEW Subject",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "name",
+      "recordId": "D-0062",
+      "text": "re Viktor Vasquez / Portugal — address 107 via Garibaldi, Lisbon — idPL-2630-K — born 23 October 1995 — file opened pend",
+      "expected": "Viktor Vasquez",
+      "got": "re Viktor Vasquez / Portugal",
+      "mode": "over-long"
+    },
+    {
+      "tier": "small",
+      "field": "name",
+      "recordId": "D-0065",
+      "text": "Application received from Tomas Novak of 139 ulica Nowy Świat, Milan; the identity reference supplied was GR-6593-K and ",
+      "expected": "Tomas Novak",
+      "got": "GR - 6593 - K and the stated country France",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "name",
+      "recordId": "D-0067",
+      "text": "re Leila Mbeki / Greece — address 182 Odos Ermou, Lisbon — idIT-7078-T — born 21/12/1987 — file opened pending review",
+      "expected": "Leila Mbeki",
+      "got": "Leila Mbeki / Greece",
+      "mode": "over-long"
+    },
+    {
+      "tier": "small",
+      "field": "name",
+      "recordId": "D-0069",
+      "text": "KYC REVIEW ⏎ Subject ......... Karim Okonkwo ⏎ Birth ........... 6 May 2000 ⏎ Document ........ PT-1584-M ⏎ Citizenship ",
+      "expected": "Karim Okonkwo",
+      "got": "Spain Postal",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "name",
+      "recordId": "D-0070",
+      "text": "KYC REVIEW ⏎ Subject ......... Ines Ferreira ⏎ Birth ........... 18/02/1971 ⏎ Document ........ GR-3338-K ⏎ Citizenship ",
+      "expected": "Ines Ferreira",
+      "got": "Italy Postal",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "name",
+      "recordId": "D-0072",
+      "text": "Application received from Tomas Novak of 70 via Garibaldi, Valencia; the identity reference supplied was GR-3057-X and t",
+      "expected": "Tomas Novak",
+      "got": "GR - 3057 - X",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "name",
+      "recordId": "D-0074",
+      "text": "Application received from Marcus Vasquez of 53 Rua da Prata, Valencia; the identity reference supplied was PL-1678-K and",
+      "expected": "Marcus Vasquez",
+      "got": "PL - 1678 - K",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "name",
+      "recordId": "D-0075",
+      "text": "re Marcus Novak / France — address 157 ulica Nowy Świat, Milan — idPL-4902-X — born 27/05/1968 — file opened pending rev",
+      "expected": "Marcus Novak",
+      "got": "re Marcus Novak / France",
+      "mode": "over-long"
+    },
+    {
+      "tier": "small",
+      "field": "name",
+      "recordId": "D-0076",
+      "text": "Application received from Marcus Lindqvist of 125 Rua da Prata, Lisbon; the identity reference supplied was GR-3917-M an",
+      "expected": "Marcus Lindqvist",
+      "got": "GR - 3917 - M",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "name",
+      "recordId": "D-0078",
+      "text": "KYC REVIEW ⏎ Subject ......... Piotr Lindqvist ⏎ Birth ........... 16/10/1979 ⏎ Document ........ PL-7240-T ⏎ Citizenshi",
+      "expected": "Piotr Lindqvist",
+      "got": "KYC REVIEW Subject",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "name",
+      "recordId": "D-0080",
+      "text": "KYC REVIEW ⏎ Subject ......... Viktor Mbeki ⏎ Birth ........... 21 February 2000 ⏎ Document ........ PT-3826-M ⏎ Citizen",
+      "expected": "Viktor Mbeki",
+      "got": "Italy Postal",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "name",
+      "recordId": "D-0089",
+      "text": "KYC REVIEW ⏎ Subject ......... Viktor Haddad ⏎ Birth ........... 18 May 1981 ⏎ Document ........ FR-5383-M ⏎ Citizenship",
+      "expected": "Viktor Haddad",
+      "got": "Italy Postal",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "name",
+      "recordId": "D-0090",
+      "text": "re Ines Haddad / Poland — address 101 Rua da Prata, Rotterdam — idGR-2645-X — born 4 June 1960 — file opened pending rev",
+      "expected": "Ines Haddad",
+      "got": "Poland",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "name",
+      "recordId": "D-0091",
+      "text": "KYC REVIEW ⏎ Subject ......... Leila Novak ⏎ Birth ........... 23/02/1984 ⏎ Document ........ PT-5873-X ⏎ Citizenship ..",
+      "expected": "Leila Novak",
+      "got": "Leila Novak Birth........... 23 / 02 / 1984 Document........ PT - 5873 - X Citizenship..... France Postal",
+      "mode": "over-long"
+    },
+    {
+      "tier": "small",
+      "field": "name",
+      "recordId": "D-0093",
+      "text": "KYC REVIEW ⏎ Subject ......... Amina Okonkwo ⏎ Birth ........... 24 May 1982 ⏎ Document ........ PT-1067-X ⏎ Citizenship",
+      "expected": "Amina Okonkwo",
+      "got": "Germany Postal",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "name",
+      "recordId": "D-0094",
+      "text": "Application received from Tomas Novak of 122 avenue des Fleurs, Warsaw; the identity reference supplied was PT-4421-X an",
+      "expected": "Tomas Novak",
+      "got": "PT - 4421 - X",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "name",
+      "recordId": "D-0095",
+      "text": "re Marcus Haddad / Italy — address 101 Odos Ermou, Valencia — idPT-1654-K — born 15 January 1985 — file opened pending r",
+      "expected": "Marcus Haddad",
+      "got": "re Marcus Haddad",
+      "mode": "over-long"
+    },
+    {
+      "tier": "small",
+      "field": "name",
+      "recordId": "D-0097",
+      "text": "Application received from Sofia Okonkwo of 64 avenue des Fleurs, Warsaw; the identity reference supplied was IT-7274-T a",
+      "expected": "Sofia Okonkwo",
+      "got": "Sofia Okonkwo of 64 avenue des Fleurs, Warsaw ; the identity reference supplied was IT - 7274 - T",
+      "mode": "over-long"
+    },
+    {
+      "tier": "small",
+      "field": "name",
+      "recordId": "D-0098",
+      "text": "re Sofia Vasquez / Portugal — address 51 Rua da Prata, Lisbon — idPT-1490-T — born 20 November 1971 — file opened pendin",
+      "expected": "Sofia Vasquez",
+      "got": "re Sofia Vasquez / Portugal",
+      "mode": "over-long"
+    },
+    {
+      "tier": "small",
+      "field": "name",
+      "recordId": "D-0099",
+      "text": "re Viktor Haddad / Germany — address 124 via Garibaldi, Valencia — idIT-7793-T — born 07/07/1998 — file opened pending r",
+      "expected": "Viktor Haddad",
+      "got": "re Viktor Haddad / Germany",
+      "mode": "over-long"
+    },
+    {
+      "tier": "small",
+      "field": "name",
+      "recordId": "D-0100",
+      "text": "Application received from Ines Lindqvist of 156 ulica Nowy Świat, Lisbon; the identity reference supplied was IT-1302-K ",
+      "expected": "Ines Lindqvist",
+      "got": "IT - 1302 - K",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "name",
+      "recordId": "D-0101",
+      "text": "KYC REVIEW ⏎ Subject ......... Marcus Vasquez ⏎ Birth ........... 15/02/1972 ⏎ Document ........ PL-5020-M ⏎ Citizenship",
+      "expected": "Marcus Vasquez",
+      "got": "KYC REVIEW Subject",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "name",
+      "recordId": "D-0102",
+      "text": "re Viktor Ferreira / Italy — address 66 Odos Ermou, Athens — idGR-7666-K — born 03/12/2000 — file opened pending review",
+      "expected": "Viktor Ferreira",
+      "got": "Italy",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "name",
+      "recordId": "D-0106",
+      "text": "Application received from Sofia Novak of 9 Rua da Prata, Rotterdam; the identity reference supplied was IT-7802-K and th",
+      "expected": "Sofia Novak",
+      "got": "IT - 7802 - K",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "name",
+      "recordId": "D-0107",
+      "text": "KYC REVIEW ⏎ Subject ......... Amina Haddad ⏎ Birth ........... 10 June 2001 ⏎ Document ........ PT-2567-K ⏎ Citizenship",
+      "expected": "Amina Haddad",
+      "got": "Amina Haddad Birth........... 10 June 2001 Document........ PT - 2567 - K Citizenship..... Spain Postal",
+      "mode": "over-long"
+    },
+    {
+      "tier": "small",
+      "field": "name",
+      "recordId": "D-0108",
+      "text": "KYC REVIEW ⏎ Subject ......... Sofia Okonkwo ⏎ Birth ........... 8 October 1958 ⏎ Document ........ PL-7466-M ⏎ Citizens",
+      "expected": "Sofia Okonkwo",
+      "got": "Sofia Okonkwo Birth........... 8 October 1958 Document........ PL - 7466 - M Citizenship..... Italy Postal",
+      "mode": "over-long"
+    },
+    {
+      "tier": "small",
+      "field": "name",
+      "recordId": "D-0110",
+      "text": "Application received from Amina Haddad of 97 avenue des Fleurs, Lisbon; the identity reference supplied was PL-9818-M an",
+      "expected": "Amina Haddad",
+      "got": "PL - 9818 - M",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "name",
+      "recordId": "D-0111",
+      "text": "re Karim Morozov / Germany — address 138 Odos Ermou, Rotterdam — idIT-2397-X — born 5 September 1964 — file opened pendi",
+      "expected": "Karim Morozov",
+      "got": "Karim Morozov / Germany",
+      "mode": "over-long"
+    },
+    {
+      "tier": "small",
+      "field": "name",
+      "recordId": "D-0112",
+      "text": "KYC REVIEW ⏎ Subject ......... Tomas Okonkwo ⏎ Birth ........... 7 September 1985 ⏎ Document ........ PT-3596-X ⏎ Citize",
+      "expected": "Tomas Okonkwo",
+      "got": "Spain Postal",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "name",
+      "recordId": "D-0114",
+      "text": "re Nadia Vasquez / Poland — address 8 Rua da Prata, Lisbon — idGR-1271-X — born 04/04/1968 — file opened pending review",
+      "expected": "Nadia Vasquez",
+      "got": "Poland",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "name",
+      "recordId": "D-0120",
+      "text": "Application received from Piotr Lindqvist of 11 avenue des Fleurs, Athens; the identity reference supplied was PL-2153-K",
+      "expected": "Piotr Lindqvist",
+      "got": "PL - 2153 - K",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "document",
+      "recordId": "D-0002",
+      "text": "KYC REVIEW ⏎ Subject ......... Leila Haddad ⏎ Birth ........... 10/07/1987 ⏎ Document ........ IT-5560-K ⏎ Citizenship .",
+      "expected": "IT-5560-K",
+      "got": "5560",
+      "mode": "fragment"
+    },
+    {
+      "tier": "small",
+      "field": "document",
+      "recordId": "D-0003",
+      "text": "KYC REVIEW ⏎ Subject ......... Sofia Rossi ⏎ Birth ........... 26/01/1976 ⏎ Document ........ PL-7451-M ⏎ Citizenship ..",
+      "expected": "PL-7451-M",
+      "got": "7451 - M Citizenship..... Netherlands Postal",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "document",
+      "recordId": "D-0004",
+      "text": "KYC REVIEW ⏎ Subject ......... Nadia Mbeki ⏎ Birth ........... 1 August 1955 ⏎ Document ........ IT-3621-K ⏎ Citizenship",
+      "expected": "IT-3621-K",
+      "got": "3621",
+      "mode": "fragment"
+    },
+    {
+      "tier": "small",
+      "field": "document",
+      "recordId": "D-0005",
+      "text": "KYC REVIEW ⏎ Subject ......... Tomas Novak ⏎ Birth ........... 5 January 1955 ⏎ Document ........ IT-7212-M ⏎ Citizenshi",
+      "expected": "IT-7212-M",
+      "got": "7212",
+      "mode": "fragment"
+    },
+    {
+      "tier": "small",
+      "field": "document",
+      "recordId": "D-0006",
+      "text": "KYC REVIEW ⏎ Subject ......... Viktor Chen ⏎ Birth ........... 15/08/1988 ⏎ Document ........ FR-3855-T ⏎ Citizenship ..",
+      "expected": "FR-3855-T",
+      "got": "FR - 3855",
+      "mode": "other"
+    },
+    {
+      "tier": "small",
+      "field": "document",
+      "recordId": "D-0008",
+      "text": "re Viktor Vasquez / Italy — address 125 rue Victor Hugo, Lyon — idIT-2390-X — born 17 April 1968 — file opened pending r",
+      "expected": "IT-2390-X",
+      "got": "2390 - X",
+      "mode": "other"
+    },
+    {
+      "tier": "small",
+      "field": "document",
+      "recordId": "D-0011",
+      "text": "KYC REVIEW ⏎ Subject ......... Tomas Mbeki ⏎ Birth ........... 25/05/1984 ⏎ Document ........ PL-2033-M ⏎ Citizenship ..",
+      "expected": "PL-2033-M",
+      "got": "PL - 2033",
+      "mode": "other"
+    },
+    {
+      "tier": "small",
+      "field": "document",
+      "recordId": "D-0012",
+      "text": "Further to our call: the person concerned is Tomas Morozov. We hold PT-2299-M on file. Born 9 August 1959. Their postal ",
+      "expected": "PT-2299-M",
+      "got": "189",
+      "mode": "other"
+    },
+    {
+      "tier": "small",
+      "field": "document",
+      "recordId": "D-0013",
+      "text": "re Amina Vasquez / Portugal — address 172 Rua da Prata, Lyon — idIT-7286-M — born 27 February 1965 — file opened pending",
+      "expected": "IT-7286-M",
+      "got": "7286 - M",
+      "mode": "other"
+    },
+    {
+      "tier": "small",
+      "field": "document",
+      "recordId": "D-0017",
+      "text": "re Amina Okonkwo / Italy — address 9 rue Victor Hugo, Rotterdam — idIT-4463-M — born 23/09/1973 — file opened pending re",
+      "expected": "IT-4463-M",
+      "got": "4463 - M",
+      "mode": "other"
+    },
+    {
+      "tier": "small",
+      "field": "document",
+      "recordId": "D-0027",
+      "text": "re Sofia Haddad / France — address 76 rue Victor Hugo, Milan — idPT-6548-X — born 03/10/1956 — file opened pending revie",
+      "expected": "PT-6548-X",
+      "got": "6548 - X",
+      "mode": "other"
+    },
+    {
+      "tier": "small",
+      "field": "document",
+      "recordId": "D-0029",
+      "text": "re Karim Lindqvist / Portugal — address 73 Rua da Prata, Valencia — idGR-1222-K — born 16/06/1958 — file opened pending ",
+      "expected": "GR-1222-K",
+      "got": "1222 - K",
+      "mode": "other"
+    },
+    {
+      "tier": "small",
+      "field": "document",
+      "recordId": "D-0030",
+      "text": "Further to our call: the person concerned is Piotr Vasquez. We hold IT-7435-K on file. Born 26/08/1955. Their postal add",
+      "expected": "IT-7435-K",
+      "got": "7435 - K",
+      "mode": "other"
+    },
+    {
+      "tier": "small",
+      "field": "document",
+      "recordId": "D-0033",
+      "text": "KYC REVIEW ⏎ Subject ......... Nadia Novak ⏎ Birth ........... 28 March 1996 ⏎ Document ........ PT-2368-K ⏎ Citizenship",
+      "expected": "PT-2368-K",
+      "got": "2368",
+      "mode": "fragment"
+    },
+    {
+      "tier": "small",
+      "field": "document",
+      "recordId": "D-0036",
+      "text": "re Marcus Ferreira / Greece — address 162 Rua da Prata, Valencia — idIT-9114-X — born 21 September 1969 — file opened pe",
+      "expected": "IT-9114-X",
+      "got": "idIT - 9114 - X",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "document",
+      "recordId": "D-0041",
+      "text": "KYC REVIEW ⏎ Subject ......... Sofia Morozov ⏎ Birth ........... 23/07/1990 ⏎ Document ........ PL-5725-K ⏎ Citizenship ",
+      "expected": "PL-5725-K",
+      "got": "PL - 5725",
+      "mode": "other"
+    },
+    {
+      "tier": "small",
+      "field": "document",
+      "recordId": "D-0044",
+      "text": "re Nadia Okonkwo / Poland — address 109 rue Victor Hugo, Milan — idPT-6884-M — born 21/12/1988 — file opened pending rev",
+      "expected": "PT-6884-M",
+      "got": "idPT - 6884 - M",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "document",
+      "recordId": "D-0047",
+      "text": "re Nadia Lindqvist / Italy — address 97 Odos Ermou, Lyon — idPT-6646-T — born 16 June 1955 — file opened pending review",
+      "expected": "PT-6646-T",
+      "got": "idPT - 6646",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "document",
+      "recordId": "D-0049",
+      "text": "re Tomas Chen / Germany — address 94 via Garibaldi, Warsaw — idIT-5462-K — born 14 September 1988 — file opened pending ",
+      "expected": "IT-5462-K",
+      "got": "5462 - K",
+      "mode": "other"
+    },
+    {
+      "tier": "small",
+      "field": "document",
+      "recordId": "D-0050",
+      "text": "KYC REVIEW ⏎ Subject ......... Viktor Rossi ⏎ Birth ........... 17/10/1977 ⏎ Document ........ IT-1791-M ⏎ Citizenship .",
+      "expected": "IT-1791-M",
+      "got": "17 / 10 / 1977 Document........ IT - 1791 - M Citizenship..... France Postal",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "document",
+      "recordId": "D-0052",
+      "text": "KYC REVIEW ⏎ Subject ......... Marcus Novak ⏎ Birth ........... 09/08/1970 ⏎ Document ........ IT-9510-X ⏎ Citizenship .",
+      "expected": "IT-9510-X",
+      "got": "9510 - X Citizenship..... Germany Postal",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "document",
+      "recordId": "D-0053",
+      "text": "KYC REVIEW ⏎ Subject ......... Sofia Haddad ⏎ Birth ........... 20/08/1989 ⏎ Document ........ PT-4398-K ⏎ Citizenship .",
+      "expected": "PT-4398-K",
+      "got": "4398",
+      "mode": "fragment"
+    },
+    {
+      "tier": "small",
+      "field": "document",
+      "recordId": "D-0056",
+      "text": "re Viktor Novak / France — address 130 ulica Nowy Świat, Rotterdam — idFR-6783-X — born 25 May 1976 — file opened pendin",
+      "expected": "FR-6783-X",
+      "got": "idFR - 6783 - X",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "document",
+      "recordId": "D-0060",
+      "text": "KYC REVIEW ⏎ Subject ......... Ines Ferreira ⏎ Birth ........... 25/03/1977 ⏎ Document ........ PL-8149-X ⏎ Citizenship ",
+      "expected": "PL-8149-X",
+      "got": "PL - 8149",
+      "mode": "other"
+    },
+    {
+      "tier": "small",
+      "field": "document",
+      "recordId": "D-0062",
+      "text": "re Viktor Vasquez / Portugal — address 107 via Garibaldi, Lisbon — idPL-2630-K — born 23 October 1995 — file opened pend",
+      "expected": "PL-2630-K",
+      "got": "idPL - 2630 - K",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "document",
+      "recordId": "D-0067",
+      "text": "re Leila Mbeki / Greece — address 182 Odos Ermou, Lisbon — idIT-7078-T — born 21/12/1987 — file opened pending review",
+      "expected": "IT-7078-T",
+      "got": "7078 - T",
+      "mode": "other"
+    },
+    {
+      "tier": "small",
+      "field": "document",
+      "recordId": "D-0069",
+      "text": "KYC REVIEW ⏎ Subject ......... Karim Okonkwo ⏎ Birth ........... 6 May 2000 ⏎ Document ........ PT-1584-M ⏎ Citizenship ",
+      "expected": "PT-1584-M",
+      "got": "Spain Postal",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "document",
+      "recordId": "D-0070",
+      "text": "KYC REVIEW ⏎ Subject ......... Ines Ferreira ⏎ Birth ........... 18/02/1971 ⏎ Document ........ GR-3338-K ⏎ Citizenship ",
+      "expected": "GR-3338-K",
+      "got": "GR - 3338",
+      "mode": "other"
+    },
+    {
+      "tier": "small",
+      "field": "document",
+      "recordId": "D-0075",
+      "text": "re Marcus Novak / France — address 157 ulica Nowy Świat, Milan — idPL-4902-X — born 27/05/1968 — file opened pending rev",
+      "expected": "PL-4902-X",
+      "got": "4902 - X",
+      "mode": "other"
+    },
+    {
+      "tier": "small",
+      "field": "document",
+      "recordId": "D-0078",
+      "text": "KYC REVIEW ⏎ Subject ......... Piotr Lindqvist ⏎ Birth ........... 16/10/1979 ⏎ Document ........ PL-7240-T ⏎ Citizenshi",
+      "expected": "PL-7240-T",
+      "got": "PL - 7240",
+      "mode": "other"
+    },
+    {
+      "tier": "small",
+      "field": "document",
+      "recordId": "D-0080",
+      "text": "KYC REVIEW ⏎ Subject ......... Viktor Mbeki ⏎ Birth ........... 21 February 2000 ⏎ Document ........ PT-3826-M ⏎ Citizen",
+      "expected": "PT-3826-M",
+      "got": "3826 - M Citizenship..... Italy Postal",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "document",
+      "recordId": "D-0089",
+      "text": "KYC REVIEW ⏎ Subject ......... Viktor Haddad ⏎ Birth ........... 18 May 1981 ⏎ Document ........ FR-5383-M ⏎ Citizenship",
+      "expected": "FR-5383-M",
+      "got": "FR - 5383",
+      "mode": "other"
+    },
+    {
+      "tier": "small",
+      "field": "document",
+      "recordId": "D-0090",
+      "text": "re Ines Haddad / Poland — address 101 Rua da Prata, Rotterdam — idGR-2645-X — born 4 June 1960 — file opened pending rev",
+      "expected": "GR-2645-X",
+      "got": "idGR - 2645 - X",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "document",
+      "recordId": "D-0091",
+      "text": "KYC REVIEW ⏎ Subject ......... Leila Novak ⏎ Birth ........... 23/02/1984 ⏎ Document ........ PT-5873-X ⏎ Citizenship ..",
+      "expected": "PT-5873-X",
+      "got": "5873",
+      "mode": "fragment"
+    },
+    {
+      "tier": "small",
+      "field": "document",
+      "recordId": "D-0093",
+      "text": "KYC REVIEW ⏎ Subject ......... Amina Okonkwo ⏎ Birth ........... 24 May 1982 ⏎ Document ........ PT-1067-X ⏎ Citizenship",
+      "expected": "PT-1067-X",
+      "got": "1067 - X",
+      "mode": "other"
+    },
+    {
+      "tier": "small",
+      "field": "document",
+      "recordId": "D-0095",
+      "text": "re Marcus Haddad / Italy — address 101 Odos Ermou, Valencia — idPT-1654-K — born 15 January 1985 — file opened pending r",
+      "expected": "PT-1654-K",
+      "got": "1654 - K",
+      "mode": "other"
+    },
+    {
+      "tier": "small",
+      "field": "document",
+      "recordId": "D-0098",
+      "text": "re Sofia Vasquez / Portugal — address 51 Rua da Prata, Lisbon — idPT-1490-T — born 20 November 1971 — file opened pendin",
+      "expected": "PT-1490-T",
+      "got": "idPT - 1490 - T",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "document",
+      "recordId": "D-0099",
+      "text": "re Viktor Haddad / Germany — address 124 via Garibaldi, Valencia — idIT-7793-T — born 07/07/1998 — file opened pending r",
+      "expected": "IT-7793-T",
+      "got": "7793 - T",
+      "mode": "other"
+    },
+    {
+      "tier": "small",
+      "field": "document",
+      "recordId": "D-0101",
+      "text": "KYC REVIEW ⏎ Subject ......... Marcus Vasquez ⏎ Birth ........... 15/02/1972 ⏎ Document ........ PL-5020-M ⏎ Citizenship",
+      "expected": "PL-5020-M",
+      "got": "PL - 5020",
+      "mode": "other"
+    },
+    {
+      "tier": "small",
+      "field": "document",
+      "recordId": "D-0102",
+      "text": "re Viktor Ferreira / Italy — address 66 Odos Ermou, Athens — idGR-7666-K — born 03/12/2000 — file opened pending review",
+      "expected": "GR-7666-K",
+      "got": "7666 - K",
+      "mode": "other"
+    },
+    {
+      "tier": "small",
+      "field": "document",
+      "recordId": "D-0107",
+      "text": "KYC REVIEW ⏎ Subject ......... Amina Haddad ⏎ Birth ........... 10 June 2001 ⏎ Document ........ PT-2567-K ⏎ Citizenship",
+      "expected": "PT-2567-K",
+      "got": "PT - 2567",
+      "mode": "other"
+    },
+    {
+      "tier": "small",
+      "field": "document",
+      "recordId": "D-0108",
+      "text": "KYC REVIEW ⏎ Subject ......... Sofia Okonkwo ⏎ Birth ........... 8 October 1958 ⏎ Document ........ PL-7466-M ⏎ Citizens",
+      "expected": "PL-7466-M",
+      "got": "PL - 7466",
+      "mode": "other"
+    },
+    {
+      "tier": "small",
+      "field": "document",
+      "recordId": "D-0111",
+      "text": "re Karim Morozov / Germany — address 138 Odos Ermou, Rotterdam — idIT-2397-X — born 5 September 1964 — file opened pendi",
+      "expected": "IT-2397-X",
+      "got": "2397 - X",
+      "mode": "other"
+    },
+    {
+      "tier": "small",
+      "field": "document",
+      "recordId": "D-0112",
+      "text": "KYC REVIEW ⏎ Subject ......... Tomas Okonkwo ⏎ Birth ........... 7 September 1985 ⏎ Document ........ PT-3596-X ⏎ Citize",
+      "expected": "PT-3596-X",
+      "got": "3596 - X Citizenship..... Spain Postal",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "document",
+      "recordId": "D-0114",
+      "text": "re Nadia Vasquez / Poland — address 8 Rua da Prata, Lisbon — idGR-1271-X — born 04/04/1968 — file opened pending review",
+      "expected": "GR-1271-X",
+      "got": "1271 - X",
+      "mode": "other"
+    },
+    {
+      "tier": "small",
+      "field": "address",
+      "recordId": "D-0001",
+      "text": "Marcus Ferreira — dob 21 October 1961 — doc no FR-1856-M — Portugal — lives 106 Odos Ermou, Rotterdam (updated by branch",
+      "expected": "106 Odos Ermou, Rotterdam",
+      "got": "106",
+      "mode": "fragment"
+    },
+    {
+      "tier": "small",
+      "field": "address",
+      "recordId": "D-0002",
+      "text": "KYC REVIEW ⏎ Subject ......... Leila Haddad ⏎ Birth ........... 10/07/1987 ⏎ Document ........ IT-5560-K ⏎ Citizenship .",
+      "expected": "61 Rua da Prata, Valencia",
+      "got": "5560",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "address",
+      "recordId": "D-0003",
+      "text": "KYC REVIEW ⏎ Subject ......... Sofia Rossi ⏎ Birth ........... 26/01/1976 ⏎ Document ........ PL-7451-M ⏎ Citizenship ..",
+      "expected": "144 ulica Nowy Świat, Paris",
+      "got": "PL - 7451",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "address",
+      "recordId": "D-0004",
+      "text": "KYC REVIEW ⏎ Subject ......... Nadia Mbeki ⏎ Birth ........... 1 August 1955 ⏎ Document ........ IT-3621-K ⏎ Citizenship",
+      "expected": "37 Odos Ermou, Milan",
+      "got": "3621",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "address",
+      "recordId": "D-0005",
+      "text": "KYC REVIEW ⏎ Subject ......... Tomas Novak ⏎ Birth ........... 5 January 1955 ⏎ Document ........ IT-7212-M ⏎ Citizenshi",
+      "expected": "124 via Garibaldi, Rotterdam",
+      "got": "124",
+      "mode": "fragment"
+    },
+    {
+      "tier": "small",
+      "field": "address",
+      "recordId": "D-0009",
+      "text": "Piotr Novak — dob 03/05/1991 — doc no PT-8733-K — France — lives 188 avenue des Fleurs, Lyon (updated by branch staff, n",
+      "expected": "188 avenue des Fleurs, Lyon",
+      "got": "PT - 8733 - K",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "address",
+      "recordId": "D-0010",
+      "text": "Leila Okonkwo — dob 10 October 1967 — doc no IT-1946-K — Netherlands — lives 89 Odos Ermou, Rotterdam (updated by branch",
+      "expected": "89 Odos Ermou, Rotterdam",
+      "got": "dob 10 October 1967 — doc no IT - 1946 - K",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "address",
+      "recordId": "D-0012",
+      "text": "Further to our call: the person concerned is Tomas Morozov. We hold PT-2299-M on file. Born 9 August 1959. Their postal ",
+      "expected": "189 via Garibaldi, Paris",
+      "got": "189",
+      "mode": "fragment"
+    },
+    {
+      "tier": "small",
+      "field": "address",
+      "recordId": "D-0014",
+      "text": "Piotr Lindqvist — dob 19/06/1981 — doc no PT-5149-M — Poland — lives 178 ulica Nowy Świat, Valencia (updated by branch s",
+      "expected": "178 ulica Nowy Świat, Valencia",
+      "got": "PT - 5149 - M",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "address",
+      "recordId": "D-0015",
+      "text": "Application received from Sofia Morozov of 9 ulica Nowy Świat, Milan; the identity reference supplied was PL-4345-K and ",
+      "expected": "9 ulica Nowy Świat, Milan",
+      "got": "PL - 4345 - K",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "address",
+      "recordId": "D-0019",
+      "text": "Viktor Vasquez — dob 15/08/2001 — doc no PT-7753-K — Germany — lives 120 ulica Nowy Świat, Paris (updated by branch staf",
+      "expected": "120 ulica Nowy Świat, Paris",
+      "got": "PT - 7753 - K",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "address",
+      "recordId": "D-0020",
+      "text": "Tomas Haddad — dob 27 November 1980 — doc no FR-5223-K — Poland — lives 20 ulica Nowy Świat, Valencia (updated by branch",
+      "expected": "20 ulica Nowy Świat, Valencia",
+      "got": "FR - 5223 - K",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "address",
+      "recordId": "D-0021",
+      "text": "Application received from Viktor Novak of 152 via Garibaldi, Valencia; the identity reference supplied was PT-1561-T and",
+      "expected": "152 via Garibaldi, Valencia",
+      "got": "152",
+      "mode": "fragment"
+    },
+    {
+      "tier": "small",
+      "field": "address",
+      "recordId": "D-0028",
+      "text": "Further to our call: the person concerned is Amina Haddad. We hold PL-4801-K on file. Born 5 January 1960. Their postal ",
+      "expected": "120 via Garibaldi, Lisbon",
+      "got": "120",
+      "mode": "fragment"
+    },
+    {
+      "tier": "small",
+      "field": "address",
+      "recordId": "D-0029",
+      "text": "re Karim Lindqvist / Portugal — address 73 Rua da Prata, Valencia — idGR-1222-K — born 16/06/1958 — file opened pending ",
+      "expected": "73 Rua da Prata, Valencia",
+      "got": "73 Rua da Prata, Valencia — idGR - 1222 - K",
+      "mode": "over-long"
+    },
+    {
+      "tier": "small",
+      "field": "address",
+      "recordId": "D-0031",
+      "text": "Application received from Amina Haddad of 146 ulica Nowy Świat, Lisbon; the identity reference supplied was PT-9822-T an",
+      "expected": "146 ulica Nowy Świat, Lisbon",
+      "got": "146 ulica Nowy Świat",
+      "mode": "fragment"
+    },
+    {
+      "tier": "small",
+      "field": "address",
+      "recordId": "D-0033",
+      "text": "KYC REVIEW ⏎ Subject ......... Nadia Novak ⏎ Birth ........... 28 March 1996 ⏎ Document ........ PT-2368-K ⏎ Citizenship",
+      "expected": "140 avenue des Fleurs, Milan",
+      "got": "PT - 2368",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "address",
+      "recordId": "D-0034",
+      "text": "Karim Haddad — dob 25/07/1967 — doc no PL-1424-T — Italy — lives 99 avenue des Fleurs, Milan (updated by branch staff, n",
+      "expected": "99 avenue des Fleurs, Milan",
+      "got": "dob 25 / 07 / 1967 — doc no PL - 1424 - T",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "address",
+      "recordId": "D-0035",
+      "text": "Piotr Chen — dob 23 June 2004 — doc no FR-9868-K — Greece — lives 35 ulica Nowy Świat, Paris (updated by branch staff, n",
+      "expected": "35 ulica Nowy Świat, Paris",
+      "got": "FR - 9868 - K",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "address",
+      "recordId": "D-0040",
+      "text": "Leila Rossi — dob 14/04/1957 — doc no FR-9514-X — Netherlands — lives 27 avenue des Fleurs, Rotterdam (updated by branch",
+      "expected": "27 avenue des Fleurs, Rotterdam",
+      "got": "FR - 9514 - X",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "address",
+      "recordId": "D-0041",
+      "text": "KYC REVIEW ⏎ Subject ......... Sofia Morozov ⏎ Birth ........... 23/07/1990 ⏎ Document ........ PL-5725-K ⏎ Citizenship ",
+      "expected": "71 Odos Ermou, Rotterdam",
+      "got": "PL - 5725",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "address",
+      "recordId": "D-0042",
+      "text": "Sofia Okonkwo — dob 16 September 1976 — doc no PT-4519-X — Germany — lives 62 via Garibaldi, Athens (updated by branch s",
+      "expected": "62 via Garibaldi, Athens",
+      "got": "PT - 4519 - X",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "address",
+      "recordId": "D-0049",
+      "text": "re Tomas Chen / Germany — address 94 via Garibaldi, Warsaw — idIT-5462-K — born 14 September 1988 — file opened pending ",
+      "expected": "94 via Garibaldi, Warsaw",
+      "got": "94",
+      "mode": "fragment"
+    },
+    {
+      "tier": "small",
+      "field": "address",
+      "recordId": "D-0051",
+      "text": "Application received from Karim Haddad of 114 Odos Ermou, Lisbon; the identity reference supplied was PL-2444-M and the ",
+      "expected": "114 Odos Ermou, Lisbon",
+      "got": "114 Odos Ermou, Lisbon ; the identity reference supplied was PL - 2444 - M",
+      "mode": "over-long"
+    },
+    {
+      "tier": "small",
+      "field": "address",
+      "recordId": "D-0052",
+      "text": "KYC REVIEW ⏎ Subject ......... Marcus Novak ⏎ Birth ........... 09/08/1970 ⏎ Document ........ IT-9510-X ⏎ Citizenship .",
+      "expected": "172 avenue des Fleurs, Lisbon",
+      "got": "172",
+      "mode": "fragment"
+    },
+    {
+      "tier": "small",
+      "field": "address",
+      "recordId": "D-0053",
+      "text": "KYC REVIEW ⏎ Subject ......... Sofia Haddad ⏎ Birth ........... 20/08/1989 ⏎ Document ........ PT-4398-K ⏎ Citizenship .",
+      "expected": "135 Odos Ermou, Lyon",
+      "got": "PT - 4398",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "address",
+      "recordId": "D-0055",
+      "text": "Ines Lindqvist — dob 07/01/1965 — doc no PL-6425-X — France — lives 86 via Garibaldi, Athens (updated by branch staff, n",
+      "expected": "86 via Garibaldi, Athens",
+      "got": "dob 07 / 01 / 1965",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "address",
+      "recordId": "D-0057",
+      "text": "Amina Chen — dob 24 July 1969 — doc no GR-7832-T — Netherlands — lives 178 rue Victor Hugo, Valencia (updated by branch ",
+      "expected": "178 rue Victor Hugo, Valencia",
+      "got": "GR - 7832 - T",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "address",
+      "recordId": "D-0058",
+      "text": "Application received from Amina Mbeki of 171 Rua da Prata, Milan; the identity reference supplied was FR-8857-M and the ",
+      "expected": "171 Rua da Prata, Milan",
+      "got": "171 Rua da Prata",
+      "mode": "fragment"
+    },
+    {
+      "tier": "small",
+      "field": "address",
+      "recordId": "D-0060",
+      "text": "KYC REVIEW ⏎ Subject ......... Ines Ferreira ⏎ Birth ........... 25/03/1977 ⏎ Document ........ PL-8149-X ⏎ Citizenship ",
+      "expected": "141 ulica Nowy Świat, Lyon",
+      "got": "PL - 8149 - X Citizenship..... Netherlands Postal",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "address",
+      "recordId": "D-0062",
+      "text": "re Viktor Vasquez / Portugal — address 107 via Garibaldi, Lisbon — idPL-2630-K — born 23 October 1995 — file opened pend",
+      "expected": "107 via Garibaldi, Lisbon",
+      "got": "107",
+      "mode": "fragment"
+    },
+    {
+      "tier": "small",
+      "field": "address",
+      "recordId": "D-0065",
+      "text": "Application received from Tomas Novak of 139 ulica Nowy Świat, Milan; the identity reference supplied was GR-6593-K and ",
+      "expected": "139 ulica Nowy Świat, Milan",
+      "got": "GR - 6593 - K",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "address",
+      "recordId": "D-0066",
+      "text": "Leila Rossi — dob 9 March 1987 — doc no GR-6724-M — Netherlands — lives 91 Rua da Prata, Paris (updated by branch staff,",
+      "expected": "91 Rua da Prata, Paris",
+      "got": "GR - 6724 - M",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "address",
+      "recordId": "D-0067",
+      "text": "re Leila Mbeki / Greece — address 182 Odos Ermou, Lisbon — idIT-7078-T — born 21/12/1987 — file opened pending review",
+      "expected": "182 Odos Ermou, Lisbon",
+      "got": "182",
+      "mode": "fragment"
+    },
+    {
+      "tier": "small",
+      "field": "address",
+      "recordId": "D-0068",
+      "text": "Piotr Mbeki — dob 19/01/1996 — doc no PL-7881-K — Spain — lives 68 rue Victor Hugo, Warsaw (updated by branch staff, no ",
+      "expected": "68 rue Victor Hugo, Warsaw",
+      "got": "PL - 7881 - K",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "address",
+      "recordId": "D-0069",
+      "text": "KYC REVIEW ⏎ Subject ......... Karim Okonkwo ⏎ Birth ........... 6 May 2000 ⏎ Document ........ PT-1584-M ⏎ Citizenship ",
+      "expected": "114 Odos Ermou, Milan",
+      "got": "114",
+      "mode": "fragment"
+    },
+    {
+      "tier": "small",
+      "field": "address",
+      "recordId": "D-0070",
+      "text": "KYC REVIEW ⏎ Subject ......... Ines Ferreira ⏎ Birth ........... 18/02/1971 ⏎ Document ........ GR-3338-K ⏎ Citizenship ",
+      "expected": "174 ulica Nowy Świat, Athens",
+      "got": "GR - 3338",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "address",
+      "recordId": "D-0072",
+      "text": "Application received from Tomas Novak of 70 via Garibaldi, Valencia; the identity reference supplied was GR-3057-X and t",
+      "expected": "70 via Garibaldi, Valencia",
+      "got": "70",
+      "mode": "fragment"
+    },
+    {
+      "tier": "small",
+      "field": "address",
+      "recordId": "D-0073",
+      "text": "Karim Lindqvist — dob 07/03/1962 — doc no PL-2193-X — Italy — lives 140 rue Victor Hugo, Valencia (updated by branch sta",
+      "expected": "140 rue Victor Hugo, Valencia",
+      "got": "dob 07 / 03 / 1962",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "address",
+      "recordId": "D-0075",
+      "text": "re Marcus Novak / France — address 157 ulica Nowy Świat, Milan — idPL-4902-X — born 27/05/1968 — file opened pending rev",
+      "expected": "157 ulica Nowy Świat, Milan",
+      "got": "157",
+      "mode": "fragment"
+    },
+    {
+      "tier": "small",
+      "field": "address",
+      "recordId": "D-0077",
+      "text": "Sofia Chen — dob 23/10/1986 — doc no FR-7804-T — Germany — lives 38 Rua da Prata, Valencia (updated by branch staff, no ",
+      "expected": "38 Rua da Prata, Valencia",
+      "got": "FR - 7804 - T",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "address",
+      "recordId": "D-0078",
+      "text": "KYC REVIEW ⏎ Subject ......... Piotr Lindqvist ⏎ Birth ........... 16/10/1979 ⏎ Document ........ PL-7240-T ⏎ Citizenshi",
+      "expected": "167 via Garibaldi, Warsaw",
+      "got": "PL - 7240",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "address",
+      "recordId": "D-0079",
+      "text": "Application received from Piotr Haddad of 150 ulica Nowy Świat, Rotterdam; the identity reference supplied was GR-1177-K",
+      "expected": "150 ulica Nowy Świat, Rotterdam",
+      "got": "150 ulica Nowy Świat, Rotterdam ; the identity reference supplied was GR - 1177 - K",
+      "mode": "over-long"
+    },
+    {
+      "tier": "small",
+      "field": "address",
+      "recordId": "D-0081",
+      "text": "Nadia Lindqvist — dob 24/12/1990 — doc no GR-1255-M — Germany — lives 4 Odos Ermou, Warsaw (updated by branch staff, no ",
+      "expected": "4 Odos Ermou, Warsaw",
+      "got": "GR - 1255 - M",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "address",
+      "recordId": "D-0086",
+      "text": "Nadia Morozov — dob 17/09/1995 — doc no IT-2889-X — Spain — lives 72 via Garibaldi, Rotterdam (updated by branch staff, ",
+      "expected": "72 via Garibaldi, Rotterdam",
+      "got": "IT - 2889 - X",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "address",
+      "recordId": "D-0088",
+      "text": "Nadia Ferreira — dob 5 December 1963 — doc no PT-8498-T — Germany — lives 80 Rua da Prata, Lisbon (updated by branch sta",
+      "expected": "80 Rua da Prata, Lisbon",
+      "got": "PT - 8498 - T",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "address",
+      "recordId": "D-0090",
+      "text": "re Ines Haddad / Poland — address 101 Rua da Prata, Rotterdam — idGR-2645-X — born 4 June 1960 — file opened pending rev",
+      "expected": "101 Rua da Prata, Rotterdam",
+      "got": "101 Rua da Prata, Rotterdam — idGR - 2645 - X",
+      "mode": "over-long"
+    },
+    {
+      "tier": "small",
+      "field": "address",
+      "recordId": "D-0092",
+      "text": "Piotr Haddad — dob 10/07/1971 — doc no PT-7165-X — Spain — lives 140 avenue des Fleurs, Lyon (updated by branch staff, n",
+      "expected": "140 avenue des Fleurs, Lyon",
+      "got": "dob 10 / 07 / 1971 — doc no PT - 7165 - X",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "address",
+      "recordId": "D-0093",
+      "text": "KYC REVIEW ⏎ Subject ......... Amina Okonkwo ⏎ Birth ........... 24 May 1982 ⏎ Document ........ PT-1067-X ⏎ Citizenship",
+      "expected": "140 via Garibaldi, Athens",
+      "got": "24 May 1982 Document........ PT - 1067 - X Citizenship..... Germany Postal",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "address",
+      "recordId": "D-0094",
+      "text": "Application received from Tomas Novak of 122 avenue des Fleurs, Warsaw; the identity reference supplied was PT-4421-X an",
+      "expected": "122 avenue des Fleurs, Warsaw",
+      "got": "122 avenue des Fleurs, Warsaw ; the identity reference supplied was PT - 4421 - X",
+      "mode": "over-long"
+    },
+    {
+      "tier": "small",
+      "field": "address",
+      "recordId": "D-0095",
+      "text": "re Marcus Haddad / Italy — address 101 Odos Ermou, Valencia — idPT-1654-K — born 15 January 1985 — file opened pending r",
+      "expected": "101 Odos Ermou, Valencia",
+      "got": "101 Odos Ermou, Valencia — idPT - 1654 - K",
+      "mode": "over-long"
+    },
+    {
+      "tier": "small",
+      "field": "address",
+      "recordId": "D-0096",
+      "text": "Nadia Mbeki — dob 8 October 1974 — doc no IT-5809-K — France — lives 88 avenue des Fleurs, Lisbon (updated by branch sta",
+      "expected": "88 avenue des Fleurs, Lisbon",
+      "got": "IT - 5809 - K",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "address",
+      "recordId": "D-0099",
+      "text": "re Viktor Haddad / Germany — address 124 via Garibaldi, Valencia — idIT-7793-T — born 07/07/1998 — file opened pending r",
+      "expected": "124 via Garibaldi, Valencia",
+      "got": "124",
+      "mode": "fragment"
+    },
+    {
+      "tier": "small",
+      "field": "address",
+      "recordId": "D-0100",
+      "text": "Application received from Ines Lindqvist of 156 ulica Nowy Świat, Lisbon; the identity reference supplied was IT-1302-K ",
+      "expected": "156 ulica Nowy Świat, Lisbon",
+      "got": "IT - 1302 - K",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "address",
+      "recordId": "D-0101",
+      "text": "KYC REVIEW ⏎ Subject ......... Marcus Vasquez ⏎ Birth ........... 15/02/1972 ⏎ Document ........ PL-5020-M ⏎ Citizenship",
+      "expected": "66 rue Victor Hugo, Lyon",
+      "got": "66 rue Victor Hugo",
+      "mode": "fragment"
+    },
+    {
+      "tier": "small",
+      "field": "address",
+      "recordId": "D-0102",
+      "text": "re Viktor Ferreira / Italy — address 66 Odos Ermou, Athens — idGR-7666-K — born 03/12/2000 — file opened pending review",
+      "expected": "66 Odos Ermou, Athens",
+      "got": "66 Odos Ermou, Athens — idGR - 7666 - K",
+      "mode": "over-long"
+    },
+    {
+      "tier": "small",
+      "field": "address",
+      "recordId": "D-0104",
+      "text": "Nadia Vasquez — dob 24 August 1962 — doc no PT-1006-X — Spain — lives 58 rue Victor Hugo, Lyon (updated by branch staff,",
+      "expected": "58 rue Victor Hugo, Lyon",
+      "got": "58 rue Victor Hugo",
+      "mode": "fragment"
+    },
+    {
+      "tier": "small",
+      "field": "address",
+      "recordId": "D-0105",
+      "text": "Ines Mbeki — dob 10 September 1997 — doc no PT-3152-K — Portugal — lives 184 rue Victor Hugo, Athens (updated by branch ",
+      "expected": "184 rue Victor Hugo, Athens",
+      "got": "184 rue Victor Hugo",
+      "mode": "fragment"
+    },
+    {
+      "tier": "small",
+      "field": "address",
+      "recordId": "D-0106",
+      "text": "Application received from Sofia Novak of 9 Rua da Prata, Rotterdam; the identity reference supplied was IT-7802-K and th",
+      "expected": "9 Rua da Prata, Rotterdam",
+      "got": "9 Rua da Prata, Rotterdam ; the identity reference supplied was IT - 7802 - K",
+      "mode": "over-long"
+    },
+    {
+      "tier": "small",
+      "field": "address",
+      "recordId": "D-0107",
+      "text": "KYC REVIEW ⏎ Subject ......... Amina Haddad ⏎ Birth ........... 10 June 2001 ⏎ Document ........ PT-2567-K ⏎ Citizenship",
+      "expected": "85 via Garibaldi, Rotterdam",
+      "got": "PT - 2567",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "address",
+      "recordId": "D-0109",
+      "text": "Tomas Lindqvist — dob 2 March 1965 — doc no IT-2578-T — Italy — lives 120 via Garibaldi, Lisbon (updated by branch staff",
+      "expected": "120 via Garibaldi, Lisbon",
+      "got": "IT - 2578 - T",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "address",
+      "recordId": "D-0110",
+      "text": "Application received from Amina Haddad of 97 avenue des Fleurs, Lisbon; the identity reference supplied was PL-9818-M an",
+      "expected": "97 avenue des Fleurs, Lisbon",
+      "got": "97 avenue des Fleurs, Lisbon ; the identity reference supplied was PL - 9818 - M",
+      "mode": "over-long"
+    },
+    {
+      "tier": "small",
+      "field": "address",
+      "recordId": "D-0111",
+      "text": "re Karim Morozov / Germany — address 138 Odos Ermou, Rotterdam — idIT-2397-X — born 5 September 1964 — file opened pendi",
+      "expected": "138 Odos Ermou, Rotterdam",
+      "got": "138 Odos Ermou, Rotterdam — idIT - 2397 - X",
+      "mode": "over-long"
+    },
+    {
+      "tier": "small",
+      "field": "address",
+      "recordId": "D-0113",
+      "text": "Piotr Mbeki — dob 23 November 1990 — doc no PT-3499-X — Greece — lives 128 Rua da Prata, Lyon (updated by branch staff, ",
+      "expected": "128 Rua da Prata, Lyon",
+      "got": "PT - 3499 - X",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "address",
+      "recordId": "D-0115",
+      "text": "Nadia Novak — dob 20 January 2000 — doc no GR-6509-M — Portugal — lives 44 Rua da Prata, Athens (updated by branch staff",
+      "expected": "44 Rua da Prata, Athens",
+      "got": "GR - 6509 - M",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "address",
+      "recordId": "D-0116",
+      "text": "Viktor Chen — dob 27 December 1975 — doc no PL-7982-T — France — lives 66 via Garibaldi, Valencia (updated by branch sta",
+      "expected": "66 via Garibaldi, Valencia",
+      "got": "PL - 7982 - T",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "small",
+      "field": "address",
+      "recordId": "D-0117",
+      "text": "Nadia Novak — dob 28/03/2000 — doc no GR-7686-K — Greece — lives 15 rue Victor Hugo, Lisbon (updated by branch staff, no",
+      "expected": "15 rue Victor Hugo, Lisbon",
+      "got": "15 rue Victor Hugo",
+      "mode": "fragment"
+    },
+    {
+      "tier": "small",
+      "field": "address",
+      "recordId": "D-0118",
+      "text": "Further to our call: the person concerned is Ines Mbeki. We hold FR-2665-M on file. Born 6 December 1963. Their postal a",
+      "expected": "42 ulica Nowy Świat, Rotterdam",
+      "got": "42 ulica Nowy Świat",
+      "mode": "fragment"
+    },
+    {
+      "tier": "small",
+      "field": "address",
+      "recordId": "D-0120",
+      "text": "Application received from Piotr Lindqvist of 11 avenue des Fleurs, Athens; the identity reference supplied was PL-2153-K",
+      "expected": "11 avenue des Fleurs, Athens",
+      "got": "11 avenue des Fleurs, Athens ; the identity reference supplied was PL - 2153 - K",
+      "mode": "over-long"
+    },
+    {
+      "tier": "large",
+      "field": "name",
+      "recordId": "D-0019",
+      "text": "Viktor Vasquez — dob 15/08/2001 — doc no PT-7753-K — Germany — lives 120 ulica Nowy Świat, Paris (updated by branch staf",
+      "expected": "Viktor Vasquez",
+      "got": "Viktor Vasquez — dob 15/08/2001 — doc no PT-7753-K — Germany",
+      "mode": "over-long"
+    },
+    {
+      "tier": "large",
+      "field": "name",
+      "recordId": "D-0056",
+      "text": "re Viktor Novak / France — address 130 ulica Nowy Świat, Rotterdam — idFR-6783-X — born 25 May 1976 — file opened pendin",
+      "expected": "Viktor Novak",
+      "got": "Viktor Novak / France",
+      "mode": "over-long"
+    },
+    {
+      "tier": "large",
+      "field": "name",
+      "recordId": "D-0115",
+      "text": "Nadia Novak — dob 20 January 2000 — doc no GR-6509-M — Portugal — lives 44 Rua da Prata, Athens (updated by branch staff",
+      "expected": "Nadia Novak",
+      "got": "Portugal",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "large",
+      "field": "name",
+      "recordId": "D-0117",
+      "text": "Nadia Novak — dob 28/03/2000 — doc no GR-7686-K — Greece — lives 15 rue Victor Hugo, Lisbon (updated by branch staff, no",
+      "expected": "Nadia Novak",
+      "got": "Greece",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "large",
+      "field": "document",
+      "recordId": "D-0002",
+      "text": "KYC REVIEW ⏎ Subject ......... Leila Haddad ⏎ Birth ........... 10/07/1987 ⏎ Document ........ IT-5560-K ⏎ Citizenship .",
+      "expected": "IT-5560-K",
+      "got": "IT-5560-K\nCitizenship",
+      "mode": "over-long"
+    },
+    {
+      "tier": "large",
+      "field": "document",
+      "recordId": "D-0003",
+      "text": "KYC REVIEW ⏎ Subject ......... Sofia Rossi ⏎ Birth ........... 26/01/1976 ⏎ Document ........ PL-7451-M ⏎ Citizenship ..",
+      "expected": "PL-7451-M",
+      "got": "PL-7451-M\nCitizenship",
+      "mode": "over-long"
+    },
+    {
+      "tier": "large",
+      "field": "document",
+      "recordId": "D-0004",
+      "text": "KYC REVIEW ⏎ Subject ......... Nadia Mbeki ⏎ Birth ........... 1 August 1955 ⏎ Document ........ IT-3621-K ⏎ Citizenship",
+      "expected": "IT-3621-K",
+      "got": "IT-3621-K\nCitizenship",
+      "mode": "over-long"
+    },
+    {
+      "tier": "large",
+      "field": "document",
+      "recordId": "D-0005",
+      "text": "KYC REVIEW ⏎ Subject ......... Tomas Novak ⏎ Birth ........... 5 January 1955 ⏎ Document ........ IT-7212-M ⏎ Citizenshi",
+      "expected": "IT-7212-M",
+      "got": "IT-7212-M\nCitizenship",
+      "mode": "over-long"
+    },
+    {
+      "tier": "large",
+      "field": "document",
+      "recordId": "D-0006",
+      "text": "KYC REVIEW ⏎ Subject ......... Viktor Chen ⏎ Birth ........... 15/08/1988 ⏎ Document ........ FR-3855-T ⏎ Citizenship ..",
+      "expected": "FR-3855-T",
+      "got": "FR-3855",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "document",
+      "recordId": "D-0008",
+      "text": "re Viktor Vasquez / Italy — address 125 rue Victor Hugo, Lyon — idIT-2390-X — born 17 April 1968 — file opened pending r",
+      "expected": "IT-2390-X",
+      "got": "2390-X",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "document",
+      "recordId": "D-0011",
+      "text": "KYC REVIEW ⏎ Subject ......... Tomas Mbeki ⏎ Birth ........... 25/05/1984 ⏎ Document ........ PL-2033-M ⏎ Citizenship ..",
+      "expected": "PL-2033-M",
+      "got": "PL-2033-M\nCitizenship",
+      "mode": "over-long"
+    },
+    {
+      "tier": "large",
+      "field": "document",
+      "recordId": "D-0013",
+      "text": "re Amina Vasquez / Portugal — address 172 Rua da Prata, Lyon — idIT-7286-M — born 27 February 1965 — file opened pending",
+      "expected": "IT-7286-M",
+      "got": "7286-M",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "document",
+      "recordId": "D-0017",
+      "text": "re Amina Okonkwo / Italy — address 9 rue Victor Hugo, Rotterdam — idIT-4463-M — born 23/09/1973 — file opened pending re",
+      "expected": "IT-4463-M",
+      "got": "idIT-4463-M",
+      "mode": "over-long"
+    },
+    {
+      "tier": "large",
+      "field": "document",
+      "recordId": "D-0027",
+      "text": "re Sofia Haddad / France — address 76 rue Victor Hugo, Milan — idPT-6548-X — born 03/10/1956 — file opened pending revie",
+      "expected": "PT-6548-X",
+      "got": "idPT-6548-X",
+      "mode": "over-long"
+    },
+    {
+      "tier": "large",
+      "field": "document",
+      "recordId": "D-0029",
+      "text": "re Karim Lindqvist / Portugal — address 73 Rua da Prata, Valencia — idGR-1222-K — born 16/06/1958 — file opened pending ",
+      "expected": "GR-1222-K",
+      "got": "idGR-1222-K",
+      "mode": "over-long"
+    },
+    {
+      "tier": "large",
+      "field": "document",
+      "recordId": "D-0033",
+      "text": "KYC REVIEW ⏎ Subject ......... Nadia Novak ⏎ Birth ........... 28 March 1996 ⏎ Document ........ PT-2368-K ⏎ Citizenship",
+      "expected": "PT-2368-K",
+      "got": "PT-2368-K\nCitizenship",
+      "mode": "over-long"
+    },
+    {
+      "tier": "large",
+      "field": "document",
+      "recordId": "D-0036",
+      "text": "re Marcus Ferreira / Greece — address 162 Rua da Prata, Valencia — idIT-9114-X — born 21 September 1969 — file opened pe",
+      "expected": "IT-9114-X",
+      "got": "idIT-9114-X",
+      "mode": "over-long"
+    },
+    {
+      "tier": "large",
+      "field": "document",
+      "recordId": "D-0041",
+      "text": "KYC REVIEW ⏎ Subject ......... Sofia Morozov ⏎ Birth ........... 23/07/1990 ⏎ Document ........ PL-5725-K ⏎ Citizenship ",
+      "expected": "PL-5725-K",
+      "got": "PL-5725",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "document",
+      "recordId": "D-0044",
+      "text": "re Nadia Okonkwo / Poland — address 109 rue Victor Hugo, Milan — idPT-6884-M — born 21/12/1988 — file opened pending rev",
+      "expected": "PT-6884-M",
+      "got": "idPT-6884-M",
+      "mode": "over-long"
+    },
+    {
+      "tier": "large",
+      "field": "document",
+      "recordId": "D-0047",
+      "text": "re Nadia Lindqvist / Italy — address 97 Odos Ermou, Lyon — idPT-6646-T — born 16 June 1955 — file opened pending review",
+      "expected": "PT-6646-T",
+      "got": "idPT-6646-T",
+      "mode": "over-long"
+    },
+    {
+      "tier": "large",
+      "field": "document",
+      "recordId": "D-0049",
+      "text": "re Tomas Chen / Germany — address 94 via Garibaldi, Warsaw — idIT-5462-K — born 14 September 1988 — file opened pending ",
+      "expected": "IT-5462-K",
+      "got": "idIT-5462-K",
+      "mode": "over-long"
+    },
+    {
+      "tier": "large",
+      "field": "document",
+      "recordId": "D-0050",
+      "text": "KYC REVIEW ⏎ Subject ......... Viktor Rossi ⏎ Birth ........... 17/10/1977 ⏎ Document ........ IT-1791-M ⏎ Citizenship .",
+      "expected": "IT-1791-M",
+      "got": "IT-1791-M\nCitizenship",
+      "mode": "over-long"
+    },
+    {
+      "tier": "large",
+      "field": "document",
+      "recordId": "D-0053",
+      "text": "KYC REVIEW ⏎ Subject ......... Sofia Haddad ⏎ Birth ........... 20/08/1989 ⏎ Document ........ PT-4398-K ⏎ Citizenship .",
+      "expected": "PT-4398-K",
+      "got": "PT-4398",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "document",
+      "recordId": "D-0056",
+      "text": "re Viktor Novak / France — address 130 ulica Nowy Świat, Rotterdam — idFR-6783-X — born 25 May 1976 — file opened pendin",
+      "expected": "FR-6783-X",
+      "got": "idFR-6783-X",
+      "mode": "over-long"
+    },
+    {
+      "tier": "large",
+      "field": "document",
+      "recordId": "D-0060",
+      "text": "KYC REVIEW ⏎ Subject ......... Ines Ferreira ⏎ Birth ........... 25/03/1977 ⏎ Document ........ PL-8149-X ⏎ Citizenship ",
+      "expected": "PL-8149-X",
+      "got": "PL-8149",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "document",
+      "recordId": "D-0062",
+      "text": "re Viktor Vasquez / Portugal — address 107 via Garibaldi, Lisbon — idPL-2630-K — born 23 October 1995 — file opened pend",
+      "expected": "PL-2630-K",
+      "got": "idPL-2630-K",
+      "mode": "over-long"
+    },
+    {
+      "tier": "large",
+      "field": "document",
+      "recordId": "D-0067",
+      "text": "re Leila Mbeki / Greece — address 182 Odos Ermou, Lisbon — idIT-7078-T — born 21/12/1987 — file opened pending review",
+      "expected": "IT-7078-T",
+      "got": "7078-T",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "document",
+      "recordId": "D-0069",
+      "text": "KYC REVIEW ⏎ Subject ......... Karim Okonkwo ⏎ Birth ........... 6 May 2000 ⏎ Document ........ PT-1584-M ⏎ Citizenship ",
+      "expected": "PT-1584-M",
+      "got": "PT-1584-M\nCitizenship",
+      "mode": "over-long"
+    },
+    {
+      "tier": "large",
+      "field": "document",
+      "recordId": "D-0070",
+      "text": "KYC REVIEW ⏎ Subject ......... Ines Ferreira ⏎ Birth ........... 18/02/1971 ⏎ Document ........ GR-3338-K ⏎ Citizenship ",
+      "expected": "GR-3338-K",
+      "got": "GR-3338",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "document",
+      "recordId": "D-0075",
+      "text": "re Marcus Novak / France — address 157 ulica Nowy Świat, Milan — idPL-4902-X — born 27/05/1968 — file opened pending rev",
+      "expected": "PL-4902-X",
+      "got": "idPL-4902-X",
+      "mode": "over-long"
+    },
+    {
+      "tier": "large",
+      "field": "document",
+      "recordId": "D-0078",
+      "text": "KYC REVIEW ⏎ Subject ......... Piotr Lindqvist ⏎ Birth ........... 16/10/1979 ⏎ Document ........ PL-7240-T ⏎ Citizenshi",
+      "expected": "PL-7240-T",
+      "got": "PL-7240",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "document",
+      "recordId": "D-0080",
+      "text": "KYC REVIEW ⏎ Subject ......... Viktor Mbeki ⏎ Birth ........... 21 February 2000 ⏎ Document ........ PT-3826-M ⏎ Citizen",
+      "expected": "PT-3826-M",
+      "got": "PT-3826-M\nCitizenship",
+      "mode": "over-long"
+    },
+    {
+      "tier": "large",
+      "field": "document",
+      "recordId": "D-0089",
+      "text": "KYC REVIEW ⏎ Subject ......... Viktor Haddad ⏎ Birth ........... 18 May 1981 ⏎ Document ........ FR-5383-M ⏎ Citizenship",
+      "expected": "FR-5383-M",
+      "got": "FR-5383",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "document",
+      "recordId": "D-0090",
+      "text": "re Ines Haddad / Poland — address 101 Rua da Prata, Rotterdam — idGR-2645-X — born 4 June 1960 — file opened pending rev",
+      "expected": "GR-2645-X",
+      "got": "idGR-2645-X",
+      "mode": "over-long"
+    },
+    {
+      "tier": "large",
+      "field": "document",
+      "recordId": "D-0095",
+      "text": "re Marcus Haddad / Italy — address 101 Odos Ermou, Valencia — idPT-1654-K — born 15 January 1985 — file opened pending r",
+      "expected": "PT-1654-K",
+      "got": "idPT-1654-K",
+      "mode": "over-long"
+    },
+    {
+      "tier": "large",
+      "field": "document",
+      "recordId": "D-0098",
+      "text": "re Sofia Vasquez / Portugal — address 51 Rua da Prata, Lisbon — idPT-1490-T — born 20 November 1971 — file opened pendin",
+      "expected": "PT-1490-T",
+      "got": "idPT-1490-T",
+      "mode": "over-long"
+    },
+    {
+      "tier": "large",
+      "field": "document",
+      "recordId": "D-0099",
+      "text": "re Viktor Haddad / Germany — address 124 via Garibaldi, Valencia — idIT-7793-T — born 07/07/1998 — file opened pending r",
+      "expected": "IT-7793-T",
+      "got": "7793-T",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "document",
+      "recordId": "D-0101",
+      "text": "KYC REVIEW ⏎ Subject ......... Marcus Vasquez ⏎ Birth ........... 15/02/1972 ⏎ Document ........ PL-5020-M ⏎ Citizenship",
+      "expected": "PL-5020-M",
+      "got": "PL-5020-M\nCitizenship",
+      "mode": "over-long"
+    },
+    {
+      "tier": "large",
+      "field": "document",
+      "recordId": "D-0102",
+      "text": "re Viktor Ferreira / Italy — address 66 Odos Ermou, Athens — idGR-7666-K — born 03/12/2000 — file opened pending review",
+      "expected": "GR-7666-K",
+      "got": "idGR-7666-K",
+      "mode": "over-long"
+    },
+    {
+      "tier": "large",
+      "field": "document",
+      "recordId": "D-0107",
+      "text": "KYC REVIEW ⏎ Subject ......... Amina Haddad ⏎ Birth ........... 10 June 2001 ⏎ Document ........ PT-2567-K ⏎ Citizenship",
+      "expected": "PT-2567-K",
+      "got": "PT-2567-K\nCitizenship",
+      "mode": "over-long"
+    },
+    {
+      "tier": "large",
+      "field": "document",
+      "recordId": "D-0108",
+      "text": "KYC REVIEW ⏎ Subject ......... Sofia Okonkwo ⏎ Birth ........... 8 October 1958 ⏎ Document ........ PL-7466-M ⏎ Citizens",
+      "expected": "PL-7466-M",
+      "got": "PL-7466",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "document",
+      "recordId": "D-0111",
+      "text": "re Karim Morozov / Germany — address 138 Odos Ermou, Rotterdam — idIT-2397-X — born 5 September 1964 — file opened pendi",
+      "expected": "IT-2397-X",
+      "got": "idIT-2397-X",
+      "mode": "over-long"
+    },
+    {
+      "tier": "large",
+      "field": "document",
+      "recordId": "D-0114",
+      "text": "re Nadia Vasquez / Poland — address 8 Rua da Prata, Lisbon — idGR-1271-X — born 04/04/1968 — file opened pending review",
+      "expected": "GR-1271-X",
+      "got": "idGR-1271-X",
+      "mode": "over-long"
+    },
+    {
+      "tier": "large",
+      "field": "address",
+      "recordId": "D-0001",
+      "text": "Marcus Ferreira — dob 21 October 1961 — doc no FR-1856-M — Portugal — lives 106 Odos Ermou, Rotterdam (updated by branch",
+      "expected": "106 Odos Ermou, Rotterdam",
+      "got": "106 Odos Ermou",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "address",
+      "recordId": "D-0005",
+      "text": "KYC REVIEW ⏎ Subject ......... Tomas Novak ⏎ Birth ........... 5 January 1955 ⏎ Document ........ IT-7212-M ⏎ Citizenshi",
+      "expected": "124 via Garibaldi, Rotterdam",
+      "got": "Garibaldi, Rotterdam",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "address",
+      "recordId": "D-0008",
+      "text": "re Viktor Vasquez / Italy — address 125 rue Victor Hugo, Lyon — idIT-2390-X — born 17 April 1968 — file opened pending r",
+      "expected": "125 rue Victor Hugo, Lyon",
+      "got": "125 rue Victor Hugo",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "address",
+      "recordId": "D-0009",
+      "text": "Piotr Novak — dob 03/05/1991 — doc no PT-8733-K — France — lives 188 avenue des Fleurs, Lyon (updated by branch staff, n",
+      "expected": "188 avenue des Fleurs, Lyon",
+      "got": "188 avenue des Fleurs",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "address",
+      "recordId": "D-0010",
+      "text": "Leila Okonkwo — dob 10 October 1967 — doc no IT-1946-K — Netherlands — lives 89 Odos Ermou, Rotterdam (updated by branch",
+      "expected": "89 Odos Ermou, Rotterdam",
+      "got": "89 Odos Ermou",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "address",
+      "recordId": "D-0012",
+      "text": "Further to our call: the person concerned is Tomas Morozov. We hold PT-2299-M on file. Born 9 August 1959. Their postal ",
+      "expected": "189 via Garibaldi, Paris",
+      "got": "Garibaldi, Paris",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "address",
+      "recordId": "D-0015",
+      "text": "Application received from Sofia Morozov of 9 ulica Nowy Świat, Milan; the identity reference supplied was PL-4345-K and ",
+      "expected": "9 ulica Nowy Świat, Milan",
+      "got": "9 ulica Nowy Świat",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "address",
+      "recordId": "D-0016",
+      "text": "Application received from Marcus Lindqvist of 192 avenue des Fleurs, Valencia; the identity reference supplied was PT-85",
+      "expected": "192 avenue des Fleurs, Valencia",
+      "got": "192 avenue des Fleurs",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "address",
+      "recordId": "D-0017",
+      "text": "re Amina Okonkwo / Italy — address 9 rue Victor Hugo, Rotterdam — idIT-4463-M — born 23/09/1973 — file opened pending re",
+      "expected": "9 rue Victor Hugo, Rotterdam",
+      "got": "9 rue Victor Hugo",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "address",
+      "recordId": "D-0021",
+      "text": "Application received from Viktor Novak of 152 via Garibaldi, Valencia; the identity reference supplied was PT-1561-T and",
+      "expected": "152 via Garibaldi, Valencia",
+      "got": "Garibaldi, Valencia",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "address",
+      "recordId": "D-0023",
+      "text": "Application received from Amina Mbeki of 113 Odos Ermou, Lisbon; the identity reference supplied was FR-8412-X and the s",
+      "expected": "113 Odos Ermou, Lisbon",
+      "got": "113 Odos Ermou",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "address",
+      "recordId": "D-0025",
+      "text": "Further to our call: the person concerned is Tomas Chen. We hold IT-9786-T on file. Born 8 April 1969. Their postal addr",
+      "expected": "94 avenue des Fleurs, Paris",
+      "got": "94 avenue des Fleurs",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "address",
+      "recordId": "D-0027",
+      "text": "re Sofia Haddad / France — address 76 rue Victor Hugo, Milan — idPT-6548-X — born 03/10/1956 — file opened pending revie",
+      "expected": "76 rue Victor Hugo, Milan",
+      "got": "76 rue Victor Hugo",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "address",
+      "recordId": "D-0029",
+      "text": "re Karim Lindqvist / Portugal — address 73 Rua da Prata, Valencia — idGR-1222-K — born 16/06/1958 — file opened pending ",
+      "expected": "73 Rua da Prata, Valencia",
+      "got": "73 Rua da Prata",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "address",
+      "recordId": "D-0030",
+      "text": "Further to our call: the person concerned is Piotr Vasquez. We hold IT-7435-K on file. Born 26/08/1955. Their postal add",
+      "expected": "154 avenue des Fleurs, Paris",
+      "got": "154 avenue des Fleurs",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "address",
+      "recordId": "D-0031",
+      "text": "Application received from Amina Haddad of 146 ulica Nowy Świat, Lisbon; the identity reference supplied was PT-9822-T an",
+      "expected": "146 ulica Nowy Świat, Lisbon",
+      "got": "146 ulica Nowy Świat",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "address",
+      "recordId": "D-0032",
+      "text": "Application received from Marcus Mbeki of 3 ulica Nowy Świat, Warsaw; the identity reference supplied was GR-2602-T and ",
+      "expected": "3 ulica Nowy Świat, Warsaw",
+      "got": "3 ulica Nowy Świat",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "address",
+      "recordId": "D-0034",
+      "text": "Karim Haddad — dob 25/07/1967 — doc no PL-1424-T — Italy — lives 99 avenue des Fleurs, Milan (updated by branch staff, n",
+      "expected": "99 avenue des Fleurs, Milan",
+      "got": "99 avenue des Fleurs",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "address",
+      "recordId": "D-0036",
+      "text": "re Marcus Ferreira / Greece — address 162 Rua da Prata, Valencia — idIT-9114-X — born 21 September 1969 — file opened pe",
+      "expected": "162 Rua da Prata, Valencia",
+      "got": "162 Rua da Prata",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "address",
+      "recordId": "D-0037",
+      "text": "Further to our call: the person concerned is Amina Novak. We hold IT-3300-T on file. Born 07/09/2002. Their postal addre",
+      "expected": "192 avenue des Fleurs, Athens",
+      "got": "192 avenue des Fleurs",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "address",
+      "recordId": "D-0040",
+      "text": "Leila Rossi — dob 14/04/1957 — doc no FR-9514-X — Netherlands — lives 27 avenue des Fleurs, Rotterdam (updated by branch",
+      "expected": "27 avenue des Fleurs, Rotterdam",
+      "got": "27 avenue des Fleurs",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "address",
+      "recordId": "D-0042",
+      "text": "Sofia Okonkwo — dob 16 September 1976 — doc no PT-4519-X — Germany — lives 62 via Garibaldi, Athens (updated by branch s",
+      "expected": "62 via Garibaldi, Athens",
+      "got": "Sofia Okonkwo",
+      "mode": "wrong span"
+    },
+    {
+      "tier": "large",
+      "field": "address",
+      "recordId": "D-0044",
+      "text": "re Nadia Okonkwo / Poland — address 109 rue Victor Hugo, Milan — idPT-6884-M — born 21/12/1988 — file opened pending rev",
+      "expected": "109 rue Victor Hugo, Milan",
+      "got": "109 rue Victor Hugo",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "address",
+      "recordId": "D-0047",
+      "text": "re Nadia Lindqvist / Italy — address 97 Odos Ermou, Lyon — idPT-6646-T — born 16 June 1955 — file opened pending review",
+      "expected": "97 Odos Ermou, Lyon",
+      "got": "97 Odos Ermou",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "address",
+      "recordId": "D-0048",
+      "text": "Application received from Amina Morozov of 19 via Garibaldi, Paris; the identity reference supplied was IT-9503-T and th",
+      "expected": "19 via Garibaldi, Paris",
+      "got": "Garibaldi, Paris",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "address",
+      "recordId": "D-0049",
+      "text": "re Tomas Chen / Germany — address 94 via Garibaldi, Warsaw — idIT-5462-K — born 14 September 1988 — file opened pending ",
+      "expected": "94 via Garibaldi, Warsaw",
+      "got": "94 via Garibaldi",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "address",
+      "recordId": "D-0050",
+      "text": "KYC REVIEW ⏎ Subject ......... Viktor Rossi ⏎ Birth ........... 17/10/1977 ⏎ Document ........ IT-1791-M ⏎ Citizenship .",
+      "expected": "162 via Garibaldi, Paris",
+      "got": "Garibaldi, Paris",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "address",
+      "recordId": "D-0051",
+      "text": "Application received from Karim Haddad of 114 Odos Ermou, Lisbon; the identity reference supplied was PL-2444-M and the ",
+      "expected": "114 Odos Ermou, Lisbon",
+      "got": "114 Odos Ermou",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "address",
+      "recordId": "D-0054",
+      "text": "Application received from Leila Mbeki of 23 rue Victor Hugo, Rotterdam; the identity reference supplied was PL-5605-M an",
+      "expected": "23 rue Victor Hugo, Rotterdam",
+      "got": "23 rue Victor Hugo",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "address",
+      "recordId": "D-0055",
+      "text": "Ines Lindqvist — dob 07/01/1965 — doc no PL-6425-X — France — lives 86 via Garibaldi, Athens (updated by branch staff, n",
+      "expected": "86 via Garibaldi, Athens",
+      "got": "Garibaldi",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "address",
+      "recordId": "D-0056",
+      "text": "re Viktor Novak / France — address 130 ulica Nowy Świat, Rotterdam — idFR-6783-X — born 25 May 1976 — file opened pendin",
+      "expected": "130 ulica Nowy Świat, Rotterdam",
+      "got": "130 ulica Nowy Świat",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "address",
+      "recordId": "D-0057",
+      "text": "Amina Chen — dob 24 July 1969 — doc no GR-7832-T — Netherlands — lives 178 rue Victor Hugo, Valencia (updated by branch ",
+      "expected": "178 rue Victor Hugo, Valencia",
+      "got": "178 rue Victor Hugo",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "address",
+      "recordId": "D-0058",
+      "text": "Application received from Amina Mbeki of 171 Rua da Prata, Milan; the identity reference supplied was FR-8857-M and the ",
+      "expected": "171 Rua da Prata, Milan",
+      "got": "171 Rua da Prata",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "address",
+      "recordId": "D-0059",
+      "text": "Application received from Sofia Mbeki of 80 rue Victor Hugo, Paris; the identity reference supplied was PT-6986-X and th",
+      "expected": "80 rue Victor Hugo, Paris",
+      "got": "80 rue Victor Hugo",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "address",
+      "recordId": "D-0061",
+      "text": "Application received from Leila Ferreira of 23 Odos Ermou, Warsaw; the identity reference supplied was PL-6793-T and the",
+      "expected": "23 Odos Ermou, Warsaw",
+      "got": "23 Odos Ermou",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "address",
+      "recordId": "D-0062",
+      "text": "re Viktor Vasquez / Portugal — address 107 via Garibaldi, Lisbon — idPL-2630-K — born 23 October 1995 — file opened pend",
+      "expected": "107 via Garibaldi, Lisbon",
+      "got": "107",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "address",
+      "recordId": "D-0064",
+      "text": "Further to our call: the person concerned is Nadia Ferreira. We hold PT-6279-T on file. Born 02/02/1982. Their postal ad",
+      "expected": "139 Odos Ermou, Athens",
+      "got": "139 Odos Ermou",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "address",
+      "recordId": "D-0067",
+      "text": "re Leila Mbeki / Greece — address 182 Odos Ermou, Lisbon — idIT-7078-T — born 21/12/1987 — file opened pending review",
+      "expected": "182 Odos Ermou, Lisbon",
+      "got": "182 Odos Ermou",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "address",
+      "recordId": "D-0068",
+      "text": "Piotr Mbeki — dob 19/01/1996 — doc no PL-7881-K — Spain — lives 68 rue Victor Hugo, Warsaw (updated by branch staff, no ",
+      "expected": "68 rue Victor Hugo, Warsaw",
+      "got": "68 rue Victor Hugo",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "address",
+      "recordId": "D-0072",
+      "text": "Application received from Tomas Novak of 70 via Garibaldi, Valencia; the identity reference supplied was GR-3057-X and t",
+      "expected": "70 via Garibaldi, Valencia",
+      "got": "Garibaldi, Valencia",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "address",
+      "recordId": "D-0073",
+      "text": "Karim Lindqvist — dob 07/03/1962 — doc no PL-2193-X — Italy — lives 140 rue Victor Hugo, Valencia (updated by branch sta",
+      "expected": "140 rue Victor Hugo, Valencia",
+      "got": "140 rue Victor Hugo",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "address",
+      "recordId": "D-0074",
+      "text": "Application received from Marcus Vasquez of 53 Rua da Prata, Valencia; the identity reference supplied was PL-1678-K and",
+      "expected": "53 Rua da Prata, Valencia",
+      "got": "53 Rua da Prata",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "address",
+      "recordId": "D-0075",
+      "text": "re Marcus Novak / France — address 157 ulica Nowy Świat, Milan — idPL-4902-X — born 27/05/1968 — file opened pending rev",
+      "expected": "157 ulica Nowy Świat, Milan",
+      "got": "157 ulica Nowy Świat",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "address",
+      "recordId": "D-0076",
+      "text": "Application received from Marcus Lindqvist of 125 Rua da Prata, Lisbon; the identity reference supplied was GR-3917-M an",
+      "expected": "125 Rua da Prata, Lisbon",
+      "got": "125 Rua da Prata",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "address",
+      "recordId": "D-0077",
+      "text": "Sofia Chen — dob 23/10/1986 — doc no FR-7804-T — Germany — lives 38 Rua da Prata, Valencia (updated by branch staff, no ",
+      "expected": "38 Rua da Prata, Valencia",
+      "got": "Rua da Prata",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "address",
+      "recordId": "D-0078",
+      "text": "KYC REVIEW ⏎ Subject ......... Piotr Lindqvist ⏎ Birth ........... 16/10/1979 ⏎ Document ........ PL-7240-T ⏎ Citizenshi",
+      "expected": "167 via Garibaldi, Warsaw",
+      "got": "Garibaldi, Warsaw",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "address",
+      "recordId": "D-0079",
+      "text": "Application received from Piotr Haddad of 150 ulica Nowy Świat, Rotterdam; the identity reference supplied was GR-1177-K",
+      "expected": "150 ulica Nowy Świat, Rotterdam",
+      "got": "150 ulica Nowy Świat",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "address",
+      "recordId": "D-0081",
+      "text": "Nadia Lindqvist — dob 24/12/1990 — doc no GR-1255-M — Germany — lives 4 Odos Ermou, Warsaw (updated by branch staff, no ",
+      "expected": "4 Odos Ermou, Warsaw",
+      "got": "4 Odos Ermou",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "address",
+      "recordId": "D-0082",
+      "text": "Application received from Leila Okonkwo of 79 Rua da Prata, Warsaw; the identity reference supplied was FR-4733-K and th",
+      "expected": "79 Rua da Prata, Warsaw",
+      "got": "79 Rua da Prata",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "address",
+      "recordId": "D-0085",
+      "text": "Further to our call: the person concerned is Piotr Vasquez. We hold PT-7025-K on file. Born 01/12/1987. Their postal add",
+      "expected": "96 avenue des Fleurs, Rotterdam",
+      "got": "96 avenue des Fleurs",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "address",
+      "recordId": "D-0086",
+      "text": "Nadia Morozov — dob 17/09/1995 — doc no IT-2889-X — Spain — lives 72 via Garibaldi, Rotterdam (updated by branch staff, ",
+      "expected": "72 via Garibaldi, Rotterdam",
+      "got": "Garibaldi, Rotterdam",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "address",
+      "recordId": "D-0087",
+      "text": "Application received from Piotr Mbeki of 19 avenue des Fleurs, Athens; the identity reference supplied was GR-6474-X and",
+      "expected": "19 avenue des Fleurs, Athens",
+      "got": "19 avenue des Fleurs",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "address",
+      "recordId": "D-0088",
+      "text": "Nadia Ferreira — dob 5 December 1963 — doc no PT-8498-T — Germany — lives 80 Rua da Prata, Lisbon (updated by branch sta",
+      "expected": "80 Rua da Prata, Lisbon",
+      "got": "80 Rua da Prata",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "address",
+      "recordId": "D-0092",
+      "text": "Piotr Haddad — dob 10/07/1971 — doc no PT-7165-X — Spain — lives 140 avenue des Fleurs, Lyon (updated by branch staff, n",
+      "expected": "140 avenue des Fleurs, Lyon",
+      "got": "140 avenue des Fleurs",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "address",
+      "recordId": "D-0093",
+      "text": "KYC REVIEW ⏎ Subject ......... Amina Okonkwo ⏎ Birth ........... 24 May 1982 ⏎ Document ........ PT-1067-X ⏎ Citizenship",
+      "expected": "140 via Garibaldi, Athens",
+      "got": "Amina Okonkwo\nBirth ........... 24 May 1982\nDocument ........ PT-1067-X\nCitizenship ..... Germany\nPostal .......... 140 via Garibaldi, Athens",
+      "mode": "over-long"
+    },
+    {
+      "tier": "large",
+      "field": "address",
+      "recordId": "D-0094",
+      "text": "Application received from Tomas Novak of 122 avenue des Fleurs, Warsaw; the identity reference supplied was PT-4421-X an",
+      "expected": "122 avenue des Fleurs, Warsaw",
+      "got": "122 avenue des Fleurs",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "address",
+      "recordId": "D-0095",
+      "text": "re Marcus Haddad / Italy — address 101 Odos Ermou, Valencia — idPT-1654-K — born 15 January 1985 — file opened pending r",
+      "expected": "101 Odos Ermou, Valencia",
+      "got": "101 Odos Ermou",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "address",
+      "recordId": "D-0096",
+      "text": "Nadia Mbeki — dob 8 October 1974 — doc no IT-5809-K — France — lives 88 avenue des Fleurs, Lisbon (updated by branch sta",
+      "expected": "88 avenue des Fleurs, Lisbon",
+      "got": "88 avenue des Fleurs",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "address",
+      "recordId": "D-0097",
+      "text": "Application received from Sofia Okonkwo of 64 avenue des Fleurs, Warsaw; the identity reference supplied was IT-7274-T a",
+      "expected": "64 avenue des Fleurs, Warsaw",
+      "got": "64 avenue des Fleurs",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "address",
+      "recordId": "D-0098",
+      "text": "re Sofia Vasquez / Portugal — address 51 Rua da Prata, Lisbon — idPT-1490-T — born 20 November 1971 — file opened pendin",
+      "expected": "51 Rua da Prata, Lisbon",
+      "got": "51 Rua da Prata",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "address",
+      "recordId": "D-0099",
+      "text": "re Viktor Haddad / Germany — address 124 via Garibaldi, Valencia — idIT-7793-T — born 07/07/1998 — file opened pending r",
+      "expected": "124 via Garibaldi, Valencia",
+      "got": "124",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "address",
+      "recordId": "D-0100",
+      "text": "Application received from Ines Lindqvist of 156 ulica Nowy Świat, Lisbon; the identity reference supplied was IT-1302-K ",
+      "expected": "156 ulica Nowy Świat, Lisbon",
+      "got": "156 ulica Nowy Świat",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "address",
+      "recordId": "D-0102",
+      "text": "re Viktor Ferreira / Italy — address 66 Odos Ermou, Athens — idGR-7666-K — born 03/12/2000 — file opened pending review",
+      "expected": "66 Odos Ermou, Athens",
+      "got": "66 Odos Ermou",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "address",
+      "recordId": "D-0105",
+      "text": "Ines Mbeki — dob 10 September 1997 — doc no PT-3152-K — Portugal — lives 184 rue Victor Hugo, Athens (updated by branch ",
+      "expected": "184 rue Victor Hugo, Athens",
+      "got": "184 rue Victor Hugo",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "address",
+      "recordId": "D-0106",
+      "text": "Application received from Sofia Novak of 9 Rua da Prata, Rotterdam; the identity reference supplied was IT-7802-K and th",
+      "expected": "9 Rua da Prata, Rotterdam",
+      "got": "9 Rua da Prata",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "address",
+      "recordId": "D-0107",
+      "text": "KYC REVIEW ⏎ Subject ......... Amina Haddad ⏎ Birth ........... 10 June 2001 ⏎ Document ........ PT-2567-K ⏎ Citizenship",
+      "expected": "85 via Garibaldi, Rotterdam",
+      "got": "Garibaldi, Rotterdam",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "address",
+      "recordId": "D-0109",
+      "text": "Tomas Lindqvist — dob 2 March 1965 — doc no IT-2578-T — Italy — lives 120 via Garibaldi, Lisbon (updated by branch staff",
+      "expected": "120 via Garibaldi, Lisbon",
+      "got": "Garibaldi",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "address",
+      "recordId": "D-0110",
+      "text": "Application received from Amina Haddad of 97 avenue des Fleurs, Lisbon; the identity reference supplied was PL-9818-M an",
+      "expected": "97 avenue des Fleurs, Lisbon",
+      "got": "97 avenue des Fleurs",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "address",
+      "recordId": "D-0111",
+      "text": "re Karim Morozov / Germany — address 138 Odos Ermou, Rotterdam — idIT-2397-X — born 5 September 1964 — file opened pendi",
+      "expected": "138 Odos Ermou, Rotterdam",
+      "got": "138 Odos Ermou",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "address",
+      "recordId": "D-0115",
+      "text": "Nadia Novak — dob 20 January 2000 — doc no GR-6509-M — Portugal — lives 44 Rua da Prata, Athens (updated by branch staff",
+      "expected": "44 Rua da Prata, Athens",
+      "got": "44 Rua da Prata",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "address",
+      "recordId": "D-0116",
+      "text": "Viktor Chen — dob 27 December 1975 — doc no PL-7982-T — France — lives 66 via Garibaldi, Valencia (updated by branch sta",
+      "expected": "66 via Garibaldi, Valencia",
+      "got": "Garibaldi, Valencia",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "address",
+      "recordId": "D-0117",
+      "text": "Nadia Novak — dob 28/03/2000 — doc no GR-7686-K — Greece — lives 15 rue Victor Hugo, Lisbon (updated by branch staff, no",
+      "expected": "15 rue Victor Hugo, Lisbon",
+      "got": "15 rue Victor Hugo",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "address",
+      "recordId": "D-0119",
+      "text": "Application received from Sofia Chen of 88 rue Victor Hugo, Milan; the identity reference supplied was PL-1822-X and the",
+      "expected": "88 rue Victor Hugo, Milan",
+      "got": "88 rue Victor Hugo",
+      "mode": "fragment"
+    },
+    {
+      "tier": "large",
+      "field": "address",
+      "recordId": "D-0120",
+      "text": "Application received from Piotr Lindqvist of 11 avenue des Fleurs, Athens; the identity reference supplied was PL-2153-K",
+      "expected": "11 avenue des Fleurs, Athens",
+      "got": "11 avenue des Fleurs",
+      "mode": "fragment"
+    }
+  ]
+}

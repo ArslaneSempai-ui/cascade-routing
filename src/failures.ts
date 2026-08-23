@@ -16,6 +16,9 @@
 
 import { generateRecords, FIELDS } from "./corpus.ts";
 import { loadavg } from "node:os";
+import { createHash } from "node:crypto";
+import { readFileSync, writeFileSync, existsSync } from "node:fs";
+import { REVISIONS } from "./tiers.ts";
 import { isMain } from "./cli.ts";
 import { ouvrirJournal, issue } from "./journal.ts";
 import { ENCODEURS, GENERATIFS, TIERS, loadExtractors, extract, correct } from "./tiers.ts";
@@ -61,7 +64,63 @@ export function classify(got: string, expected: string): Failure["mode"] {
  * pendant qu'une mesure y tournait — deux travaux se disputant le même GPU, tous deux
  * ralentis, aucun des deux en erreur.
  */
-export async function collect(howMany = 120, paliers: TierName[] = ENCODEURS): Promise<Failure[]> {
+/*
+ * LA GALERIE SE CALCULE UNE FOIS, ET SON CACHE PORTE L'EMPREINTE DE SES ENTRÉES.
+ *
+ * `collect()` faisait 1 800 appels de modèle — 120 cas × 5 champs × 3 paliers — À CHAQUE
+ * EXÉCUTION, y compris en mode `--check`, où l'on veut seulement savoir si le README
+ * correspond au code. Trois conséquences, une seule visible :
+ *   — `npm run test`, la première commande recommandée, téléchargeait 722 Mo de poids et
+ *     mourait en douze secondes derrière un proxy d'entreprise ;
+ *   — 59 des 103 secondes de la suite y passaient ;
+ *   — chaque passe écrivait un journal de 400 Kio que rien ne purge.
+ *
+ * Le calcul est pourtant DÉTERMINISTE : le corpus est engendré d'une graine fixe, les
+ * modèles sont épinglés par révision, le correcteur est du code. Le mettre en cache est
+ * donc légitime — et c'est justement ce qui le rend dangereux. Un cache qui ne porte pas
+ * l'empreinte de son entrée est un générateur de faux résultats REPRODUCTIBLES : il rend
+ * toujours la même chose, donc il inspire confiance, et il peut être périmé depuis des
+ * semaines sans que rien ne le dise.
+ *
+ * La clé couvre donc tout ce qui décide du résultat, y compris LE CODE. Les révisions de
+ * modèles et la graine du corpus ne suffisent pas : changer une règle dans `tiers.ts` change
+ * la galerie sans changer aucun paramètre. On hache donc aussi le texte des trois modules
+ * qui produisent le résultat. C'est grossier et c'est exact — un faux positif fait
+ * recalculer, un faux négatif publierait une galerie qui ne correspond plus au code.
+ *
+ * Et si la clé diffère, on RECALCULE. Jamais servir un cache dont on sait qu'il ne
+ * correspond pas : ce serait remplacer une lenteur par un mensonge.
+ */
+const GALERIE = new URL("../failures-reference.json", import.meta.url).pathname;
+
+function empreinteDesEntrees(howMany: number, paliers: TierName[]): string {
+  const sources = ["tiers.ts", "corpus.ts", "failures.ts"]
+    .map((f) => {
+      try { return readFileSync(new URL(f, import.meta.url).pathname, "utf8"); }
+      catch { return ""; }
+    }).join("\u0000");
+  return createHash("sha256").update(JSON.stringify({
+    howMany, paliers: [...paliers].sort(), revisions: REVISIONS, split: "heldout",
+    code: createHash("sha256").update(sources).digest("hex"),
+  })).digest("hex").slice(0, 16);
+}
+
+export async function collect(howMany = 120, paliers: TierName[] = ENCODEURS, refaire = false): Promise<Failure[]> {
+  const cle = empreinteDesEntrees(howMany, paliers);
+  if (!refaire && existsSync(GALERIE)) {
+    try {
+      const c = JSON.parse(readFileSync(GALERIE, "utf8")) as { entrees?: string; echecs?: Failure[] };
+      if (c.entrees === cle && Array.isArray(c.echecs)) return c.echecs;
+      console.warn(`\n⚠ La galerie en cache ne correspond plus à ses entrées (${c.entrees ?? "sans clé"} ≠ ${cle}).`);
+      console.warn(`  Recalcul — les modèles vont être chargés.\n`);
+    } catch {
+      console.warn(`\n⚠ ${GALERIE} illisible : recalcul.\n`);
+    }
+  }
+  return await calculerGalerie(howMany, paliers, cle);
+}
+
+async function calculerGalerie(howMany: number, paliers: TierName[], cle: string): Promise<Failure[]> {
   const records = generateRecords(howMany, "heldout");
   await loadExtractors();
   const failures: Failure[] = [];
@@ -102,6 +161,16 @@ export async function collect(howMany = 120, paliers: TierName[] = ENCODEURS): P
     }
   }
   journal.fermer();
+  /* on écrit le cache AVEC sa clé : sans elle il n'aurait aucune valeur, et il en aurait
+     l'apparence — ce qui est pire que pas de cache du tout. */
+  writeFileSync(GALERIE, JSON.stringify({
+    entrees: cle,
+    quoi: "Galerie des échecs, mise en cache. La clé « entrees » couvre le corpus, les "
+      + "révisions de modèles et le texte des modules qui produisent ce résultat. Si elle "
+      + "ne correspond pas, l'outil recalcule au lieu de servir ceci.",
+    calculeeLe: new Date().toISOString(),
+    echecs: failures,
+  }, null, 2));
   return failures;
 }
 
