@@ -9,8 +9,10 @@ import { execFileSync } from "node:child_process";
 import { generateRecords, generateAlerts, FIELDS, TYPOLOGIES } from "./corpus.ts";
 import { correct, TIERS, estLocal, OLLAMA, MODELES_LOCAUX, digestsQuiDivergent } from "./tiers.ts";
 import type { TierName } from "./paliers.ts";
-import { classify, empreinteDesEntrees, modulesAtteints } from "./failures.ts";
+import { classify, empreinteDesEntrees, modulesAtteints, cleDeLaGalerieLivree, cleDuFichierLivre } from "./failures.ts";
 import { comparer } from "./diff.ts";
+import { comparerPopulations, plancherDeBruit, longueur } from "./entree.ts";
+import { SEUIL_DE_L_INDUSTRIE, OBSERVATIONS_MINIMALES } from "./psi.ts";
 import { readProfiles, empreinteDuReleve, RELEVE_DE_REFERENCE, type Profile, type ProvenanceDuPalier, type Provenance } from "./measure.ts";
 import { optimiseExtraction, optimiseClassification, budgetShadowPrice, latenceRepresentative, paliersMesures, evaluer, pricePerThousandDocuments } from "./optimise.ts";
 import { ASSUMPTIONS, UNITS, pricePerThousandExtractions, accuracy } from "./assumptions.ts";
@@ -1899,4 +1901,97 @@ test("le diff voit les cas perdus sous un taux qui monte, et refuse ce qui ne s'
     "deux échantillons de tailles différentes ont été appariés cas par cas.");
   assert.match(raisons["t/sansBits"] ?? "", /réussites par cas/,
     "une cellule sans réussites par cas a été comptée comme comparée.");
+});
+
+
+/*
+ * §6.3 DU DOSSIER SIGNÉ : SURVEILLER L'ENTRÉE, ET SAVOIR CE QU'UN INDICE VAUT.
+ *
+ * « Watch the input distribution, not only the output. Accuracy falls after the population has
+ * already moved. » La troisième obligation, et la dernière qui n'était pas tenue.
+ *
+ * Un indice de déplacement ne se lit pas seul. Le témoin éprouve donc les trois choses qui le
+ * rendent lisible, et chacune est une façon différente pour l'outil de mentir :
+ *
+ *   — LE PLANCHER N'EST PAS ZÉRO. Si le ré-échantillonnage ne ré-échantillonnait pas — une
+ *     graine ignorée, un argument perdu en route — les deux tirages seraient le même tirage,
+ *     l'indice vaudrait exactement 0, et TOUT déplacement paraîtrait infiniment significatif.
+ *     C'est le vert vide de cet outil-ci : un plancher à zéro n'est pas un bon plancher, c'est
+ *     un plancher qui n'a rien mesuré.
+ *   — IL SÉPARE. À mille observations, l'écart entre deux découpages doit dominer largement ce
+ *     que le tirage produit à lui seul. Sinon l'indicateur ne distingue rien et le publier
+ *     serait pire que se taire.
+ *   — IL REFUSE, ET LE REFUS EST MESURÉ ICI. À cent vingt observations, le bruit de tirage
+ *     dépasse le seuil de l'industrie : à cette taille, le seuil se déclenche sur une
+ *     population immobile. C'est la raison du refus sous `OBSERVATIONS_MINIMALES`, retrouvée
+ *     sur CE corpus et CE trait au lieu d'être héritée d'un autre dépôt.
+ */
+test("l'indice d'entrée sépare les populations, et refuse sous le nombre où le bruit dépasse le seuil", () => {
+  const GRAND = 1000, PETIT = 120;
+
+  const plancherGrand = plancherDeBruit("heldout", GRAND);
+  assert.ok(plancherGrand > 0,
+    `le plancher de bruit vaut ${plancherGrand} : les deux tirages sont identiques, donc la `
+    + `graine du ré-échantillonnage n'arrive pas jusqu'à « generateRecords ». Un plancher à `
+    + `zéro rend tout déplacement infiniment significatif — il ne mesure rien.`);
+  assert.ok(plancherGrand < SEUIL_DE_L_INDUSTRIE,
+    `à ${GRAND} observations le bruit de tirage vaut déjà ${plancherGrand.toFixed(3)}, contre un `
+    + `seuil de ${SEUIL_DE_L_INDUSTRIE} : le seuil crierait sur une population immobile.`);
+
+  const dev = comparerPopulations("heldout", "dev", GRAND);
+  assert.ok(dev.indice > plancherGrand * 10,
+    `l'écart heldout/dev (${dev.indice.toFixed(3)}) ne domine pas le bruit de tirage `
+    + `(${plancherGrand.toFixed(3)}) : sur ce trait, l'indicateur ne sépare pas les deux `
+    + `populations, et le publier tromperait.`);
+  assert.ok(dev.auDessusDuSeuil && dev.assezDObservations);
+
+  /* LE REFUS, ET SA RAISON MESURÉE. Si ce test tombe un jour parce que le corpus a changé,
+     ce n'est pas le test qu'il faut détendre : c'est la prose de `entree.ts` qui cite 0,260
+     et le chiffre d'`OBSERVATIONS_MINIMALES` qu'il faut refaire depuis la mesure. */
+  const petit = comparerPopulations("heldout", "dev", PETIT);
+  assert.equal(petit.assezDObservations, false,
+    `${PETIT} observations, il en faut ${OBSERVATIONS_MINIMALES}, et le relevé se dit pourtant suffisant.`);
+  const plancherPetit = plancherDeBruit("heldout", PETIT);
+  assert.ok(plancherPetit >= SEUIL_DE_L_INDUSTRIE,
+    `à ${PETIT} observations le bruit de tirage vaut ${plancherPetit.toFixed(3)}, sous le seuil de `
+    + `${SEUIL_DE_L_INDUSTRIE} — la prose d'« entree.ts » affirme le contraire (0,260) et doit être refaite.`);
+
+  /* LE TRAIT EST UN ARGUMENT, PAS UNE CONSTANTE CACHÉE : un trait aveugle rend un indice nul,
+     et l'outil doit rester capable de le montrer plutôt que de le maquiller. */
+  const aveugle = comparerPopulations("heldout", "dev", GRAND, 10, () => 1);
+  assert.equal(aveugle.indice, 0,
+    "un trait qui rend la même valeur partout devrait rendre un indice nul ; il ne le fait pas.");
+});
+
+
+/*
+ * LE CACHE LIVRÉ EST-IL ENCORE CHAUD ?
+ *
+ * La clé du cache fait exactement son travail : elle a vu que le code avait bougé et elle a
+ * refusé de servir un résultat périmé. Ce qui manquait, c'est que PERSONNE NE LE DISAIT.
+ *
+ * Mesuré : la galerie a été versionnée au commit « A hand-written list is always one file
+ * behind », et le commit SUIVANT a modifié `tiers.ts`, qui est dans sa fermeture. La clé a
+ * changé, le cache est resté froid pendant quatre commits, et chaque `npm test` a rechargé les
+ * modèles — quatre-vingts secondes, à chaque fois, chez nous comme chez l'acheteur au premier
+ * `npm test` d'un clone frais. L'outil l'écrivait pourtant, en toutes lettres, au milieu d'une
+ * sortie que personne ne lit jusqu'au bout.
+ *
+ * Et le README publie la promesse « downloads nothing while the cached failure gallery matches
+ * the code ». Elle est littéralement vraie et pratiquement fausse : la condition n'était plus
+ * tenue. Ce témoin la remet dans les mains de l'outil plutôt que dans celles du lecteur.
+ *
+ * Le contrôle ne charge aucun modèle : il compare deux empreintes.
+ */
+test("la galerie versionnée porte encore la clé que le code produit", () => {
+  const attendue = cleDeLaGalerieLivree();
+  const livree = cleDuFichierLivre();
+  assert.notEqual(livree, null,
+    "`failures-reference.json` est absent ou illisible : il n'y a pas de cache, et le premier "
+    + "`npm test` d'un clone frais chargera les modèles sans prévenir.");
+  assert.equal(livree, attendue,
+    `la galerie versionnée porte ${livree} alors que le code produit ${attendue} : le cache est `
+    + `froid. Chaque « npm test » et chaque « npm run figures » recharge les modèles, et le `
+    + `README promet le contraire.\n  Remède : npm run figures, puis versionner `
+    + `failures-reference.json avec le changement qui a déplacé la clé.`);
 });

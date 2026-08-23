@@ -176,7 +176,37 @@ function empreinteDesEntrees(howMany: number, paliers: TierName[]): string {
 
 export { empreinteDesEntrees };
 
-export async function collect(howMany = 120, paliers: TierName[] = ENCODEURS, refaire = false): Promise<Failure[]> {
+/*
+ * LES ARGUMENTS DE LA GALERIE LIVRÉE, NOMMÉS UNE FOIS.
+ *
+ * `readme.ts` appelle `collect()` sans arguments : ce sont donc ces valeurs-là qui produisent
+ * le fichier versionné. Elles étaient écrites en clair dans la signature, et un contrôle qui
+ * veut vérifier que le cache livré est encore chaud devait les recopier — c'est-à-dire tenir
+ * une deuxième liste, qui a un jour de retard sur la première le jour où l'une bouge.
+ */
+export const GALERIE_LIVREE = { howMany: 120, paliers: ENCODEURS };
+
+/**
+ * La clé que le fichier versionné DEVRAIT porter. Si elle diffère de ce qu'il porte, le cache
+ * est froid : l'outil le dit, recalcule, et charge les modèles — à chaque `npm test`, à chaque
+ * `npm run figures`. C'est correct et c'est cher, et un avertissement au milieu de quatre-vingts
+ * secondes de sortie n'est lu par personne.
+ */
+export function cleDeLaGalerieLivree(): string {
+  return empreinteDesEntrees(GALERIE_LIVREE.howMany, GALERIE_LIVREE.paliers);
+}
+
+/** Ce que porte le fichier versionné, ou `null` s'il est absent ou illisible. */
+export function cleDuFichierLivre(): string | null {
+  if (!existsSync(GALERIE)) return null;
+  try {
+    return (JSON.parse(readFileSync(GALERIE, "utf8")) as { entrees?: string }).entrees ?? null;
+  } catch { return null; }
+}
+
+export async function collect(
+  howMany = GALERIE_LIVREE.howMany, paliers: TierName[] = GALERIE_LIVREE.paliers, refaire = false,
+): Promise<Failure[]> {
   const cle = empreinteDesEntrees(howMany, paliers);
   if (!refaire && existsSync(GALERIE)) {
     try {

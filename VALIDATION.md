@@ -148,8 +148,20 @@ obligation this document creates rather than a recommendation:
    number whose expiry date has passed.
 2. **Compare runs rather than reading the latest one.** A rising aggregate can hide cases
    that used to pass and no longer do; only a run-to-run diff surfaces those.
+   `npm run diff <before> <after>` compares two sealed runs case by case, and refuses
+   the comparison — naming the cell and the reason — rather than returning a zero it
+   cannot support.
 3. **Watch the input distribution, not only the output.** Accuracy falls after the
    population has already moved, which makes it the last indicator to react.
+   `npm run entree` computes a population stability index on the documents alone — no
+   labels, so it runs where no ground truth exists, which is production. It reports that
+   index next to its own noise floor: what the same sample size produces on a population
+   that has **not** moved. An index below the floor is a draw, not a drift, and the floor
+   is what decides whether the 0.2 threshold means anything at that sample size — on
+   this corpus it is 0.260 at 120 observations, which is above the threshold, and
+   0.061 at 350, which is below it. That is why the tool
+   refuses to read under 350: any smaller and the threshold fires
+   on a population that never moved.
 
 ## 7. What this does not establish
 

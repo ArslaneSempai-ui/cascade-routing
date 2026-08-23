@@ -471,6 +471,9 @@ const commandes = (() => {
        sans sa condition est la même faute qu'avant, écrite dans l'autre sens. */
     ["test", "types, figures and the suite — start here; downloads nothing while the cached failure gallery matches the code"],
     ["measure", "measure the encoder tiers and freeze the profile (1.26 GB on the first run)"],
+    ["sceller", "seal a profile: the fingerprint that makes a silently edited measurement fail loudly"],
+    ["diff", "compare two sealed runs case by case — a rising rate can still have lost cases"],
+    ["entree", "population drift on the documents alone, no labels, read against its own noise floor"],
     ["optimise", "the routing, and what the next improvement would cost"],
     ["failures", "every case it gets wrong, with its input and its output"],
     ["sensitivity", "which assumptions decide the answer, and which do not"],
@@ -488,6 +491,7 @@ const commandes = (() => {
     ["abstention", "silence instead of a doubtful value: wrong ones removed per correct one lost"],
     ["figures", "regenerate every table on this page from the frozen profile"],
     ["landing", "regenerate landing.json — the figures a published page reads, with their provenance"],
+    ["derivees", "refreeze the three landing figures drawn from the journals git does not carry"],
     ["dossier", "the validation file a reviewer signs"],
     ["start", "the screen, on localhost:4670"],
     ["measure:yours", "your own cases, from a CSV — nothing leaves your machine"],

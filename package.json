@@ -36,7 +36,8 @@
     "clone-neuf": "node src/clone-neuf.mjs",
     "contrainte": "node src/contrainte.ts",
     "sceller": "node src/sceller.ts",
-    "diff": "node src/diff.ts"
+    "diff": "node src/diff.ts",
+    "entree": "node src/entree.ts"
   },
   "dependencies": {
     "@huggingface/transformers": "^3.0.0"

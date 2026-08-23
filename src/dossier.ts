@@ -33,6 +33,8 @@ import { rate, writeRate, distinguishable } from "./interval.ts";
 import { MEANING } from "./provenance.ts";
 import { table } from "./figures.ts";
 import { MODELES_LOCAUX, REVISIONS, LICENCES } from "./tiers.ts";
+import { plancherDeBruit } from "./entree.ts";
+import { SEUIL_DE_L_INDUSTRIE, OBSERVATIONS_MINIMALES } from "./psi.ts";
 
 import type { Profiles } from "./measure.ts";
 import type { Assumptions } from "./assumptions.ts";
@@ -229,6 +231,12 @@ export function dossier(p: Profiles, h: Assumptions): string {
 
   /* ── 6. La surveillance ── */
   w(``);
+  /* Les trois chiffres du point 3 sont MESURÉS ici, pas tapés : le plancher de bruit dépend
+     du corpus, et un corpus qui bouge doit déplacer la phrase qui justifie le refus. */
+  const SEUiL = String(SEUIL_DE_L_INDUSTRIE);
+  const floor120 = plancherDeBruit("heldout", 120).toFixed(3);
+  const floorMin = plancherDeBruit("heldout", OBSERVATIONS_MINIMALES).toFixed(3);
+
   w(`## 6. Ongoing monitoring`);
   w(``);
   w(`**A routing decision expires.** It was taken against pinned revisions on a fixed sample;`);
@@ -241,8 +249,20 @@ export function dossier(p: Profiles, h: Assumptions): string {
   w(`   number whose expiry date has passed.`);
   w(`2. **Compare runs rather than reading the latest one.** A rising aggregate can hide cases`);
   w(`   that used to pass and no longer do; only a run-to-run diff surfaces those.`);
+  w(`   \`npm run diff <before> <after>\` compares two sealed runs case by case, and refuses`);
+  w(`   the comparison — naming the cell and the reason — rather than returning a zero it`);
+  w(`   cannot support.`);
   w(`3. **Watch the input distribution, not only the output.** Accuracy falls after the`);
   w(`   population has already moved, which makes it the last indicator to react.`);
+  w(`   \`npm run entree\` computes a population stability index on the documents alone — no`);
+  w(`   labels, so it runs where no ground truth exists, which is production. It reports that`);
+  w(`   index next to its own noise floor: what the same sample size produces on a population`);
+  w(`   that has **not** moved. An index below the floor is a draw, not a drift, and the floor`);
+  w(`   is what decides whether the ${SEUiL} threshold means anything at that sample size — on`);
+  w(`   this corpus it is ${floor120} at 120 observations, which is above the threshold, and`);
+  w(`   ${floorMin} at ${OBSERVATIONS_MINIMALES}, which is below it. That is why the tool`);
+  w(`   refuses to read under ${OBSERVATIONS_MINIMALES}: any smaller and the threshold fires`);
+  w(`   on a population that never moved.`);
 
   /* ── 7. Les limites ── */
   w(``);

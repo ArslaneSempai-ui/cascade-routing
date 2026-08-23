@@ -20,6 +20,9 @@ what that pass actually cost is stated below, read from the relevé rather than 
 |---|---|
 | `npm run test` | types, figures and the suite — start here; downloads nothing while the cached failure gallery matches the code |
 | `npm run measure` | measure the encoder tiers and freeze the profile (1.26 GB on the first run) |
+| `npm run sceller` | seal a profile: the fingerprint that makes a silently edited measurement fail loudly |
+| `npm run diff` | compare two sealed runs case by case — a rising rate can still have lost cases |
+| `npm run entree` | population drift on the documents alone, no labels, read against its own noise floor |
 | `npm run optimise` | the routing, and what the next improvement would cost |
 | `npm run failures` | every case it gets wrong, with its input and its output |
 | `npm run sensitivity` | which assumptions decide the answer, and which do not |
@@ -37,6 +40,7 @@ what that pass actually cost is stated below, read from the relevé rather than 
 | `npm run abstention` | silence instead of a doubtful value: wrong ones removed per correct one lost |
 | `npm run figures` | regenerate every table on this page from the frozen profile |
 | `npm run landing` | regenerate landing.json — the figures a published page reads, with their provenance |
+| `npm run derivees` | refreeze the three landing figures drawn from the journals git does not carry |
 | `npm run dossier` | the validation file a reviewer signs |
 | `npm run start` | the screen, on localhost:4670 |
 | `npm run measure:yours` | your own cases, from a CSV — nothing leaves your machine |
@@ -46,8 +50,6 @@ what that pass actually cost is stated below, read from the relevé rather than 
 | `npm run fuite` | what the prompt owes to the half it was tuned against (needs Ollama) |
 | `npm run pages` | build docs/ and verify the published screen — required before publishing: docs/ carries a compiled copy of the code and goes stale silently |
 | `npm run captures` | re-record the images on this page |
-
-⚠ 3 command(s) exist in package.json and are not classified above: `derivees`, `sceller`, `diff`.
 <!-- /figures:commandes -->
 
 ```bash
@@ -55,7 +57,7 @@ npm test           # types, README figures, landing.json, and the suite
 ```
 
 <!-- figures:tests -->
-**133 tests** across 9 files, counted from the sources rather than typed here.
+**135 tests** across 9 files, counted from the sources rather than typed here.
 <!-- /figures:tests -->
 
 ```
