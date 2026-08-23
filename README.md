@@ -55,7 +55,7 @@ npm test           # types, README figures, landing.json, and the suite
 ```
 
 <!-- figures:tests -->
-**129 tests** across 9 files, counted from the sources rather than typed here.
+**130 tests** across 9 files, counted from the sources rather than typed here.
 <!-- /figures:tests -->
 
 ```
@@ -436,7 +436,7 @@ tool runs on is missing from it.
 | Kind | Name | What it is | Note |
 |---|---|---|---|
 | measured | `profiles` | per-field accuracy and latency for each tier | real models pinned by revision, scored on a held-out split, on the chosen corpus below |
-| measured | `routing` | the cheapest assignment of tiers to fields that fits the budget | exhaustive over all 16,807 combinations of the measured tiers — no heuristic, nothing to tune |
+| measured | `routing` | the cheapest assignment of tiers to fields that fits the budget | exhaustive over all 16,807 combinations of the 7 tiers in the profile, 1 of which carries an assumed accuracy rather than a measured one — no heuristic, nothing to tune |
 | measured | `shadowPrice` | the smallest budget increase that actually buys a better routing | a step, not a slope: differentiating a staircase says the next euro buys nothing |
 | measured | `REVISIONS` | the exact model revisions the figures were produced with | pinned, so a stranger reproduces the table rather than a different one |
 | assumed | `humanAccuracy` | how often a human reviewing their fortieth file of the day gets it right | moved here from being infallible by construction, which made the human tier unbeatable |

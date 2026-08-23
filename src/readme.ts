@@ -525,6 +525,17 @@ const commandes = (() => {
    compte se calcule donc ici, là où le profil existe, et ne peut plus vieillir
    quand un palier s'ajoute. */
 const nCombinaisons = Math.pow(paliersMesures(p).length, FIELDS.length);
+/* L'ADJECTIF ÉTAIT FAUX, PAS LE NOMBRE — et il l'est devenu par ricochet.
+   L'optimiseur énumère bien 7^5 = 16 807 : les sept paliers du relevé, humain compris.
+   Mais « of the MEASURED tiers » est faux depuis qu'on a établi que personne n'a jamais
+   mesuré un humain — `optimise.ts` l'écrit à l'écran à chaque passe, « human accuracy
+   assumed … this is not a measurement ».
+   La preuve que c'est un ricochet et non un choix : ce fichier filtre `human` hors de
+   `paliersMesures()` deux lignes plus haut, et pas ici. Les auteurs connaissent la
+   distinction ; une seule ligne ne l'avait pas apprise, et `--check` disait « up to date ».
+   On garde 16 807 — sous-estimer l'espace de recherche serait mentir dans l'autre sens —
+   et on nomme le septième. Trouvé par une relecture croisée, pas par ce dépôt. */
+const nAvecHypothese = paliersMesures(p).filter((t) => t === "human").length;
 /*
  * CE QUE LA PASSE A RÉELLEMENT COÛTÉ, pris dans le relevé lui-même.
  *
@@ -598,7 +609,9 @@ const embauche = (() => {
 
 const provenance = markdown(
   INVENTORY.map((e) => e.name === "routing"
-    ? { ...e, note: `exhaustive over all ${nCombinaisons.toLocaleString("en-GB")} combinations of the measured tiers — no heuristic, nothing to tune` }
+    ? { ...e, note: `exhaustive over all ${nCombinaisons.toLocaleString("en-GB")} combinations of the ${paliersMesures(p).length} tiers in the profile`
+        + (nAvecHypothese ? `, ${nAvecHypothese} of which carries an assumed accuracy rather than a measured one` : "")
+        + ` — no heuristic, nothing to tune` }
     : e),
   table,
 );

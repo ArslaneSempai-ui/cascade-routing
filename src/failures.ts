@@ -18,7 +18,7 @@ import { generateRecords, FIELDS } from "./corpus.ts";
 import { loadavg } from "node:os";
 import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { REVISIONS } from "./tiers.ts";
 import { etatMachine, MEMOIRE_LIBRE_MINIMALE_MO } from "./contrainte.ts";
 import { isMain } from "./cli.ts";
@@ -114,10 +114,60 @@ const GALERIE = fileURLToPath(new URL("../failures-reference.json", import.meta.
  * scelle rien — c'est le relevé sans somme de contrôle, déplacé d'un cran. Si une source est
  * illisible, l'empreinte ne doit pas exister.
  */
+/*
+ * LA FERMETURE TRANSITIVE DES IMPORTS, ET NON UNE LISTE ÉCRITE À LA MAIN.
+ *
+ * Première version : `["tiers.ts", "corpus.ts", "failures.ts"]`. Une relecture croisée a
+ * montré le trou en le mesurant — `paliers.ts` décide du chemin d'extraction
+ * (`estGeneratif`, `GENERATIFS`, `ENCODEURS` y vivent, et `tiers.ts:291` s'y branche), et
+ * n'était pas hachée. Déplacer `large` de `ENCODEURS` vers `GENERATIFS` change le résultat
+ * de tous les cas, et la clé ne bougeait pas : la galerie périmée était servie comme
+ * fraîche.
+ *
+ * On n'ajoute donc pas `paliers.ts` à la liste : UNE LISTE ÉCRITE À LA MAIN AURA TOUJOURS UN
+ * FICHIER DE RETARD, et la prochaine extraction d'un module vers un fichier tiers rouvrirait
+ * le trou en silence — sans que rien ne casse, ce qui est le pire des cas. On suit les
+ * imports depuis ce fichier, en profondeur, et tout module atteint entre dans l'empreinte.
+ *
+ * Pas de `catch` : un module illisible doit empêcher l'empreinte d'exister, jamais la
+ * laisser se calculer sur une entrée manquante. C'est la même règle que le scellé du relevé.
+ */
+export function modulesAtteints(entree: string): string[] {
+  const vus = new Set<string>();
+  const aVoir = [fileURLToPath(new URL(entree, import.meta.url))];
+  const RELATIF = /\bfrom\s+["'](\.[^"']+)["']/g;
+  while (aVoir.length) {
+    const chemin = aVoir.pop()!;
+    if (vus.has(chemin)) continue;
+    vus.add(chemin);
+    for (const m of readFileSync(chemin, "utf8").matchAll(RELATIF)) {
+      const cible = fileURLToPath(new URL(m[1]!, pathToFileURL(chemin)));
+      if (!vus.has(cible)) aVoir.push(cible);
+    }
+  }
+  return [...vus].sort();
+}
+
+export function fermetureDesSources(entree: string): string[] {
+  const vus = new Map<string, string>();
+  const aVoir = [fileURLToPath(new URL(entree, import.meta.url))];
+  const RELATIF = /\bfrom\s+["'](\.[^"']+)["']/g;
+  while (aVoir.length) {
+    const chemin = aVoir.pop()!;
+    if (vus.has(chemin)) continue;
+    const texte = readFileSync(chemin, "utf8");
+    vus.set(chemin, texte);
+    for (const m of texte.matchAll(RELATIF)) {
+      /* `new URL` résout le relatif contre le module courant, comme le fait le moteur. */
+      const cible = fileURLToPath(new URL(m[1]!, pathToFileURL(chemin)));
+      if (!vus.has(cible)) aVoir.push(cible);
+    }
+  }
+  return [...vus.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([, t]) => t);
+}
+
 function empreinteDesEntrees(howMany: number, paliers: TierName[]): string {
-  const sources = ["tiers.ts", "corpus.ts", "failures.ts"]
-    .map((f) => readFileSync(fileURLToPath(new URL(f, import.meta.url)), "utf8"))
-    .join("\u0000");
+  const sources = fermetureDesSources("./failures.ts").join("\u0000");
   return createHash("sha256").update(JSON.stringify({
     howMany, paliers: [...paliers].sort(), revisions: REVISIONS, split: "heldout",
     code: createHash("sha256").update(sources).digest("hex"),

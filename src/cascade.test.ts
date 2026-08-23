@@ -9,7 +9,7 @@ import { execFileSync } from "node:child_process";
 import { generateRecords, generateAlerts, FIELDS, TYPOLOGIES } from "./corpus.ts";
 import { correct, TIERS, estLocal, OLLAMA } from "./tiers.ts";
 import type { TierName } from "./paliers.ts";
-import { classify, empreinteDesEntrees } from "./failures.ts";
+import { classify, empreinteDesEntrees, modulesAtteints } from "./failures.ts";
 import { readProfiles, empreinteDuReleve, RELEVE_DE_REFERENCE, type Profile, type ProvenanceDuPalier, type Provenance } from "./measure.ts";
 import { optimiseExtraction, optimiseClassification, budgetShadowPrice, latenceRepresentative, paliersMesures, evaluer, pricePerThousandDocuments } from "./optimise.ts";
 import { ASSUMPTIONS, UNITS, pricePerThousandExtractions, accuracy } from "./assumptions.ts";
@@ -1731,4 +1731,31 @@ test("tout relevé de la racine dit quand il a été mesuré, et nomme son commi
   assert.deepEqual(declareInutilement, [],
     `déclaré(s) sans commit alors qu'il(s) en porte(nt) un : ${declareInutilement.join(", ")}. `
     + `Retire-le(s) de la liste, sinon elle ment dans l'autre sens et personne ne le verra.`);
+});
+
+
+/*
+ * LA CLÉ SUIT TOUT CE QUI DÉCIDE, PAS UNE LISTE ÉCRITE À LA MAIN.
+ *
+ * Première version : trois fichiers nommés en dur. Une relecture croisée a mesuré le trou —
+ * `paliers.ts` porte `estGeneratif`, `GENERATIFS` et `ENCODEURS`, dont `tiers.ts` se sert
+ * pour choisir le chemin d'extraction, et n'était pas hachée. Déplacer `large` d'une liste à
+ * l'autre change le résultat de tous les cas ; la clé ne bougeait pas, et la galerie périmée
+ * était servie comme fraîche.
+ *
+ * UNE LISTE ÉCRITE À LA MAIN AURA TOUJOURS UN FICHIER DE RETARD. Ce test ne vérifie donc pas
+ * qu'un fichier précis est dedans — ce serait la même liste, déplacée — mais que la
+ * fermeture des imports est bien SUIVIE : le module que la liste d'origine oubliait doit y
+ * être, et le compte doit dépasser les trois de départ.
+ */
+test("la clé du cache suit la fermeture des imports, pas une liste figée", () => {
+  const atteints = modulesAtteints("./failures.ts").map((c) => c.split("/").pop());
+  assert.ok(atteints.includes("paliers.ts"),
+    `paliers.ts n'est pas atteint : ${atteints.join(", ")}. Il décide du chemin d'extraction, `
+    + "et la clé doit en dépendre.");
+  assert.ok(atteints.length > 3,
+    `la fermeture n'atteint que ${atteints.length} module(s) : on est revenu à une liste figée.`);
+  for (const attendu of ["failures.ts", "tiers.ts", "corpus.ts"]) {
+    assert.ok(atteints.includes(attendu), `${attendu} n'est plus atteint depuis failures.ts.`);
+  }
 });
