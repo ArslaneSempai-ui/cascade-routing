@@ -99,6 +99,22 @@ on another they never saw. Measured honestly, they collapse.
 **The `±` column is the widest half-interval on that row**, at 95 %, taken over the five fields — so it never flatters. Two rates on the same row that differ by less than twice it are not separated by this sample, and the generative tiers carry roughly 7 points of it against 3 for the encoders, because they were measured on fewer cases.
 <!-- /figures:extraction -->
 
+<!-- figures:obligation -->
+**Why these fields.** 31 CFR 1020.220(a)(2)(i)(A) — Before opening an account a bank must obtain, at a minimum, the customer's name, date of birth for an individual, address, and identification number.
+
+| Field | What the rule names | Measured here |
+|---|---|---|
+| `name` | Name | yes |
+| `birth` | Date of birth, for an individual | yes |
+| `document` | Identification number | yes |
+| `country` | — | yes, but not required by name |
+| `address` | Address | yes |
+
+4 of the 5 fields are named by the text; `country` is not — it follows from the address or the document, and no line of the CFR requires it as a datum of its own. It is measured anyway, and said so rather than attached by force.
+
+*31 CFR 1020.220(a)(2)(i)(A) · https://www.law.cornell.edu/cfr/text/31/1020.220 · retrieved 2026-08-24*
+<!-- /figures:obligation -->
+
 Two things fall out of that table, and neither is guessable:
 
 <!-- figures:deuxfaits -->

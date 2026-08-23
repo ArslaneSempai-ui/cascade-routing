@@ -13,9 +13,10 @@ import { markdown } from "./provenance.ts";
 import { optimiseExtraction, optimiseClassification, budgetShadowPrice, latenceRepresentative, paliersMesures } from "./optimise.ts";
 import { ASSUMPTIONS, pricePerThousandExtractions, accuracy } from "./assumptions.ts";
 import { collect, shape } from "./failures.ts";
-import { FIELDS } from "./corpus.ts";
+import { FIELDS, type Field } from "./corpus.ts";
 import { TIERS } from "./tiers.ts";
 import { run as emit, table } from "./figures.ts";
+import { citation, provenance as sourceDuTexte } from "./regulations.ts";
 import { rate, writeRate, distinguishable, precision } from "./interval.ts";
 import { GENERATIFS } from "./paliers.ts";
 import { majorityClass, uniformGuess, verdict } from "./baselines.ts";
@@ -59,6 +60,38 @@ const euro = (n: number) => "$" + Math.round(n).toLocaleString("en-GB");
  * générative à cent vingt. C'est l'information qui manquait, et elle change la lecture de la
  * moitié du tableau.
  */
+/*
+ * POURQUOI CES CINQ CHAMPS, ET PAS D'AUTRES.
+ *
+ * Le tableau ci-dessus publie une exactitude par champ. Il ne disait nulle part POURQUOI ces
+ * champs-la sont mesures — un lecteur en conformite ne demande pas d'abord un taux, il demande
+ * ce qui l'oblige. La reponse etait deja dans le depot, dans `regulations.ts`, retrouvee a la
+ * source et jamais affichee : le module etait importe par personne ici.
+ *
+ * Quatre des cinq champs sont nommes par le texte. LE PAYS NE L'EST PAS, et il est ecrit comme
+ * tel plutot que rattache de force : il se deduit de l'adresse ou du document, mais aucune
+ * ligne du CFR ne l'exige comme donnee propre. Un rattachement invente vaudrait moins que rien
+ * dans un document dont l'argument est qu'une decision automatique doit etre defendable.
+ */
+const obligation = (() => {
+  const EXIGES: Partial<Record<Field, string>> = {
+    name: "Name",
+    birth: "Date of birth, for an individual",
+    document: "Identification number",
+    address: "Address",
+  };
+  const nommes = FIELDS.filter((f) => f in EXIGES);
+  const absents = FIELDS.filter((f) => !(f in EXIGES));
+  return `**Why these fields.** ${citation("customerIdentification")}\n\n`
+    + table(["Field", "What the rule names", "Measured here"],
+        FIELDS.map((f) => [`\`${f}\``, EXIGES[f] ?? "—", f in EXIGES ? "yes" : "yes, but not required by name"]))
+    + `\n\n${nommes.length} of the ${FIELDS.length} fields are named by the text; `
+    + `${absents.map((f) => `\`${f}\``).join(", ")} ${absents.length > 1 ? "are" : "is"} not — `
+    + `it follows from the address or the document, and no line of the CFR requires it as a `
+    + `datum of its own. It is measured anyway, and said so rather than attached by force.\n\n`
+    + `*${sourceDuTexte("customerIdentification")}*`;
+})();
+
 const extraction = table(
   ["Tier", ...FIELDS, "Latency", "n", "±"],
   mesures.map((t) => {
@@ -783,6 +816,6 @@ const tests = (() => {
 })();
 
 emit(fileURLToPath(new URL("../README.md", import.meta.url)),
-  { finding, extraction, classification, routing, shadow, gallery, baselines, provenance, coutDeReproduction, embauche,
+  { finding, obligation, extraction, classification, routing, shadow, gallery, baselines, provenance, coutDeReproduction, embauche,
     echelles, latence, egalites, fuite, deuxfaits, retractations, public: publicJeu, commandes,
     tests });

@@ -145,6 +145,28 @@ export const REGULATIONS = {
     source: "https://www.law.cornell.edu/cfr/text/31/501.603",
     retrieved: RETRIEVED,
   },
+  /*
+   * Ce que la banque doit COLLECTER, et non plus seulement qui identifier et quand.
+   *
+   * Les neuf entrees ci-dessus disent QUI identifier, QUAND, et fixent des seuils monetaires
+   * et des delais. Aucune ne dit QUELLES DONNEES. C'etait le lien manquant pour rattacher les
+   * figures d'un extracteur a une obligation : mesurer le nom, la date de naissance, le
+   * document et l'adresse n'est pas un choix de produit, c'est ce que le texte exige.
+   *
+   * Retrouve le 24 aout 2026 a la source. LE PAYS N'Y FIGURE PAS comme donnee propre — il se
+   * deduit de l'adresse ou du document — donc il n'est rattache a rien ici. Forcer ce
+   * cinquieme lien serait exactement ce que ce fichier existe pour interdire.
+   */
+  customerIdentification: {
+    cite: "31 CFR 1020.220(a)(2)(i)(A)",
+    short: "identifying information",
+    says: "Before opening an account a bank must obtain, at a minimum, the customer's name, "
+      + "date of birth for an individual, address, and identification number.",
+    figure: "4 data elements",
+    quote: "Name; Date of birth, for an individual; Address; Identification number",
+    source: "https://www.law.cornell.edu/cfr/text/31/1020.220",
+    retrieved: "2026-08-24",
+  },
 } as const satisfies Record<string, Regulation>;
 
 export type RegulationKey = keyof typeof REGULATIONS;
