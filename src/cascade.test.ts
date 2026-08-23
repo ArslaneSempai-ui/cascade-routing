@@ -1,4 +1,5 @@
 import { test } from "node:test";
+import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
 import { PREMIER_COMMIT_MULTI_FORMULATION } from "./landing.ts";
 import assert from "node:assert/strict";
@@ -8,7 +9,7 @@ import { execFileSync } from "node:child_process";
 import { generateRecords, generateAlerts, FIELDS, TYPOLOGIES } from "./corpus.ts";
 import { correct, TIERS, estLocal, OLLAMA } from "./tiers.ts";
 import type { TierName } from "./paliers.ts";
-import { classify } from "./failures.ts";
+import { classify, empreinteDesEntrees } from "./failures.ts";
 import { readProfiles, empreinteDuReleve, RELEVE_DE_REFERENCE, type Profile, type ProvenanceDuPalier, type Provenance } from "./measure.ts";
 import { optimiseExtraction, optimiseClassification, budgetShadowPrice, latenceRepresentative, paliersMesures, evaluer, pricePerThousandDocuments } from "./optimise.ts";
 import { ASSUMPTIONS, UNITS, pricePerThousandExtractions, accuracy } from "./assumptions.ts";
@@ -1567,4 +1568,37 @@ test("la galerie en cache s'invalide quand le code qui la produit change", () =>
   const h = (x: string) => createHash("sha256").update(x).digest("hex");
   assert.notEqual(h(sources), h(sources + " "),
     "l'empreinte du code ne bouge pas quand le code bouge : la clé ne protège rien.");
+});
+
+
+/*
+ * LA CLÉ DU CACHE PEUT DÉGRADER EN CONSTANTE, ET C'EST PIRE QU'UNE CLÉ ABSENTE.
+ *
+ * Première écriture : les trois sources étaient lues via « new URL(...).pathname », sous un
+ * « catch { return "" } ». `.pathname` conserve le pourcent-encodage — sur un chemin qui
+ * porte une espace, la lecture échoue, le catch rend la chaîne vide trois fois, et la
+ * composante « code » de la clé devient une CONSTANTE. Changer une règle d'extraction ne
+ * changeait alors plus la clé : le cache n'était plus jamais invalidé, et la garde produisait
+ * exactement le générateur de faux résultats reproductibles qu'elle existe pour empêcher.
+ * Trouvé par une relecture croisée, pas par ce dépôt.
+ *
+ * Une garde qui dégrade en constante A L'AIR de fonctionner : elle calcule toujours une
+ * empreinte, elle ne lève rien, elle a simplement cessé de discriminer. Aucun test de
+ * présence ne l'attrape — d'où celui-ci, qui éprouve la DISCRIMINATION.
+ */
+test("l'empreinte du cache discrimine, elle ne dégrade pas en constante", () => {
+  const a = empreinteDesEntrees(120, ["rules", "small", "large"] as never);
+  const b = empreinteDesEntrees(120, ["rules", "small"] as never);
+  const c = empreinteDesEntrees(60, ["rules", "small", "large"] as never);
+  assert.notEqual(a, b, "changer la liste des paliers ne change pas la clé.");
+  assert.notEqual(a, c, "changer le nombre de cas ne change pas la clé.");
+
+  /* ET LA COMPOSANTE « CODE » EST RÉELLEMENT LUE, de la même façon que l'empreinte la lit.
+     Si les trois sources devenaient illisibles, la clé cesserait de suivre le code sans que
+     rien ne le dise. */
+  for (const f of ["tiers.ts", "corpus.ts", "failures.ts"]) {
+    const t = readFileSync(fileURLToPath(new URL("./" + f, import.meta.url)), "utf8");
+    assert.ok(t.length > 500,
+      "la source " + f + " lue par l'empreinte fait " + t.length + " caractères : la clé ne suit plus le code.");
+  }
 });

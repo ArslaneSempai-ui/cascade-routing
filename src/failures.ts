@@ -18,6 +18,7 @@ import { generateRecords, FIELDS } from "./corpus.ts";
 import { loadavg } from "node:os";
 import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { REVISIONS } from "./tiers.ts";
 import { isMain } from "./cli.ts";
 import { ouvrirJournal, issue } from "./journal.ts";
@@ -91,19 +92,38 @@ export function classify(got: string, expected: string): Failure["mode"] {
  * Et si la clé diffère, on RECALCULE. Jamais servir un cache dont on sait qu'il ne
  * correspond pas : ce serait remplacer une lenteur par un mensonge.
  */
-const GALERIE = new URL("../failures-reference.json", import.meta.url).pathname;
+const GALERIE = fileURLToPath(new URL("../failures-reference.json", import.meta.url));
 
+/*
+ * `fileURLToPath`, PAS `.pathname` — ET PAS DE `catch`. Deux fautes dans quatre lignes,
+ * trouvées par une relecture croisée le jour même.
+ *
+ * `.pathname` conserve le pourcent-encodage : sur un chemin qui porte une espace ou un
+ * caractère non-ASCII, il rend « /tmp/dossier%20avec%20espace/x.ts » et la lecture échoue.
+ * Mesuré. Avec le `catch { return "" }` d'origine, les trois lectures rendaient la chaîne
+ * vide, et la composante « code » de la clé devenait une CONSTANTE STABLE : changer une
+ * règle d'extraction ne changeait plus la clé, donc le cache n'était plus jamais invalidé.
+ * Le générateur de faux résultats reproductibles que cette clé existe pour empêcher, obtenu
+ * par la garde elle-même — une garde qui DÉGRADE EN CONSTANTE au lieu d'échouer.
+ *
+ * Et ce n'est pas théorique : `clone-neuf.mjs` clone dans un dossier temporaire, et le jour
+ * où ce chemin porte une espace, la garantie vendable mesure avec une clé aveugle.
+ *
+ * Le `catch` part avec. Un scellé qui se calcule quand même sur une entrée manquante ne
+ * scelle rien — c'est le relevé sans somme de contrôle, déplacé d'un cran. Si une source est
+ * illisible, l'empreinte ne doit pas exister.
+ */
 function empreinteDesEntrees(howMany: number, paliers: TierName[]): string {
   const sources = ["tiers.ts", "corpus.ts", "failures.ts"]
-    .map((f) => {
-      try { return readFileSync(new URL(f, import.meta.url).pathname, "utf8"); }
-      catch { return ""; }
-    }).join("\u0000");
+    .map((f) => readFileSync(fileURLToPath(new URL(f, import.meta.url)), "utf8"))
+    .join("\u0000");
   return createHash("sha256").update(JSON.stringify({
     howMany, paliers: [...paliers].sort(), revisions: REVISIONS, split: "heldout",
     code: createHash("sha256").update(sources).digest("hex"),
   })).digest("hex").slice(0, 16);
 }
+
+export { empreinteDesEntrees };
 
 export async function collect(howMany = 120, paliers: TierName[] = ENCODEURS, refaire = false): Promise<Failure[]> {
   const cle = empreinteDesEntrees(howMany, paliers);
