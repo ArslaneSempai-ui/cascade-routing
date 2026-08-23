@@ -561,6 +561,41 @@ const coutDeReproduction = (() => {
     + `for, not a round number: it is read from the relevé, so it moves when the relevé does.`;
 })();
 
+/*
+ * L'EMBAUCHE EST UNE MARCHE, PAS UNE PENTE — et ce dépôt la facture en pente.
+ *
+ * `pricePerThousandExtractions` calcule un coût horaire d'analyste
+ * (`analystAnnualCost / (heures × jours)`) puis facture au prorata des secondes. C'est
+ * l'erreur que le dépôt voisin `alert-triage-economics` nomme dans son propre README :
+ * « Headcount is a step, not a slope. You hire whole people. » On n'embauche pas trois
+ * dixièmes de personne, et sous une marche, resserrer n'achète rien.
+ *
+ * Ce qu'on en fait ici, et pourquoi ce n'est pas une réécriture : mesuré, aux valeurs en
+ * usage l'écart est de 1,06 — 0,95 personne, donc presque une marche pleine — et le routage
+ * retenu n'emploie pas le palier humain, donc la réponse publiée ne change pas. Au bas du
+ * balayage de `humanSeconds` l'écart monte à 3,17. C'est assez pour être dit, pas assez pour
+ * refaire le modèle de coût avant d'avoir branché celui d'`economics`, qui le porte déjà.
+ *
+ * Le dire coûte une phrase et rend l'hypothèse attaquable ; se taire laisse un ingénieur la
+ * trouver seul, et il conclura que le reste est du même acabit.
+ */
+const embauche = (() => {
+  const heuresAn = h.productiveHoursPerDay * h.workingDaysPerYear;
+  const fraction = (s: number) => (h.volume * s) / 3600 / heuresAn;
+  const prorata = (s: number) => ((h.volume * s) / 3600) * (h.analystAnnualCost / heuresAn);
+  const reel = (s: number) => Math.ceil(fraction(s)) * h.analystAnnualCost;
+  const rapport = (s: number) => reel(s) / Math.max(prorata(s), 1);
+  const enUsage = h.humanSeconds;
+  return `**The human tier is priced as a slope, and headcount is a step.** At `
+    + `${h.humanSeconds} s per item and ${h.volume.toLocaleString("en-GB")} documents the `
+    + `human tier would occupy **${fraction(enUsage).toFixed(2)} of an analyst**, billed pro `
+    + `rata at ${euro(prorata(enUsage))} where a payroll pays ${euro(reel(enUsage))} — a factor `
+    + `of ${rapport(enUsage).toFixed(2)}. You do not hire a fraction of a person. At the bottom `
+    + `of the swept range the factor reaches ${rapport(15).toFixed(2)}. It does not change the `
+    + `answer here — the routing above does not select the human tier — but the cost model is `
+    + `a slope where the world has steps, and that is stated rather than left to be found.`;
+})();
+
 const provenance = markdown(
   INVENTORY.map((e) => e.name === "routing"
     ? { ...e, note: `exhaustive over all ${nCombinaisons.toLocaleString("en-GB")} combinations of the measured tiers — no heuristic, nothing to tune` }
@@ -630,6 +665,6 @@ const tests = (() => {
 })();
 
 emit(fileURLToPath(new URL("../README.md", import.meta.url)),
-  { finding, extraction, classification, routing, shadow, gallery, baselines, provenance, coutDeReproduction,
+  { finding, extraction, classification, routing, shadow, gallery, baselines, provenance, coutDeReproduction, embauche,
     echelles, latence, egalites, fuite, deuxfaits, retractations, public: publicJeu, commandes,
     tests });

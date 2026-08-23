@@ -573,6 +573,11 @@ proves nothing until a decision reads it.
 
 ## What a reviewer can check without running anything
 
+<!-- figures:embauche -->
+**The human tier is priced as a slope, and headcount is a step.** At 45 s per item and 100,000 documents the human tier would occupy **0.95 of an analyst**, billed pro rata at $58,712 where a payroll pays $62,000 — a factor of 1.06. You do not hire a fraction of a person. At the bottom of the swept range the factor reaches 3.17. It does not change the answer here — the routing above does not select the human tier — but the cost model is a slope where the world has steps, and that is stated rather than left to be found.
+<!-- /figures:embauche -->
+
+
 | Claim | Where it is checked |
 |---|---|
 | Every figure on this page | Generated from the frozen profile; `npm test` fails if the page drifts |
