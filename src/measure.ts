@@ -59,6 +59,8 @@ export type Profile = {
    * lieu d'un fichier JSON de plusieurs kilooctets par palier et par champ.
    */
   reussites?: string;
+  /** Posé sur le palier humain : ce n'est pas une mesure, et le fichier doit le dire. */
+  commodite?: string;
   /**
    * Ce que le palier a répondu, cas par cas, avant tout jugement.
    *
@@ -548,8 +550,29 @@ export async function measure(
       }
       /* Durées conservées de la passe précédente quand la machine ne permettait pas de les prendre. */
       const ancienChamp = latenceValide ? undefined : readProfiles()?.extraction?.[tier]?.[champ];
+      /*
+       * LE PALIER HUMAIN N'EST PAS MESURÉ, ET LE FICHIER DOIT LE DIRE.
+       *
+       * `extract("human", …)` rend la vérité terrain : c'est une commodité pour que la
+       * boucle tourne sur tous les paliers, et le code le dit déjà en toutes lettres. Mais
+       * le FICHIER, lui, ne le disait pas. Il enregistrait pour l'humain une exactitude de
+       * 1,0 sur 1 000 cas, mille bits de réussite tous à 1, une latence de 0,0005 ms, et une
+       * provenance identique à celle d'une vraie mesure — commit, arbre propre, date, et
+       * jusqu'à la charge de la machine pendant la passe.
+       *
+       * Personne ne publie ce chiffre : `accuracy()` lui substitue l'hypothèse. Mais c'est le
+       * fichier que l'acheteur ouvre pour vérifier, et la ligne la plus damnante qu'il puisse
+       * y trouver est une mesure fabriquée portant toute la panoplie d'une vraie. Le scellé
+       * qu'on vient de poser dessus le rendait pire : il déclarait que ce contenu fait foi.
+       *
+       * On n'enregistre donc plus de bits pour lui — mille « 1 » ne sont pas une observation —
+       * et on marque la case. Aucun consommateur n'en pâtit : tous filtrent déjà `human`.
+       */
+      const commodite = tier === "human";
       extraction[tier][champ] = {
-        reussites: bits.join(""),
+        ...(commodite
+          ? { commodite: "ground truth returned so the loop can run over every tier — not a measurement; the human accuracy used anywhere is the assumption, never this" }
+          : { reussites: bits.join("") }),
         sorties,
         accuracy: right / dossiers.length,
         latency: ancienChamp?.latency ?? quantile(durees, 0.5),

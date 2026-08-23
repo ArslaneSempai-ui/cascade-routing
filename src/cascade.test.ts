@@ -598,6 +598,23 @@ test("un relevé régénéré garde les réussites par cas, pour que McNemar pui
   for (const t of paliersMesures(p)) {
     for (const c of FIELDS) {
       const profil: Profile = p.extraction[t][c];
+      /*
+       * LE PALIER HUMAIN EST EXEMPTÉ, ET L'EXEMPTION EST UN CONTRÔLE.
+       *
+       * `extract("human", …)` rend la vérité terrain : la boucle de mesure y trouve donc
+       * mille réussites sur mille, et le fichier enregistrait mille bits à 1 comme s'il
+       * s'agissait d'une observation. McNemar sur ces bits comparerait un palier à une
+       * copie de la réponse. On ne se contente pas de sauter le cas : on EXIGE la marque
+       * et l'absence de bits, sinon la fabrication peut revenir sans que rien ne le voie.
+       */
+      if (t === "human") {
+        assert.equal(profil.reussites, undefined,
+          "le palier humain porte des réussites par cas : ce sont mille « 1 » rendus par la "
+          + "vérité terrain, pas une observation.");
+        assert.equal(typeof (profil as { commodite?: string }).commodite, "string",
+          "le palier humain ne porte pas sa marque : rien ne distingue sa ligne d'une mesure.");
+        continue;
+      }
       assert.equal(typeof profil.reussites, "string",
         `${t}/${c} ne conserve pas ses réussites par cas — le test apparié ne peut pas tourner`);
       assert.equal(profil.reussites!.length, profil.items,
