@@ -48,7 +48,26 @@ export function casAmbigus(): CasDur[] {
   });
 }
 
+/*
+ * UN REFUS CORRECT QUI SORT PAR UN ABANDON NATIF N'EST PAS UN REFUS.
+ *
+ * `npm run dur` est mort après neuf minutes de travail sur ceci :
+ *
+ *     Error: qwen3:4b n'a pas répondu en 30 s. Le serveur est bloqué…
+ *     libc++abi: terminating due to uncaught exception … mutex lock failed
+ *
+ * Le message était juste. Ce qui s'affichait ensuite ne l'était pas : le runtime natif des
+ * encodeurs tient des ressources dans ce processus, et une exception non capturée le fait
+ * abandonner pendant sa destruction — SIGABRT, code 134, trace de pile C++ par-dessus le
+ * message. Une session voisine a mesuré le même 134 ailleurs et l'a d'abord attribué à
+ * l'enveloppe npm ; ce n'était pas npm, `npm run` transmet les codes à l'identique. C'était
+ * ceci, et le même défaut explique les deux observations.
+ *
+ * Un utilisateur voit donc un plantage là où l'outil avait quelque chose de précis à dire, et
+ * il cherche du côté de son installation plutôt que du modèle qui charge.
+ */
 if (isMain(import.meta)) {
+  try {
   const demandes = process.argv.find((a) => a.startsWith("--tiers="))?.split("=")[1]?.split(",");
   const paliers = (demandes ?? TIERS.filter((t) => t !== "human")) as TierName[];
 
@@ -168,4 +187,8 @@ if (isMain(import.meta)) {
       + "documents ni la même règle de notation. La baisse est attendue et voulue.",
   }, null, 2) + "\n");
   console.log(`\n${j.lignes} tentatives enregistrées. Écrit dans ${SORTIE.split("/").pop()}\n`);
+  } catch (e) {
+    console.error(`\n${e instanceof Error ? e.message : String(e)}\n`);
+    process.exit(1);
+  }
 }

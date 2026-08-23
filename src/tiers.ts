@@ -132,6 +132,25 @@ export const MODELES_LOCAUX: Record<string, { tag: string; digest: string }> = {
 export const OLLAMA = process.env.OLLAMA_HOST ?? "http://localhost:11434";
 
 /**
+ * Les modèles déjà sollicités DANS CE PROCESSUS.
+ *
+ * Sert à savoir si l'attente qui commence inclut un chargement. Volontairement par processus
+ * et non persisté : Ollama évince les modèles inactifs, donc un état gardé sur disque
+ * affirmerait « déjà chargé » pour un modèle qui ne l'est plus, et poserait le délai serré
+ * pile sur l'attente longue. Se tromper dans ce sens coûte une passe entière.
+ */
+const modelesDejaSollicites = new Set<string>();
+
+/** Ce que borne chaque attente. Exportés pour qu'un contrôle puisse les confronter au relevé. */
+export const DELAI_DE_GENERATION_MS = 30_000;
+export const DELAI_DE_CHARGEMENT_MS = 180_000;
+
+/** Ce qu'un premier appel a réellement coûté ici, le 23/08/2026, modèles évincés avant chaque essai. */
+export const CHARGEMENTS_MESURES_MS: Record<string, number> = {
+  "qwen3:0.6b": 3_700, "qwen3:4b": 54_800, "qwen3:8b": 68_000,
+};
+
+/**
  * Un hôte est local quand il désigne cette machine, et rien d'autre.
  *
  * La première version testait `/^127\./`, ce qui accepte `127.0.0.1.evil.example` : un nom de
@@ -172,7 +191,36 @@ async function ollama(tier: TierName, prompt: string, schema: unknown): Promise<
    * Trente secondes est large : le palier le plus lent mesuré ici répond en 1,5 seconde, donc
    * le délai ne se déclenche que sur une vraie anomalie, jamais sur une lenteur normale.
    */
-  const DELAI_MS = 30_000;
+  /*
+   * DEUX DÉLAIS, PARCE QU'IL Y A DEUX ATTENTES, ET UNE SEULE ÉTAIT BORNÉE.
+   *
+   * Le délai unique valait trente secondes, et la prose ci-dessus le justifiait ainsi : « le
+   * palier le plus lent mesuré ici répond en 1,5 seconde, donc le délai ne se déclenche que
+   * sur une vraie anomalie ». Le raisonnement est juste et il porte SUR LE MAUVAIS OBJET : il
+   * compare le délai au temps de GÉNÉRATION d'un modèle déjà en mémoire, alors que le délai
+   * borne aussi le CHARGEMENT — trois à cinq gigaoctets à monter en mémoire graphique.
+   *
+   * Mesuré le 23 août 2026 sur cette machine, modèles évincés avant chaque essai :
+   *
+   *     qwen3:0.6b   premier appel  3,7 s
+   *     qwen3:4b     premier appel 54,8 s      appel suivant 2,5 s
+   *     qwen3:8b     premier appel 68,0 s
+   *
+   * Deux paliers sur trois dépassaient donc le délai AU PREMIER APPEL, systématiquement, et
+   * Ollama évince les modèles inactifs au bout de quelques minutes — une passe longue
+   * recharge en cours de route. C'est ce qui a tué `npm run dur` après neuf minutes de
+   * travail, en annonçant « le serveur est bloqué » alors qu'il chargeait normalement.
+   *
+   * LE DÉLAI DE GÉNÉRATION RESTE À TRENTE SECONDES, et c'est là que le raisonnement d'origine
+   * devient vrai : 2,5 s mesuré, donc douze fois la marge. LE DÉLAI DE CHARGEMENT EST UN
+   * CHOIX, PAS UNE MESURE : 68 s constaté ici, posé à cent quatre-vingts. Une machine plus
+   * lente, un disque plus lent ou une mémoire plus disputée allongent le chargement, et rien
+   * dans ce dépôt ne mesure de combien. Le nommer « choisi » plutôt que le présenter comme
+   * une borne mesurée est la seule façon honnête de l'écrire.
+   */
+  const premierAppel = !modelesDejaSollicites.has(m.tag);
+  modelesDejaSollicites.add(m.tag);
+  const DELAI_MS = premierAppel ? DELAI_DE_CHARGEMENT_MS : DELAI_DE_GENERATION_MS;
   let r: Response;
   try {
     r = await fetch(`${OLLAMA}/api/generate`, {
@@ -186,9 +234,15 @@ async function ollama(tier: TierName, prompt: string, schema: unknown): Promise<
     });
   } catch (e) {
     if (e instanceof Error && e.name === "TimeoutError") {
-      throw new Error(
-        `${m.tag} n'a pas répondu en ${DELAI_MS / 1000} s. Le serveur est bloqué ou le modèle `
-        + `ne se charge pas : vérifier \`ollama ps\`. Les paliers déjà mesurés gardent leurs chiffres.`);
+      throw new Error(premierAppel
+        ? `${m.tag} n'a pas fini de CHARGER en ${DELAI_MS / 1000} s. C'est son premier appel de `
+          + `cette passe, donc le poids monte en mémoire : compter environ une minute pour un `
+          + `modèle de cinq gigaoctets, plus sur une machine chargée. Au-delà de trois minutes, `
+          + `le serveur est en cause : vérifier \`ollama ps\`. Les paliers déjà mesurés gardent `
+          + `leurs chiffres.`
+        : `${m.tag} n'a pas répondu en ${DELAI_MS / 1000} s alors qu'il était déjà chargé — `
+          + `douze fois le temps de génération mesuré. Le serveur est bloqué ou le modèle a été `
+          + `évincé : vérifier \`ollama ps\`. Les paliers déjà mesurés gardent leurs chiffres.`);
     }
     throw new Error(
       `Ollama injoignable sur ${OLLAMA}. L'échelle générative est optionnelle : ` +

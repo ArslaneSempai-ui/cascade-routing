@@ -7,7 +7,8 @@ import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { execFileSync } from "node:child_process";
 import { generateRecords, generateAlerts, FIELDS, TYPOLOGIES } from "./corpus.ts";
-import { correct, TIERS, estLocal, OLLAMA, MODELES_LOCAUX, digestsQuiDivergent } from "./tiers.ts";
+import { correct, TIERS, estLocal, OLLAMA, MODELES_LOCAUX, digestsQuiDivergent,
+  DELAI_DE_GENERATION_MS, DELAI_DE_CHARGEMENT_MS, CHARGEMENTS_MESURES_MS } from "./tiers.ts";
 import type { TierName } from "./paliers.ts";
 import { classify, empreinteDesEntrees, modulesAtteints, cleDeLaGalerieLivree, cleDuFichierLivre } from "./failures.ts";
 import { comparer } from "./diff.ts";
@@ -2550,4 +2551,47 @@ test("un CSV client dont une guillemet reste ouverte est refusé, pas rétréci 
   assert.doesNotThrow(() => lireCsv(legitime),
     "une guillemet échappée selon la règle CSV est refusée : la garde mord sur l'usage correct.");
   assert.equal(lireCsv(legitime).cas.length, 2);
+});
+
+
+/*
+ * LE DÉLAI BORNAIT DEUX ATTENTES ET N'EN CONNAISSAIT QU'UNE.
+ *
+ * Trente secondes, justifiées dans le code par « le palier le plus lent répond en 1,5 seconde ».
+ * Le raisonnement est juste et porte sur le mauvais objet : il compare le délai au temps de
+ * GÉNÉRATION d'un modèle déjà en mémoire, alors que le même délai borne aussi le CHARGEMENT de
+ * trois à cinq gigaoctets. Mesuré, modèles évincés avant chaque essai : 3,7 s pour le 0.6b,
+ * 54,8 s pour le 4b, 68,0 s pour le 8b. DEUX PALIERS SUR TROIS DÉPASSAIENT LE DÉLAI AU PREMIER
+ * APPEL, systématiquement — et Ollama évince les modèles inactifs, donc une passe longue
+ * recharge en cours de route. C'est ce qui a tué `npm run dur` après neuf minutes.
+ *
+ * Ce témoin existe parce que la faute est facile à refaire : les deux attentes se ressemblent
+ * depuis le code, et seule la mesure les sépare. Il tombe si quelqu'un resserre le délai de
+ * chargement sous ce qu'un chargement coûte réellement.
+ */
+test("le délai de chargement couvre ce qu'un chargement a réellement coûté", () => {
+  const pire = Math.max(...Object.values(CHARGEMENTS_MESURES_MS));
+  const lePire = Object.entries(CHARGEMENTS_MESURES_MS).find(([, v]) => v === pire)![0];
+
+  assert.ok(DELAI_DE_CHARGEMENT_MS > pire,
+    `le délai de chargement vaut ${DELAI_DE_CHARGEMENT_MS / 1000} s et le plus long chargement `
+    + `mesuré est ${pire / 1000} s (${lePire}). Toute passe qui commence par ce palier échoue, `
+    + `et le message accusera le serveur d'être bloqué alors qu'il charge normalement.`);
+
+  /* La marge est un CHOIX, pas une mesure : rien ici ne dit de combien une machine plus lente
+     allonge un chargement. Elle doit rester assez large pour que ce ne soit pas une question. */
+  assert.ok(DELAI_DE_CHARGEMENT_MS >= pire * 2,
+    `le délai de chargement (${DELAI_DE_CHARGEMENT_MS / 1000} s) laisse moins du double du pire `
+    + `chargement mesuré (${pire / 1000} s). Sur une machine plus lente que celle du relevé, il `
+    + `redeviendrait la contrainte — et personne ne mesure ici de combien.`);
+
+  assert.ok(DELAI_DE_GENERATION_MS < DELAI_DE_CHARGEMENT_MS,
+    "les deux délais sont confondus : on est revenu à un seul, qui bornera de nouveau deux "
+    + "attentes de natures différentes.");
+
+  /* ET LE DÉLAI SERRÉ DOIT LE RESTER : c'est lui qui attrape un serveur réellement bloqué. Le
+     laisser dériver vers le délai de chargement ferait attendre trois minutes sur une panne. */
+  assert.ok(DELAI_DE_GENERATION_MS <= 60_000,
+    `le délai de génération vaut ${DELAI_DE_GENERATION_MS / 1000} s. Au-delà d'une minute il `
+    + `cesse d'attraper un serveur bloqué en temps utile, ce qui est son seul travail.`);
 });
