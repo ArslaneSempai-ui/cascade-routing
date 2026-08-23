@@ -70,8 +70,9 @@ import { FIELDS, draw } from "./corpus.ts";
 import type { Tentative } from "./journal.ts";
 import type { TierName } from "./paliers.ts";
 import type { Field } from "./corpus.ts";
+import { fileURLToPath } from "node:url";
 
-const SORTIE = new URL("../escalade.json", import.meta.url).pathname;
+const SORTIE = fileURLToPath(new URL("../escalade.json", import.meta.url));
 
 export type Issue = { outcome: string; value: string };
 

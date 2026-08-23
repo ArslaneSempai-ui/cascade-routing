@@ -21,6 +21,7 @@ import { GENERATIFS } from "./paliers.ts";
 import { majorityClass, uniformGuess, verdict } from "./baselines.ts";
 import { generateAlerts } from "./corpus.ts";
 import { TYPOLOGIES } from "./corpus.ts";
+import { fileURLToPath } from "node:url";
 
 const p = readProfiles();
 if (!p) { console.error("No profile measured — start with: npm run measure"); process.exit(1); }
@@ -321,7 +322,7 @@ const egalites = (() => {
  * jeu de test, et le chiffre publié était emprunté.
  */
 const fuite = (() => {
-  const f = new URL("../data/fuite.json", import.meta.url).pathname;
+  const f = fileURLToPath(new URL("../data/fuite.json", import.meta.url));
   if (!existsSync(f)) {
     return "Not measured yet — run `npm run fuite`. Until it is, the generative figures on this "
       + "page carry a prompt tuned against the half they are scored on, and are optimistic by an "
@@ -388,7 +389,7 @@ const deuxfaits = (() => {
  * gênante, et c'est précisément le jour où elle compte.
  */
 const retractations = (() => {
-  const f = new URL("../retractations.json", import.meta.url).pathname;
+  const f = fileURLToPath(new URL("../retractations.json", import.meta.url));
   if (!existsSync(f)) return "";
   const d = JSON.parse(readFileSync(f, "utf8")) as {
     entries: { date: string; claimed: string; actually: string; caughtBy: string; cost: string; heldBy: string | null }[];
@@ -408,7 +409,7 @@ const retractations = (() => {
  * recopiée d'un terminal.
  */
 const publicJeu = (() => {
-  const f = new URL("../benchmarks/banking77.json", import.meta.url).pathname;
+  const f = fileURLToPath(new URL("../benchmarks/banking77.json", import.meta.url));
   if (!existsSync(f)) return "Not run yet — `npm run benchmark`.";
   const d = JSON.parse(readFileSync(f, "utf8")) as {
     jeu: string; cas: number; etiquettes: number;
@@ -450,7 +451,7 @@ const publicJeu = (() => {
  * classée fait apparaître un avertissement dans la page plutôt que de se perdre.
  */
 const commandes = (() => {
-  const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url).pathname, "utf8"));
+  const pkg = JSON.parse(readFileSync(fileURLToPath(new URL("../package.json", import.meta.url)), "utf8"));
   const ordre: [string, string][] = [
     /* « IT NEEDS NOTHING DOWNLOADED » ÉTAIT FAUX, et c'était la première ligne du
        premier tableau — la seule phrase qui parle de coût réseau, lue avant le
@@ -584,7 +585,7 @@ const finding = (() => {
  * Le compte se lit maintenant dans les fichiers de test, comme tout le reste de cette page.
  */
 const tests = (() => {
-  const dossier = new URL(".", import.meta.url).pathname;
+  const dossier = fileURLToPath(new URL(".", import.meta.url));
   const fichiers = readdirSync(dossier).filter((n: string) => n.endsWith(".test.ts"));
   const n = fichiers.reduce((a: number, f: string) =>
     a + (readFileSync(join(dossier, f), "utf8").match(/^test\(/gm) ?? []).length, 0);
@@ -592,7 +593,7 @@ const tests = (() => {
   return `**${n} tests** across ${fichiers.length} files, counted from the sources rather than typed here.`;
 })();
 
-emit(new URL("../README.md", import.meta.url).pathname,
+emit(fileURLToPath(new URL("../README.md", import.meta.url)),
   { finding, extraction, classification, routing, shadow, gallery, baselines, provenance,
     echelles, latence, egalites, fuite, deuxfaits, retractations, public: publicJeu, commandes,
     tests });

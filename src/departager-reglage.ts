@@ -31,9 +31,10 @@ import { departager } from "./regler-prompt.ts";
 import type { NomPrompt } from "./tiers.ts";
 import type { TierName } from "./paliers.ts";
 import type { Field } from "./corpus.ts";
+import { fileURLToPath } from "node:url";
 
-const REGLAGE = new URL("../prompts-par-palier.json", import.meta.url).pathname;
-const SORTIE = new URL("../departage-reglage.json", import.meta.url).pathname;
+const REGLAGE = fileURLToPath(new URL("../prompts-par-palier.json", import.meta.url));
+const SORTIE = fileURLToPath(new URL("../departage-reglage.json", import.meta.url));
 
 export const PEUT_CONFIRMER = false;   // voir l'en-tête : réfuter oui, confirmer non
 
@@ -56,7 +57,7 @@ if (isMain(import.meta)) {
 
   const version = (() => {
     try {
-      const cwd = new URL("..", import.meta.url).pathname;
+      const cwd = fileURLToPath(new URL("..", import.meta.url));
       return {
         commit: execFileSync("git", ["rev-parse", "--short", "HEAD"], { cwd, encoding: "utf8" }).trim(),
         sale: execFileSync("git", ["status", "--porcelain"], { cwd, encoding: "utf8" }).trim().length > 0,

@@ -20,8 +20,9 @@
 
 import { readFileSync, existsSync, statSync } from "node:fs";
 import { journaux } from "./journal.ts";
+import { fileURLToPath } from "node:url";
 
-export const FICHIER = new URL("../mesures-derivees.json", import.meta.url).pathname;
+export const FICHIER = fileURLToPath(new URL("../mesures-derivees.json", import.meta.url));
 
 export type Derivees = {
   quoi: string;

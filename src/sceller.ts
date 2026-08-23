@@ -17,8 +17,9 @@
  */
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { empreinteDuReleve } from "./measure.ts";
+import { fileURLToPath } from "node:url";
 
-const cible = process.argv[2] ?? new URL("../data/profiles.json", import.meta.url).pathname;
+const cible = process.argv[2] ?? fileURLToPath(new URL("../data/profiles.json", import.meta.url));
 if (!existsSync(cible)) {
   console.error(`  ${cible} n'existe pas. Rien à sceller.`);
   process.exit(2);

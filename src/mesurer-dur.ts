@@ -28,9 +28,10 @@ import { corpusDur, lireFichier, noterDur, REGLE_DE_NOTATION } from "./corpus-du
 import type { Attendu, CasDur } from "./corpus-dur.ts";
 import type { TierName } from "./paliers.ts";
 import type { Field } from "./corpus.ts";
+import { fileURLToPath } from "node:url";
 
-const CLE_AMBIGUS = new URL("../cas-ambigus.json", import.meta.url).pathname;
-const SORTIE = new URL("../dur.json", import.meta.url).pathname;
+const CLE_AMBIGUS = fileURLToPath(new URL("../cas-ambigus.json", import.meta.url));
+const SORTIE = fileURLToPath(new URL("../dur.json", import.meta.url));
 
 /** Les cas ambigus : leur document vient de la prose, leurs lectures de la clé. */
 export function casAmbigus(): CasDur[] {
@@ -53,7 +54,7 @@ if (isMain(import.meta)) {
 
   const version = (() => {
     try {
-      const cwd = new URL("..", import.meta.url).pathname;
+      const cwd = fileURLToPath(new URL("..", import.meta.url));
       return {
         commit: execFileSync("git", ["rev-parse", "--short", "HEAD"], { cwd, encoding: "utf8" }).trim(),
         sale: execFileSync("git", ["status", "--porcelain"], { cwd, encoding: "utf8" }).trim().length > 0,

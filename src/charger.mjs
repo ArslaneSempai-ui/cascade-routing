@@ -21,6 +21,7 @@
 
 import { availableParallelism, loadavg } from "node:os";
 import { fork } from "node:child_process";
+import { fileURLToPath } from "node:url";
 
 /*
  * Le fils d'abord, avant toute autre chose.
@@ -46,7 +47,7 @@ if (!Number.isInteger(boucles) || boucles < 1) {
 }
 
 const fils = Array.from({ length: boucles }, () =>
-  fork(new URL(import.meta.url).pathname, { env: { ...process.env, CHARGER_FILS: "1" }, stdio: "ignore" }));
+  fork(fileURLToPath(new URL(import.meta.url)), { env: { ...process.env, CHARGER_FILS: "1" }, stdio: "ignore" }));
 
 const arreter = () => { for (const f of fils) f.kill("SIGKILL"); process.exit(0); };
 process.on("SIGINT", arreter);

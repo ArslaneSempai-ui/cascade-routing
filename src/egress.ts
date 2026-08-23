@@ -31,8 +31,9 @@ import { spawn, execFileSync } from "node:child_process";
 import { writeFileSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { isMain } from "./cli.ts";
+import { fileURLToPath } from "node:url";
 
-const FICHIER = new URL("../data/egress.json", import.meta.url).pathname;
+const FICHIER = fileURLToPath(new URL("../data/egress.json", import.meta.url));
 
 export type Connexion = { hote: string; port: string; etat: string; vu: number };
 

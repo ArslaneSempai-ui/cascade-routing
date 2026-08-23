@@ -17,6 +17,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import assert from "node:assert/strict";
 import { lireCsv } from "./your-cases.ts";
+import { fileURLToPath } from "node:url";
 
 test("deux colonnes : texte et réponse, sans identifiant", () => {
   const { champs, cas } = lireCsv("text,category\nHow do I find my card?,card_arrival\n");
@@ -202,7 +203,7 @@ test("« déclaré » n'entre pas dans le vocabulaire de provenance, qui est cop
  * main, et le second n'est pas une mesure. C'est le défaut du `null` qui vaut deux choses.
  */
 test("le mode de notation du client est annoncé, et son absence dégrade le rang du chiffre", async () => {
-  const src = readFileSync(new URL("./your-cases.ts", import.meta.url).pathname, "utf8");
+  const src = readFileSync(fileURLToPath(new URL("./your-cases.ts", import.meta.url)), "utf8");
 
   assert.match(src, /notePar\?\.version/,
     "rien ne regarde la version du correcteur qui a produit les issues.");

@@ -32,8 +32,9 @@ import { rate, ENOUGH } from "./interval.ts";
 
 import type { Tentative } from "./journal.ts";
 import type { Field } from "./corpus.ts";
+import { fileURLToPath } from "node:url";
 
-const SORTIE = new URL("../abstention.json", import.meta.url).pathname;
+const SORTIE = fileURLToPath(new URL("../abstention.json", import.meta.url));
 
 export type Bilan = {
   regle: string; abstentions: number;

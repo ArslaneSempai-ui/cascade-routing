@@ -23,8 +23,9 @@ import { FIELDS } from "./corpus.ts";
 import type { Profiles } from "./measure.ts";
 import type { Field } from "./corpus.ts";
 import type { TierName } from "./paliers.ts";
+import { fileURLToPath } from "node:url";
 
-const SORTIE = new URL("../mur.json", import.meta.url).pathname;
+const SORTIE = fileURLToPath(new URL("../mur.json", import.meta.url));
 
 /**
  * Un profil synthétique à F champs et T paliers, bâti par recopie du profil réel.

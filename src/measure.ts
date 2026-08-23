@@ -22,8 +22,9 @@ import { generateRecords, generateAlerts, FIELDS, TYPOLOGIES } from "./corpus.ts
 import { TIERS, ENCODEURS, GENERATIFS, loadExtractors, loadClassifiers, loadGeneratifs, extract, classify, correct, OLLAMA, estLocal, PROMPTS, type NomPrompt, rechauffer, residents} from "./tiers.ts";
 import type { TierName } from "./tiers.ts";
 import type { Field } from "./corpus.ts";
+import { fileURLToPath } from "node:url";
 
-const FICHIER = new URL("../data/profiles.json", import.meta.url).pathname;
+const FICHIER = fileURLToPath(new URL("../data/profiles.json", import.meta.url));
 
 export type Profile = {
   /** Share of items this tier gets right. Measured. */
@@ -300,7 +301,7 @@ export function readProfiles(): Profiles | null {
     return p;
   }
 
-  const racine = new URL("..", import.meta.url).pathname;
+  const racine = fileURLToPath(new URL("..", import.meta.url));
   const livres = readdirSync(racine)
     .filter((f) => /^profiles-.*\.json$/.test(f))
     .map((f) => {
@@ -359,9 +360,9 @@ function etatDuDepot(): { commit: string; sale: boolean } | undefined {
 
     try {
       const commit = execFileSync("git", ["rev-parse", "--short", "HEAD"],
-        { cwd: new URL("..", import.meta.url).pathname, encoding: "utf8" }).trim();
+        { cwd: fileURLToPath(new URL("..", import.meta.url)), encoding: "utf8" }).trim();
       const sale = execFileSync("git", ["status", "--porcelain"],
-        { cwd: new URL("..", import.meta.url).pathname, encoding: "utf8" }).trim().length > 0;
+        { cwd: fileURLToPath(new URL("..", import.meta.url)), encoding: "utf8" }).trim().length > 0;
       return { commit, sale };
     } catch { return undefined; }   // dépôt cloné sans git, ou git absent : on n'invente rien
 }

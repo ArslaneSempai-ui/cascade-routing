@@ -51,8 +51,9 @@ import type { Routing } from "./optimise.ts";
 import type { Profiles } from "./measure.ts";
 import type { Provenance } from "./provenance.ts";
 import type { Assumptions } from "./assumptions.ts";
+import { fileURLToPath } from "node:url";
 
-const SORTIE = new URL("../landing.json", import.meta.url).pathname;
+const SORTIE = fileURLToPath(new URL("../landing.json", import.meta.url));
 
 /** Un nombre, et d'où il vient. Jamais l'un sans l'autre sur une page publiée. */
 type Chiffre = { value: number | null; provenance: Provenance; basis: string };
@@ -259,7 +260,7 @@ function seuils(p: Profiles, h: Assumptions): Record<string, Seuil> {
 /** Le commit existe-t-il encore, et sinon où est passé son contenu ? */
 function commitReecrit(commit: string | null) {
   if (!commit) return {};
-  const f = new URL("../commits-reecrits.json", import.meta.url).pathname;
+  const f = fileURLToPath(new URL("../commits-reecrits.json", import.meta.url));
   if (!existsSync(f)) return {};
   const j = JSON.parse(readFileSync(f, "utf8")) as {
     entries: { missing: string; nowAt: string; establishedBy: string }[] };
@@ -299,7 +300,7 @@ function formulation(b: { promptUtilise?: string; measuredAt: string }) {
  * lecteur qui voit « identique au millième » sans ce chiffre croit avoir sept confirmations.
  */
 function balayageDeCharge() {
-  const racine = new URL("..", import.meta.url).pathname;
+  const racine = fileURLToPath(new URL("..", import.meta.url));
   const lire = (nom: string, fichier: string) => {
     const chemin = `${racine}/${fichier}`;
     if (!existsSync(chemin)) return null;
@@ -999,7 +1000,7 @@ export function construire(p: Profiles): unknown {
      * ce qui empêche l'argument de se retourner.
      */
     retractions: (() => {
-      const f = new URL("../retractations.json", import.meta.url).pathname;
+      const f = fileURLToPath(new URL("../retractations.json", import.meta.url));
       if (!existsSync(f)) return null;
       const j = JSON.parse(readFileSync(f, "utf8")) as {
         entries: { date: string; headline?: string; caughtBeforeAnyoneSawIt?: boolean }[] };

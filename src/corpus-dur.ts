@@ -27,8 +27,9 @@ import { normaliserReponse, correct } from "./tiers.ts";
 
 import type { Issue } from "./journal.ts";
 import type { Field } from "./corpus.ts";
+import { fileURLToPath } from "node:url";
 
-export const DOSSIER = new URL("../corpus-dur", import.meta.url).pathname;
+export const DOSSIER = fileURLToPath(new URL("../corpus-dur", import.meta.url));
 
 /** La colonne « field » du corpus, vers les noms du dépôt. */
 export const CHAMPS: Record<string, Field> = {

@@ -32,8 +32,9 @@ import { pairedVerdict } from "./interval.ts";
 
 import type { Field } from "./corpus.ts";
 import type { TierName } from "./paliers.ts";
+import { fileURLToPath } from "node:url";
 
-const SORTIE = new URL("../prompts-par-palier.json", import.meta.url).pathname;
+const SORTIE = fileURLToPath(new URL("../prompts-par-palier.json", import.meta.url));
 
 /**
  * Le vainqueur sur `dev` est-il séparable de son second, sur les mêmes cas ?
@@ -73,7 +74,7 @@ if (isMain(import.meta)) {
 
   const version = (() => {
     try {
-      const cwd = new URL("..", import.meta.url).pathname;
+      const cwd = fileURLToPath(new URL("..", import.meta.url));
       return {
         commit: execFileSync("git", ["rev-parse", "--short", "HEAD"], { cwd, encoding: "utf8" }).trim(),
         sale: execFileSync("git", ["status", "--porcelain"], { cwd, encoding: "utf8" }).trim().length > 0,

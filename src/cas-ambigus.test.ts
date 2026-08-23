@@ -16,6 +16,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync, existsSync } from "node:fs";
 import { normaliserReponse } from "./tiers.ts";
+import { fileURLToPath } from "node:url";
 
 type Cle = {
   additionsBeyondTheProse: { case: string; field: string; reading: string; addedOn: string; why: string }[];
@@ -23,8 +24,8 @@ type Cle = {
     silenceAccepted: boolean; collapsesBecause?: string }[];
 };
 
-const CLE = new URL("../cas-ambigus.json", import.meta.url).pathname;
-const PROSE = new URL("../corpus-dur/cas-ambigus.md", import.meta.url).pathname;
+const CLE = fileURLToPath(new URL("../cas-ambigus.json", import.meta.url));
+const PROSE = fileURLToPath(new URL("../corpus-dur/cas-ambigus.md", import.meta.url));
 
 const charger = () => ({
   cle: JSON.parse(readFileSync(CLE, "utf8")) as Cle,

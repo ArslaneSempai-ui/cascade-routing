@@ -26,8 +26,9 @@ import { rate, distinguishable, pairedVerdict, writeRate } from "./interval.ts";
 import type { NomPrompt } from "./tiers.ts";
 import type { TierName } from "./paliers.ts";
 import type { Field } from "./corpus.ts";
+import { fileURLToPath } from "node:url";
 
-const SORTIE = new URL("../apparie-prompt.json", import.meta.url).pathname;
+const SORTIE = fileURLToPath(new URL("../apparie-prompt.json", import.meta.url));
 const PALIERS = ["gen-4b", "gen-8b"] as TierName[];
 const FORMULATIONS = ["reference", "A-sans-exemple"] as NomPrompt[];
 
@@ -37,7 +38,7 @@ if (isMain(import.meta)) {
 
   const version = (() => {
     try {
-      const cwd = new URL("..", import.meta.url).pathname;
+      const cwd = fileURLToPath(new URL("..", import.meta.url));
       return {
         commit: execFileSync("git", ["rev-parse", "--short", "HEAD"], { cwd, encoding: "utf8" }).trim(),
         sale: execFileSync("git", ["status", "--porcelain"], { cwd, encoding: "utf8" }).trim().length > 0,

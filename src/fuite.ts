@@ -24,8 +24,9 @@ import { loadGeneratifs, extract, correct } from "./tiers.ts";
 
 import type { TierName } from "./paliers.ts";
 import type { Field } from "./corpus.ts";
+import { fileURLToPath } from "node:url";
 
-const FICHIER = new URL("../data/fuite.json", import.meta.url).pathname;
+const FICHIER = fileURLToPath(new URL("../data/fuite.json", import.meta.url));
 
 export async function mesurerFuite(palier: TierName, combien = 120) {
   const champs: Record<string, { dev: number; heldout: number; n: number }> = {};

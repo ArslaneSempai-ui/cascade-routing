@@ -30,8 +30,9 @@ import { readFileSync, writeFileSync, mkdtempSync, rmSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const ui = new URL("./ui.html", import.meta.url).pathname;
+const ui = fileURLToPath(new URL("./ui.html", import.meta.url));
 
 /** Le contenu du `<script type="module">` de l'écran. Il n'y en a qu'un, et c'est voulu. */
 function script(): string {
@@ -96,7 +97,7 @@ test("aucun nom importé n'est redéclaré dans l'écran", () => {
  * Node ce que chaque module exporte vraiment.
  */
 test("chaque symbole importé par le gabarit de pages.ts existe vraiment", async () => {
-  const source = readFileSync(new URL("./pages.ts", import.meta.url).pathname, "utf8");
+  const source = readFileSync(fileURLToPath(new URL("./pages.ts", import.meta.url)), "utf8");
   const imports = [...source.matchAll(/import\s*\{([^}]+)\}\s*from\s*"\.\/js\/([A-Za-z0-9_-]+)\.js"/g)];
 
   /*
@@ -117,7 +118,7 @@ test("chaque symbole importé par le gabarit de pages.ts existe vraiment", async
   }
 
   for (const [, liste, module] of imports) {
-    const mod = await import(new URL(`./${module}.ts`, import.meta.url).pathname) as Record<string, unknown>;
+    const mod = await import(fileURLToPath(new URL(`./${module}.ts`, import.meta.url))) as Record<string, unknown>;
     const noms = liste!.split(",")
       .map((n) => n.trim().replace(/^type\s+/, "").split(/\s+as\s+/)[0]!.trim())
       .filter(Boolean);

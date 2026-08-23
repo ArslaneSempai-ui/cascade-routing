@@ -14,8 +14,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync, existsSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 
-const racine = new URL("..", import.meta.url).pathname;
+const racine = fileURLToPath(new URL("..", import.meta.url));
 const css = () => readFileSync(racine + "src/registre.css", "utf8");
 const graphes = () => readFileSync(racine + "src/graphes.js", "utf8");
 
@@ -78,7 +79,7 @@ test("les couches partagées sont bien celles d'identite", () => {
    * oubliée dans un dépôt est un contrôle qui passe au vert sur un fichier que personne ne
    * regarde — c'est déjà arrivé avec la démo du RAG, deux versions en retard.
    */
-  const source = new URL("../../identite/", import.meta.url).pathname;
+  const source = fileURLToPath(new URL("../../identite/", import.meta.url));
   if (!existsSync(source + "registre.css")) return; // dépôt cloné seul : rien à comparer
   for (const f of ["registre.css", "graphes.js"]) {
     assert.equal(readFileSync(racine + "src/" + f, "utf8"), readFileSync(source + f, "utf8"),

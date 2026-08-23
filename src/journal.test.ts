@@ -20,6 +20,7 @@ import { RELEVE_DE_REFERENCE } from "./measure.ts";
 import { FIELDS, generateRecords, draw } from "./corpus.ts";
 
 import type { Tentative } from "./journal.ts";
+import { fileURLToPath } from "node:url";
 
 test("un blanc et une valeur fausse ne sont pas le même échec", () => {
   assert.equal(issue("Anna Petrova", "Anna Petrova"), "clean");
@@ -147,7 +148,7 @@ test("toute passe qui mesure ouvre un journal de tentatives", () => {
    * pas lu ce fichier. Un script qui appelle `extract` ou `classify` en boucle et n'ouvre pas
    * de journal est exactement la passe qu'on repaiera.
    */
-  const dossier = new URL(".", import.meta.url).pathname;
+  const dossier = fileURLToPath(new URL(".", import.meta.url));
   const mesureurs = readdirSync(dossier)
     .filter((n) => n.endsWith(".ts") && !n.endsWith(".test.ts") && n !== "journal.ts")
     .map((n) => ({ n, src: readFileSync(join(dossier, n), "utf8") }))
@@ -169,7 +170,7 @@ test("chaque ligne porte sa formulation, référence comprise", () => {
    * n'écrire la formulation que lorsqu'elle diffère rendrait « mesuré sous la référence » et
    * « personne ne l'a noté » indiscernables.
    */
-  const dossier = new URL(".", import.meta.url).pathname;
+  const dossier = fileURLToPath(new URL(".", import.meta.url));
   const sources = readdirSync(dossier).filter((n) => n.endsWith(".ts") && !n.endsWith(".test.ts"))
     .map((n) => ({ n, src: readFileSync(join(dossier, n), "utf8") }))
     .filter(({ src }) => /journal\??\.ligne\(/.test(src));
@@ -198,7 +199,7 @@ test("chaque ligne porte sa formulation, référence comprise", () => {
  * est ce qui aurait crié le soir même.
  */
 test("aucun relevé livré ne cite un commit introuvable", () => {
-  const racine = new URL("..", import.meta.url).pathname;
+  const racine = fileURLToPath(new URL("..", import.meta.url));
   const releves = readdirSync(racine).filter((n) => /^profiles-.*\.json$/.test(n));
   assert.ok(releves.length >= 3, `${releves.length} relevé(s) trouvé(s) : la lecture a échoué.`);
 
@@ -401,7 +402,7 @@ test("le pied de page d'une passe dit la charge pendant, et si les durées valen
  * **constatée** et non déduite de cet ordre, puisque un essai sur trois la perd quand même.
  */
 test("les modèles se chargent du plus gros au plus petit, et la résidence est constatée", () => {
-  const src = readFileSync(new URL("./tiers.ts", import.meta.url).pathname, "utf8");
+  const src = readFileSync(fileURLToPath(new URL("./tiers.ts", import.meta.url)), "utf8");
 
   const f = src.slice(src.indexOf("export async function loadGeneratifs"));
   const corps = f.slice(0, f.indexOf("\n}\n") + 2);
@@ -412,7 +413,7 @@ test("les modèles se chargent du plus gros au plus petit, et la résidence est 
     "loadGeneratifs ne constate pas la résidence — l'ordre seul ne suffit pas, un essai sur trois échoue.");
 
   /* Et la mesure doit réchauffer chaque palier juste avant de le chronométrer. */
-  const mes = readFileSync(new URL("./measure.ts", import.meta.url).pathname, "utf8");
+  const mes = readFileSync(fileURLToPath(new URL("./measure.ts", import.meta.url)), "utf8");
   assert.ok(/await rechauffer\(tier\)/.test(mes),
     "measure.ts ne réchauffe pas le palier avant de le mesurer : son premier appel sera un\n"
     + "  rechargement, mesuré à cinq fois la médiane.");
@@ -523,7 +524,7 @@ test("le témoin négatif atteint le taux d'erreur de base, et un signal aveugle
  * Un chiffre publié qui ne se reproduit pas n'est pas un chiffre.
  */
 test("les témoins aléatoires sont graines, pas tirés à chaque exécution", () => {
-  const dossier = new URL(".", import.meta.url).pathname;
+  const dossier = fileURLToPath(new URL(".", import.meta.url));
   for (const n of ["signal.ts", "escalade.ts"]) {
     const src = readFileSync(join(dossier, n), "utf8");
     assert.ok(!/Math\.random\(/.test(src),
@@ -549,8 +550,8 @@ test("les témoins aléatoires sont graines, pas tirés à chaque exécution", (
  * un contrôle qui n'examine rien passe aussi.
  */
 test("aucun contrôle ne lit un produit que rien ne vérifie avant lui", () => {
-  const racine = new URL("..", import.meta.url).pathname;
-  const dossier = new URL(".", import.meta.url).pathname;
+  const racine = fileURLToPath(new URL("..", import.meta.url));
+  const dossier = fileURLToPath(new URL(".", import.meta.url));
 
   /* Ce que le dépôt produit, et ce qui le vérifie avant que les tests le lisent. */
   const produits: Record<string, string | null> = {
@@ -600,7 +601,7 @@ test("un produit plus ancien que sa source arrête le contrôle au lieu de l'ave
     "le verdict de péremption doit être rendu avec sa raison, pas seulement son booléen.");
 
   /* La garde est câblée dans le contrôle, et elle sort au lieu d'avertir. */
-  const src = readFileSync(new URL("./landing.ts", import.meta.url).pathname, "utf8");
+  const src = readFileSync(fileURLToPath(new URL("./landing.ts", import.meta.url)), "utf8");
   const i = src.indexOf("const age = perime();");
   assert.notEqual(i, -1, "le contrôle n'appelle pas la garde de péremption.");
   const bloc = src.slice(i, i + 200);
@@ -622,7 +623,7 @@ test("un produit plus ancien que sa source arrête le contrôle au lieu de l'ave
  * au tri — puisqu'il n'aurait rien à distinguer.
  */
 test("le relevé de référence est nommé, et le tri par date aurait choisi un autre", () => {
-  const racine = new URL("..", import.meta.url).pathname;
+  const racine = fileURLToPath(new URL("..", import.meta.url));
   const livres = readdirSync(racine)
     .filter((n) => /^profiles-.*\.json$/.test(n))
     .map((n) => ({ n, p: JSON.parse(readFileSync(join(racine, n), "utf8")) as { measuredAt?: string } }))
@@ -654,7 +655,7 @@ test("le relevé de référence est nommé, et le tri par date aurait choisi un 
  * sept minutes à révéler chacun des deux autres. Ce test les empêche de repousser.
  */
 test("les sorties brutes ne sont lues qu'à un seul endroit", () => {
-  const dossier = new URL(".", import.meta.url).pathname;
+  const dossier = fileURLToPath(new URL(".", import.meta.url));
   const fichiers = readdirSync(dossier).filter((n) => n.endsWith(".ts") && !n.endsWith(".test.ts"));
 
   const lecteurs: string[] = [];

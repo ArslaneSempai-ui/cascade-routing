@@ -17,6 +17,7 @@ import { ecart } from "./benchmark.ts";
 import { lire } from "./intake.ts";
 import { ASSUMPTIONS } from "./assumptions.ts";
 import { readFileSync, existsSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 
 /* ── le banc public : ce qui a bougé d'une exécution à l'autre ── */
 
@@ -103,7 +104,7 @@ test("chaque fichier de data/ a la forme que le générateur suppose", () => {
    * renommée ne casserait rien à la génération : elle produirait une page avec un tableau
    * vide, ce qui est pire qu'une erreur puisque personne ne la voit.
    */
-  const racine = new URL("../", import.meta.url).pathname;
+  const racine = fileURLToPath(new URL("../", import.meta.url));
   const attendus: Record<string, string[]> = {
     "data/profiles.json": ["measuredAt", "extraction", "classification"],
     "retractations.json": ["entries"],
@@ -151,7 +152,7 @@ test("un clone frais rend un chiffre sans intervention manuelle", () => {
    * livré, ou si le premier nombre se met à exiger un modèle. C'est aussi le seul test dont
    * l'échec se lit directement comme « la phrase de la page est devenue fausse ».
    */
-  const racine = new URL("..", import.meta.url).pathname;
+  const racine = fileURLToPath(new URL("..", import.meta.url));
   const dossier = mkdtempSync(join(tmpdir(), "clone-promesse-"));
   try {
     execFileSync("git", ["clone", "--quiet", racine, "cascade"], { cwd: dossier, stdio: "pipe" });
@@ -255,7 +256,7 @@ test("la paire à départager est le vainqueur et son second, pas une paire comm
  * un maximum en résultat : soit le départage est dans le fichier, soit une réfutation y renvoie.
  */
 test("aucun réglage ne déclare une formulation retenue sans l'avoir départagée", () => {
-  const f = new URL("../prompts-par-palier.json", import.meta.url).pathname;
+  const f = fileURLToPath(new URL("../prompts-par-palier.json", import.meta.url));
   if (!existsSync(f)) return;
   const reglage = JSON.parse(readFileSync(f, "utf8")) as {
     retenu?: Record<string, string | null>;
@@ -277,7 +278,7 @@ test("aucun réglage ne déclare une formulation retenue sans l'avoir départag�
       `${palier} déclare une formulation retenue sans départage et sans réfutation.\n`
       + `  → soit le relevé est régénéré par un script qui départage,\n`
       + `    soit il porte « refutePar » vers la mesure qui l'a réfuté.`);
-    const r = new URL(`../${reglage.refutePar!.fichier}`, import.meta.url).pathname;
+    const r = fileURLToPath(new URL(`../${reglage.refutePar!.fichier}`, import.meta.url));
     assert.ok(existsSync(r), `« refutePar » désigne ${reglage.refutePar!.fichier}, qui n'existe pas.`);
     const preuve = JSON.parse(readFileSync(r, "utf8")) as { resultats: Record<string, { decidable: boolean }> };
     assert.ok(preuve.resultats[palier], `la réfutation ne dit rien de ${palier}.`);

@@ -14,9 +14,10 @@
  */
 
 import { readFileSync, writeFileSync, mkdirSync, cpSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { isMain } from "./cli.ts";
 
-const root = new URL("..", import.meta.url).pathname;
+const root = fileURLToPath(new URL("..", import.meta.url));
 
 const PROFILS = readFileSync(root + "data/profiles.json", "utf8").trim();
 

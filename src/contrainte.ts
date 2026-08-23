@@ -40,8 +40,9 @@ import { PROMPTS, OLLAMA, MODELES_LOCAUX, correct, normaliserReponse } from "./t
 import { FIELDS, generateRecords } from "./corpus.ts";
 
 import type { Field } from "./corpus.ts";
+import { fileURLToPath } from "node:url";
 
-const SORTIE = new URL("../contrainte.json", import.meta.url).pathname;
+const SORTIE = fileURLToPath(new URL("../contrainte.json", import.meta.url));
 
 /** Le plafond, choisi après un pilote qui a montré qu'il ne mord pas. */
 export const PLAFOND_JETONS = 4000;

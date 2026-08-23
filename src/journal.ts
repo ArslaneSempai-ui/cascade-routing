@@ -31,8 +31,9 @@ import { platform, arch, cpus, loadavg } from "node:os";
 import { join } from "node:path";
 import { normaliserReponse, correct } from "./tiers.ts";
 import { pairedVerdict } from "./interval.ts";
+import { fileURLToPath } from "node:url";
 
-export const DOSSIER = new URL("../data/tentatives", import.meta.url).pathname;
+export const DOSSIER = fileURLToPath(new URL("../data/tentatives", import.meta.url));
 
 /** `clean` quand la réponse est juste, `blank` quand il n'y en a pas, `wrong` quand elle est fausse. */
 export type Issue = "clean" | "blank" | "wrong";

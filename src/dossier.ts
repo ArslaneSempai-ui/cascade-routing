@@ -38,8 +38,9 @@ import type { Profiles } from "./measure.ts";
 import type { Assumptions } from "./assumptions.ts";
 import type { TierName } from "./paliers.ts";
 import type { Field } from "./corpus.ts";
+import { fileURLToPath } from "node:url";
 
-const FICHIER = new URL("../VALIDATION.md", import.meta.url).pathname;
+const FICHIER = fileURLToPath(new URL("../VALIDATION.md", import.meta.url));
 
 const pc = (x: number) => (x * 100).toFixed(1) + " %";
 const euro = (x: number) => "$" + Math.round(x).toLocaleString("en-US");

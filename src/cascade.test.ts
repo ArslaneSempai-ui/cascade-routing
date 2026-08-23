@@ -376,7 +376,7 @@ test("aucun chiffre n'est tapé à la main dans la prose du README", () => {
    * ne relit pas. Donc soit il vient d'un bloc généré, soit il est déclaré ici avec sa raison
    * d'être immuable — et toute nouveauté fait tomber la suite.
    */
-  const readme = readFileSync(new URL("../README.md", import.meta.url).pathname, "utf8");
+  const readme = readFileSync(fileURLToPath(new URL("../README.md", import.meta.url)), "utf8");
   const prose = readme
     .replace(/<!-- figures:(\w+) -->[\s\S]*?<!-- \/figures:\1 -->/g, "")
     .replace(/```[\s\S]*?```/g, "")
@@ -461,7 +461,7 @@ test("les gestes du pilote de capture mènent à l'optimum courant", () => {
   const p = readProfiles();
   if (!p) return;
   type Script = { images: { sortie: string; scenes?: string[][] }[] };
-  const script: Script = JSON.parse(readFileSync(new URL("../captures.json", import.meta.url).pathname, "utf8"));
+  const script: Script = JSON.parse(readFileSync(fileURLToPath(new URL("../captures.json", import.meta.url)), "utf8"));
   const gif = script.images.find((i) => i.sortie.endsWith(".gif"));
   if (!gif?.scenes) return;   // pas de GIF piloté : rien à tenir
 
@@ -501,7 +501,7 @@ test("chaque rétractation nomme un test qui existe vraiment", () => {
    * Ce test ferme la boucle dans le seul sens qui soit mécanisable : chaque `tenu` doit
    * désigner un test réel du dépôt.
    */
-  const f = new URL("../retractations.json", import.meta.url).pathname;
+  const f = fileURLToPath(new URL("../retractations.json", import.meta.url));
   if (!existsSync(f)) return;
   const journal = JSON.parse(readFileSync(f, "utf8")) as {
     entries: { claimed: string; heldBy: string | null; notHeld?: string }[] };
@@ -512,7 +512,7 @@ test("chaque rétractation nomme un test qui existe vraiment", () => {
    * contrôle disait « ce test n'existe pas » là où il fallait lire « je ne l'ai pas cherché ».
    * Un contrôle anti-péremption qui périme lui-même demande le répertoire, il ne le récite pas.
    */
-  const dossier = new URL(".", import.meta.url).pathname;
+  const dossier = fileURLToPath(new URL(".", import.meta.url));
   const fichiers = readdirSync(dossier).filter((n) => n.endsWith(".test.ts")).sort();
   assert.ok(fichiers.length >= 5, `${fichiers.length} fichier(s) de test trouvé(s) : la lecture du répertoire a échoué.`);
   const sources = fichiers.map((n) => readFileSync(join(dossier, n), "utf8")).join("\n");
@@ -852,7 +852,7 @@ test("aucun appel sortant n'a été ajouté hors de la liste", () => {
    * Les URL citées en texte — une source réglementaire, un lien dans une page — ne sont pas
    * des appels : on ne retient que ce qui est passé à `fetch`.
    */
-  const dossier = new URL("./", import.meta.url).pathname;
+  const dossier = fileURLToPath(new URL("./", import.meta.url));
   const fichiers = readdirSync(dossier).filter((f) => /\.(ts|mjs)$/.test(f) && !f.endsWith(".test.ts"));
 
   const permis = SORTIES_AUTORISEES.map((s) => s.motif);
@@ -876,7 +876,7 @@ test("l'écran n'écoute que la boucle locale", () => {
    * banque, c'est un écran de dossiers clients exposé au réseau interne. L'adresse est déjà
    * explicite dans le code ; ce test empêche qu'elle disparaisse à la faveur d'un nettoyage.
    */
-  const src = readFileSync(new URL("./server.ts", import.meta.url).pathname, "utf8");
+  const src = readFileSync(fileURLToPath(new URL("./server.ts", import.meta.url)), "utf8");
   assert.match(src, /listen\(PORT,\s*"127\.0\.0\.1"/,
     "le serveur doit écouter 127.0.0.1 explicitement, jamais toutes les interfaces");
 
@@ -891,7 +891,7 @@ test("l'écran n'écoute que la boucle locale", () => {
    * joindre, pas celle qu'on emploie soi-même. Le gardien lit donc le répertoire au lieu de
    * réciter une liste — la même correction que le contrôle des rétractations a demandée.
    */
-  const dossier = new URL(".", import.meta.url).pathname;
+  const dossier = fileURLToPath(new URL(".", import.meta.url));
   const fichiers = readdirSync(dossier).filter((n) => /\.(ts|mjs)$/.test(n) && !n.endsWith(".test.ts"));
   const lanceurs = fichiers
     .map((n) => ({ n, src: readFileSync(join(dossier, n), "utf8") }))
@@ -926,7 +926,7 @@ test("les deux fichiers classent une absence de seuil de la même façon", () =>
    */
   const p = readProfiles();
   if (!p) return;
-  const f = new URL("../landing.json", import.meta.url).pathname;
+  const f = fileURLToPath(new URL("../landing.json", import.meta.url));
   if (!existsSync(f)) return;
 
   const publie = JSON.parse(readFileSync(f, "utf8")) as {
@@ -985,7 +985,7 @@ test("aucun relevé suivi par git ne transporte ses sorties brutes", () => {
    * il regarde ce que git suit réellement, ce qu'aucune relecture d'intention n'aurait vu.
    */
   const suivis = execFileSync("git", ["ls-files", "--", "*.json"], {
-    cwd: new URL("..", import.meta.url).pathname, encoding: "utf8",
+    cwd: fileURLToPath(new URL("..", import.meta.url)), encoding: "utf8",
   }).split("\n").filter((f) => /profiles.*\.json$/.test(f));
 
   assert.ok(suivis.length > 0,
@@ -995,7 +995,7 @@ test("aucun relevé suivi par git ne transporte ses sorties brutes", () => {
 
   let vus = 0;
   for (const f of suivis) {
-    const chemin = new URL(`../${f}`, import.meta.url).pathname;
+    const chemin = fileURLToPath(new URL(`../${f}`, import.meta.url));
     if (!existsSync(chemin)) continue;
     vus++;
     const p = JSON.parse(readFileSync(chemin, "utf8")) as {
@@ -1060,7 +1060,7 @@ test("la décomposition des erreurs recompose l'exactitude du palier", () => {
    */
   const p = readProfiles();
   if (!p) return;
-  const f = new URL("../landing.json", import.meta.url).pathname;
+  const f = fileURLToPath(new URL("../landing.json", import.meta.url));
   if (!existsSync(f)) return;
   const l = JSON.parse(readFileSync(f, "utf8")) as {
     errorSplit: { perThousand: Record<string, { tier: string; blank: number | null; wrong: number | null }> } | null;
@@ -1100,7 +1100,7 @@ test("chaque rétractation porte son résumé et dit si quelqu'un l'a vue", () =
    * Le test n'a pas d'avis sur leur valeur. Il exige seulement qu'elles soient posées, et
    * qu'une entrée ajoutée demain ne parte pas sans elles.
    */
-  const f = new URL("../retractations.json", import.meta.url).pathname;
+  const f = fileURLToPath(new URL("../retractations.json", import.meta.url));
   if (!existsSync(f)) return;
   const j = JSON.parse(readFileSync(f, "utf8")) as {
     entries: { date: string; headline?: string; caughtBeforeAnyoneSawIt?: boolean }[] };
@@ -1125,7 +1125,7 @@ test("chaque rétractation porte son résumé et dit si quelqu'un l'a vue", () =
  * mesure-là — une seule — qui porte l'affirmation.
  */
 test("l'égalité d'exactitude sous charge ne porte que sur les paliers réellement remesurés", () => {
-  const f = new URL("../landing.json", import.meta.url).pathname;
+  const f = fileURLToPath(new URL("../landing.json", import.meta.url));
   if (!existsSync(f)) return;
   const ls = (JSON.parse(readFileSync(f, "utf8")) as {
     loadSweep: null | {
@@ -1165,7 +1165,7 @@ test("l'égalité d'exactitude sous charge ne porte que sur les paliers réellem
  * honnête par une supposition confortable. Ce test demande à git ce que le code contenait.
  */
 test("le commit qui introduit le choix de formulation est bien celui qu'on nomme", () => {
-  const racine = new URL("..", import.meta.url).pathname;
+  const racine = fileURLToPath(new URL("..", import.meta.url));
   const c = PREMIER_COMMIT_MULTI_FORMULATION;
   const contient = (rev: string) => {
     try {
@@ -1182,7 +1182,7 @@ test("le commit qui introduit le choix de formulation est bien celui qu'on nomme
     + `  donc « mesuré avant lui ⇒ formulation reference » ne se déduit plus du code.`);
 
   /* Et tout palier de landing.json doit porter sa formulation, jamais l'absence. */
-  const f = new URL("../landing.json", import.meta.url).pathname;
+  const f = fileURLToPath(new URL("../landing.json", import.meta.url));
   if (!existsSync(f)) return;
   const perTier = (JSON.parse(readFileSync(f, "utf8")) as {
     generatedFrom: { perTier: Record<string, null | { accuracy: { phrasing?: string; phrasingSource?: string } }> };
@@ -1205,7 +1205,7 @@ test("le commit qui introduit le choix de formulation est bien celui qu'on nomme
  * page dirait « aucune baisse ne déplace le routage » sur la foi d'une boucle qui n'a pas tourné.
  */
 test("le balayage vers le bas essaie des prix, et le dit", () => {
-  const f = new URL("../landing.json", import.meta.url).pathname;
+  const f = fileURLToPath(new URL("../landing.json", import.meta.url));
   if (!existsSync(f)) return;
   const d = (JSON.parse(readFileSync(f, "utf8")) as {
     sensitivity: { downward: {
@@ -1240,7 +1240,7 @@ test("le balayage vers le bas essaie des prix, et le dit", () => {
  * mesure dit « sous-estime » passer pour « prudente ».
  */
 test("la composition des latences est nommée, et son écart au total réel est chiffré", () => {
-  const f = new URL("../landing.json", import.meta.url).pathname;
+  const f = fileURLToPath(new URL("../landing.json", import.meta.url));
   if (!existsSync(f)) return;
   const ls = (JSON.parse(readFileSync(f, "utf8")) as {
     latencySpread: { composition?: string; compositionCheck?: {
@@ -1286,7 +1286,7 @@ test("la composition des latences est nommée, et son écart au total réel est 
  * dans le code et absente de l'émission ne protège personne.
  */
 test("chaque seuil publié porte son unité, dénominateur compris", () => {
-  const f = new URL("../landing.json", import.meta.url).pathname;
+  const f = fileURLToPath(new URL("../landing.json", import.meta.url));
   if (!existsSync(f)) return;
   const seuils = (JSON.parse(readFileSync(f, "utf8")) as {
     sensitivity: { thresholds: Record<string, { unit?: string }> };
@@ -1320,7 +1320,7 @@ test("chaque seuil publié porte son unité, dénominateur compris", () => {
  * sans qu'aucun chiffre du dépôt ne bouge, puisqu'il faudrait remesurer pour le voir.
  */
 test("l'appel génératif impose une sortie structurée, sinon le prix publié est faux d'un facteur huit", () => {
-  const src = readFileSync(new URL("./tiers.ts", import.meta.url).pathname, "utf8");
+  const src = readFileSync(fileURLToPath(new URL("./tiers.ts", import.meta.url)), "utf8");
   const i = src.indexOf("/api/generate");
   assert.notEqual(i, -1, "l'appel de génération est introuvable.");
   const appel = src.slice(i, i + 700);
@@ -1354,7 +1354,7 @@ test("l'appel génératif impose une sortie structurée, sinon le prix publié e
  * elle ne prononçait pas le mot « country ».
  */
 test("la prose du plafond nomme l'exception que ses chiffres portent", () => {
-  const f = new URL("../landing.json", import.meta.url).pathname;
+  const f = fileURLToPath(new URL("../landing.json", import.meta.url));
   if (!existsSync(f)) return;
   const bloc = (JSON.parse(readFileSync(f, "utf8")) as {
     latencySpread: { escalationCeiling: null | {
@@ -1418,7 +1418,7 @@ test("la prose du plafond nomme l'exception que ses chiffres portent", () => {
  * réellement des percentiles. Une déclaration qui pointe vers un objet vide serait pire que rien.
  */
 test("toute durée publiée déclare d'où elle vient, et cet endroit porte des percentiles", () => {
-  const f = new URL("../landing.json", import.meta.url).pathname;
+  const f = fileURLToPath(new URL("../landing.json", import.meta.url));
   if (!existsSync(f)) return;
   const vue = JSON.parse(readFileSync(f, "utf8")) as {
     latencyFigures?: { origin: string; dispersionLivesIn: string; noFreshTimingHere: boolean;
@@ -1500,7 +1500,7 @@ test("le relevé livré correspond à son empreinte, et une valeur changée la f
      chose que git ne transporte pas », le défaut que ce dépôt a déjà payé sept fois.
      On éprouve donc les deux : celui de référence toujours, celui de travail s'il existe. */
   const cibles = [RELEVE_DE_REFERENCE, "data/profiles.json"]
-    .map((f) => new URL(`../${f}`, import.meta.url).pathname)
+    .map((f) => fileURLToPath(new URL(`../${f}`, import.meta.url)))
     .filter((f) => existsSync(f));
   assert.ok(cibles.length >= 1, "aucun relevé à éprouver : le dépôt n'en porte plus.");
 
@@ -1552,7 +1552,7 @@ test("le relevé livré correspond à son empreinte, et une valeur changée la f
  * décrit. On éprouve donc l'invalidation, pas seulement la présence.
  */
 test("la galerie en cache s'invalide quand le code qui la produit change", () => {
-  const chemin = new URL("../failures-reference.json", import.meta.url).pathname;
+  const chemin = fileURLToPath(new URL("../failures-reference.json", import.meta.url));
   assert.ok(existsSync(chemin),
     "failures-reference.json manque : « npm run failures » le reconstruit.");
   const c = JSON.parse(readFileSync(chemin, "utf8")) as { entrees?: string; echecs?: unknown[] };
@@ -1564,7 +1564,7 @@ test("la galerie en cache s'invalide quand le code qui la produit change", () =>
      empreinte que `failures.ts`, une fois telle quelle et une fois avec une source
      modifiée d'un caractère, et les deux doivent différer. */
   const sources = ["tiers.ts", "corpus.ts", "failures.ts"]
-    .map((f) => readFileSync(new URL(`./${f}`, import.meta.url).pathname, "utf8")).join("\u0000");
+    .map((f) => readFileSync(fileURLToPath(new URL(`./${f}`, import.meta.url)), "utf8")).join("\u0000");
   const h = (x: string) => createHash("sha256").update(x).digest("hex");
   assert.notEqual(h(sources), h(sources + " "),
     "l'empreinte du code ne bouge pas quand le code bouge : la clé ne protège rien.");
@@ -1601,4 +1601,46 @@ test("l'empreinte du cache discrimine, elle ne dégrade pas en constante", () =>
     assert.ok(t.length > 500,
       "la source " + f + " lue par l'empreinte fait " + t.length + " caractères : la clé ne suit plus le code.");
   }
+});
+
+
+/*
+ * `.pathname` SUR UNE URL DE FICHIER, PLUS JAMAIS.
+ *
+ * `new URL(f, import.meta.url).pathname` conserve le pourcent-encodage : sur un chemin qui
+ * porte une espace ou un caractère non-ASCII il rend « /tmp/dossier%20avec%20espace/x.ts »
+ * et la lecture échoue. Quatre-vingt-onze occurrences dans ce dépôt, dont une sous un
+ * `catch` qui transformait l'échec en CONSTANTE — la clé du cache de la galerie cessait
+ * alors de suivre le code, sans rien lever.
+ *
+ * Ce n'est pas théorique : `clone-neuf.mjs` clone dans un dossier temporaire, et c'est lui
+ * qui porte la garantie vendue à l'acheteur.
+ *
+ * Corriger quatre-vingt-onze sites ne sert à rien si le quatre-vingt-douzième revient
+ * demain. Une faute déjà payée devient une règle exécutable, ou elle se repaie.
+ */
+test("aucun fichier n'emploie `.pathname` sur une URL de fichier", () => {
+  const racine = fileURLToPath(new URL(".", import.meta.url));
+  const fautifs: string[] = [];
+  for (const f of readdirSync(racine)) {
+    if (!/\.(ts|mjs|js)$/.test(f)) continue;
+    /* UNE MENTION N'EST PAS UN EMPLOI, et cette règle a tiré sur ses propres
+       commentaires au premier essai — la faute que ce dépôt décrit comme la plus
+       fréquente de son catalogue, « commise dans l'outil même qui la surveillait ».
+       On retire donc commentaires et chaînes avant de regarder, EN PRÉSERVANT LES
+       LIGNES : un bloc écrasé en une espace décale tous les numéros et le
+       diagnostic désigne une ligne innocente. */
+    const src = readFileSync(join(racine, f), "utf8")
+      .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, " "))
+      .replace(/\/\/[^\n]*/g, (m) => " ".repeat(m.length))
+      .replace(/"(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'/g, (m) => " ".repeat(m.length));
+    src.split("\n").forEach((l, i) => {
+      if (/import\.meta\.url\s*\)\s*\.pathname/.test(l) || /new URL\([^)]*\)\.pathname/.test(l)) {
+        fautifs.push(`${f}:${i + 1}  ${l.trim().slice(0, 80)}`);
+      }
+    });
+  }
+  assert.deepEqual(fautifs, [],
+    "`.pathname` conserve le pourcent-encodage : emploie `fileURLToPath(new URL(...))`.\n  "
+    + fautifs.join("\n  "));
 });

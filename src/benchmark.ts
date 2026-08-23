@@ -27,6 +27,7 @@ import { rate, writeRate, distinguishable } from "./interval.ts";
 import { lireCsv } from "./your-cases.ts";
 
 import type { TierName } from "./paliers.ts";
+import { fileURLToPath } from "node:url";
 
 /**
  * Les jeux mesurés, avec ce qu'il faut pour les citer honnêtement.
@@ -51,7 +52,7 @@ export const JEUX = {
 
 export type NomJeu = keyof typeof JEUX;
 
-const DOSSIER = new URL("../benchmarks/", import.meta.url).pathname;
+const DOSSIER = fileURLToPath(new URL("../benchmarks/", import.meta.url));
 
 /** Le fichier, téléchargé une fois et laissé hors du dépôt. */
 function recuperer(nom: NomJeu): { chemin: string; empreinte: string } {

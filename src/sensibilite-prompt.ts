@@ -31,8 +31,9 @@ import { loadGeneratifs, extract, correct, PROMPTS, type NomPrompt } from "./tie
 import { readProfiles } from "./measure.ts";
 
 import type { Field } from "./corpus.ts";
+import { fileURLToPath } from "node:url";
 
-const SORTIE = new URL("../prompts-2026-08-20.json", import.meta.url).pathname;
+const SORTIE = fileURLToPath(new URL("../prompts-2026-08-20.json", import.meta.url));
 const PALIER = "gen-4b" as const;
 
 if (isMain(import.meta)) {
@@ -42,7 +43,7 @@ if (isMain(import.meta)) {
 
   const version = (() => {
     try {
-      const cwd = new URL("..", import.meta.url).pathname;
+      const cwd = fileURLToPath(new URL("..", import.meta.url));
       return {
         commit: execFileSync("git", ["rev-parse", "--short", "HEAD"], { cwd, encoding: "utf8" }).trim(),
         sale: execFileSync("git", ["status", "--porcelain"], { cwd, encoding: "utf8" }).trim().length > 0,

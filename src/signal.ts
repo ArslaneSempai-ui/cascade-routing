@@ -26,8 +26,9 @@ import { corpusDur } from "./corpus-dur.ts";
 import { casAmbigus } from "./mesurer-dur.ts";
 
 import type { Tentative } from "./journal.ts";
+import { fileURLToPath } from "node:url";
 
-const SORTIE = new URL("../signal.json", import.meta.url).pathname;
+const SORTIE = fileURLToPath(new URL("../signal.json", import.meta.url));
 
 /**
  * Le dénominateur, déclaré une fois et employé partout à l'identique.
