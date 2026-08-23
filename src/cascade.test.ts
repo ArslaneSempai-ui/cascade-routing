@@ -2722,10 +2722,22 @@ test("chaque route du serveur existe et répond, et une origine étrangère est 
       "une page web ouverte dans un autre onglet peut écrire dans cet écran. Écouter la boucle "
       + "locale protège du réseau, pas du navigateur.");
 
+    /* L'ORIGINE DOIT ÊTRE CELLE PAR LAQUELLE ON SE CONNECTE, et ce détail n'est pas cosmétique :
+       la première version annonçait `localhost` en se connectant à `127.0.0.1`. Un navigateur
+       traite ces deux-là comme DEUX ORIGINES DIFFÉRENTES, donc le refus était juste et c'est le
+       témoin qui était faux. Il l'a montré en tombant, ce qui est exactement son travail. */
     const sienne = await fetch(`${base}/api/routage`, {
-      method: "POST", headers: { "content-type": "application/json", origin: `http://localhost:${PORT}` }, body: "{}",
+      method: "POST", headers: { "content-type": "application/json", origin: `http://127.0.0.1:${PORT}` }, body: "{}",
     });
     assert.equal(sienne.status, 200, "l'écran lui-même est refusé : la garde mord son propre usage.");
+
+    /* Et l'autre nom de la même machine EST une autre origine : le vérifier fige le choix. */
+    const autreNom = await fetch(`${base}/api/routage`, {
+      method: "POST", headers: { "content-type": "application/json", origin: `http://localhost:${PORT}` }, body: "{}",
+    });
+    assert.equal(autreNom.status, 403,
+      "`localhost` et `127.0.0.1` sont deux origines distinctes pour un navigateur ; les "
+      + "confondre reviendrait à accepter un hôte qu'on n'a pas servi.");
 
     const sansOrigine = await fetch(`${base}/api/routage`, {
       method: "POST", headers: { "content-type": "application/json" }, body: "{}",

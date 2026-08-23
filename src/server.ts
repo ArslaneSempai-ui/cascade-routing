@@ -150,8 +150,26 @@ export function etat() {
 function origineEtrangere(req: IncomingMessage): string | null {
   const o = req.headers.origin;
   if (!o) return null;                       // hors navigateur : pas d'Origin, rien à défendre
-  const attendues = [`http://localhost:${PORT}`, `http://127.0.0.1:${PORT}`];
-  return attendues.includes(o) ? null : o;
+  /*
+   * ON COMPARE À L'HÔTE DE LA REQUÊTE, PAS À UNE LISTE ÉCRITE EN DUR.
+   *
+   * La première version acceptait `localhost:4670` et `127.0.0.1:4670`, littéralement. Elle
+   * aurait donc refusé SON PROPRE ÉCRAN dès que quelqu'un sert la démo sous un autre nom —
+   * `mon-mac.local`, un port choisi par PORT=…, une machine de démonstration, un proxy. Une
+   * garde qui refuse l'usage normal se fait retirer, et elle emporte la faille avec elle.
+   *
+   * Une page servie PAR ce serveur porte forcément le même hôte que la requête qu'elle émet :
+   * comparer les deux est à la fois plus permissif pour l'usage légitime et aussi strict pour
+   * l'attaque, puisqu'une page hostile a par définition un autre hôte. Le navigateur remplit
+   * `Host` et `Origin` lui-même et une page ne peut falsifier ni l'un ni l'autre.
+   */
+  const hote = req.headers.host;
+  if (!hote) return o;                       // sans Host on ne peut rien comparer : on refuse
+  try {
+    return new URL(o).host === hote ? null : o;
+  } catch {
+    return o;                                // un Origin illisible n'est pas le nôtre
+  }
 }
 
 const serveur = createServer(async (req, res) => {
