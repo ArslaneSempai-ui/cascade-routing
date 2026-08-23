@@ -18,7 +18,7 @@ about two minutes.
 <!-- figures:commandes -->
 | Command | What it does, in the order that makes sense |
 |---|---|
-| `npm run test` | types, figures and the suite — start here, it needs nothing downloaded |
+| `npm run test` | types, figures and the suite — start here; the first run downloads the two extraction models and caches them (sizes below) |
 | `npm run measure` | measure the encoder tiers and freeze the profile (1.26 GB on the first run) |
 | `npm run optimise` | the routing, and what the next improvement would cost |
 | `npm run failures` | every case it gets wrong, with its input and its output |
@@ -82,33 +82,33 @@ The corpus is now split: the rules were developed on one set of phrasings and ar
 on another they never saw. Measured honestly, they collapse.
 
 <!-- figures:extraction -->
-| Tier | name | birth | document | country | address | Latency |
-|---|---|---|---|---|---|---|
-| `rules` | 0.0 % | 100.0 % | 79.7 % | 100.0 % | 0.0 % | 0.0 ms |
-| `small` | 46.6 % | 97.9 % | 57.7 % | 100.0 % | 43.0 % | 19.1 ms |
-| `large` | 96.6 % | 100.0 % | 64.4 % | 100.0 % | 32.8 % | 45.2 ms |
-| `gen-0.6b` | 80.8 % | 87.5 % | 70.0 % | 83.3 % | 75.0 % | 233.4 ms |
-| `gen-4b` | 89.2 % | 99.2 % | 79.2 % | 100.0 % | 95.8 % | 788.0 ms |
-| `gen-8b` | 91.7 % | 100.0 % | 83.3 % | 100.0 % | 82.5 % | 1194.5 ms |
+| Tier | name | birth | document | country | address | Latency | n |
+|---|---|---|---|---|---|---|---|
+| `rules` | 0.0 % | 100.0 % | 79.7 % | 100.0 % | 0.0 % | 0.0 ms | 1000 |
+| `small` | 46.6 % | 97.9 % | 57.7 % | 100.0 % | 43.0 % | 19.1 ms | 1000 |
+| `large` | 96.6 % | 100.0 % | 64.4 % | 100.0 % | 32.8 % | 45.2 ms | 1000 |
+| `gen-0.6b` | 80.8 % | 87.5 % | 70.0 % | 83.3 % | 75.0 % | 233.4 ms | 120 |
+| `gen-4b` | 89.2 % | 99.2 % | 79.2 % | 100.0 % | 95.8 % | 788.0 ms | 120 |
+| `gen-8b` | 91.7 % | 100.0 % | 83.3 % | 100.0 % | 82.5 % | 1194.5 ms | 120 |
 <!-- /figures:extraction -->
 
 Two things fall out of that table, and neither is guessable:
 
 <!-- figures:deuxfaits -->
-On the address, **the large model is worse than the small one** — 32.8 % against 43.0 % — while costing several times as much. And on the identity number, **the free regex beats 4 of the 5 model tiers**: 79.7 % against 57.7 %, 64.4 %, 70.0 %, 79.2 %, for nothing.
+On the address, **the large model is worse than the small one** — 32.8 % [30–36], n=1000 against 43.0 % [40–46], n=1000 — while costing several times as much. The sample separates them. And on the identity number, **the free regex beats 4 of the 5 model tiers**: 79.7 % [77–82], n=1000 against 57.7 % [55–61], n=1000, 64.4 % [61–67], n=1000, 70.0 % [61–77], n=120, 79.2 % [71–85], n=120, for nothing.
 <!-- /figures:deuxfaits -->
 
 The second chain, classifying alert narratives, is where the keyword collapse is starkest:
 
 <!-- figures:classification -->
-| Tier | Accuracy | 95 % interval | Latency |
-|---|---|---|---|
-| `rules` | 21.3 % | [19–24] | 0.00 ms |
-| `small` | 69.2 % | [66–72] | 3.89 ms |
-| `large` | 40.5 % | [37–44] | 8.73 ms |
-| `gen-0.6b` | 61.7 % | [53–70] | 228.27 ms |
-| `gen-4b` | 94.2 % | [88–97] | 724.05 ms |
-| `gen-8b` | 100.0 % | [97–100] | 998.27 ms |
+| Tier | Accuracy | 95 % interval | Latency | n |
+|---|---|---|---|---|
+| `rules` | 21.3 % | [19–24] | 0.00 ms | 1000 |
+| `small` | 69.2 % | [66–72] | 3.89 ms | 1000 |
+| `large` | 40.5 % | [37–44] | 8.73 ms | 1000 |
+| `gen-0.6b` | 61.7 % | [53–70] | 228.27 ms | 120 |
+| `gen-4b` | 94.2 % | [88–97] | 724.05 ms | 120 |
+| `gen-8b` | 100.0 % | [97–100] | 998.27 ms | 120 |
 <!-- /figures:classification -->
 
 Those keywords scored **100 %** against the templates they were written from. On
@@ -131,6 +131,8 @@ same scorer were run against a local Qwen3 ladder at 0.6B, 4B and 8B parameters.
 | `document` | 79.7 % | 57.7 % | 64.4 % | 70.0 % | 79.2 % | **83.3 %** | `gen-8b` |
 | `country` | **100.0 %** | 100.0 % | 100.0 % | 83.3 % | 100.0 % | 100.0 % | `rules` |
 | `address` | 0.0 % | 43.0 % | 32.8 % | 75.0 % | **95.8 %** | 82.5 % | `gen-4b` |
+
+Cases behind each column — `rules` 1000 · `small` 1000 · `large` 1000 · `gen-0.6b` 120 · `gen-4b` 120 · `gen-8b` 120.
 <!-- /figures:echelles -->
 
 **No family wins everywhere, and that is the entire finding.** A specialised extractive head
@@ -219,7 +221,9 @@ around a second per field, so the constraint stops being decorative.
 | 50 ms | 75.3 % | $160 | 48.0 ms | `large` `rules` `rules` `rules` `rules` |
 | 30 ms | 65.3 % | $20 | 18.0 ms | `small` `rules` `rules` `rules` `rules` |
 
-**What the promise costs.** Lift the ceiling entirely and the cheapest routing that is statistically indistinguishable in accuracy costs $67 instead of $191 — it just takes 2021 ms per document. **Your latency promise is worth $123**, and the money budget never binds at all. That is the shadow price nobody prices.
+Each accuracy is the **mean of the five field rates** of that routing, measured on separate samples — a mean of proportions, so no interval is quoted.
+
+**What the promise costs.** Lift the ceiling entirely and the cheapest routing that is statistically indistinguishable in accuracy costs $67 instead of $191 — it just takes 2021 ms per document. **Your latency promise is worth $124**, and the money budget never binds at all. That is the shadow price nobody prices.
 <!-- /figures:latence -->
 
 Read it as the price list for a service level agreement: each row is what a tighter promise
@@ -235,16 +239,16 @@ classifier scores what it scores — is that bad? It was unanswerable until the 
 computed.
 
 <!-- figures:baselines -->
-|  | Accuracy | Verdict |
-|---|---|---|
-| always the most common label | 25.0 % | *answers "fractionnement" every time, ignoring the input entirely* |
-| uniform guess | 20.0 % | *picks one of 5 labels at random* |
-| `rules` | 21.3 % | **loses to "always the most common label"** by 3.7 points |
-| `small` | 69.2 % | beats "always the most common label" by 44.2 points |
-| `large` | 40.5 % | beats "always the most common label" by 15.5 points |
-| `gen-0.6b` | 61.7 % | beats "always the most common label" by 36.7 points |
-| `gen-4b` | 94.2 % | beats "always the most common label" by 69.2 points |
-| `gen-8b` | 100.0 % | beats "always the most common label" by 75.0 points |
+|  | Accuracy | Verdict | n |
+|---|---|---|---|
+| always the most common label | 25.0 % | *answers "fractionnement" every time, ignoring the input entirely* | 1000 |
+| uniform guess | 20.0 % | *picks one of 5 labels at random* | 1000 |
+| `rules` | 21.3 % | **loses to "always the most common label"** by 3.7 points | 1000 |
+| `small` | 69.2 % | beats "always the most common label" by 44.2 points | 1000 |
+| `large` | 40.5 % | beats "always the most common label" by 15.5 points | 1000 |
+| `gen-0.6b` | 61.7 % | beats "always the most common label" by 36.7 points | 120 |
+| `gen-4b` | 94.2 % | beats "always the most common label" by 69.2 points | 120 |
+| `gen-8b` | 100.0 % | beats "always the most common label" by 75.0 points | 120 |
 <!-- /figures:baselines -->
 
 Hand-written keyword rules, refined over an afternoon, carry no information that a
@@ -258,12 +262,14 @@ baseline took four minutes to write.
 <!-- figures:routing -->
 | Field | Tier chosen | Accuracy | Cost |
 |---|---|---|---|
-| name | `large` | 96.6 % | $160 |
-| birth | `rules` | 100.0 % | $0 |
-| document | `rules` | 79.7 % | $0 |
-| country | `rules` | 100.0 % | $0 |
-| address | `gen-4b` | 95.8 % | $26 |
+| name | `large` | 96.6 % [95–98], n=1000 | $160 |
+| birth | `rules` | 100.0 % [100–100], n=1000 | $0 |
+| document | `rules` | 79.7 % [77–82], n=1000 | $0 |
+| country | `rules` | 100.0 % [100–100], n=1000 | $0 |
+| address | `gen-4b` | 95.8 % [91–98], n=120 | $31 |
 | **total** |  | **94.4 %** | **$191** |
+
+The total is the **mean of the five field rates**, each measured on its own sample (1000, 1000, 1000, 1000, 120 cases). It is not a proportion, so it carries no interval: a Wilson bound on a mean of proportions drawn from different samples would be a fabricated statistic, and this report would rather publish a number without a bound than a bound without a meaning.
 <!-- /figures:routing -->
 
 <!-- figures:shadow -->

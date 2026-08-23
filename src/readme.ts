@@ -31,23 +31,42 @@ const mesures = paliersMesures(p).filter((t) => t !== "human");
 const pc = (x: number) => (x * 100).toFixed(1) + " %";
 const euro = (n: number) => "$" + Math.round(n).toLocaleString("en-GB");
 
+/* TRENTE TAUX PUBLIÉS, ET PAS UN SEUL n. C'était le plus gros trou de la page :
+   le bloc d'ouverture affirme que « les tableaux portent chacun leur n », et
+   c'était faux ici — le tableau le plus lu du document. Un taux sans son
+   effectif n'est pas une mesure, c'est une anecdote, et c'est la première chose
+   qu'un lecteur sceptique attaque.
+   Une colonne suffit et ne coûte rien en largeur : l'effectif est constant sur
+   les cinq champs d'un même palier — 1 000 pour les paliers machine, 120 pour
+   l'échelle générative. Cet écart d'un facteur huit est lui-même l'information
+   qui manquait : il dit pourquoi les taux génératifs bougent plus, et il se
+   voyait nulle part. */
 const extraction = table(
-  ["Tier", ...FIELDS, "Latency"],
-  mesures.map((t) => [
-    `\`${t}\``,
-    ...FIELDS.map((f) => pc(p.extraction[t][f].accuracy)),
-    (FIELDS.reduce((s, f) => s + p.extraction[t][f].latency, 0) / FIELDS.length).toFixed(1) + " ms",
-  ]),
+  ["Tier", ...FIELDS, "Latency", "n"],
+  mesures.map((t) => {
+    const n = FIELDS.map((f) => p.extraction[t][f].items);
+    const memeN = n.every((x) => x === n[0]);
+    return [
+      `\`${t}\``,
+      ...FIELDS.map((f) => pc(p.extraction[t][f].accuracy)),
+      (FIELDS.reduce((s, f) => s + p.extraction[t][f].latency, 0) / FIELDS.length).toFixed(1) + " ms",
+      /* si un jour les champs cessent d'être mesurés sur le même échantillon,
+         la colonne le DIT au lieu d'afficher le premier et de taire les autres */
+      memeN ? String(n[0]) : n.join(" / "),
+    ];
+  }),
 );
 
 const classification = table(
-  ["Tier", "Accuracy", "95 % interval", "Latency"],
+  ["Tier", "Accuracy", "95 % interval", "Latency", "n"],
   mesures.map((t) => {
     const prof = p.classification[t];
     const r = rate(Math.round(prof.accuracy * prof.items), prof.items);
+    /* l'intervalle était là, l'effectif non : on peut vérifier la borne sans
+       pouvoir vérifier ce sur quoi elle porte, ce qui la rend invérifiable. */
     return [`\`${t}\``, pc(prof.accuracy),
       `[${(r.low * 100).toFixed(0)}–${(r.high * 100).toFixed(0)}]`,
-      prof.latency.toFixed(2) + " ms"];
+      prof.latency.toFixed(2) + " ms", String(prof.items)];
   }),
 );
 
@@ -56,10 +75,39 @@ const routing = best ? table(
   ["Field", "Tier chosen", "Accuracy", "Cost"],
   FIELDS.map((f) => {
     const t = best.routing[f];
-    return [f, `\`${t}\``, pc(accuracy(t, p.extraction[t][f].accuracy, h)),
-      euro((h.volume / 1000) * pricePerThousandExtractions(t, h, latenceRepresentative(p, t)))];
+    /* LA LATENCE DU CHAMP, PAS LA MOYENNE DU PALIER — et c'est la colonne qui
+       ne s'additionnait pas. `latenceRepresentative` rend la moyenne des cinq
+       champs ; sur un palier local le tarif est du TEMPS MACHINE, et le temps
+       dépend du champ — le commentaire de `pricePerThousandDocuments` le dit
+       déjà en toutes lettres : « l'adresse ne coûte pas la date de naissance ».
+       Chiffré : `address` sur `gen-4b` demande 919,74 ms et non les 340 ms de
+       la moyenne du palier, donc 30,66 $ et non 26,27 $.
+
+       Conséquence visible, et c'est la première chose qu'un lecteur sceptique
+       vérifie : la colonne affichait 160 + 0 + 0 + 0 + 26 = 186 sous un total
+       de 191. Les lignes et le total venaient de DEUX CALCULS différents — les
+       lignes recomputées ici, le total pris de l'optimiseur — donc deux objets
+       pour une seule grandeur. Le total avait raison : avec la latence propre,
+       la somme des lignes tombe sur 190,6581, à l'unité près de `best.cost`. */
+    const q = p.extraction[t][f];
+    /* L'INTERVALLE S'ARRÊTE OÙ LA MESURE S'ARRÊTE. `accuracy()` rend le chiffre
+       mesuré pour les paliers machine et l'HYPOTHÈSE pour l'humain — la seule
+       valeur affichée du projet qui ne soit pas une mesure, son propre
+       commentaire le dit. Encadrer une hypothèse par un intervalle de Wilson
+       lui donnerait l'apparence d'un relevé : ce serait la faute exacte que
+       cette colonne est censée réparer. */
+    const cellule = t === "human"
+      ? `${pc(accuracy(t, q.accuracy, h))} *(assumed)*`
+      : writeRate(rate(Math.round(q.accuracy * q.items), q.items));
+    return [f, `\`${t}\``, cellule,
+      euro((h.volume / 1000) * pricePerThousandExtractions(t, h, q.latency))];
   }).concat([["**total**", "", `**${pc(best.accuracy)}**`, `**${euro(best.cost)}**`]]),
-) : "";
+) + `\n\nThe total is the **mean of the five field rates**, each measured on its own sample `
+  + `(${FIELDS.map((f) => p!.extraction[best.routing[f]][f].items).join(", ")} cases). `
+  + `It is not a proportion, so it carries no interval: a Wilson bound on a mean of `
+  + `proportions drawn from different samples would be a fabricated statistic, and this `
+  + `report would rather publish a number without a bound than a bound without a meaning.`
+: "";
 
 const shadow = (() => {
   const f = budgetShadowPrice(p, h);
@@ -108,14 +156,21 @@ const alerts = generateAlerts(120, "heldout");
 const majority = majorityClass(alerts.map((a) => a.truth));
 const uniform = uniformGuess(TYPOLOGIES.length);
 
+const nEtiquettes = p.classification[mesures[0]!]!.items;
 const baselines = table(
-  ["", "Accuracy", "Verdict"],
+  ["", "Accuracy", "Verdict", "n"],
   [
-    [`${majority.name}`, pc(majority.accuracy), `*${majority.what}*`],
-    [`${uniform.name}`, pc(uniform.accuracy), `*${uniform.what}*`],
+    /* LES DEUX RÉFÉRENCES SE CALCULENT SUR LE MÊME JEU D'ÉTIQUETTES que les
+       paliers de la colonne du dessous, donc le même effectif. `Baseline` ne le
+       porte pas — j'ai d'abord écrit `majority.n`, et le compilateur a refusé :
+       inventer un champ pour publier un chiffre aurait été la faute même que
+       cette colonne répare. On le prend là où il est mesuré. */
+    [`${majority.name}`, pc(majority.accuracy), `*${majority.what}*`, String(nEtiquettes)],
+    [`${uniform.name}`, pc(uniform.accuracy), `*${uniform.what}*`, String(nEtiquettes)],
     ...mesures.map((t) => [
       `\`${t}\``, pc(p.classification[t].accuracy),
       verdict(p.classification[t].accuracy, majority, p.classification[t].items),
+      String(p.classification[t].items),
     ]),
   ],
 );
@@ -141,7 +196,13 @@ const echelles = (() => {
       (e === meilleur ? "**" : "") + pc(p!.extraction[e][c].accuracy) + (e === meilleur ? "**" : "")),
       `\`${meilleur}\``];
   });
-  return table(["Field", ...mesures.map((e) => `\`${e}\``), "Best"], lignes);
+  /* L'EFFECTIF VARIE PAR COLONNE, PAS PAR LIGNE — donc pas de colonne « n »
+     possible ici, et c'est pour ça que ce tableau était le dernier sans. Une
+     ligne de pied le porte : trente taux publiés sans savoir sur combien de cas
+     chacun repose, et l'écart va de 1 000 à 120. */
+  const effectifs = mesures.map((e) => `\`${e}\` ${p!.extraction[e][FIELDS[0]!].items}`).join(" · ");
+  return table(["Field", ...mesures.map((e) => `\`${e}\``), "Best"], lignes)
+    + `\n\nCases behind each column — ${effectifs}.`;
 })();
 
 /*
@@ -174,16 +235,34 @@ const latence = (() => {
    * cher, qu'il doit refuser parce qu'il dépasse la promesse de latence. Deux contraintes
    * dont une seule contraint, et ce n'est pas celle que tout le monde regarde.
    */
+  /* MÊME AVERTISSEMENT QUE LE TOTAL DU ROUTAGE, et pour la même raison : la
+     colonne « Accuracy » de ce tableau est la moyenne des cinq taux de champ du
+     routage retenu, chacun mesuré sur son propre échantillon. Ce n'est pas une
+     proportion, donc pas d'intervalle. Le dire une fois par tableau plutôt
+     qu'une fois pour toute la page : un lecteur qui arrive par un lien d'ancre
+     ne lit pas le paragraphe d'à côté. */
+  const noteMoyenne = `\n\nEach accuracy is the **mean of the five field rates** of that routing, `
+    + `measured on separate samples — a mean of proportions, so no interval is quoted.`;
   const sans = optimiseExtraction(p!, { ...h, latencyBudgetMs: Number.MAX_SAFE_INTEGER });
   const avec = optimiseExtraction(p!, h);
   const note = (sans && avec && sans.cost < avec.cost)
     ? `\n\n**What the promise costs.** Lift the ceiling entirely and the cheapest routing that is `
       + `statistically indistinguishable in accuracy costs ${euro(sans.cost)} instead of `
       + `${euro(avec.cost)} — it just takes ${sans.latencyPerItem.toFixed(0)} ms per document. `
-      + `**Your latency promise is worth ${euro(avec.cost - sans.cost)}**, and the money budget `
+      /* L'ÉCART SE PREND SUR LES CHIFFRES AFFICHÉS, pas sur les valeurs pleines.
+         `euro(avec.cost - sans.cost)` arrondissait la DIFFÉRENCE (123,4 → 123)
+         pendant que la phrase affiche les deux opérandes arrondis, 191 et 67 :
+         le lecteur qui soustrait obtient 124 et voit une page qui se contredit.
+         Aucun des trois chiffres n'était faux, et c'est bien le problème — un
+         document dont l'argument est « vérifiez notre arithmétique » doit
+         d'abord tomber juste quand on la vérifie. On arrondit donc les deux
+         opérandes puis on soustrait : l'écart reste à moins d'un dollar de la
+         valeur pleine, ce qui est exactement ce que veut dire arrondir, et la
+         page est cohérente pour qui la contrôle au crayon. */
+      + `**Your latency promise is worth ${euro(Math.round(avec.cost) - Math.round(sans.cost))}**, and the money budget `
       + `never binds at all. That is the shadow price nobody prices.`
     : "";
-  return table(["Ceiling per document", "Accuracy", "Cost", "Actual", "Routing"], lignes) + note;
+  return table(["Ceiling per document", "Accuracy", "Cost", "Actual", "Routing"], lignes) + noteMoyenne + note;
 })();
 
 /*
@@ -252,10 +331,33 @@ const deuxfaits = (() => {
   const parRegle = adr["rules"][doc].accuracy;
   const modeles = mesures.filter((e) => e !== "rules");
   const battus = modeles.filter((e) => adr[e][doc].accuracy < parRegle);
+  /* CETTE PHRASE A DÉJÀ ÉTÉ RÉTRACTÉE UNE FOIS, et le journal des rétractations
+     le dit à la date du 19/08 : « sur un seul champ — et sur 120 cas l'écart
+     était de 4,2 points avec des intervalles qui se recouvraient presque
+     entièrement ». Elle a été corrigée, puis republiée SANS ses effectifs et
+     SANS son verdict de distinguabilité — donc réexposée à la faute exacte qui
+     l'avait fait tomber. Un chiffre qu'on a déjà payé mérite plus qu'une
+     correction : il mérite la garde qui empêche la rechute.
+     On publie donc les taux avec leur intervalle et leur n, et on dit
+     explicitement si l'échantillon départage — « moins exact » et « on ne peut
+     pas les départager » sont deux affirmations différentes, et seule la
+     seconde est parfois vraie. */
+  const qGrand = adr["large"]["address"], qPetit = adr["small"]["address"];
+  const rGrand = rate(Math.round(qGrand.accuracy * qGrand.items), qGrand.items);
+  const rPetit = rate(Math.round(qPetit.accuracy * qPetit.items), qPetit.items);
+  const tranche = distinguishable(rGrand, rPetit);
+  const qRegle = adr["rules"][doc];
+  const rRegle = rate(Math.round(qRegle.accuracy * qRegle.items), qRegle.items);
   return `On the address, **the ${grand < petit ? "large model is worse than the small one" : "small model trails the large one"}** `
-    + `— ${pc(grand)} against ${pc(petit)} — while costing several times as much. `
+    + `— ${writeRate(rGrand)} against ${writeRate(rPetit)} — while costing several times as much. `
+    + (tranche
+        ? `The sample separates them. `
+        : `**The sample does not separate them**: the intervals overlap, so this is a gap we can see and cannot establish. `)
     + `And on the identity number, **the free regex beats ${battus.length} of the ${modeles.length} model tiers**: `
-    + `${pc(parRegle)} against ${battus.map((e) => pc(adr[e][doc].accuracy)).join(", ")}, for nothing.`
+    + `${writeRate(rRegle)} against ${battus.map((e) => {
+        const q = adr[e][doc];
+        return writeRate(rate(Math.round(q.accuracy * q.items), q.items));
+      }).join(", ")}, for nothing.`
     ;
 })();
 
@@ -331,7 +433,17 @@ const publicJeu = (() => {
 const commandes = (() => {
   const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url).pathname, "utf8"));
   const ordre: [string, string][] = [
-    ["test", "types, figures and the suite — start here, it needs nothing downloaded"],
+    /* « IT NEEDS NOTHING DOWNLOADED » ÉTAIT FAUX, et c'était la première ligne du
+       premier tableau — la seule phrase qui parle de coût réseau, lue avant le
+       moindre chiffre d'exactitude. Mesuré : `node src/readme.ts --check` charge
+       les deux modèles d'extraction (`src/readme.ts` appelle `collect()` au
+       niveau module, donc en mode --check aussi), soit 722 Mo de poids .onnx.
+       Sur un poste derrière un proxy qui laisse passer npm et pas huggingface,
+       la commande d'accueil meurt en douze secondes.
+       On ne remet pas de chiffre ici : ce dépôt s'interdit les nombres tapés à
+       la main, et la taille est déjà publiée plus bas, mesurée. On dit le fait
+       et on laisse le chiffre où il est vérifiable. */
+    ["test", "types, figures and the suite — start here; the first run downloads the two extraction models and caches them (sizes below)"],
     ["measure", "measure the encoder tiers and freeze the profile (1.26 GB on the first run)"],
     ["optimise", "the routing, and what the next improvement would cost"],
     ["failures", "every case it gets wrong, with its input and its output"],
