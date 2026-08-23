@@ -153,15 +153,35 @@ const shadow = (() => {
 const f = await collect();
 const gallery = (() => {
   const seen = new Set<string>();
-  const six = f.filter((x) => {
+  const parPaire = f.filter((x) => {
     const k = `${x.tier}:${x.field}`;
     if (seen.has(k)) return false;
     seen.add(k);
     return true;
-  }).slice(0, 5);
+  });
+  /* Le nombre de paires qui ONT un échec, pour que la phrase publiée puisse dire ce qu'elle
+     écarte au lieu de promettre « chacune ». */
+  const pairesAvecEchec = parPaire.length;
+  const six = parPaire.slice(0, 5);
 
   const counts = table(["Failures", "Tier · field · what kind of wrong"],
     shape(f).slice(0, 6).map(([k, n]) => [n, k]));
+
+  /*
+   * LA PHRASE QUI COMMENTE LA GALERIE PROMETTAIT L'EXHAUSTIVITÉ, EN PROSE LIBRE.
+   *
+   * Elle disait : « The gallery takes the first failure of EACH tier-and-field pair, in order,
+   * and shows what came back. » Le code en prend cinq sur les neuf paires qui ont un échec, et
+   * le bloc engendré juste au-dessus le disait honnêtement — « 5 of them ». LE DOCUMENT SE
+   * CONTREDISAIT À DEUX LIGNES D'INTERVALLE, la figure étant juste et la prose fausse.
+   *
+   * Corriger la phrase ne suffirait pas : elle vit hors bloc, donc elle rouillerait de nouveau
+   * au premier palier ajouté. Elle est donc ENGENDRÉE ici, avec ses deux nombres, et elle ne
+   * peut plus s'écarter de ce que la boucle fait juste au-dessus.
+   */
+  const commentaire = `Nothing here is curated for flattery. The gallery takes the FIRST failure `
+    + `of a tier-and-field pair, in order, and shows what came back — `
+    + `${six.length} of the ${pairesAvecEchec} pairs that have one, not a chosen sample.`;
 
   const examples = six.map((x) =>
     "```\n" + `${x.tier} · ${x.field} · ${x.mode}   [${x.recordId}]\n` +
@@ -183,12 +203,13 @@ const gallery = (() => {
   return `${f.length} failures across ${paliersVus.length} of the ${paliersMesuresSansHumain.length} measured tiers`
     + `, grouped by what actually went wrong.\n\n${counts}\n\n`
     + `Shown above: the ${Math.min(6, genres)} most common of ${genres} kinds. Below: `
-    + `${six.length} of them with their input and output. `
+    + `${six.length} of the ${pairesAvecEchec} tier-and-field pairs that have a failure, `
+    + `with their input and output. `
     + (absents.length
         ? `Not here at all — ${absents.map((t) => `\`${t}\``).join(", ")}: the generative ladder is `
           + `measured only with \`npm run measure -- --llm\`. `
         : "")
-    + `\`npm run failures\` prints every case of the tiers it runs.\n\n${examples}`;
+    + `\`npm run failures\` prints every case of the tiers it runs.\n\n${commentaire}\n\n${examples}`;
 })();
 
 /*

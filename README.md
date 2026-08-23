@@ -319,7 +319,9 @@ model's actual output beside the expected one is something you can check.
 | 38 | small · address · wrong span |
 | 27 | large · document · over-long |
 
-Shown above: the 6 most common of 20 kinds. Below: 5 of them with their input and output. Not here at all — `gen-0.6b`, `gen-4b`, `gen-8b`: the generative ladder is measured only with `npm run measure -- --llm`. `npm run failures` prints every case of the tiers it runs.
+Shown above: the 6 most common of 20 kinds. Below: 5 of the 9 tier-and-field pairs that have a failure, with their input and output. Not here at all — `gen-0.6b`, `gen-4b`, `gen-8b`: the generative ladder is measured only with `npm run measure -- --llm`. `npm run failures` prints every case of the tiers it runs.
+
+Nothing here is curated for flattery. The gallery takes the FIRST failure of a tier-and-field pair, in order, and shows what came back — 5 of the 9 pairs that have one, not a chosen sample.
 
 ```
 rules · name · empty   [D-0001]
@@ -357,8 +359,7 @@ small · document · fragment   [D-0002]
 ```
 <!-- /figures:gallery -->
 
-Nothing here is curated for flattery. The gallery takes the first failure of each
-tier-and-field pair, in order, and shows what came back.
+
 
 ---
 
@@ -421,8 +422,9 @@ anything. A validator can audit a history; they cannot audit a promise.
 <!-- /figures:retractations -->
 
 Each line names what caught it, because that is the part worth copying. Two were caught by a
-person re-reading, and the rest by a check that now runs on every commit — which is the whole
-argument for turning a lesson into a test rather than a note.
+person re-reading, and the rest by a check that runs in continuous integration on every push
+— not on every commit: there is no local hook, so a commit stays unverified until it leaves
+the machine. Turning a lesson into a test rather than a note is still the whole argument.
 
 ## Where every number comes from
 
