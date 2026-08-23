@@ -73,8 +73,14 @@ window.LOCAL = async (chemin, corps) => {
   if (chemin === "/api/hypotheses") {
     if (corps.remise) hypotheses = { ...ASSUMPTIONS };
     else for (const [cle, bornes] of Object.entries(BOUNDS)) {
-      const v = Number(corps[cle]);
-      if (Number.isFinite(v)) hypotheses = { ...hypotheses, [cle]: Math.min(bornes[1], Math.max(bornes[0], v)) };
+      /* MEME GARDE QUE DANS LE SERVEUR, ET C EST LE POINT : la demo publiee portait la faute
+         mot pour mot, donc corriger un seul des deux la laisse la ou l acheteur regarde.
+         Ce commentaire est ecrit sans accent grave et sans apostrophe : il vit DANS un
+         gabarit, et un accent grave le fermerait. Quatrieme fois aujourd hui dans l equipe
+         qu une insertion casse un gabarit ; la premiere pour moi, apres l avoir signalee
+         deux fois aux autres. */
+      const v = corps[cle];
+      if (typeof v === "number" && Number.isFinite(v)) hypotheses = { ...hypotheses, [cle]: Math.min(bornes[1], Math.max(bornes[0], v)) };
     }
     return etat();
   }

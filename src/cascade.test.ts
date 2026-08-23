@@ -13,13 +13,14 @@ import type { TierName } from "./paliers.ts";
 import { classify, empreinteDesEntrees, modulesAtteints, cleDeLaGalerieLivree, cleDuFichierLivre } from "./failures.ts";
 import { comparer } from "./diff.ts";
 import { sonde } from "./sonde.ts";
+import { appliquerHypotheses } from "./server.ts";
 import { lireCsv } from "./your-cases.ts";
 import { corpusDur } from "./corpus-dur.ts";
 import { comparerPopulations, plancherDeBruit, longueur, GRAINES_DE_BRUIT } from "./entree.ts";
 import { SEUIL_DE_L_INDUSTRIE, OBSERVATIONS_MINIMALES } from "./psi.ts";
 import { readProfiles, empreinteDuReleve, RELEVE_DE_REFERENCE, type Profile, type ProvenanceDuPalier, type Provenance } from "./measure.ts";
 import { optimiseExtraction, optimiseClassification, budgetShadowPrice, latenceRepresentative, paliersMesures, evaluer, pricePerThousandDocuments } from "./optimise.ts";
-import { ASSUMPTIONS, UNITS, pricePerThousandExtractions, accuracy } from "./assumptions.ts";
+import { ASSUMPTIONS, UNITS, BOUNDS, pricePerThousandExtractions, accuracy } from "./assumptions.ts";
 import { wilson, rate, distinguishable } from "./interval.ts";
 import { PLAUSIBLE, bands, ETIQUETTE, advise } from "./sensitivity.ts";
 
@@ -2594,4 +2595,71 @@ test("le délai de chargement couvre ce qu'un chargement a réellement coûté",
   assert.ok(DELAI_DE_GENERATION_MS <= 60_000,
     `le délai de génération vaut ${DELAI_DE_GENERATION_MS / 1000} s. Au-delà d'une minute il `
     + `cesse d'attraper un serveur bloqué en temps utile, ce qui est son seul travail.`);
+});
+
+
+/*
+ * LA CONVERSION AVANT LA GARDE : UN IDIOME, PAS UNE FAUTE ISOLÉE.
+ *
+ * `Number(recu[cle])` puis `Number.isFinite(v)`. La conversion s'exécute avant le test, et
+ * `Number(null)`, `Number("")`, `Number([])`, `Number(false)` valent tous zéro — fini, donc
+ * accepté, donc ramené dans les bornes, c'est-à-dire POSÉ SUR LA BORNE BASSE.
+ *
+ * Mesuré sur le serveur en marche avant correction : `{"volume": null}` rendait 200 et faisait
+ * passer le volume de 100 000 à 1 000. Un facteur cent sur l'hypothèse dont dépend tout le
+ * calcul de coût, sur l'écran qui existe pour montrer ce que les hypothèses décident. Et
+ * l'écran fabriquait lui-même l'entrée : `lire()` rend NaN sur une saisie illisible, et
+ * `JSON.stringify` écrit NaN comme null. Taper « abc » dans un champ suffisait.
+ *
+ * Une session voisine a trouvé le même idiome dans TROIS autres dépôts — une part de risque à
+ * zéro, un seuil KYC posé sur son réglage le moins prudent, une promesse ramenée à un jour. À
+ * chaque fois une extrémité de plage, à chaque fois un 200, à chaque fois le chiffre que
+ * l'outil existe pour montrer. Il se lit comme une validation et n'en est pas.
+ */
+test("une valeur non numérique est refusée, pas convertie en borne basse", () => {
+  const depart = { ...ASSUMPTIONS };
+  const cle = Object.keys(BOUNDS)[0]!;
+
+  /* LES QUATRE VALEURS QUE `Number()` TRANSFORME EN ZÉRO. Chacune arrive réellement : `null`
+     depuis un NaN sérialisé, `""` d'un champ vide, `false` d'une case à cocher, `[]` d'un
+     formulaire multiple. */
+  for (const poison of [null, "", false, [] as unknown]) {
+    const r = appliquerHypotheses({ [cle]: poison }, depart);
+    assert.equal(r.refuses.length, 1,
+      `${JSON.stringify(poison)} n'est pas refusé. Number() le rend fini, il sera ramené dans `
+      + `les bornes, et l'hypothèse se posera sur sa borne basse sans qu'un mot soit dit.`);
+    assert.equal(r.hypotheses[cle as keyof typeof depart], depart[cle as keyof typeof depart],
+      "l'hypothèse a bougé alors que la valeur était refusée.");
+  }
+
+  /* LE TÉMOIN INVERSE, ET IL DÉCIDE DE LA SURVIE DE LA GARDE : l'usage légitime doit passer.
+     Une garde qui mord ce que l'écran envoie normalement est retirée à la première plainte. */
+  const [bas, haut] = BOUNDS[cle as keyof typeof BOUNDS]!;
+  const milieu = (bas + haut) / 2;
+  const bon = appliquerHypotheses({ [cle]: milieu }, depart);
+  assert.deepEqual(bon.refuses, [], "une valeur numérique valide est refusée.");
+  assert.equal(bon.hypotheses[cle as keyof typeof depart], milieu);
+
+  /* Et le hors-bornes reste ramené dans les bornes plutôt que refusé : c'est un choix
+     antérieur, il ne change pas, et le témoin le fige pour qu'on ne le change pas par erreur. */
+  const trop = appliquerHypotheses({ [cle]: haut * 10 }, depart);
+  assert.deepEqual(trop.refuses, []);
+  assert.equal(trop.hypotheses[cle as keyof typeof depart], haut);
+});
+
+test("la démo publiée porte la même garde que le serveur", () => {
+  /*
+   * LES DEUX COPIES, ET C'EST LE POINT.
+   *
+   * `pages.ts` émet le code que la démo exécute dans le navigateur : c'est du texte dans un
+   * gabarit, donc il ne peut pas importer la fonction du serveur, donc la divergence ne se
+   * ferme pas par construction. Elle se ferme par ce contrôle. Avant correction, la démo
+   * portait la faute MOT POUR MOT — et c'est elle que l'acheteur manipule.
+   */
+  const shim = readFileSync(fileURLToPath(new URL("./pages.ts", import.meta.url)), "utf8");
+  assert.match(shim, /typeof v === "number" && Number\.isFinite\(v\)/,
+    "la démo publiée n'exige pas le type : elle accepte null, \"\" et false, et les pose sur la "
+    + "borne basse — pendant que le serveur les refuse. Deux comportements pour un seul outil.");
+  assert.doesNotMatch(shim, /const v = Number\(corps\[cle\]\)/,
+    "l'ancienne conversion-avant-garde est revenue dans la démo.");
 });

@@ -60,6 +60,49 @@ function corps(req: IncomingMessage): Promise<Record<string, unknown>> {
   });
 }
 
+/*
+ * LA CONVERSION PRÉCÉDAIT LA GARDE, ET LA GARDE NE GARDAIT RIEN.
+ *
+ * `Number(recu[cle])` puis `Number.isFinite(v)` : la conversion s'exécute AVANT le test, or
+ * `Number(null)`, `Number("")`, `Number([])` et `Number(false)` valent tous **zéro**, qui est
+ * fini, qui est donc accepté, et qui est ensuite ramené dans les bornes — c'est-à-dire posé
+ * SUR LA BORNE BASSE de l'hypothèse.
+ *
+ * Mesuré sur le serveur en marche : `{"volume": null}` rend 200 et fait passer le volume de
+ * 100 000 à 1 000. Un facteur cent sur l'hypothèse dont dépend tout le calcul de coût, sans
+ * un mot, sur l'écran qui existe pour montrer ce que les hypothèses décident.
+ *
+ * ET L'ÉCRAN FABRIQUE LUI-MÊME CETTE ENTRÉE. `lire()` rend `NaN` sur une saisie illisible,
+ * `JSON.stringify` écrit `NaN` comme `null`, et le voilà. Taper « abc » dans un champ, ou le
+ * vider, suffisait.
+ *
+ * Une session voisine a trouvé le même idiome dans trois autres dépôts — une part de risque
+ * mise à zéro, un seuil KYC posé sur son réglage le moins prudent, une promesse ramenée à un
+ * jour. À chaque fois la valeur atterrit à une extrémité de sa plage, à chaque fois avec un
+ * 200, à chaque fois sur le chiffre que l'outil existe pour montrer. Ce n'est plus une faute,
+ * c'est un idiome : il SE LIT comme une validation et n'en est pas.
+ *
+ * On exige donc le type que l'écran envoie déjà, et on NOMME ce qu'on a refusé — ignorer en
+ * silence est ce qui a rendu ce défaut invisible pendant tout ce temps.
+ */
+export function appliquerHypotheses(
+  recu: Record<string, unknown>, actuelles: Assumptions,
+): { hypotheses: Assumptions; refuses: string[] } {
+  if (recu.remise) return { hypotheses: { ...ASSUMPTIONS }, refuses: [] };
+  let hypotheses = actuelles;
+  const refuses: string[] = [];
+  for (const [cle, [bas, haut]] of Object.entries(BOUNDS)) {
+    if (!(cle in recu)) continue;
+    const v = recu[cle];
+    if (typeof v === "number" && Number.isFinite(v)) {
+      hypotheses = { ...hypotheses, [cle]: Math.min(haut, Math.max(bas, v)) };
+    } else {
+      refuses.push(`${cle}=${JSON.stringify(v)}`);
+    }
+  }
+  return { hypotheses, refuses };
+}
+
 export function etat() {
   const optimum = optimiseExtraction(profils, hypotheses);
   const mien = evaluer(profils, hypotheses, routage);
@@ -107,31 +150,16 @@ const serveur = createServer(async (req, res) => {
 
     if (url.pathname === "/api/routage" && req.method === "POST") {
       const recu = await corps(req);
-      const champ = String(recu.champ ?? "");
-      const palier = String(recu.palier ?? "") as TierName;
-      if (FIELDS.includes(champ as never) && TIERS.includes(palier)) {
-        routage = { ...routage, [champ]: palier };
+      const r = appliquerHypotheses(recu as Record<string, unknown>, hypotheses);
+      if (r.refuses.length) {
+        return json(res, {
+          erreur: `valeur(s) non numérique(s) refusée(s) : ${r.refuses.join(", ")}. `
+            + `Une hypothèse absente n'est pas une hypothèse à zéro : elle serait posée sur `
+            + `sa borne basse et le routage affiché serait calculé dessus.`,
+          ...etat(),
+        }, 400);
       }
-      return json(res, etat());
-    }
-
-    if (url.pathname === "/api/optimum" && req.method === "POST") {
-      const o = optimiseExtraction(profils, hypotheses);
-      if (o) routage = { ...o.routing };
-      return json(res, etat());
-    }
-
-    if (url.pathname === "/api/hypotheses" && req.method === "POST") {
-      const recu = await corps(req);
-      if (recu.remise) hypotheses = { ...ASSUMPTIONS };
-      else {
-        for (const [cle, [bas, haut]] of Object.entries(BOUNDS)) {
-          const v = Number(recu[cle]);
-          if (Number.isFinite(v)) {
-            hypotheses = { ...hypotheses, [cle]: Math.min(haut, Math.max(bas, v)) };
-          }
-        }
-      }
+      hypotheses = r.hypotheses;
       return json(res, etat());
     }
 
