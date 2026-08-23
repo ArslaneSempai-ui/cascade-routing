@@ -19,6 +19,7 @@
 import { writeFileSync, readFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { loadavg, cpus } from "node:os";
+import { CHARGE_MAX_PAR_COEUR } from "./measure.ts";
 import { isMain } from "./cli.ts";
 import { FIELDS } from "./corpus.ts";
 import { ouvrirJournal } from "./journal.ts";
@@ -90,7 +91,39 @@ if (isMain(import.meta)) {
   console.log(`\n${tous.length} cas (${tabulaires.length} tabulaires, ${ambigus.length} ambigus), `
     + `${tentatives} champs déclarés, ${paliers.length} paliers.`);
   console.log(`Notation : ${REGLE_DE_NOTATION}`);
+  /*
+   * MESURER SUR UNE MACHINE SATURÉE MESURE LA MACHINE.
+   *
+   * Cette passe ANNONÇAIT la charge et démarrait quand même, alors que `measure.ts` — qui fait
+   * le même genre de travail dans le même dépôt — refuse de chronométrer au-delà de
+   * `CHARGE_MAX_PAR_COEUR`. Une garde présente dans un fichier et absente de son voisin : c'est
+   * la forme interne de « la garde ne voyage pas », et elle s'est payée deux fois ce soir.
+   *
+   * Elle ne s'est pas payée en durées faussées — cette passe n'en publie pas — mais en PASSES
+   * MORTES. À une charge de 26,81 sur dix cœurs, une génération qui prend 2,5 s au repos
+   * dépasse les trente secondes du délai, et la passe s'arrête après neuf minutes de travail
+   * en annonçant que le serveur est bloqué. Il ne l'était pas : le modèle était résident, avec
+   * vingt-six minutes devant lui. C'est la machine qui était pleine, et c'est moi qui l'avais
+   * remplie en faisant travailler quatre sessions en parallèle.
+   *
+   * Le refus porte donc sur le TEMPS PERDU, pas sur la justesse : l'exactitude est
+   * déterministe et resterait vraie. Mais dépenser vingt minutes pour un abandon est un coût
+   * réel, et le seul moment où on peut l'éviter est avant de partir.
+   */
+  const chargeParCoeur = loadavg()[0]! / cpus().length;
+  const malgreCharge = process.argv.find((a) => a.startsWith("--allow-load="))?.split("=")[1];
   console.log(`Charge avant départ : ${loadavg()[0]!.toFixed(2)} sur ${cpus().length} cœurs.\n`);
+  if (chargeParCoeur > CHARGE_MAX_PAR_COEUR && malgreCharge === undefined) {
+    console.error(
+      `Charge de ${(100 * chargeParCoeur).toFixed(0)} % par cœur, seuil `
+      + `${(100 * CHARGE_MAX_PAR_COEUR).toFixed(0)} %. Cette passe dure une vingtaine de minutes `
+      + `et les appels génératifs ont un délai de trente secondes : sous cette charge ils le\n`
+      + `  dépassent, et la passe meurt après avoir travaillé pour rien.\n\n`
+      + `  Attendre que la machine se calme, ou forcer en disant POURQUOI et avec quoi :\n`
+      + `  npm run dur -- --allow-load="ce qui tourne à côté"\n`
+      + `  La raison est écrite dans le relevé, pour que personne n'ait à la deviner plus tard.`);
+    process.exit(1);
+  }
   await loadExtractors();
   if (paliers.some((t) => t.startsWith("gen-"))) await loadGeneratifs();
 
