@@ -22,7 +22,7 @@
  * that awarded itself a pass would be worth nothing to the person signing it.
  */
 
-import { writeFileSync } from "node:fs";
+import { writeFileSync, readFileSync, existsSync } from "node:fs";
 import { isMain } from "./cli.ts";
 import { FIELDS } from "./corpus.ts";
 import { readProfiles } from "./measure.ts";
@@ -275,6 +275,32 @@ if (isMain(import.meta)) {
     process.exit(1);
   }
   const texte = dossier(p, ASSUMPTIONS);
+
+  /*
+   * `--check`, ET IL MANQUAIT AU SEUL DOCUMENT QUE L'ACHETEUR OUVRE POUR VÉRIFIER.
+   *
+   * `npm test` lançait `readme.ts --check` et `landing.ts --check`. Pas celui-ci. Le dossier
+   * signé — celui qui porte les obligations de §6 et les aveux de §7 — pouvait donc dériver
+   * du relevé sans que rien ne proteste : trente-quatre taux engendrés, aucun vérifié.
+   *
+   * Il était à jour le jour où on l'a regardé, ce qui est exactement le problème : rien ne
+   * garantissait qu'il le reste, et un document juste par chance est indiscernable d'un
+   * document juste par construction — jusqu'au jour où il ne l'est plus.
+   *
+   * Même formulation de refus que les deux autres : on nomme le fichier, on dit la commande
+   * qui répare, et on sort en erreur pour que la porte le voie.
+   */
+  if (process.argv.includes("--check")) {
+    const surDisque = existsSync(FICHIER) ? readFileSync(FICHIER, "utf8") : "";
+    if (surDisque === texte) {
+      console.log(`VALIDATION.md is up to date — from the measurement of ${p.measuredAt}.`);
+      process.exit(0);
+    }
+    console.error(`VALIDATION.md is stale — it no longer matches the frozen profile.`);
+    console.error(`  Run: npm run dossier`);
+    process.exit(1);
+  }
+
   writeFileSync(FICHIER, texte);
   console.log(`\nValidation file written to VALIDATION.md — ${texte.split("\n").length} lines,`
     + ` from the measurement of ${p.measuredAt}.\n`);

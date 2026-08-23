@@ -1800,3 +1800,50 @@ test("un modèle réinstallé est détecté, et une absence n'est pas un écart"
   assert.equal(ecarts[0]!.tag, premier.tag);
   assert.equal(ecarts[0]!.declare, premier.digest);
 });
+
+
+/*
+ * LES TAUX QUI VIVENT DANS LA PROSE, COMPTÉS — ET QUI NE PEUVENT PLUS ÊTRE PLUS NOMBREUX.
+ *
+ * Ce dépôt s'interdit les chiffres tapés à la main, et il en publie quand même : 99 taux hors
+ * de tout bloc engendré, sur cinq documents. La ventilation change tout, et c'est elle qui
+ * dicte le remède :
+ *
+ *   VALIDATION.md — 34 taux, mais le fichier est engendré EN ENTIER par `dossier.ts`, et
+ *                   `npm test` ne le vérifiait pas. Réparé : `dossier --check` est dans la
+ *                   suite. Ces 34-là sont donc protégés, pas tapés.
+ *   NOTATION-CAS-DURS.md — 2 taux, engendré par `mesurer-dur.ts`, pas encore vérifié.
+ *   SONDE.md — 58 taux, AUCUN générateur. Ceux-là sont réellement écrits à la main.
+ *   README.md — 5 taux hors bloc, dans une prose que le générateur couvre par ailleurs.
+ *
+ * Les cinq qu'on a pu confronter au relevé scellé sont JUSTES aujourd'hui. C'est exactement
+ * ce qui les rend dangereux : bien formés, avec leur intervalle et leur `n`, ils inspirent
+ * confiance et rouilleront sans bruit.
+ *
+ * On ne peut pas les supprimer sans écrire quatre générateurs. On peut empêcher qu'il y en
+ * ait un de plus. Ce plancher ne descend que par du travail, et il ne monte pas : ajouter un
+ * taux à la main casse la suite, et le message dit quoi faire.
+ */
+const TAUX_EN_PROSE_AU_23_08 = 99;
+
+test("le nombre de taux tapés dans la prose ne peut que baisser", () => {
+  const racine = fileURLToPath(new URL("..", import.meta.url));
+  const parFichier: [string, number][] = [];
+  for (const f of readdirSync(racine)) {
+    if (!f.endsWith(".md")) continue;
+    let t = readFileSync(join(racine, f), "utf8");
+    /* on écarte ce qui est engendré ou cité : blocs de figures, blocs de code, code en ligne.
+       Un exemple entre accents graves n'est pas une affirmation. */
+    t = t.replace(/<!-- figures:([a-z0-9-]+) -->[\s\S]*?<!-- \/figures:\1 -->/g, "");
+    t = t.replace(/```[\s\S]*?```/g, "");
+    t = t.replace(/`[^`\n]*`/g, "");
+    const n = (t.match(/\d+(?:[.,]\d+)?\s*%/g) ?? []).length;
+    if (n) parFichier.push([f, n]);
+  }
+  const total = parFichier.reduce((s2, [, n]) => s2 + n, 0);
+  assert.ok(total <= TAUX_EN_PROSE_AU_23_08,
+    `${total} taux tapés dans la prose, contre ${TAUX_EN_PROSE_AU_23_08} au moment où ce `
+    + `plancher a été posé — il ne doit que baisser.\n  `
+    + parFichier.map(([f, n]) => `${f}: ${n}`).join("\n  ")
+    + `\n  Un taux publié se calcule depuis le relevé, ou il rouillera sans que rien ne le dise.`);
+});
