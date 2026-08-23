@@ -11,6 +11,7 @@
  */
 
 import { mkdirSync, writeFileSync, readFileSync, existsSync, renameSync, readdirSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { isMain } from "./cli.ts";
 import { ouvrirJournal, issue } from "./journal.ts";
@@ -237,8 +238,67 @@ let refReferenceAnnoncee = false;
  * ultérieure, y compris celles qu'on garde justement parce qu'elles sont mauvaises.
  */
 export const RELEVE_DE_REFERENCE = "profiles-2026-08-20-coeur-rendu.json";
+
+/*
+ * L'EMPREINTE DU RELEVÉ, ET CE QU'ELLE PROUVE EXACTEMENT.
+ *
+ * Le fichier portait déjà sa provenance — date de mesure, commit, propreté de l'arbre à ce
+ * moment-là, et le détail par palier. Il ne portait aucune somme de contrôle de son CONTENU.
+ * Conséquence : un taux modifié à la main y était indétectable. La date ne bouge pas, le
+ * commit ne bouge pas, tous les tests passent, et le chiffre fabriqué se retrouve publié dans
+ * le README avec exactement l'aplomb d'une mesure. C'est le trou central d'un audit vendu sur
+ * sa reproductibilité — le seul défaut de cette liste qu'un acheteur ne peut pas trouver seul,
+ * parce que rien dans le dépôt ne le contredirait.
+ *
+ * CE QUE L'EMPREINTE PROUVE : que le fichier n'a pas changé depuis qu'elle a été posée.
+ * CE QU'ELLE NE PROUVE PAS : que ce qu'il contenait ce jour-là était juste. Une empreinte est
+ * un scellé, pas un témoin. Le premier scellé a été posé sur un fichier déjà écrit, donc il
+ * ne dit rien de ce qui l'a précédé — et il vaut mieux l'écrire ici que de laisser croire le
+ * contraire à qui lit « checksum » dans un rapport.
+ *
+ * Sérialisation à clés triées, sinon deux exécutions du même relevé rendent deux empreintes
+ * et le contrôle devient du bruit que tout le monde apprend à ignorer.
+ */
+function canonique(x: unknown): unknown {
+  if (Array.isArray(x)) return x.map(canonique);
+  if (x && typeof x === "object") {
+    const o = x as Record<string, unknown>;
+    return Object.keys(o).sort().reduce<Record<string, unknown>>((a, k) => {
+      if (k !== "empreinte") a[k] = canonique(o[k]);
+      return a;
+    }, {});
+  }
+  return x;
+}
+
+export function empreinteDuReleve(profils: unknown): string {
+  return createHash("sha256").update(JSON.stringify(canonique(profils))).digest("hex").slice(0, 16);
+}
 export function readProfiles(): Profiles | null {
-  if (existsSync(FICHIER)) return JSON.parse(readFileSync(FICHIER, "utf8"));
+  if (existsSync(FICHIER)) {
+    const p = JSON.parse(readFileSync(FICHIER, "utf8"));
+    /* ON REFUSE, ON NE PRÉVIENT PAS. Un avertissement sur un relevé altéré serait lu une
+       fois puis passé — et pendant ce temps la page publierait le chiffre. Le seul niveau
+       de sévérité correct pour « la mesure a été modifiée depuis sa mesure » est l'arrêt.
+       Le message dit quoi faire, parce qu'un refus sans issue se contourne. */
+    const attendue = (p as Record<string, unknown>).empreinte;
+    const calculee = empreinteDuReleve(p);
+    if (typeof attendue !== "string") {
+      throw new Error(
+        `${FICHIER} ne porte pas d'empreinte de contenu : impossible de dire si ses chiffres\n`
+        + `  sont ceux qui ont été mesurés. Reposez le scellé avec « npm run sceller », ou\n`
+        + `  remesurez avec « npm run measure ».`);
+    }
+    if (attendue !== calculee) {
+      throw new Error(
+        `${FICHIER} a changé depuis sa mesure — empreinte ${attendue}, contenu ${calculee}.\n`
+        + `  Un chiffre de ce fichier a été modifié à la main, ou le fichier a été assemblé\n`
+        + `  depuis deux relevés. Aucun chiffre publié à partir de lui n'a de valeur tant que\n`
+        + `  ce n'est pas éclairci. Remesurez, ou reposez le scellé si la modification est\n`
+        + `  voulue et assumée.`);
+    }
+    return p;
+  }
 
   const racine = new URL("..", import.meta.url).pathname;
   const livres = readdirSync(racine)
@@ -253,6 +313,26 @@ export function readProfiles(): Profiles | null {
   /* Le relevé nommé d'abord ; la date ne sert que s'il a disparu, et le repli se dit. */
   const ref = livres.find((x) => x.f === RELEVE_DE_REFERENCE) ?? livres[0];
   if (!ref) return null;
+  /* ET LE SCELLÉ VAUT ICI AUSSI — c'est même ici qu'il compte le plus.
+     `data/` est ignoré par git : dans un clone neuf, `data/profiles.json` n'existe pas et
+     c'est CE fichier-ci qui produit tous les chiffres publiés. Sceller seulement le premier
+     aurait protégé la machine de l'auteur et laissé le chemin du client sans garde — la
+     forme exacte du défaut qu'on répare : un contrôle qui ne couvre pas le cas qui voyage. */
+  {
+    const attendue = (ref.p as unknown as Record<string, unknown>).empreinte;
+    const calculee = empreinteDuReleve(ref.p);
+    if (typeof attendue !== "string") {
+      throw new Error(
+        `${ref.f} ne porte pas d'empreinte de contenu : impossible de dire si ses chiffres\n`
+        + `  sont ceux qui ont été mesurés. Reposez le scellé : npm run sceller -- ${ref.f}`);
+    }
+    if (attendue !== calculee) {
+      throw new Error(
+        `${ref.f} a changé depuis sa mesure — empreinte ${attendue}, contenu ${calculee}.\n`
+        + `  C'est le relevé qu'un clone neuf emploie pour engendrer TOUS les chiffres publiés.\n`
+        + `  Aucun d'eux n'a de valeur tant que ce n'est pas éclairci.`);
+    }
+  }
   if (ref.f !== RELEVE_DE_REFERENCE && !refReferenceAnnoncee) {
     console.warn(`\n⚠ ${RELEVE_DE_REFERENCE} est introuvable : repli sur ${ref.f}, dont les`);
     console.warn(`  chiffres ne sont pas ceux dont le README et landing.json ont été engendrés.\n`);
@@ -584,6 +664,8 @@ export async function measure(
   };
   profils.tiers = (Object.keys(profils.extraction) as TierName[]);
   mkdirSync(dirname(FICHIER), { recursive: true });
+  /* le scellé se pose sur le contenu final, et il s'exclut lui-même du calcul */
+  (profils as Record<string, unknown>).empreinte = empreinteDuReleve(profils);
   writeFileSync(FICHIER, JSON.stringify(profils, null, 2));
   const { lignes, chemin } = journal.fermer();
   console.log(`\n${lignes} tentatives enregistrées dans ${chemin.split("/").slice(-2).join("/")}`);

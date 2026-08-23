@@ -8,7 +8,7 @@ import { generateRecords, generateAlerts, FIELDS, TYPOLOGIES } from "./corpus.ts
 import { correct, TIERS, estLocal, OLLAMA } from "./tiers.ts";
 import type { TierName } from "./paliers.ts";
 import { classify } from "./failures.ts";
-import { readProfiles, type Profile, type ProvenanceDuPalier, type Provenance } from "./measure.ts";
+import { readProfiles, empreinteDuReleve, RELEVE_DE_REFERENCE, type Profile, type ProvenanceDuPalier, type Provenance } from "./measure.ts";
 import { optimiseExtraction, optimiseClassification, budgetShadowPrice, latenceRepresentative, paliersMesures, evaluer, pricePerThousandDocuments } from "./optimise.ts";
 import { ASSUMPTIONS, UNITS, pricePerThousandExtractions, accuracy } from "./assumptions.ts";
 import { wilson, rate, distinguishable } from "./interval.ts";
@@ -1473,4 +1473,61 @@ test("toute hypothèse est balayée, ou déclarée comme une entrée que le clie
   const doublons = [...ENTREES_DU_CLIENT].filter((k) => balayees.has(k));
   assert.deepEqual(doublons, [],
     `déclarée(s) comme entrée du client ET balayée(s) : ${doublons.join(", ")}.`);
+});
+
+
+/*
+ * LE SCELLÉ DU RELEVÉ, ET LES DEUX SENS QUI COMPTENT.
+ *
+ * Le fichier de mesures portait sa provenance — date, commit, propreté de l'arbre — et
+ * aucune somme de contrôle de son contenu. Un taux modifié à la main y était indétectable :
+ * la date ne bouge pas, le commit ne bouge pas, la suite passe, et le chiffre fabriqué se
+ * publie avec l'aplomb d'une mesure. C'était le seul défaut de la liste qu'un acheteur ne
+ * pouvait pas trouver seul, puisque rien dans le dépôt ne l'aurait contredit.
+ *
+ * Un scellé qui ne se déclenche pas ne protège de rien, donc on éprouve les deux sens : le
+ * fichier livré correspond à son empreinte, ET une valeur changée la fait diverger. Le
+ * second est le seul qui prouve quelque chose — le premier passerait sur une fonction qui
+ * rend une constante.
+ */
+test("le relevé livré correspond à son empreinte, et une valeur changée la fait diverger", () => {
+  /* LE FICHIER QUI VOYAGE, PAS CELUI DE MA MACHINE. `data/` est ignoré par git : dans un
+     clone neuf, `data/profiles.json` n'existe pas, et c'est le relevé de référence à la
+     racine qui engendre tous les chiffres publiés. Un test qui n'aurait scellé que le
+     premier serait passé au vert ici et absent là-bas — « un chiffre dérivé de quelque
+     chose que git ne transporte pas », le défaut que ce dépôt a déjà payé sept fois.
+     On éprouve donc les deux : celui de référence toujours, celui de travail s'il existe. */
+  const cibles = [RELEVE_DE_REFERENCE, "data/profiles.json"]
+    .map((f) => new URL(`../${f}`, import.meta.url).pathname)
+    .filter((f) => existsSync(f));
+  assert.ok(cibles.length >= 1, "aucun relevé à éprouver : le dépôt n'en porte plus.");
+
+  let brut: Record<string, unknown> = {};
+  for (const chemin of cibles) {
+    brut = JSON.parse(readFileSync(chemin, "utf8")) as Record<string, unknown>;
+    assert.equal(typeof brut.empreinte, "string",
+      `${chemin} ne porte pas de scellé : « npm run sceller -- ${chemin} ».`);
+    assert.equal(empreinteDuReleve(brut), brut.empreinte,
+      `le contenu de ${chemin} ne correspond plus à son empreinte.`);
+  }
+
+  /* CONTRE-ÉPREUVE. Sans elle, une empreinte qui rendrait toujours la même chaîne
+     passerait l'assertion du dessus sans rien vérifier. */
+  const falsifie = JSON.parse(JSON.stringify(brut));
+  const t = Object.keys(falsifie.extraction)[0]!;
+  const c = Object.keys(falsifie.extraction[t])[0]!;
+  falsifie.extraction[t][c].accuracy = falsifie.extraction[t][c].accuracy + 0.01;
+  assert.notEqual(empreinteDuReleve(falsifie), brut.empreinte,
+    "un taux modifié ne change pas l'empreinte : le scellé ne scelle rien.");
+
+  /* et l'ordre des clés ne doit RIEN changer, sinon deux exécutions du même relevé
+     rendent deux empreintes et le contrôle devient du bruit qu'on apprend à ignorer. */
+  /* Réordonner, pas filtrer. `JSON.stringify(o, tableau)` ne réordonne rien : il
+     GARDE seulement les clés listées, à tous les niveaux — donc il hachait un objet
+     amputé de tout son contenu imbriqué, et le contrôle échouait en accusant le code.
+     Un témoin faux accuse le juste : c'est pire qu'un témoin absent. */
+  const remue: Record<string, unknown> = {};
+  for (const k of Object.keys(brut).reverse()) remue[k] = brut[k];
+  assert.equal(empreinteDuReleve(remue), empreinteDuReleve(brut),
+    "l'empreinte dépend de l'ordre des clés : elle signalera des faux positifs.");
 });

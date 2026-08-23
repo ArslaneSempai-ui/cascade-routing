@@ -47,7 +47,7 @@ about two minutes.
 | `npm run pages` | build docs/ and verify the published screen — required before publishing: docs/ carries a compiled copy of the code and goes stale silently |
 | `npm run captures` | re-record the images on this page |
 
-⚠ 1 command(s) exist in package.json and are not classified above: `derivees`.
+⚠ 2 command(s) exist in package.json and are not classified above: `derivees`, `sceller`.
 <!-- /figures:commandes -->
 
 ```bash
@@ -55,7 +55,7 @@ npm test           # types, README figures, landing.json, and the suite
 ```
 
 <!-- figures:tests -->
-**124 tests** across 9 files, counted from the sources rather than typed here.
+**125 tests** across 9 files, counted from the sources rather than typed here.
 <!-- /figures:tests -->
 
 ```
