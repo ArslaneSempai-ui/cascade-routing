@@ -42,6 +42,7 @@ what that pass actually cost is stated below, read from the relevé rather than 
 | `npm run landing` | regenerate landing.json — the figures a published page reads, with their provenance |
 | `npm run derivees` | refreeze the three landing figures drawn from the journals git does not carry |
 | `npm run dossier` | the validation file a reviewer signs |
+| `npm run sonde` | the generative probe, regenerated from the frozen profile — it was hand-typed and eleven of its figures had gone stale |
 | `npm run start` | the screen, on localhost:4670 |
 | `npm run measure:yours` | your own cases, from a CSV — nothing leaves your machine |
 | `npm run benchmark` | the same measurement on a public labelled dataset |
@@ -57,10 +58,8 @@ npm test           # types, README figures, landing.json, and the suite
 ```
 
 <!-- figures:tests -->
-**135 tests** across 9 files, counted from the sources rather than typed here.
+**138 tests** across 9 files, counted from the sources rather than typed here.
 <!-- /figures:tests -->
-
-```
 
 Everything runs locally. No API key, nothing leaves the machine, and anyone who clones this
 reproduces the numbers below.

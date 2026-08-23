@@ -493,6 +493,7 @@ const commandes = (() => {
     ["landing", "regenerate landing.json — the figures a published page reads, with their provenance"],
     ["derivees", "refreeze the three landing figures drawn from the journals git does not carry"],
     ["dossier", "the validation file a reviewer signs"],
+    ["sonde", "the generative probe, regenerated from the frozen profile — it was hand-typed and eleven of its figures had gone stale"],
     ["start", "the screen, on localhost:4670"],
     ["measure:yours", "your own cases, from a CSV — nothing leaves your machine"],
     ["benchmark", "the same measurement on a public labelled dataset"],

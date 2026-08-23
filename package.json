@@ -8,7 +8,7 @@
     "measure": "node src/measure.ts",
     "optimise": "node src/optimise.ts",
     "typage": "tsc --noEmit",
-    "test": "tsc --noEmit && node src/readme.ts --check && node src/landing.ts --check && node src/dossier.ts --check && node --test src/*.test.ts",
+    "test": "tsc --noEmit && node src/readme.ts --check && node src/landing.ts --check && node src/dossier.ts --check && node src/sonde.ts --check && node --test src/*.test.ts",
     "failures": "node src/failures.ts",
     "figures": "node src/readme.ts && node src/landing.ts",
     "landing": "node src/landing.ts",
@@ -37,7 +37,8 @@
     "contrainte": "node src/contrainte.ts",
     "sceller": "node src/sceller.ts",
     "diff": "node src/diff.ts",
-    "entree": "node src/entree.ts"
+    "entree": "node src/entree.ts",
+    "sonde": "node src/sonde.ts"
   },
   "dependencies": {
     "@huggingface/transformers": "^3.0.0"

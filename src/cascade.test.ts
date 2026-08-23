@@ -11,6 +11,7 @@ import { correct, TIERS, estLocal, OLLAMA, MODELES_LOCAUX, digestsQuiDivergent }
 import type { TierName } from "./paliers.ts";
 import { classify, empreinteDesEntrees, modulesAtteints, cleDeLaGalerieLivree, cleDuFichierLivre } from "./failures.ts";
 import { comparer } from "./diff.ts";
+import { sonde } from "./sonde.ts";
 import { comparerPopulations, plancherDeBruit, longueur } from "./entree.ts";
 import { SEUIL_DE_L_INDUSTRIE, OBSERVATIONS_MINIMALES } from "./psi.ts";
 import { readProfiles, empreinteDuReleve, RELEVE_DE_REFERENCE, type Profile, type ProvenanceDuPalier, type Provenance } from "./measure.ts";
@@ -366,25 +367,93 @@ test("à écart non significatif, le moins cher est retenu", () => {
   }
 });
 
-test("aucun chiffre n'est tapé à la main dans la prose du README", () => {
-  /*
-   * Le contrôle qui ferme la vérification.
-   *
-   * Trois nombres publiés étaient faux le 19 août 2026 — « 83 % contre 68 % et 63 % » sur le
-   * numéro de document, « 24,2 % » sur le classifieur, et la légende du GIF. Aucun n'était
-   * faux le jour où il a été écrit : ils sont devenus faux à la remesure, sur la page en
-   * ligne, sans que rien ne le signale.
-   *
-   * Un chiffre dans une phrase est une promesse que la phrase sera relue à chaque mesure. On
-   * ne relit pas. Donc soit il vient d'un bloc généré, soit il est déclaré ici avec sa raison
-   * d'être immuable — et toute nouveauté fait tomber la suite.
-   */
-  const readme = readFileSync(fileURLToPath(new URL("../README.md", import.meta.url)), "utf8");
-  const prose = readme
-    .replace(/<!-- figures:(\w+) -->[\s\S]*?<!-- \/figures:\1 -->/g, "")
-    .replace(/```[\s\S]*?```/g, "")
-    .replace(/^\s*\|.*\|\s*$/gm, "");
+/*
+ * LES DOCUMENTS LIVRÉS, ET CE QUE LEUR PROSE A LE DROIT D'AFFIRMER.
+ *
+ * Trois nombres publiés étaient faux le 19 août 2026 — « 83 % contre 68 % et 63 % » sur le
+ * numéro de document, « 24,2 % » sur le classifieur, et la légende du GIF. Aucun n'était faux
+ * le jour où il a été écrit : ils sont devenus faux à la remesure, sur la page en ligne, sans
+ * que rien ne le signale. Un chiffre dans une phrase est une promesse que la phrase sera
+ * relue à chaque mesure. On ne relit pas.
+ *
+ * ─── POURQUOI CETTE GARDE A ÉTÉ REFAITE LE 23 AOÛT ───
+ *
+ * Elle existait, elle passait, et elle N'EXAMINAIT QUE 129 LIGNES SUR 596. Elle retirait les
+ * blocs engendrés AVANT les blocs de code ; or certaines clôtures ``` vivaient à l'intérieur
+ * d'un bloc engendré, donc les retirer laissait un nombre IMPAIR de clôtures, et
+ * l'appariement suivant avalait deux cent vingt-trois lignes de prose. Un « 97,8 % » inventé
+ * planté ligne 69 passait sans un mot.
+ *
+ * La même clôture déséquilibrée cassait le rendu : quatre cent quatre-vingt-treize lignes du
+ * README s'affichaient en bloc de code sur la page que l'acheteur ouvre en premier, et
+ * trente-six titres n'apparaissaient pas. Le défaut du contrôle et le défaut visible avaient
+ * la même cause, et personne n'avait REGARDÉ le document rendu.
+ *
+ * D'où les trois gardes ci-dessous, dans cet ordre : les clôtures s'équilibrent, la
+ * couverture se mesure, et seulement ensuite les chiffres se comptent. Une garde qui ne dit
+ * pas combien elle a regardé peut ne rien regarder du tout.
+ */
 
+/** Les documents que l'acheteur ouvre. Un .md à la racine est livré, par construction. */
+const LIVRES = ["README.md", "VALIDATION.md", "SONDE.md", "NOTATION-CAS-DURS.md", "COUT-PALIER-1.7B.md"];
+
+const lireLivre = (n: string) => readFileSync(fileURLToPath(new URL(`../${n}`, import.meta.url)), "utf8");
+
+test("les clôtures de bloc de code s'équilibrent dans chaque document livré", () => {
+  /*
+   * LE DÉFAUT LE PLUS CHER DE LA JOURNÉE TENAIT EN UNE LIGNE ORPHELINE.
+   *
+   * Une clôture ``` sans sa jumelle ne casse rien à la lecture du fichier brut : elle casse
+   * le RENDU, en aval, chez le lecteur, sur une page que l'auteur ne rouvre jamais. Et elle
+   * casse en silence tout outil qui découpe le document sur ces clôtures — dont la garde
+   * suivante, qui devenait aveugle sans le dire.
+   */
+  for (const nom of LIVRES) {
+    if (!existsSync(fileURLToPath(new URL(`../${nom}`, import.meta.url)))) continue;
+    const lignes = lireLivre(nom).split("\n");
+    const clotures = lignes.filter((l) => /^\s*```/.test(l)).length;
+    assert.equal(clotures % 2, 0,
+      `${nom} porte ${clotures} clôtures \`\`\` — un nombre impair. Une d'elles est orpheline : `
+      + `tout ce qui la suit s'affiche en bloc de code chez le lecteur, et tout outil qui `
+      + `découpe sur ces clôtures avale la suite sans le dire.\n  Cherchez la ligne \`\`\` `
+      + `isolée : \`grep -n '\`\`\`' ${nom}\`, et appariez-les deux à deux.`);
+  }
+});
+
+/**
+ * Les nombres qu'une prose affirme, et d'où ils viennent.
+ *
+ * Rendu comme une fonction pour une seule raison : LE TÉMOIN. Une garde qui ne peut pas
+ * démontrer qu'elle voit encore ce qu'elle prétend voir rassure sans regarder — c'est
+ * exactement ce que l'ancienne faisait. Le test l'appelle deux fois : sur le document réel,
+ * puis sur une copie empoisonnée dont il exige qu'elle la fasse échouer.
+ */
+function chiffresNus(texte: string, permis: Map<string, string>) {
+  /* L'ORDRE COMPTE, et c'est tout le défaut d'hier : le code d'abord, les blocs engendrés
+     ensuite. Les tableaux ne sont PAS retirés — les mêmes chiffres passaient selon qu'ils
+     étaient en phrase ou en cellule. */
+  const prose = texte
+    .replace(/```[\s\S]*?```/g, "")
+    .replace(/<!-- figures:(\w+) -->[\s\S]*?<!-- \/figures:\1 -->/g, "")
+    .replace(/`[^`\n]*`/g, "");
+  const engendre = [...texte.matchAll(/<!-- figures:(\w+) -->([\s\S]*?)<!-- \/figures:\1 -->/g)]
+    .map((m) => m[2]).join("\n");
+
+  /* Toutes les unités, pas seulement celles qui portaient un pour-cent. MB, ms, points et
+     « n sur N » décidaient d'un achat autant qu'un taux, et rien ne les regardait. */
+  const MOTIF = /(\d[\d.,]*)\s*(%|\$|GB|MB|KB|Mbit|ms\b|×|points?\b|of \d[\d,]*)/g;
+  const DOLLARS = /\$\s?\d[\d,.]*/g;
+  const vus = [
+    ...[...prose.matchAll(MOTIF)].map((m) => `${m[1]} ${m[2]}`.replace(/\s+/g, " ").trim()),
+    ...[...prose.matchAll(DOLLARS)].map((m) => m[0].replace(/\s+/g, "")),
+  ];
+  /* Un chiffre qui figure à l'identique dans un bloc engendré du MÊME fichier est tenu par
+     lui : s'il bouge à la remesure, les deux bougent, ou la prose se retrouve nue ici. */
+  const nus = [...new Set(vus)].filter((x) => !permis.has(x) && !engendre.includes(x));
+  return { nus, lignesVues: prose.split("\n").length, lignesTotal: texte.split("\n").length };
+}
+
+test("aucun chiffre n'est tapé à la main dans la prose du README, et la garde le prouve", () => {
   /** Ce qu'on s'autorise à écrire en clair, et pourquoi ça ne bougera pas. */
   const permis = new Map<string, string>([
     ["100 %", "une borne, pas une mesure : « jusqu'à 100 % » reste vrai quoi qu'il arrive"],
@@ -393,16 +462,59 @@ test("aucun chiffre n'est tapé à la main dans la prose du README", () => {
     ["51.7 %", "un chiffre historique : ce que valait un champ avant que l'évaluateur soit corrigé"],
     ["25 %", "la référence triviale à cinq classes, fixée par le nombre de classes"],
     ["20 %", "idem, le tirage uniforme à cinq classes"],
+    /* Les poids : figés par la révision du modèle, et un modèle réinstallé est déjà attrapé
+       ailleurs par `digestsQuiDivergent()`. Ils ne rouillent donc pas en silence. */
+    ["400 MB", "les paquets npm, un ordre de grandeur arrondi et annoncé comme tel"],
+    ["474 MB", "le poids de roberta-base-squad2 à sa révision épinglée"],
+    ["448 MB", "le poids de multilingual-e5-small à sa révision épinglée"],
+    ["249 MB", "le poids de distilbert à sa révision épinglée"],
+    ["86 MB", "le poids de MiniLM à sa révision épinglée"],
+    ["50 Mbit", "une hypothèse sur la ligne du lecteur, pas une mesure de ce dépôt"],
+    ["133 of 685", "un compte historique : les échecs imputés à l'évaluateur avant sa correction"],
   ]);
 
-  const trouves = [...prose.matchAll(/(\d+(?:[.,]\d+)?\s*%|\$\s?\d[\d,]*(?:,\d{3})*)/g)]
-    .map((m) => m[1]!.replace(/\s+/g, " ").trim());
-  const inconnus = [...new Set(trouves)].filter((x) => !permis.has(x));
+  const r = chiffresNus(lireLivre("README.md"), permis);
 
-  assert.deepEqual(inconnus, [],
-    `chiffre(s) écrit(s) à la main dans la prose : ${inconnus.join(", ")}\n`
-    + `  → soit le générer dans un bloc <!-- figures:... -->, soit l'ajouter à la liste\n`
-    + `    des permis dans ce test avec la raison pour laquelle il ne bougera jamais.`);
+  /*
+   * LA COUVERTURE, AVANT LE COMPTE.
+   *
+   * C'est la garde qui manquait. Le 23 août, ce contrôle examinait 22 % du fichier et rendait
+   * zéro : un zéro par aveuglement, indiscernable d'un zéro par propreté. Le plancher est bas
+   * exprès — les blocs engendrés et les blocs de code sont retirés à bon droit — mais il rend
+   * impossible de retomber sous la moitié sans que la suite tombe.
+   */
+  const couverture = r.lignesVues / r.lignesTotal;
+  assert.ok(couverture >= 0.5,
+    `la garde n'examine que ${r.lignesVues} lignes sur ${r.lignesTotal} `
+    + `(${(couverture * 100).toFixed(0)} %). Elle rendrait zéro sans avoir regardé. `
+    + `Cherchez une clôture \`\`\` orpheline ou un marqueur <!-- figures: --> non fermé.`);
+
+  assert.deepEqual(r.nus, [],
+    `chiffre(s) écrit(s) à la main : ${r.nus.join(", ")}\n`
+    + `  → soit le générer dans un bloc <!-- figures:... -->, soit l'ajouter à la liste des\n`
+    + `    permis dans ce test AVEC la raison pour laquelle il ne bougera jamais. Une entrée\n`
+    + `    sans raison écrite est une intention, et ce fichier en a déjà payé trois.`);
+
+  /*
+   * LE TÉMOIN, ET IL EST LA MOITIÉ DE LA GARDE.
+   *
+   * Trois poisons, choisis pour couvrir les trois façons dont l'ancienne garde était aveugle :
+   * un taux ajouté en PHRASE, le même en CELLULE de tableau, et un montant en dollars — que
+   * l'ancienne ne voyait qu'en phrase. Si l'un d'eux passe, la garde ci-dessus est un vert
+   * vide et ce test doit tomber ici plutôt que de rassurer plus haut.
+   */
+  const readme = lireLivre("README.md");
+  const poisons: [string, string][] = [
+    ["en phrase", readme + "\n\nIndependently reproduced: 97.8 % accuracy across three teams.\n"],
+    ["en tableau", readme + "\n\n| Client | Accuracy |\n|---|---|\n| A | 97.8 % |\n"],
+    ["en dollars", readme + "\n\nThree client teams saved $402,750 last quarter.\n"],
+    ["une taille", readme + "\n\nThe weights come to 174 MB on disk.\n"],
+  ];
+  for (const [quoi, empoisonne] of poisons) {
+    assert.ok(chiffresNus(empoisonne, permis).nus.length > 0,
+      `la garde ne voit pas un chiffre inventé ajouté ${quoi}. Elle ne prouve donc rien, et `
+      + `son zéro plus haut ne vaut rien.`);
+  }
 });
 
 test("le routage est exhaustif, pas heuristique", () => {
@@ -1806,39 +1918,89 @@ test("un modèle réinstallé est détecté, et une absence n'est pas un écart"
 
 
 /*
- * LES TAUX QUI VIVENT DANS LA PROSE, COMPTÉS — ET QUI NE PEUVENT PLUS ÊTRE PLUS NOMBREUX.
+ * COMBIEN DE TAUX RESTENT ÉCRITS À LA MAIN, ET DANS QUOI.
  *
- * Ce dépôt s'interdit les chiffres tapés à la main, et il en publie quand même : 99 taux hors
- * de tout bloc engendré, sur cinq documents. La ventilation change tout, et c'est elle qui
- * dicte le remède :
+ * Ce plancher a été posé à quatre-vingt-dix-neuf le 23 août 2026. Il en compte DOUZE le même
+ * jour, et pas un taux n'a été supprimé entre les deux : ce sont le contrôle et le décompte
+ * qui étaient faux, chacun à sa façon, et les deux façons méritent d'être écrites.
  *
- *   VALIDATION.md — 34 taux, mais le fichier est engendré EN ENTIER par `dossier.ts`, et
- *                   `npm test` ne le vérifiait pas. Réparé : `dossier --check` est dans la
- *                   suite. Ces 34-là sont donc protégés, pas tapés.
- *   NOTATION-CAS-DURS.md — 2 taux, engendré par `mesurer-dur.ts`, pas encore vérifié.
- *   SONDE.md — 58 taux, AUCUN générateur. Ceux-là sont réellement écrits à la main.
- *   README.md — 5 taux hors bloc, dans une prose que le générateur couvre par ailleurs.
+ *   — IL COMPTAIT DES TAUX QU'UN GÉNÉRATEUR TIENT DÉJÀ. VALIDATION.md en portait trente-quatre
+ *     et SONDE.md quatre-vingt-quatre ; aucun n'est tapé, ils naissent du relevé à chaque
+ *     `npm run`. Les compter comme de la prose gonflait le nombre d'un facteur huit avec
+ *     exactement les chiffres qu'on veut voir se multiplier. Voir `ENGENDRES`.
+ *   — IL NE VOYAIT PAS 78 % DU README. Une clôture ``` orpheline, ligne 63, faisait avaler
+ *     deux cent vingt-trois lignes à son propre nettoyage. Réparée, le compte du README est
+ *     passé de cinq à dix : cinq taux avaient toujours été là, invisibles.
  *
- * Les cinq qu'on a pu confronter au relevé scellé sont JUSTES aujourd'hui. C'est exactement
- * ce qui les rend dangereux : bien formés, avec leur intervalle et leur `n`, ils inspirent
- * confiance et rouilleront sans bruit.
+ * CE QUI RESTE, ET POURQUOI ÇA RESTE :
  *
- * On ne peut pas les supprimer sans écrire quatre générateurs. On peut empêcher qu'il y en
- * ait un de plus. Ce plancher ne descend que par du travail, et il ne monte pas : ajouter un
- * taux à la main casse la suite, et le message dit quoi faire.
+ *   README.md — dix taux hors bloc. Chacun est maintenant NOMMÉ dans la table `permis` du
+ *               test des chiffres tapés, avec la raison pour laquelle il ne bougera pas. Le
+ *               compte n'est plus la seule garde : le contenu l'est aussi.
+ *   NOTATION-CAS-DURS.md — deux taux, et ils ne doivent PAS être engendrés. Ce document est un
+ *               pré-enregistrement : il déclare la règle de notation AVANT la passe et sa
+ *               valeur vient de son immobilité. Un commentaire affirmait ici qu'il était
+ *               « engendré par mesurer-dur.ts » — c'est faux, `mesurer-dur.ts` ne fait que le
+ *               citer, et cette phrase l'a fait passer pour protégé pendant des jours. Un faux
+ *               témoin met en confiance sur la chose même qu'il ne regarde pas.
+ *
+ * Le plancher ne descend que par du travail et il ne monte pas : ajouter un taux à la main
+ * casse la suite, et le message dit quoi faire.
  */
-const TAUX_EN_PROSE_AU_23_08 = 99;
+const TAUX_EN_PROSE_AU_23_08 = 12;
+
+/**
+ * Les documents ENTIÈREMENT engendrés, et la commande qui refuse leur version périmée.
+ *
+ * Ils portent des taux — trente-quatre pour le dossier, quatre-vingt-quatre pour la sonde —
+ * et aucun n'est tapé : ils naissent du relevé à chaque `npm run`, et `npm test` refuse une
+ * copie qui ne correspond plus. Les compter comme « prose » gonflait le cliquet d'un facteur
+ * huit avec des chiffres qui sont précisément ceux qu'on veut voir se multiplier.
+ *
+ * L'entrée porte sa commande, et un test vérifie que cette commande est bien dans `npm test`.
+ * Sans ça, il suffirait d'inscrire un fichier ici pour le soustraire au contrôle.
+ */
+const ENGENDRES: Record<string, string> = {
+  "VALIDATION.md": "node src/dossier.ts --check",
+  "SONDE.md": "node src/sonde.ts --check",
+};
+
+test("un document déclaré engendré est vraiment vérifié par npm test", () => {
+  /*
+   * LA PORTE DE SORTIE DOIT ÊTRE FERMÉE À CLÉ.
+   *
+   * `ENGENDRES` soustrait un fichier au cliquet ci-dessous. C'est exactement le geste qu'on
+   * ferait pour faire taire une garde gênante — et il ne coûterait qu'une ligne. Il coûte
+   * donc aussi de brancher le `--check` correspondant dans la chaîne, ce qui se vérifie.
+   */
+  const pkg = JSON.parse(readFileSync(fileURLToPath(new URL("../package.json", import.meta.url)), "utf8"));
+  for (const [fichier, commande] of Object.entries(ENGENDRES)) {
+    assert.ok(String(pkg.scripts.test).includes(commande),
+      `${fichier} est déclaré engendré, donc dispensé du cliquet des taux, mais « ${commande} » `
+      + `n'est pas dans « npm test ». Rien ne vérifie qu'il correspond au relevé : le fichier a `
+      + `été soustrait au contrôle sans rien recevoir en échange.`);
+  }
+});
 
 test("le nombre de taux tapés dans la prose ne peut que baisser", () => {
   const racine = fileURLToPath(new URL("..", import.meta.url));
   const parFichier: [string, number][] = [];
   for (const f of readdirSync(racine)) {
     if (!f.endsWith(".md")) continue;
+    /* Un document engendré n'a pas de prose : il a une source. Voir ENGENDRES. */
+    if (f in ENGENDRES) continue;
     let t = readFileSync(join(racine, f), "utf8");
-    /* on écarte ce qui est engendré ou cité : blocs de figures, blocs de code, code en ligne.
-       Un exemple entre accents graves n'est pas une affirmation. */
-    t = t.replace(/<!-- figures:([a-z0-9-]+) -->[\s\S]*?<!-- \/figures:\1 -->/g, "");
+    /*
+     * L'ORDRE, ENCORE, ET IL A COÛTÉ CHER UNE FOIS.
+     *
+     * Les blocs de code d'ABORD. Retirer les blocs engendrés en premier laissait un nombre
+     * impair de clôtures ``` — certaines vivaient dedans — et l'appariement suivant avalait
+     * deux cent vingt-trois lignes du README. Ce cliquet mesurait 22 % du fichier et son
+     * plancher de quatre-vingt-dix-neuf avait été posé sur cet aveuglement : la réparation
+     * l'a fait monter à cent quatre sans qu'un seul taux ait été ajouté.
+     */
     t = t.replace(/```[\s\S]*?```/g, "");
+    t = t.replace(/<!-- figures:([a-z0-9-]+) -->[\s\S]*?<!-- \/figures:\1 -->/g, "");
     t = t.replace(/`[^`\n]*`/g, "");
     const n = (t.match(/\d+(?:[.,]\d+)?\s*%/g) ?? []).length;
     if (n) parFichier.push([f, n]);
@@ -1850,6 +2012,7 @@ test("le nombre de taux tapés dans la prose ne peut que baisser", () => {
     + parFichier.map(([f, n]) => `${f}: ${n}`).join("\n  ")
     + `\n  Un taux publié se calcule depuis le relevé, ou il rouillera sans que rien ne le dise.`);
 });
+
 
 
 /*
@@ -1994,4 +2157,100 @@ test("la galerie versionnée porte encore la clé que le code produit", () => {
     + `froid. Chaque « npm test » et chaque « npm run figures » recharge les modèles, et le `
     + `README promet le contraire.\n  Remède : npm run figures, puis versionner `
     + `failures-reference.json avec le changement qui a déplacé la clé.`);
+});
+
+
+/*
+ * LA SONDE : LA PROSE SUIT LE CHIFFRE, OU ELLE NE VAUT RIEN.
+ *
+ * SONDE.md portait cinquante-huit taux tapés à la main et aucun générateur. Le 23 août 2026,
+ * onze de ses chiffres ont été confrontés au relevé scellé : LES ONZE ÉTAIENT FAUX. Ils
+ * n'étaient pas faux à l'écriture — les paliers encodeurs ont été remesurés à mille cas le 20
+ * août, et personne ne relit sept kilo-octets pour y répercuter une remesure.
+ *
+ * Deux PHRASES DE CONCLUSION étaient donc fausses, et c'est le vrai coût :
+ *   — « Against roberta's 38.3 %, that is +57.5 points » : roberta est à 32,8 %, l'écart vaut
+ *     +63,0. Le document sous-vendait son propre résultat.
+ *   — « the free regex ties the 8B model, 83.3 % against 83.3 % » : le regex est à 79,7 %. Il
+ *     ne fait pas jeu égal, il PERD — et la phrase s'en servait pour conclure l'inverse.
+ *
+ * Engendrer les tableaux n'aurait pas suffi : ces deux phrases sont de la PROSE. D'où un
+ * document entièrement engendré, dont les verdicts — « les intervalles se touchent », « ce
+ * palier gagne encore » — sont rendus par `distinguishable()` au moment de l'écriture.
+ *
+ * Ce témoin éprouve la seule chose qui compte : quand la mesure change, la phrase change.
+ * Un générateur qui interpole des chiffres dans une prose figée aurait le même bogue que le
+ * document qu'il remplace, en plus difficile à voir.
+ */
+test("la sonde fait suivre ses verdicts à la mesure, pas à sa rédaction", () => {
+  const vrai = readProfiles();
+  assert.ok(vrai, "pas de profil gelé : ce témoin ne peut rien éprouver.");
+  const clone = () => JSON.parse(JSON.stringify(vrai)) as typeof vrai;
+  const cell = (p: typeof vrai, t: string, f: string) =>
+    (p as never as Record<string, Record<string, Record<string, { accuracy: number }>>>).extraction[t]![f]!;
+
+  const avant = sonde(vrai!);
+  assert.match(avant, /do not overlap/,
+    "sur le relevé courant, 8B et 4B sont séparés sur l'adresse : le document devrait le dire.");
+
+  /* (1) ON RAPPROCHE LES DEUX TAUX. Les intervalles se recouvrent, donc l'échantillon ne
+     sépare plus — et la phrase doit cesser d'affirmer une différence. */
+  const colle = clone()!;
+  cell(colle, "gen-8b", "address").accuracy = cell(colle, "gen-4b", "address").accuracy;
+  const apresColle = sonde(colle);
+  assert.doesNotMatch(apresColle, /do not overlap/,
+    "les deux taux sont désormais identiques et le document affirme encore que les intervalles "
+    + "ne se recouvrent pas. La prose ne suit pas le chiffre : c'est le bogue qu'on remplaçait.");
+  assert.match(apresColle, /cannot separate them/,
+    "le document doit dire que l'échantillon ne sépare pas, plutôt que se taire.");
+
+  /* (2) ON FAIT TOMBER L'ENCODEUR. « roberta is not beaten » ne peut pas survivre à un
+     roberta battu : c'est la phrase qui portait la conclusion « les encodeurs tiennent ». */
+  const chute = clone()!;
+  cell(chute, "large", "name").accuracy = 0.10;
+  const apresChute = sonde(chute);
+  assert.doesNotMatch(apresChute, /`roberta` (still wins|is not beaten)/,
+    "roberta est tombé à 10 % et le document dit encore qu'il n'est pas battu.");
+
+  /* (3) ON LES FAIT TOUS TOMBER. La section « les encodeurs n'ont pas été dépassés » doit
+     pouvoir annoncer sa propre réfutation, sinon son titre ment le jour où elle est vide. */
+  const deroute = clone()!;
+  for (const f of FIELDS) for (const t of ["rules", "small", "large"]) cell(deroute, t, f).accuracy = 0.01;
+  const apresDeroute = sonde(deroute);
+  assert.match(apresDeroute, /no longer true/,
+    "aucun encodeur ne tient plus, et la section garde son titre sans dire qu'il est démenti.");
+
+  /* (4) LES CHIFFRES VIENNENT DU RELEVÉ, PAS DU GÉNÉRATEUR. Tout taux publié doit se
+     retrouver dans le profil : un générateur qui invente est pire qu'une prose qui rouille,
+     parce qu'il a l'air d'une mesure. */
+  const publies = [...avant.matchAll(/(\d+\.\d) %/g)].map((m) => m[1]!);
+  const duReleve = new Set<string>();
+  for (const chaine of ["extraction", "classification"] as const)
+    for (const t of Object.keys((vrai as never as Record<string, Record<string, unknown>>)[chaine]!)) {
+      const noeud = (vrai as never as Record<string, Record<string, never>>)[chaine]![t]!;
+      const cellules = "accuracy" in (noeud as object) ? [noeud] : Object.values(noeud);
+      for (const c of cellules as { accuracy?: number }[])
+        if (typeof c.accuracy === "number") duReleve.add((c.accuracy * 100).toFixed(1));
+    }
+  /*
+   * LES DEUX MOYENNES SE RECALCULENT, ELLES NE S'EXEMPTENT PAS.
+   *
+   * Ce contrôle a d'abord accusé « 95,2 » et « 83,9 » d'être inventés. Ils ne le sont pas : ce
+   * sont les deux moyennes par champ que le document publie, et le document dit lui-même
+   * qu'elles ne sont pas des proportions. La tentation était de les inscrire dans une liste
+   * d'exceptions — c'est-à-dire de rendre le contrôle aveugle à la seule catégorie de chiffre
+   * qu'un générateur peut réellement fabriquer. On les RECALCULE ici, depuis le relevé, par un
+   * chemin indépendant de celui du générateur.
+   */
+  const moyenne = (paliers: TierName[]) => FIELDS.reduce((somme, f) => somme
+    + Math.max(...paliers.map((t) => cell(vrai!, t, f)?.accuracy ?? -1)), 0) / FIELDS.length;
+  const derivees = new Set([
+    (moyenne(["rules", "small", "large", "gen-0.6b", "gen-4b", "gen-8b"]) * 100).toFixed(1),
+    (moyenne(["rules", "small", "large"]) * 100).toFixed(1),
+  ]);
+  const inventes = [...new Set(publies)].filter((x) => !duReleve.has(x) && !derivees.has(x));
+  assert.deepEqual(inventes, [],
+    `taux publié(s) par SONDE.md qu'on ne retrouve pas dans le relevé : ${inventes.join(", ")}. `
+    + `Un chiffre engendré doit venir de la mesure, sinon le générateur ne fait que rendre `
+    + `l'invention reproductible.`);
 });
