@@ -5,7 +5,7 @@ import { PREMIER_COMMIT_MULTI_FORMULATION } from "./landing.ts";
 import assert from "node:assert/strict";
 import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { generateRecords, generateAlerts, FIELDS, TYPOLOGIES } from "./corpus.ts";
 import { correct, TIERS, estLocal, OLLAMA, MODELES_LOCAUX, digestsQuiDivergent,
   DELAI_DE_GENERATION_MS, DELAI_DE_CHARGEMENT_MS, CHARGEMENTS_MESURES_MS } from "./tiers.ts";
@@ -2662,4 +2662,81 @@ test("la démo publiée porte la même garde que le serveur", () => {
     + "borne basse — pendant que le serveur les refuse. Deux comportements pour un seul outil.");
   assert.doesNotMatch(shim, /const v = Number\(corps\[cle\]\)/,
     "l'ancienne conversion-avant-garde est revenue dans la démo.");
+});
+
+
+/*
+ * LES ROUTES EXISTENT, ET C'EST MOI QUI AI PROUVÉ QU'IL FALLAIT LE VÉRIFIER.
+ *
+ * En extrayant `appliquerHypotheses` hors du gestionnaire, j'ai ÉCRASÉ le corps de
+ * `/api/routage` avec celui de `/api/hypotheses`, et supprimé `/api/optimum` et
+ * `/api/hypotheses`. Trois routes détruites, commitées, et `npm test` est resté vert : mes deux
+ * témoins éprouvaient la FONCTION, pas la ROUTE. Un module qui exporte ce que personne
+ * n'appelle passe tous les contrôles de ses deux côtés.
+ *
+ * Le trou n'était donc pas dans le code : il était dans la forme des témoins. Une couture se
+ * vérifie en la traversant, pas en inspectant ses deux bords.
+ *
+ * Ce test lance le vrai serveur sur un port à part et parle avec lui. C'est plus lent qu'un
+ * appel de fonction, et c'est la seule chose qui aurait vu ce que j'ai cassé.
+ */
+test("chaque route du serveur existe et répond, et une origine étrangère est refusée", async () => {
+  const PORT = 4771;
+  const enfant = spawn("node", [fileURLToPath(new URL("./server.ts", import.meta.url))], {
+    env: { ...process.env, PORT: String(PORT) }, stdio: ["ignore", "ignore", "ignore"],
+  });
+  /* On attend que le port réponde plutôt qu'un délai fixe : une session voisine a mesuré des
+     « refus » qui n'étaient qu'un serveur pas encore démarré, et son relevé était cohérent et
+     entièrement faux. Un appel témoin dont on connaît la réponse, avant de croire les autres. */
+  const base = `http://127.0.0.1:${PORT}`;
+  let vivant = false;
+  for (let i = 0; i < 100 && !vivant; i++) {
+    try { await fetch(`${base}/api/etat`); vivant = true; }
+    catch { await new Promise((r) => setTimeout(r, 100)); }
+  }
+  try {
+    assert.ok(vivant, `le serveur n'a pas démarré sur ${PORT} : ce test ne prouve rien.`);
+
+    /* LES ROUTES QUE L'ÉCRAN APPELLE. La liste vient de `ui.html` : si une route disparaît du
+       serveur, l'écran continue de l'appeler et le bouton ne fait plus rien, en silence. */
+    const html = readFileSync(fileURLToPath(new URL("./ui.html", import.meta.url)), "utf8");
+    const appelees = [...new Set([...html.matchAll(/["'`](\/api\/[a-z]+)["'`]/g)].map((m) => m[1]!))];
+    assert.ok(appelees.length >= 3,
+      `seulement ${appelees.length} route(s) trouvée(s) dans ui.html : le motif ne les voit plus, `
+      + `donc ce contrôle ne couvre plus rien.`);
+
+    for (const route of appelees) {
+      const r = await fetch(`${base}${route}`, {
+        method: "POST", headers: { "content-type": "application/json" }, body: "{}",
+      });
+      assert.notEqual(r.status, 404,
+        `${route} est appelée par l'écran et le serveur rend 404. Le bouton correspondant ne `
+        + `fait plus rien, sans un mot — c'est exactement ce que j'ai cassé en refactorant.`);
+    }
+
+    /* LA GARDE D'ORIGINE, DANS SES QUATRE SENS. */
+    const etrangere = await fetch(`${base}/api/routage`, {
+      method: "POST", headers: { "content-type": "text/plain", origin: "https://exemple-hostile.test" }, body: "{}",
+    });
+    assert.equal(etrangere.status, 403,
+      "une page web ouverte dans un autre onglet peut écrire dans cet écran. Écouter la boucle "
+      + "locale protège du réseau, pas du navigateur.");
+
+    const sienne = await fetch(`${base}/api/routage`, {
+      method: "POST", headers: { "content-type": "application/json", origin: `http://localhost:${PORT}` }, body: "{}",
+    });
+    assert.equal(sienne.status, 200, "l'écran lui-même est refusé : la garde mord son propre usage.");
+
+    const sansOrigine = await fetch(`${base}/api/routage`, {
+      method: "POST", headers: { "content-type": "application/json" }, body: "{}",
+    });
+    assert.equal(sansOrigine.status, 200,
+      "un client hors navigateur — curl, un script, nos propres contrôles — est refusé alors "
+      + "qu'il n'a rien à voir avec la faille.");
+
+    const lecture = await fetch(`${base}/api/etat`);
+    assert.equal(lecture.status, 200, "la lecture a été prise dans la garde des écritures.");
+  } finally {
+    enfant.kill();
+  }
 });

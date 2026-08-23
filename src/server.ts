@@ -130,9 +130,43 @@ export function etat() {
   };
 }
 
+/*
+ * ÉCOUTER LA BOUCLE LOCALE MET HORS DE PORTÉE DU RÉSEAU, PAS DU NAVIGATEUR.
+ *
+ * Trouvé par une session voisine sur un autre dépôt, vérifié ici : n'importe quelle page web
+ * ouverte par l'utilisateur peut poster sur `localhost:4670`. En forme « simple »
+ * — `content-type: text/plain` — il n'y a pas de requête préalable, la requête PART, et
+ * l'absence d'en-têtes CORS empêche seulement la page de LIRE la réponse. Pas d'annuler ce que
+ * la requête a déjà fait. Mesuré avant correction : une origine étrangère changeait le routage
+ * affiché, donc la démonstration que l'acheteur regarde.
+ *
+ * La garde tient sur un fait du navigateur : il envoie TOUJOURS `Origin` sur une écriture, et
+ * une page ne peut pas le falsifier. Un client hors navigateur — curl, un script, nos propres
+ * contrôles — n'en envoie pas du tout. Refuser une origine étrangère ferme donc le navigateur
+ * sans fermer la ligne de commande, et c'est la seule forme qui fasse les deux.
+ *
+ * Elle est posée AVANT TOUTE ROUTE, pour qu'ajouter une route ne soit pas un moyen de l'oublier.
+ */
+function origineEtrangere(req: IncomingMessage): string | null {
+  const o = req.headers.origin;
+  if (!o) return null;                       // hors navigateur : pas d'Origin, rien à défendre
+  const attendues = [`http://localhost:${PORT}`, `http://127.0.0.1:${PORT}`];
+  return attendues.includes(o) ? null : o;
+}
+
 const serveur = createServer(async (req, res) => {
   const url = new URL(req.url ?? "/", `http://localhost:${PORT}`);
   try {
+    if (req.method === "POST") {
+      const etrangere = origineEtrangere(req);
+      if (etrangere !== null) {
+        return json(res, {
+          erreur: `écriture refusée : la requête vient de ${etrangere}, pas de cet écran. `
+            + `Écouter la boucle locale protège du réseau, pas du navigateur — une page ouverte `
+            + `dans un autre onglet peut poster ici sans que rien ne le montre.`,
+        }, 403);
+      }
+    }
     if (url.pathname === "/") {
       res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" });
       res.end(readFileSync(fileURLToPath(new URL("./ui.html", import.meta.url)), "utf8"));
@@ -149,6 +183,22 @@ const serveur = createServer(async (req, res) => {
     if (url.pathname === "/api/etat") return json(res, etat());
 
     if (url.pathname === "/api/routage" && req.method === "POST") {
+      const recu = await corps(req);
+      const champ = String(recu.champ ?? "");
+      const palier = String(recu.palier ?? "") as TierName;
+      if (FIELDS.includes(champ as never) && TIERS.includes(palier)) {
+        routage = { ...routage, [champ]: palier };
+      }
+      return json(res, etat());
+    }
+
+    if (url.pathname === "/api/optimum" && req.method === "POST") {
+      const o = optimiseExtraction(profils, hypotheses);
+      if (o) routage = { ...o.routing };
+      return json(res, etat());
+    }
+
+    if (url.pathname === "/api/hypotheses" && req.method === "POST") {
       const recu = await corps(req);
       const r = appliquerHypotheses(recu as Record<string, unknown>, hypotheses);
       if (r.refuses.length) {
