@@ -10,6 +10,7 @@ import { generateRecords, generateAlerts, FIELDS, TYPOLOGIES } from "./corpus.ts
 import { correct, TIERS, estLocal, OLLAMA, MODELES_LOCAUX, digestsQuiDivergent } from "./tiers.ts";
 import type { TierName } from "./paliers.ts";
 import { classify, empreinteDesEntrees, modulesAtteints } from "./failures.ts";
+import { comparer } from "./diff.ts";
 import { readProfiles, empreinteDuReleve, RELEVE_DE_REFERENCE, type Profile, type ProvenanceDuPalier, type Provenance } from "./measure.ts";
 import { optimiseExtraction, optimiseClassification, budgetShadowPrice, latenceRepresentative, paliersMesures, evaluer, pricePerThousandDocuments } from "./optimise.ts";
 import { ASSUMPTIONS, UNITS, pricePerThousandExtractions, accuracy } from "./assumptions.ts";
@@ -1846,4 +1847,56 @@ test("le nombre de taux tapés dans la prose ne peut que baisser", () => {
     + `plancher a été posé — il ne doit que baisser.\n  `
     + parFichier.map(([f, n]) => `${f}: ${n}`).join("\n  ")
     + `\n  Un taux publié se calcule depuis le relevé, ou il rouillera sans que rien ne le dise.`);
+});
+
+
+/*
+ * §6.2 DU DOSSIER SIGNÉ, ET CE QUE LE DIFF DOIT REFUSER.
+ *
+ * « Compare runs rather than reading the latest one. A rising aggregate can hide cases that
+ * used to pass and no longer do. » C'est une obligation que le dossier crée, et rien ne la
+ * tenait — alors que le dépôt livre cinq relevés dont quatre portent leurs réussites cas par
+ * cas.
+ *
+ * Le cas qui donne son sens à l'outil est celui où LE TAUX MONTE ET DES CAS SONT PERDUS. Un
+ * agrégat ne le voit pas ; c'est tout l'argument de la section. Le témoin le fabrique.
+ *
+ * Et il éprouve les deux refus, qui valent autant que la détection : deux relevés
+ * d'échantillons différents ne s'apparient pas cas par cas — le cas i de mille n'est pas le
+ * cas i de cent vingt — et un relevé sans bits ne se compare pas du tout. Rendre zéro dans
+ * l'un ou l'autre cas serait un zéro par absence, indiscernable d'un zéro par succès.
+ */
+test("le diff voit les cas perdus sous un taux qui monte, et refuse ce qui ne s'apparie pas", () => {
+  const cel = (bits: string) => ({ reussites: bits, accuracy: [...bits].filter((b) => b === "1").length / bits.length, items: bits.length });
+  const avant = { measuredAt: "A", extraction: { t: {
+    monte: cel("11000"),          /* 2/5 */
+    identique: cel("10101"),
+    tailleDiff: cel("1100"),
+    sansBits: { accuracy: 1, items: 5 },
+  } } };
+  const apres = { measuredAt: "B", extraction: { t: {
+    monte: cel("01110"),          /* 3/5 — le taux MONTE, et le cas 0 est PERDU */
+    identique: cel("10101"),
+    tailleDiff: cel("110000"),
+    sansBits: { accuracy: 1, items: 5 },
+  } } };
+
+  const r = comparer(avant as never, apres as never);
+  assert.equal(r.cellulesComparees, 2, "les cellules non appariables auraient dû être écartées.");
+
+  const m = r.ecarts.find((e) => e.champ === "monte");
+  assert.ok(m, "le diff n'a pas vu la cellule où des cas ont changé d'issue.");
+  assert.ok(m!.tauxApres > m!.tauxAvant, "le témoin est mal construit : le taux devait monter.");
+  assert.equal(m!.perdus, 1, "un cas qui passait et ne passe plus n'a pas été compté.");
+  assert.equal(m!.gagnes, 2);
+
+  assert.equal(r.ecarts.find((e) => e.champ === "identique"), undefined,
+    "une cellule inchangée est rapportée comme un écart.");
+
+  /* LES DEUX REFUS, NOMMÉS. Un écart silencieux serait pire qu'un faux positif. */
+  const raisons = Object.fromEntries(r.cellulesEcartees.map((e) => [e.cellule, e.pourquoi]));
+  assert.match(raisons["t/tailleDiff"] ?? "", /échantillons différents/,
+    "deux échantillons de tailles différentes ont été appariés cas par cas.");
+  assert.match(raisons["t/sansBits"] ?? "", /réussites par cas/,
+    "une cellule sans réussites par cas a été comptée comme comparée.");
 });
