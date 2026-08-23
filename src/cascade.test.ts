@@ -3,9 +3,10 @@ import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
 import { PREMIER_COMMIT_MULTI_FORMULATION } from "./landing.ts";
 import assert from "node:assert/strict";
-import { readFileSync, existsSync, readdirSync } from "node:fs";
+import { readFileSync, existsSync, readdirSync, writeFileSync, mkdtempSync, rmSync } from "node:fs";
 import { join } from "node:path";
-import { execFileSync, spawn } from "node:child_process";
+import { tmpdir } from "node:os";
+import { execFileSync, spawn, spawnSync } from "node:child_process";
 import { createServer } from "node:http";
 import { generateRecords, generateAlerts, FIELDS, TYPOLOGIES } from "./corpus.ts";
 import { correct, TIERS, estLocal, OLLAMA, MODELES_LOCAUX, digestsQuiDivergent,
@@ -3054,4 +3055,68 @@ test("la version de sharp installée est au-dessus des CVE de libvips", () => {
     `sharp ${version} est installée. Les CVE de libvips touchent tout ce qui est sous 0.35.0, `
     + `et il n'existe pas de correctif en amont pour la branche 0.34 — c'est la mise à niveau `
     + `ou rien. Vérifier que l'override est toujours honoré : \`npm install\` puis \`npm audit\`.`);
+});
+
+
+/*
+ * UNE CLAUSE DE CONTRAT QU'AUCUN TEST NE PROTEGEAIT.
+ *
+ * La lettre de mission promet, mot pour mot : « No extracted value reaches us — not a name,
+ * not a date of birth, not a document number. » La section du contrat qui fixe le traitement
+ * des donnees repose entierement dessus.
+ *
+ * C'est VRAI aujourd'hui : le seul `writeFileSync` du flux client emet une table d'agregats —
+ * champ, palier, exactitude, intervalle, n, duree mediane. Mais les valeurs du client
+ * existent UNE LIGNE AU-DESSUS, dans les enregistrements qui portent `value` et `expected`.
+ * Quelqu'un qui etend cette fonction peut les faire entrer dans le fichier sans savoir qu'il
+ * vient de casser une clause contractuelle — et rien ne le lui dirait.
+ *
+ * Signale par la session qui auditait le depot commercial, qui a lu la clause d'un cote et
+ * l'outil de l'autre. C'est la seule facon de trouver ce defaut-la : il n'est visible ni dans
+ * le contrat seul, ni dans le code seul.
+ *
+ * LE TEMOIN TRAVERSE LA COUTURE. Il ne lit pas le code a la recherche de `value` — il fait
+ * TOURNER l'outil sur un fichier dont il connait les valeurs, et cherche ces valeurs dans ce
+ * qui est ecrit. Une garde qui inspecte la source rate une valeur ecrite par un autre chemin ;
+ * celle-ci regarde ce qui sort.
+ */
+test("aucune valeur du client n'entre dans le fichier que l'outil lui rend", () => {
+  const dossier = mkdtempSync(join(tmpdir(), "cascade-clause-"));
+  try {
+    /* Des valeurs qu'aucun agregat ne pourrait produire par hasard : si l'une d'elles
+       apparait dans la sortie, elle vient forcement du fichier d'entree. */
+    const TEMOINS = ["Zorglub Wyvernheim", "1911-02-29", "XQ-77-ZZZ-0451"];
+    const csv = `text,name,birth,document\n`
+      + `${TEMOINS[0]} ne le ${TEMOINS[1]} document ${TEMOINS[2]},${TEMOINS[0]},${TEMOINS[1]},${TEMOINS[2]}\n`
+      + `Jean Dupont ne le 1980-03-03 document AB-12-CDE-3456,Jean Dupont,1980-03-03,AB-12-CDE-3456\n`;
+    const entree = join(dossier, "cas.csv");
+    writeFileSync(entree, csv);
+
+    const r = spawnSync("node", [fileURLToPath(new URL("./your-cases.ts", import.meta.url)),
+      `--cases=${entree}`], { encoding: "utf8", timeout: 300_000 });
+
+    const sortie = entree.replace(/\.csv$/, "") + "-measured.md";
+    if (!existsSync(sortie)) {
+      /* L'outil n'a pas produit de fichier — souvent parce que les modeles ne sont pas en
+         cache. On ne rend pas un vert pour autant : un contrôle qui n'a rien vu le dit. */
+      assert.ok(r.status !== 0 || r.stdout.includes("Written to"),
+        `l'outil n'a ecrit aucun fichier et n'a pas explique pourquoi. Sortie : `
+        + `${(r.stderr || r.stdout).slice(0, 200)}`);
+      return;
+    }
+
+    const rendu = readFileSync(sortie, "utf8");
+    const fuites = TEMOINS.filter((v) => rendu.includes(v));
+    assert.deepEqual(fuites, [],
+      `valeur(s) du client presente(s) dans le fichier rendu : ${fuites.join(", ")}.\n`
+      + `  La lettre de mission promet « No extracted value reaches us — not a name, not a\n`
+      + `  date of birth, not a document number ». Ce fichier vient de la rompre. Les valeurs\n`
+      + `  vivent dans les enregistrements internes ; seuls les agregats sortent.`);
+
+    /* Et le contrôle doit avoir REGARDE quelque chose : un fichier vide passerait sinon. */
+    assert.ok(rendu.includes("Accuracy") && rendu.length > 100,
+      "le fichier rendu est vide ou sans table : le zero ci-dessus ne prouve rien.");
+  } finally {
+    rmSync(dossier, { recursive: true, force: true });
+  }
 });
