@@ -49,23 +49,52 @@ export type Cas = { id: string; text: string; truth: Record<string, string> };
  * responsable conformité qui doit approuver l'outil lit trois cents lignes, pas un arbre de
  * modules.
  */
+/*
+ * UNE GUILLEMET NON REFERMÉE MANGEAIT LA MOITIÉ DU FICHIER DU CLIENT, EN SILENCE.
+ *
+ * Mesuré : deux fichiers de sept lignes, un seul caractère d'écart — une guillemet ouvrante
+ * jamais refermée. Le premier rendait six cas, le second trois. Rien n'était signalé, le code
+ * de sortie restait zéro, et l'outil imprimait ensuite « 3 cases is below the point where a
+ * rate says anything » : il AVERTISSAIT que l'échantillon était petit sans dire QU'IL L'AVAIT
+ * RENDU PETIT. Le client lit trois et conclut que son fichier en contenait trois.
+ *
+ * C'est la pire forme de chiffre faux — celle qui ne se voit pas dans le chiffre — et elle
+ * tombait sur les données du client, dans un dépôt dont c'est l'argument de vente.
+ *
+ * La cause est ordinaire : à l'intérieur d'une guillemet, le retour à la ligne est du contenu.
+ * C'est correct, et c'est même la raison d'être des guillemets. Ce qui manquait, c'est que
+ * PERSONNE NE VÉRIFIAIT que l'automate en était ressorti à la fin.
+ */
 export function lireCsv(texte: string): { champs: string[]; cas: Cas[] } {
   const lignes: string[][] = [];
   let ligne: string[] = [], cellule = "", guillemets = false;
+  /* Où la guillemet encore ouverte a été ouverte. Sans elle, le refus dirait « quelque part
+     dans votre fichier », ce qui est inutilisable sur cinq mille lignes. */
+  let ouvertureLigne = 0, numeroDeLigne = 1;
   for (let i = 0; i < texte.length; i++) {
     const c = texte[i]!;
     if (guillemets) {
       if (c === '"' && texte[i + 1] === '"') { cellule += '"'; i++; }
       else if (c === '"') guillemets = false;
-      else cellule += c;
-    } else if (c === '"') guillemets = true;
+      else { if (c === "\n") numeroDeLigne++; cellule += c; }
+    } else if (c === '"') { guillemets = true; ouvertureLigne = numeroDeLigne; }
     else if (c === ",") { ligne.push(cellule); cellule = ""; }
     else if (c === "\n" || c === "\r") {
       if (c === "\r" && texte[i + 1] === "\n") i++;
+      numeroDeLigne++;
       ligne.push(cellule); cellule = "";
       if (ligne.some((x) => x.trim() !== "")) lignes.push(ligne);
       ligne = [];
     } else cellule += c;
+  }
+  if (guillemets) {
+    throw new Error(
+      `Ligne ${ouvertureLigne} de votre CSV ouvre une guillemet qui n'est jamais refermée.\n`
+      + `  Tout ce qui suit a été avalé comme le contenu d'une seule cellule : le fichier a été\n`
+      + `  lu jusqu'au bout, mais il ne reste que ${lignes.length} ligne(s) au lieu de vos données.\n`
+      + `  Cet outil refuse plutôt que de mesurer un taux sur ce qu'il n'a pas perdu.\n\n`
+      + `  Pour écrire une guillemet DANS une cellule, doublez-la : "il a dit ""bonjour""".\n`
+      + `  Pour trouver la ligne fautive : sed -n '${ouvertureLigne}p' <votre fichier>`);
   }
   if (cellule !== "" || ligne.length) { ligne.push(cellule); if (ligne.some((x) => x.trim() !== "")) lignes.push(ligne); }
 
@@ -529,4 +558,19 @@ Nothing leaves your machine: the models are local and this path makes no network
   }
 }
 
-if (isMain(import.meta)) await principal();
+/*
+ * UN REFUS DESTINÉ AU CLIENT NE SORT PAS EN TRACE DE PILE.
+ *
+ * Le message qui explique une guillemet non refermée est écrit pour quelqu'un qui a un CSV et
+ * pas ce code sous les yeux. Le laisser remonter brut le noie sous cinq lignes de chemins de
+ * fichiers et de numéros internes : le lecteur voit un plantage, pas une instruction. Le code
+ * de sortie reste 1 — c'est ce que lit une chaîne d'intégration, et il ne doit pas changer.
+ */
+if (isMain(import.meta)) {
+  try {
+    await principal();
+  } catch (e) {
+    console.error(`\n${e instanceof Error ? e.message : String(e)}\n`);
+    process.exit(1);
+  }
+}

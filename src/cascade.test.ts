@@ -12,6 +12,7 @@ import type { TierName } from "./paliers.ts";
 import { classify, empreinteDesEntrees, modulesAtteints, cleDeLaGalerieLivree, cleDuFichierLivre } from "./failures.ts";
 import { comparer } from "./diff.ts";
 import { sonde } from "./sonde.ts";
+import { lireCsv } from "./your-cases.ts";
 import { corpusDur } from "./corpus-dur.ts";
 import { comparerPopulations, plancherDeBruit, longueur, GRAINES_DE_BRUIT } from "./entree.ts";
 import { SEUIL_DE_L_INDUSTRIE, OBSERVATIONS_MINIMALES } from "./psi.ts";
@@ -2451,4 +2452,50 @@ test("les chiffres cités dans les commentaires de entree.ts sont ceux que le co
      On vérifie qu'une valeur qui n'y est PAS est bien détectée comme absente. */
   assert.ok(!src.includes(fr(maxMille + 0.5)),
     "le contrôle trouve une valeur qui ne devrait pas être là : sa recherche est trop lâche.");
+});
+
+
+/*
+ * LE CSV DU CLIENT : CE QUI DISPARAÎT SANS LE DIRE.
+ *
+ * Deux fichiers de sept lignes, un seul caractère d'écart — une guillemet ouvrante jamais
+ * refermée. Le premier rendait six cas, le second trois. Aucun avertissement, code de sortie
+ * zéro. Et l'outil imprimait ensuite « 3 cases is below the point where a rate says
+ * anything » : il annonçait un échantillon trop petit sans dire QU'IL L'AVAIT RÉDUIT.
+ *
+ * C'est la forme la plus coûteuse d'un chiffre faux — celle qui ne se voit pas dans le
+ * chiffre — et elle tombait sur les données du client, pas sur les nôtres. Trouvé par une
+ * autre session en fabriquant des entrées hostiles, ce qu'aucun de nos propres fichiers de
+ * test ne faisait : nos CSV d'essai étaient tous bien formés, ce qui est exactement la raison
+ * pour laquelle rien ne l'avait vu.
+ */
+test("un CSV client dont une guillemet reste ouverte est refusé, pas rétréci en silence", () => {
+  const propre = 'text,name\nAlpha Bravo,Alpha\nCharlie Delta,Charlie\nEcho Foxtrot,Echo\nGolf Hotel,Golf\n';
+  const casse = 'text,name\nAlpha Bravo,Alpha\nCharlie Delta,Charlie\nEcho "Foxtrot,Echo\nGolf Hotel,Golf\n';
+
+  const bon = lireCsv(propre);
+  assert.equal(bon.cas.length, 4, "le fichier bien formé ne doit rien perdre.");
+
+  let refus: Error | null = null;
+  try { lireCsv(casse); } catch (e) { refus = e as Error; }
+  assert.ok(refus,
+    "une guillemet jamais refermée avale les lignes suivantes et le lecteur rend un nombre de "
+    + "cas plus petit sans le dire. Rendre un compte rétréci est pire que refuser.");
+
+  /*
+   * LE REFUS DOIT ÊTRE ACTIONNABLE. Sur un fichier de cinq mille lignes, « guillemet non
+   * refermée quelque part » n'est pas une aide : c'est le même silence, formulé poliment.
+   */
+  assert.match(refus!.message, /Ligne 4\b/,
+    `le refus ne nomme pas la ligne où la guillemet s'ouvre : « ${refus!.message.split("\n")[0]} »`);
+  assert.match(refus!.message, /""/,
+    "le refus doit dire comment écrire une guillemet dans une cellule — un refus sans issue "
+    + "se contourne en supprimant la garde.");
+
+  /* LE TÉMOIN DU TÉMOIN : une guillemet correctement doublée ne doit PAS déclencher le refus,
+     sinon la garde interdit l'usage légitime et sera retirée à la première plainte. */
+  const legitime = 'text,name\nAlpha,"il a dit ""bonjour"""\nBravo,Charlie\n';
+  assert.doesNotThrow(() => lireCsv(legitime),
+    "une guillemet échappée selon la règle CSV est refusée : la garde mord sur l'usage correct.");
+  assert.equal(lireCsv(legitime).cas.length, 2);
 });
