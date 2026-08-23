@@ -489,7 +489,22 @@ const commandes = (() => {
 })();
 
 /* Where every number on this page came from. Generated, and guarded by a test. */
-const provenance = markdown(INVENTORY, table);
+/* « EXHAUSTIVE OVER ALL 1,024 COMBINATIONS » ÉTAIT LE COMPTE D'AVANT.
+   1 024, c'est 4^5 — quatre paliers, cinq champs — et l'échelle générative en a
+   ajouté trois depuis. Le dépôt en énumère 16 807. La phrase se lit comme une
+   garantie, et elle sous-estimait de seize fois l'espace réellement parcouru :
+   la vérité était MEILLEURE que l'affirmation, ce qui est la forme la plus
+   bête de perdre la confiance d'un lecteur qui vérifie.
+   `INVENTORY` est une déclaration statique et n'a pas accès au profil ; le
+   compte se calcule donc ici, là où le profil existe, et ne peut plus vieillir
+   quand un palier s'ajoute. */
+const nCombinaisons = Math.pow(paliersMesures(p).length, FIELDS.length);
+const provenance = markdown(
+  INVENTORY.map((e) => e.name === "routing"
+    ? { ...e, note: `exhaustive over all ${nCombinaisons.toLocaleString("en-GB")} combinations of the measured tiers — no heuristic, nothing to tune` }
+    : e),
+  table,
+);
 
 /*
  * Ce que coûte le pas suivant, calculé et non recopié.

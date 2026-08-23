@@ -1443,3 +1443,34 @@ test("toute durée publiée déclare d'où elle vient, et cet endroit porte des 
       `${tier} a des percentiles dans le désordre : p10 ${v!.p10}, médiane ${v!.median}, p90 ${v!.p90}.`);
   }
 });
+
+
+/*
+ * UNE HYPOTHÈSE AJOUTÉE SANS ÊTRE BALAYÉE, ET PERSONNE NE LE VOIT.
+ *
+ * Le README annonçait « every assumption declared in the inventory and swept ». Mesuré :
+ * dix des treize entrées de `ASSUMPTIONS` sont dans `PLAUSIBLE`, trois n'y sont pas. Les
+ * trois sont défendables — ce sont les entrées que le CLIENT pose, pas des valeurs qu'on a
+ * devinées, et deux d'entre elles ont leur propre tableau de balayage — mais rien ne le
+ * disait, et surtout rien n'empêchait la quatrième d'arriver en silence.
+ *
+ * Une promesse d'exhaustivité qui ne peut pas se vérifier n'est pas une promesse, c'est une
+ * intention. Ce test la rend exécutable : toute clé d'`ASSUMPTIONS` est soit balayée, soit
+ * NOMMÉE ici comme une entrée du client. Ajouter une hypothèse sans faire l'un des deux
+ * casse la suite, ce qui est le seul moment où quelqu'un regardera.
+ */
+const ENTREES_DU_CLIENT = new Set(["volume", "budget", "latencyBudgetMs"]);
+
+test("toute hypothèse est balayée, ou déclarée comme une entrée que le client pose", () => {
+  const declarees = Object.keys(ASSUMPTIONS);
+  const balayees = new Set(Object.keys(PLAUSIBLE));
+  const orphelines = declarees.filter((k) => !balayees.has(k) && !ENTREES_DU_CLIENT.has(k));
+  assert.deepEqual(orphelines, [],
+    `hypothèse(s) ni balayée(s) ni déclarée(s) comme entrée du client : ${orphelines.join(", ")}. `
+    + `Ajoute-la à PLAUSIBLE avec sa plage, ou à ENTREES_DU_CLIENT si c'est le lecteur qui la pose.`);
+  /* et l'inverse : une entrée du client qui se met à être balayée doit sortir de la liste,
+     sinon la liste ment dans l'autre sens et personne ne s'en aperçoit jamais. */
+  const doublons = [...ENTREES_DU_CLIENT].filter((k) => balayees.has(k));
+  assert.deepEqual(doublons, [],
+    `déclarée(s) comme entrée du client ET balayée(s) : ${doublons.join(", ")}.`);
+});

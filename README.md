@@ -55,7 +55,7 @@ npm test           # types, README figures, landing.json, and the suite
 ```
 
 <!-- figures:tests -->
-**123 tests** across 9 files, counted from the sources rather than typed here.
+**124 tests** across 9 files, counted from the sources rather than typed here.
 <!-- /figures:tests -->
 
 ```
@@ -428,7 +428,7 @@ tool runs on is missing from it.
 | Kind | Name | What it is | Note |
 |---|---|---|---|
 | measured | `profiles` | per-field accuracy and latency for each tier | real models pinned by revision, scored on a held-out split, on the chosen corpus below |
-| measured | `routing` | the cheapest assignment of tiers to fields that fits the budget | exhaustive over all 1,024 combinations — no heuristic, nothing to tune |
+| measured | `routing` | the cheapest assignment of tiers to fields that fits the budget | exhaustive over all 16,807 combinations of the measured tiers — no heuristic, nothing to tune |
 | measured | `shadowPrice` | the smallest budget increase that actually buys a better routing | a step, not a slope: differentiating a staircase says the next euro buys nothing |
 | measured | `REVISIONS` | the exact model revisions the figures were produced with | pinned, so a stranger reproduces the table rather than a different one |
 | assumed | `humanAccuracy` | how often a human reviewing their fortieth file of the day gets it right | moved here from being infallible by construction, which made the human tier unbeatable |
@@ -485,8 +485,9 @@ Node with native TypeScript, no build step. `distilbert-squad` and `roberta-base
 for extraction, `all-MiniLM-L6-v2` and `multilingual-e5-small` for classification, all
 local through `@huggingface/transformers`.
 
-**The routing is exhaustive, not heuristic.** Five fields and four tiers is 1,024
-combinations, which is instant — and it guarantees the optimum, which no heuristic does.
+**The routing is exhaustive, not heuristic.** Every combination of the measured tiers is
+enumerated — the count is in the provenance table above, and it grows with the ladder — which
+is instant, and it guarantees the optimum, which no heuristic does.
 
 **The shadow price measures the step, not the slope.** A first version relaxed the budget
 by 10 % and concluded "the next euro buys nothing" — true, and useless. The next gain does
@@ -569,8 +570,8 @@ proves nothing until a decision reads it.
 | Every figure on this page | Generated from the frozen profile; `npm test` fails if the page drifts |
 | The models | Pinned by exact revision, so a clone measures the same thing |
 | The split | A test fails if training and held-out phrasings share a shape |
-| Every assumption | Declared in the inventory and swept, with "priced out" told apart from "irrelevant" |
-| The routing | Exhaustive over all 1,024 combinations — no heuristic, nothing tuned |
+| Every assumption | The values we guessed are declared in the inventory and swept, with "priced out" told apart from "irrelevant". The three inputs *you* set — volume, budget, latency ceiling — are not in that sweep: the ceiling has its own table above and the budget has the shadow price, and a test fails if a fourth ever joins them unannounced |
+| The routing | Exhaustive over every combination of the measured tiers — no heuristic, nothing tuned |
 | Every failure | Published in full, by kind, rather than summarised into a rate |
 
 ---
