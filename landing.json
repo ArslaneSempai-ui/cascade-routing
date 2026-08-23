@@ -644,6 +644,15 @@
       "admissible": false
     }
   ],
+  "accuracyFigures": {
+    "whichCarryNoInterval": [
+      "routing.accuracy",
+      "singleTierBaselines[].accuracy"
+    ],
+    "why": "Each is the mean of the 5 per-field rates of that assignment, measured on separate samples — not a proportion, so a Wilson bound would be fabricated.",
+    "boundedRatesLiveIn": "tiers[].acc[field]",
+    "humanIsAssumed": "The human tier's accuracy is an assumption, not a measurement: it carries no bound because there is no sample behind it."
+  },
   "latencyFigures": {
     "origin": "Toutes les durées de ce fichier sont dérivées d'un seul relevé mesuré, jamais mesurées à nouveau ici. Chacune est une somme de médianes par champ.",
     "dispersionLivesIn": "latencySpread.perDoc",

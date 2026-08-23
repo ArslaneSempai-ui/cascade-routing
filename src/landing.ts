@@ -866,6 +866,34 @@ export function construire(p: Profiles): unknown {
      * est un fait sur la machine, sa charge et l'instant, et ne se transporte pas. Deux chiffres
      * ont dû être retirés cette nuit pour avoir confondu les deux.
      */
+    /*
+     * POURQUOI HUIT EXACTITUDES DE CE FICHIER NE PORTENT PAS D'INTERVALLE.
+     *
+     * Trente-huit taux sont publiés ici ; trente portent leur borne et leur effectif. Les
+     * huit qui n'en portent pas sont l'exactitude du routage et celles des sept paliers
+     * seuls — et ce n'est pas un oubli, c'est un refus. `evaluer()` rend
+     * `sommeJustesse / champs.length` : une MOYENNE de cinq taux mesurés sur des échantillons
+     * différents, 1 000 cas pour les paliers machine et 120 pour l'échelle générative. Ce
+     * n'est pas une proportion. Un intervalle de Wilson dessus aurait l'exactitude d'un
+     * relevé et la valeur d'une invention.
+     *
+     * Les taux qui SONT des proportions, eux, portent tous leur borne : ils sont dans
+     * `tiers[].acc[champ]`, un par palier et par champ, avec leur `n`. Un lecteur qui veut
+     * une borne sur une exactitude de document doit la chercher là, champ par champ — et
+     * c'est la vraie réponse, pas une borne agrégée qui n'existe pas.
+     *
+     * Déclaré une fois plutôt que répété huit fois, comme les durées juste en dessous : un
+     * contrôle qui reniflerait les noms de clés crierait sur les huit sans rien comprendre.
+     */
+    accuracyFigures: {
+      whichCarryNoInterval: ["routing.accuracy", "singleTierBaselines[].accuracy"],
+      why: "Each is the mean of the 5 per-field rates of that assignment, measured on "
+        + "separate samples — not a proportion, so a Wilson bound would be fabricated.",
+      boundedRatesLiveIn: "tiers[].acc[field]",
+      humanIsAssumed: "The human tier's accuracy is an assumption, not a measurement: it "
+        + "carries no bound because there is no sample behind it.",
+    },
+
     latencyFigures: {
       origin: "Toutes les durées de ce fichier sont dérivées d'un seul relevé mesuré, jamais "
         + "mesurées à nouveau ici. Chacune est une somme de médianes par champ.",
