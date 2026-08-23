@@ -12,6 +12,7 @@ import type { TierName } from "./paliers.ts";
 import { classify, empreinteDesEntrees, modulesAtteints, cleDeLaGalerieLivree, cleDuFichierLivre } from "./failures.ts";
 import { comparer } from "./diff.ts";
 import { sonde } from "./sonde.ts";
+import { corpusDur } from "./corpus-dur.ts";
 import { comparerPopulations, plancherDeBruit, longueur } from "./entree.ts";
 import { SEUIL_DE_L_INDUSTRIE, OBSERVATIONS_MINIMALES } from "./psi.ts";
 import { readProfiles, empreinteDuReleve, RELEVE_DE_REFERENCE, type Profile, type ProvenanceDuPalier, type Provenance } from "./measure.ts";
@@ -2253,4 +2254,155 @@ test("la sonde fait suivre ses verdicts à la mesure, pas à sa rédaction", () 
     `taux publié(s) par SONDE.md qu'on ne retrouve pas dans le relevé : ${inventes.join(", ")}. `
     + `Un chiffre engendré doit venir de la mesure, sinon le générateur ne fait que rendre `
     + `l'invention reproductible.`);
+});
+
+
+/*
+ * LES DEUX PRÉ-ENREGISTREMENTS, ET CE QUI LEUR DONNE LEUR VALEUR.
+ *
+ * `NOTATION-CAS-DURS.md` déclare comment le corpus dur est noté ; `COUT-PALIER-1.7B.md`
+ * estime ce que coûterait un huitième palier. Ni l'un ni l'autre ne doit être ENGENDRÉ : leur
+ * valeur vient de leur immobilité. Une règle de notation écrite après la passe se choisit
+ * elle-même pour produire le résultat qu'on voulait — c'est la première entrée du journal de
+ * rétractation de ce dépôt — et une estimation réécrite après coup est un souvenir généreux.
+ *
+ * Ils n'avaient donc aucune garde, et un commentaire de ce fichier affirmait au contraire que
+ * la notation était « engendrée par mesurer-dur.ts ». Elle ne l'est pas : `mesurer-dur.ts` ne
+ * fait que la citer. Cette phrase a fait passer le document pour protégé.
+ *
+ * ─── CE QUI TIENT LIEU DE SCELLÉ ───
+ *
+ * Pas une empreinte de plus : GIT. Une édition n'est pas silencieuse, elle est datée. Ce qui
+ * manquait n'était pas la trace du changement mais la vérification de son ORDRE — et c'est le
+ * seul fait qui distingue un pré-enregistrement d'une justification.
+ */
+test("la notation du corpus dur a été committée AVANT la mesure qu'elle régit", () => {
+  const racine = fileURLToPath(new URL("..", import.meta.url));
+  const dateDe = (f: string) => {
+    const t = execFileSync("git", ["log", "-1", "--format=%ct", "--", f], { cwd: racine, encoding: "utf8" }).trim();
+    return t ? Number(t) : null;
+  };
+  const notation = dateDe("NOTATION-CAS-DURS.md");
+  const mesure = dateDe("dur.json");
+  assert.ok(notation && mesure,
+    "l'un des deux fichiers n'a pas d'historique : on ne peut pas établir l'ordre, donc "
+    + "« committed before this pass » n'est plus qu'une affirmation.");
+
+  /*
+   * STRICTEMENT ANTÉRIEUR, ET LE MÊME COMMIT NE PASSE PAS.
+   *
+   * Deux fichiers modifiés ensemble, c'est une notation retouchée en même temps que la mesure
+   * qu'elle note. C'est précisément le geste que le pré-enregistrement existe pour rendre
+   * impossible, et il serait invisible à un contrôle qui accepte l'égalité.
+   */
+  assert.ok(notation! < mesure!,
+    `NOTATION-CAS-DURS.md a été committée le ${new Date(notation! * 1000).toISOString()} et `
+    + `dur.json le ${new Date(mesure! * 1000).toISOString()}. La notation n'est plus antérieure à `
+    + `la mesure : elle a pu être ajustée en connaissant le résultat, et le document affirme `
+    + `pourtant « committed before this pass ».\n  Il n'y a pas de raccourci ici : ou bien le `
+    + `changement de notation est annulé, ou bien la passe dure est relancée SOUS la nouvelle `
+    + `notation — « npm run dur » — et le résultat précédent est rétracté dans retractations.json.`);
+});
+
+test("le pré-enregistrement de la notation décrit encore le corpus qu'il note", () => {
+  /*
+   * UN PRÉ-ENREGISTREMENT PÉRIME SANS BOUGER.
+   *
+   * Il ne peut pas se régénérer, donc il ne peut pas suivre le corpus — et le corpus, lui,
+   * grandit. Ses deux comptes (« vingt et un des cent cinquante champs ») sont vrais
+   * aujourd'hui à l'unité près ; le jour où un document est ajouté, ils deviennent faux en
+   * silence dans un texte que rien ne relit.
+   *
+   * On ne les corrige pas ici : les corriger reviendrait à réécrire le pré-enregistrement, ce
+   * qui est exactement ce qu'on interdit. On les SURVEILLE, et le message dit ce que le
+   * changement oblige.
+   */
+  const doc = readFileSync(fileURLToPath(new URL("../NOTATION-CAS-DURS.md", import.meta.url)), "utf8");
+  const cas = corpusDur();
+  const champs = cas.reduce((n, c) => n + Object.keys(c.attendus).length, 0);
+  const silences = cas.reduce((n, c) =>
+    n + Object.values(c.attendus).filter((a) => (a as { silence?: boolean }).silence).length, 0);
+
+  assert.ok(doc.includes("hundred and fifty"),
+    `le pré-enregistrement annonce un nombre de champs que le corpus tabulaire ne porte plus `
+    + `(${champs} aujourd'hui). Un pré-enregistrement ne se réécrit pas : soit le corpus revient `
+    + `à ce qu'il déclarait, soit ce document est daté et remplacé par un nouveau, committé `
+    + `avant la prochaine passe, et l'ancien reste au dossier.`);
+  assert.equal(champs, 150, `le corpus tabulaire porte ${champs} champs, le document en déclare 150.`);
+  assert.equal(silences, 21, `le corpus tabulaire porte ${silences} silences attendus, le document en déclare 21.`);
+
+  /*
+   * ET LA PART QU'IL NE COUVRE PAS. `mesurer-dur.ts` mesure les tabulaires PLUS les cas
+   * ambigus — 164 champs, pas 150. Le pré-enregistrement décrit donc 91 % du champ mesuré, et
+   * un lecteur croit qu'il décrit tout. La règle « plusieurs lectures » les couvre ; le compte
+   * ne les compte pas.
+   */
+  const mesures = JSON.parse(readFileSync(fileURLToPath(new URL("../dur.json", import.meta.url)), "utf8")) as { champs: number };
+  assert.ok(mesures.champs >= champs,
+    `dur.json déclare ${mesures.champs} champs mesurés, moins que les ${champs} du corpus tabulaire.`);
+  assert.ok(doc.includes("Several values"),
+    `le pré-enregistrement doit déclarer la règle des lectures multiples : elle est ce qui couvre `
+    + `les ${mesures.champs - champs} champs ambigus que son compte de 150 n'inclut pas.`);
+});
+
+test("l'estimation du palier 1.7b n'affirme rien que le dépôt contredise", () => {
+  /*
+   * UNE ESTIMATION ÉCRITE AVANT, POUR ÊTRE CONFRONTÉE APRÈS.
+   *
+   * Trois de ses chiffres — 198, 311, 606 ms — ne sont retrouvables nulle part : douze
+   * extractions sur une machine dont la charge n'était pas tenue. Le document le DIT, en gras,
+   * et c'est ce qui le rend acceptable. Cette phrase est donc load-bearing : la retirer
+   * transformerait trois nombres de sondage en trois latences publiées, dans un dépôt qui
+   * vend le contraire. Elle est vérifiée ici comme on vérifie un chiffre.
+   *
+   * Le reste est vérifiable, donc vérifié.
+   */
+  const doc = readFileSync(fileURLToPath(new URL("../COUT-PALIER-1.7B.md", import.meta.url)), "utf8");
+
+  assert.match(doc, /not published latencies and must not be quoted as any/,
+    "l'avertissement qui désavoue les trois médianes a disparu. Sans lui, douze mesures prises "
+    + "sur une machine chargée deviennent des latences publiées.");
+
+  /* Le digest épinglé : il désigne bien un modèle présent, et le palier n'a PAS été ajouté —
+     sinon l'estimation devrait avoir été confrontée au réel, ce que personne n'a fait. */
+  const digest = doc.match(/`([0-9a-f]{12})`/)?.[1];
+  assert.ok(digest, "le digest épinglé a disparu du document : l'estimation ne désigne plus de modèle.");
+  assert.ok(!JSON.stringify(MODELES_LOCAUX).includes(digest!),
+    `le digest ${digest} est maintenant dans MODELES_LOCAUX : le palier a été ajouté, donc cette `
+    + `estimation a un réel auquel se confronter. Le document promet cette confrontation `
+    + `(« so it can be checked against the actual afterwards ») — elle doit être écrite, et `
+    + `l'estimation datée, avant que ce test puisse repasser.`);
+
+  /* Les deux puissances se recalculent : elles ne dépendent que du nombre de paliers et de
+     champs, et un palier ajouté ailleurs les déplacerait sans que la prose bouge. */
+  const n = TIERS.length, f = FIELDS.length;
+  const puissance = (k: number) => `${k}⁵ = ${Math.pow(k, f).toLocaleString("en-US")}`;
+  assert.ok(doc.includes(puissance(n)),
+    `le document annonce une énumération que le dépôt ne produit plus : ${n} paliers et ${f} `
+    + `champs donnent ${Math.pow(n, f).toLocaleString("en-US")} affectations.`);
+  assert.ok(doc.includes(puissance(n + 1)),
+    `le document chiffre le coût d'un palier de plus à une valeur que ${n} + 1 paliers ne donnent pas.`);
+
+  /*
+   * LES TÉMOINS, PARCE QUE TROIS DE CES QUATRE GARDES SONT DES `includes`.
+   *
+   * Une recherche de sous-chaîne reste vraie par accident bien plus facilement qu'elle ne
+   * devient fausse : il suffit que la phrase cherchée survive ailleurs, reformulée, ou que le
+   * motif soit si lâche qu'il matche n'importe quoi. Chacune doit donc démontrer qu'elle
+   * bascule quand on falsifie précisément ce qu'elle prétend surveiller.
+   */
+  const falsifications: [string, string][] = [
+    ["l'avertissement retiré", doc.replace("These are not published latencies and must not be quoted as any.", "These are the latencies.")],
+    ["le digest retiré", doc.replace(/`[0-9a-f]{12}`/, "the pinned digest")],
+    ["la puissance changée", doc.replace(puissance(n), `${n}⁵ = 99,999`)],
+    ["le palier de plus changé", doc.replace(puissance(n + 1), `${n + 1}⁵ = 99,999`)],
+  ];
+  for (const [quoi, faux] of falsifications) {
+    const tientEncore = /not published latencies and must not be quoted as any/.test(faux)
+      && /`[0-9a-f]{12}`/.test(faux)
+      && faux.includes(puissance(n)) && faux.includes(puissance(n + 1));
+    assert.ok(!tientEncore,
+      `avec ${quoi}, les quatre contrôles ci-dessus restent tous vrais. L'un d'eux ne regarde `
+      + `donc pas ce qu'il prétend, et son vert ne vaut rien.`);
+  }
 });
