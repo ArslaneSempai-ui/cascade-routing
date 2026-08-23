@@ -58,7 +58,7 @@ npm test           # types, README figures, landing.json, and the suite
 ```
 
 <!-- figures:tests -->
-**141 tests** across 9 files, counted from the sources rather than typed here.
+**142 tests** across 9 files, counted from the sources rather than typed here.
 <!-- /figures:tests -->
 
 Everything runs locally. No API key, nothing leaves the machine, and anyone who clones this
@@ -200,6 +200,8 @@ good many of those rankings are noise. These pairs are **not distinguishable** h
 | `birth` | `small` | 97.9 % [97–99], n=1000 | `gen-4b` | 99.2 % [95–100], n=120 |
 | `birth` | `small` | 97.9 % [97–99], n=1000 | `gen-8b` | 100.0 % [97–100], n=120 |
 | `birth` | `large` | 100.0 % [100–100], n=1000 | `gen-4b` | 99.2 % [95–100], n=120 |
+
+*Showing 8 of 30 indistinguishable pairs — 9 further pairs this sample cannot separate and 13 exact ties not listed. A table that shows a selection carries the count of what it leaves out.*
 <!-- /figures:egalites -->
 
 This section exists because it caught me. An earlier headline for this project claimed the

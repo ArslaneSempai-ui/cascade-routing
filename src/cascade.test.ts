@@ -13,7 +13,7 @@ import { classify, empreinteDesEntrees, modulesAtteints, cleDeLaGalerieLivree, c
 import { comparer } from "./diff.ts";
 import { sonde } from "./sonde.ts";
 import { corpusDur } from "./corpus-dur.ts";
-import { comparerPopulations, plancherDeBruit, longueur } from "./entree.ts";
+import { comparerPopulations, plancherDeBruit, longueur, GRAINES_DE_BRUIT } from "./entree.ts";
 import { SEUIL_DE_L_INDUSTRIE, OBSERVATIONS_MINIMALES } from "./psi.ts";
 import { readProfiles, empreinteDuReleve, RELEVE_DE_REFERENCE, type Profile, type ProvenanceDuPalier, type Provenance } from "./measure.ts";
 import { optimiseExtraction, optimiseClassification, budgetShadowPrice, latenceRepresentative, paliersMesures, evaluer, pricePerThousandDocuments } from "./optimise.ts";
@@ -2405,4 +2405,50 @@ test("l'estimation du palier 1.7b n'affirme rien que le dépôt contredise", () 
       `avec ${quoi}, les quatre contrôles ci-dessus restent tous vrais. L'un d'eux ne regarde `
       + `donc pas ce qu'il prétend, et son vert ne vaut rien.`);
   }
+});
+
+
+/*
+ * LES CHIFFRES QUE `entree.ts` CITE DANS SES PROPRES COMMENTAIRES.
+ *
+ * Ils ont été écrits avec trois ré-échantillonnages, puis la fonction est passée à cinq, et
+ * personne n'a remesuré : « 0,014 » était devenu la médiane d'une fonction qui publie son
+ * maximum, et « 0,147 » se lisait encore « 0,140 ». Deux chiffres faux sur trois, dans le
+ * fichier même qui existe pour dire qu'un chiffre non tenu rouille — et en moins de deux
+ * heures, sans qu'un seul contrôle bronche.
+ *
+ * Un commentaire n'est pas une note de service : celui-ci porte l'argument entier de l'outil,
+ * « regardez l'indice contre son plancher ». S'il ment, le lecteur applique la mauvaise règle.
+ * Il est donc tenu comme une figure publiée, ce qu'il est.
+ */
+test("les chiffres cités dans les commentaires de entree.ts sont ceux que le code produit", () => {
+  const src = readFileSync(fileURLToPath(new URL("./entree.ts", import.meta.url)), "utf8");
+  const fr = (x: number) => x.toFixed(3).replace(".", ",");
+
+  const maxMille = plancherDeBruit("heldout", 1000);
+  const maxCentVingt = plancherDeBruit("heldout", 120);
+  const medianeCentVingt = (() => {
+    const t = GRAINES_DE_BRUIT
+      .map((g) => comparerPopulations("heldout", "heldout", 120, 10, longueur, g).indice)
+      .sort((a, b) => a - b);
+    return t[Math.floor(t.length / 2)]!;
+  })();
+
+  for (const [quoi, valeur] of [
+    ["le plancher à 1 000 observations", maxMille],
+    ["le plancher à 120 observations", maxCentVingt],
+    ["la médiane à 120 observations", medianeCentVingt],
+  ] as [string, number][]) {
+    assert.ok(src.includes(fr(valeur)),
+      `${quoi} vaut ${fr(valeur)} et ce nombre n'apparaît nulle part dans les commentaires de `
+      + `src/entree.ts. Soit le commentaire cite une valeur périmée, soit il a cessé de citer `
+      + `celle-ci — dans les deux cas l'argument que le fichier expose ne correspond plus à ce `
+      + `qu'il calcule.\n  Les valeurs courantes : plancher(1000)=${fr(maxMille)}, `
+      + `plancher(120)=${fr(maxCentVingt)}, médiane(120)=${fr(medianeCentVingt)}.`);
+  }
+
+  /* LE TÉMOIN : sans lui, `includes` sur un fichier de six mille caractères passe par hasard.
+     On vérifie qu'une valeur qui n'y est PAS est bien détectée comme absente. */
+  assert.ok(!src.includes(fr(maxMille + 0.5)),
+    "le contrôle trouve une valeur qui ne devrait pas être là : sa recherche est trop lâche.");
 });

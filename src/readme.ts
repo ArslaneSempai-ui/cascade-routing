@@ -295,6 +295,7 @@ const latence = (() => {
  */
 const egalites = (() => {
   const lignes: string[][] = [];
+  let egalitesExactes = 0;
   for (const c of FIELDS) {
     for (let i = 0; i < mesures.length; i++) {
       for (let j = i + 1; j < mesures.length; j++) {
@@ -302,7 +303,7 @@ const egalites = (() => {
         const qa = p!.extraction[a][c], qb = p!.extraction[b][c];
         const ra = rate(Math.round(qa.accuracy * qa.items), qa.items);
         const rb = rate(Math.round(qb.accuracy * qb.items), qb.items);
-        if (qa.accuracy === qb.accuracy) continue;      // une égalité exacte n'étonne personne
+        if (qa.accuracy === qb.accuracy) { egalitesExactes++; continue; }  // n'étonne personne, mais se compte
         if (!distinguishable(ra, rb)) {
           lignes.push([`\`${c}\``, `\`${a}\``, writeRate(ra), `\`${b}\``, writeRate(rb)]);
         }
@@ -310,7 +311,29 @@ const egalites = (() => {
     }
   }
   if (!lignes.length) return "On this sample every tier is distinguishable from every other on every field.";
-  return table(["Field", "Tier", "Rate", "Tier", "Rate"], lignes.slice(0, 8));
+  /*
+   * CE TABLEAU EST UNE SÉLECTION, ET IL LE DISAIT PAS.
+   *
+   * `slice(0, 8)` publiait huit lignes sur dix-huit et se présentait comme « les paires que
+   * cet échantillon ne sait pas trancher » — c'est-à-dire comme la liste, alors que c'en est
+   * un extrait. Dix paires disparaissaient sans un mot, et vingt et une égalités exactes
+   * étaient écartées plus haut par un `continue` dont rien ne rendait compte.
+   *
+   * C'est la cinquième fois que cette règle se paie dans ce dépôt : toute figure issue d'une
+   * sélection porte le compte de ce qu'elle exclut, ou elle ne se publie pas. Un lecteur qui
+   * compte huit paires et conclut « il y en a huit » a été trompé par la mise en page.
+   */
+  const MONTREES = 8;
+  const cachees = lignes.length - MONTREES;
+  const rendu = table(["Field", "Tier", "Rate", "Tier", "Rate"], lignes.slice(0, MONTREES));
+  if (cachees <= 0 && !egalitesExactes) return rendu;
+  const parts = [
+    cachees > 0 ? `${cachees} further pair${cachees > 1 ? "s" : ""} this sample cannot separate` : "",
+    egalitesExactes ? `${egalitesExactes} exact tie${egalitesExactes > 1 ? "s" : ""}` : "",
+  ].filter(Boolean);
+  return `${rendu}\n\n*Showing ${Math.min(MONTREES, lignes.length)} of ${lignes.length + egalitesExactes} `
+    + `indistinguishable pairs — ${parts.join(" and ")} not listed. A table that shows a selection `
+    + `carries the count of what it leaves out.*`;
 })();
 
 /*

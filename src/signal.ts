@@ -17,6 +17,8 @@
  */
 
 import { writeFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { isMain } from "./cli.ts";
 import { journaux, lireJournal } from "./journal.ts";
 import { normaliserReponse, GENERATIFS_PUBLICS } from "./tiers.ts";
@@ -26,7 +28,6 @@ import { corpusDur } from "./corpus-dur.ts";
 import { casAmbigus } from "./mesurer-dur.ts";
 
 import type { Tentative } from "./journal.ts";
-import { fileURLToPath } from "node:url";
 
 const SORTIE = fileURLToPath(new URL("../signal.json", import.meta.url));
 
@@ -250,8 +251,22 @@ if (isMain(import.meta)) {
     };
   });
 
-  /* La confiance émise par le modèle : zéro trouvé n'est pas zéro cherché. */
-  const exposantUneConfiance = GENERATIFS_PUBLICS.filter(() => false).length;
+  /*
+   * La confiance émise par le modèle : zéro trouvé n'est pas zéro cherché.
+   *
+   * CE COMPTE ÉTAIT `filter(() => false)`. Le chiffre était juste — aucun palier n'expose de
+   * confiance, et le rapport le dit — mais la forme était un prédicat constant déguisé en
+   * calcul : le jour où quelqu'un ajouterait les log-probabilités à l'appel, ce zéro serait
+   * resté zéro, et la phrase « aucun palier n'expose de confiance » aurait continué à
+   * s'imprimer sous un palier qui en expose une. Une garde qui ne peut plus discriminer a
+   * cessé d'être une garde ; elle en garde seulement l'apparence, ce qui est pire que rien.
+   *
+   * On le dérive donc de la source qui décide : un palier n'expose une confiance que si
+   * l'appel de génération la DEMANDE. `tiers.ts` est le seul endroit où cet appel est écrit.
+   */
+  const appelGeneratif = readFileSync(fileURLToPath(new URL("./tiers.ts", import.meta.url)), "utf8");
+  const demandeUneConfiance = /\b(logprobs|top_logprobs|top_k_logits|return_logits)\b/.test(appelGeneratif);
+  const exposantUneConfiance = GENERATIFS_PUBLICS.filter(() => demandeUneConfiance).length;
 
   const cible = toutes.filter((t) => t.faux).length;
   console.log(`\nDénominateur : ${DENOMINATEUR} — ${toutes.length} valeurs.`);

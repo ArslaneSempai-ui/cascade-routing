@@ -24,11 +24,17 @@
  *
  * LE PLANCHER DE BRUIT, QUI EST LA MOITIÉ DE L'OUTIL. Un indice de 1,232 ne veut rien dire
  * tant qu'on ne sait pas ce que le MÊME nombre d'observations produit sur une population qui
- * n'a pas bougé. Ici, mesuré : à 1 000 observations le bruit de tirage vaut 0,014, donc 1,232
+ * n'a pas bougé. Ici, mesuré : à 1 000 observations le bruit de tirage vaut 0,018, donc 1,232
  * est un déplacement. À 120 observations il atteint 0,260 — AU-DESSUS du seuil de
  * l'industrie : à cette taille, l'indicateur crie sur une population immobile. C'est la raison
  * mesurée du refus sous `OBSERVATIONS_MINIMALES`, et elle est retrouvée ici, sur ce trait, au
  * lieu d'être héritée d'un autre dépôt. Le relevé porte donc son plancher, toujours.
+ *
+ * CES TROIS CHIFFRES SONT TENUS PAR UN TEST, ET ILS N'ONT PAS TENU DEUX HEURES SANS LUI.
+ * Écrits avec trois tirages, ils sont devenus faux quand je suis passé à cinq sans les
+ * remesurer : « 0,014 » était la médiane d'une fonction qui publie son maximum, et « 0,140 »
+ * la médiane d'avant. Un commentaire est de la prose, et la prose de ce dépôt rouille comme
+ * la prose des autres — celle-ci a rouillé dans la même journée que sa rédaction.
  *
  * CE QU'ON NE PRÉTEND PAS. Un indice qui bouge ne dit pas que l'exactitude va tomber, ni de
  * combien. Il dit que la population n'est plus celle sur laquelle le routage a été choisi, et
@@ -58,7 +64,7 @@ export const GRAINES_DE_BRUIT = [20260901, 20261103, 20270214, 20270620, 2027100
  * ON REND LE PIRE TIRAGE, PAS LE TIRAGE TYPIQUE. La question à laquelle ce plancher répond
  * n'est pas « combien de bruit y a-t-il d'habitude » mais « qu'est-ce que le bruit peut
  * produire de plus fort » — puisque c'est ce maximum-là qui déclenchera une fausse alerte. Une
- * médiane rassurerait : à 120 observations elle vaut 0,140, sous le seuil, alors qu'un des
+ * médiane rassurerait : à 120 observations elle vaut 0,147, sous le seuil, alors qu'un des
  * cinq tirages atteint 0,260 et dépasse le seuil. Publier la médiane reviendrait à cacher
  * précisément le cas qu'on cherche.
  */
