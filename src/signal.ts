@@ -65,10 +65,28 @@ export type Verdict = {
   /** Appels de palier supplémentaires qu'il faut payer pour calculer ce signal. */
   coutEnAppels: number;
   declenche: number; justes: number; fausses: number;
-  precision: number | null; rappel: number | null;
-  faussesAlertes: number; tauxDeFaussesAlertes: number | null;
+  precision: TauxPublie | null; rappel: TauxPublie | null;
+  faussesAlertes: number; tauxDeFaussesAlertes: TauxPublie | null;
+  /** Sous ce nombre d'observations, un taux ne se publie pas. Écrit à côté des taux. */
+  seuilDeRapportabilite: number;
   temoin: { precisionMoyenne: number; rappelMoyen: number; tirages: number };
   bat: boolean | null;
+};
+
+/**
+ * Un taux tel qu'il se publie : jamais seul.
+ *
+ * Le type portait `number | null`, et c'est ce qui rendait l'oubli invisible — rien dans la
+ * signature ne réclamait la borne, donc rien ne manquait à la lecture. Un taux nu ne devrait
+ * pas être exprimable ici : c'est moins cher de le rendre impossible que de le chercher.
+ */
+export type TauxPublie = {
+  taux: number;
+  /** Les bornes de Wilson à 95 %. */
+  bas: number; haut: number;
+  n: number;
+  /** Faux sous `ENOUGH` observations : le taux existe, il ne veut rien dire. */
+  rapportable: boolean;
 };
 
 /**
@@ -106,16 +124,45 @@ export function evaluerSignal(
   const faussesAlertes = tirees.length - vraiesPositives;
   const justes = n - fausses;
   const t = temoin(n, fausses, tirees.length);
-  const precision = tirees.length ? vraiesPositives / tirees.length : null;
+  /*
+   * TROIS DIVISIONS BRUTES, ET QUARANTE-QUATRE TAUX PUBLIÉS SANS BORNE.
+   *
+   * `interval.ts` est importé en haut de ce fichier depuis toujours — `rate` et `ENOUGH` — et
+   * n'était appelé nulle part ici. Le dépôt refuse un taux sans son intervalle et son `n`
+   * partout ailleurs ; `signal.json` en publiait quarante-quatre, tous nus, et deux
+   * conclusions du rapport s'appuient dessus.
+   *
+   * Ce sont de VRAIES PROPORTIONS — un compte sur un total — donc éligibles à Wilson, ce qui
+   * n'est pas le cas de l'exactitude globale de ce dépôt, qui est une moyenne de cinq taux
+   * mesurés sur des échantillons distincts. La distinction est écrite dans `interval.ts` et
+   * elle vaut d'être rappelée ici : ce qui autorise une borne, c'est la forme du nombre, pas
+   * l'envie d'en avoir une.
+   *
+   * `rate()` porte aussi `reportable`, faux sous ENOUGH observations, et `writeRate` refuse
+   * alors d'écrire le taux. Un signal qui ne se déclenche que trois fois n'a pas de précision
+   * publiable, et le dire vaut mieux que publier 100 % sur trois cas.
+   */
+  const precision = tirees.length ? rate(vraiesPositives, tirees.length) : null;
+  const rappel = fausses ? rate(vraiesPositives, fausses) : null;
+  const tauxFausses = justes ? rate(faussesAlertes, justes) : null;
+  const publiable = (r: ReturnType<typeof rate> | null) => r === null ? null : {
+    taux: Number(r.rate.toFixed(4)),
+    bas: Number(r.low.toFixed(4)), haut: Number(r.high.toFixed(4)),
+    n: r.n, rapportable: r.reportable,
+  };
   return {
     nom, description, coutEnAppels,
     declenche: tirees.length, justes, fausses,
-    precision: precision === null ? null : Number(precision.toFixed(4)),
-    rappel: fausses ? Number((vraiesPositives / fausses).toFixed(4)) : null,
+    precision: publiable(precision),
+    rappel: publiable(rappel),
     faussesAlertes,
-    tauxDeFaussesAlertes: justes ? Number((faussesAlertes / justes).toFixed(4)) : null,
+    tauxDeFaussesAlertes: publiable(tauxFausses),
+    /* SOUS `ENOUGH` DÉCLENCHEMENTS, IL N'Y A PAS DE COMPARAISON À FAIRE. Comparer une
+       précision non rapportable au témoin de hasard produirait un « bat le hasard » tiré de
+       trois cas, c'est-à-dire un verdict sur du bruit. */
+    seuilDeRapportabilite: ENOUGH,
     temoin: t,
-    bat: precision === null ? null : precision > t.precisionMoyenne,
+    bat: precision === null || !precision.reportable ? null : precision.rate > t.precisionMoyenne,
   };
 }
 
@@ -179,7 +226,9 @@ if (isMain(import.meta)) {
   ];
 
   const oracle = verdicts[0]!;
-  const bancValide = oracle.precision === 1 && oracle.rappel === 1;
+  /* L'oracle lit la clé de réponses : il doit séparer parfaitement, sinon le banc est en
+     cause et rien au-dessus ne vaut. On compare le taux, pas l'objet qui le porte. */
+  const bancValide = oracle.precision?.taux === 1 && oracle.rappel?.taux === 1;
 
   /*
    * VUE SECONDAIRE — les échecs invisibles seuls. Population restreinte aux non-blancs, cible
@@ -272,10 +321,16 @@ if (isMain(import.meta)) {
   console.log(`\nDénominateur : ${DENOMINATEUR} — ${toutes.length} valeurs.`);
   console.log(`Cible : tout ce qui n'est pas \`clean\` — ${cible} valeurs, soit ${(100 * cible / toutes.length).toFixed(1)} %.`);
   console.log(`C'est aussi la précision qu'atteint un signal tiré au hasard.\n`);
+  /* À l'écran comme dans le fichier : le taux ne sort jamais sans sa borne et son n, et il
+     ne sort pas du tout sous le seuil de rapportabilité. Un « 100,0 % » sur trois
+     déclenchements se lit exactement comme un « 100,0 % » sur mille. */
+  const ecrire = (t: TauxPublie | null) => t === null ? "—".padStart(21)
+    : !t.rapportable ? `— (n=${t.n}, trop peu)`.padStart(21)
+    : `${(t.taux * 100).toFixed(1)} % [${(t.bas * 100).toFixed(0)}–${(t.haut * 100).toFixed(0)}] n=${t.n}`.padStart(21);
   for (const v of verdicts) {
     console.log(`  ${v.nom.padEnd(24)} tire ${String(v.declenche).padStart(3)}`
-      + `  précision ${((v.precision ?? 0) * 100).toFixed(1).padStart(5)} %`
-      + `  rappel ${((v.rappel ?? 0) * 100).toFixed(1).padStart(5)} %`
+      + `  précision ${ecrire(v.precision)}`
+      + `  rappel ${ecrire(v.rappel)}`
       + `  fausses alertes ${String(v.faussesAlertes).padStart(3)}`
       + `  appels +${v.coutEnAppels}`
       + `  ${v.bat ? "bat le hasard" : "ne bat pas"}`);

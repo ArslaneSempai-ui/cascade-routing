@@ -139,7 +139,18 @@ export const OLLAMA = process.env.OLLAMA_HOST ?? "http://localhost:11434";
  * affirmerait « déjà chargé » pour un modèle qui ne l'est plus, et poserait le délai serré
  * pile sur l'attente longue. Se tromper dans ce sens coûte une passe entière.
  */
-const modelesDejaSollicites = new Set<string>();
+const modelesDejaSollicites = new Map<string, number>();
+
+/**
+ * Combien de temps demander à Ollama de garder un modèle en mémoire.
+ *
+ * Sans ce réglage, Ollama évince après cinq minutes d'inactivité — et une passe qui parcourt
+ * six paliers y passe plus que ça, donc elle recharge sans arrêt et paie une minute à chaque
+ * retour. C'est un CHOIX : trente minutes couvrent les passes de ce dépôt, mais un modèle
+ * gardé occupe la mémoire graphique de qui utilise la machine à côté. La bonne valeur dépend
+ * de ce qu'on fait d'autre pendant, et rien ici ne le mesure.
+ */
+export const GARDER_EN_MEMOIRE = "30m";
 
 /** Ce que borne chaque attente. Exportés pour qu'un contrôle puisse les confronter au relevé. */
 export const DELAI_DE_GENERATION_MS = 30_000;
@@ -218,8 +229,25 @@ async function ollama(tier: TierName, prompt: string, schema: unknown): Promise<
    * dans ce dépôt ne mesure de combien. Le nommer « choisi » plutôt que le présenter comme
    * une borne mesurée est la seule façon honnête de l'écrire.
    */
-  const premierAppel = !modelesDejaSollicites.has(m.tag);
-  modelesDejaSollicites.add(m.tag);
+  /*
+   * « DÉJÀ SOLLICITÉ » N'EST PAS « ENCORE CHARGÉ », ET LA DIFFÉRENCE A TUÉ UNE SECONDE PASSE.
+   *
+   * Le registre en mémoire savait qu'on avait demandé ce modèle, donc il posait le délai
+   * serré. Mais OLLAMA ÉVINCE LES MODÈLES INACTIFS au bout de cinq minutes, et une passe
+   * mesure plusieurs minutes par palier : quand elle revient au précédent, il est parti. Le
+   * message le disait — « ou le modèle a été évincé » — et je n'en avais pas tiré la
+   * conséquence, ce qui est la définition d'un diagnostic écrit sans être lu.
+   *
+   * Deux réponses, et la première est la vraie. `keep_alive` demande à Ollama de le garder :
+   * vérifié, un appel avec `30m` fait passer l'échéance de trois à vingt-neuf minutes. Et par
+   * sécurité, si le dernier appel à ce modèle remonte à plus longtemps que le délai
+   * d'éviction par défaut, on repasse au délai de chargement — parce qu'une garde qui suppose
+   * que l'autre a marché n'est plus une garde.
+   */
+  const EVICTION_PAR_DEFAUT_MS = 5 * 60_000;
+  const vuA = modelesDejaSollicites.get(m.tag);
+  const premierAppel = vuA === undefined || Date.now() - vuA > EVICTION_PAR_DEFAUT_MS;
+  modelesDejaSollicites.set(m.tag, Date.now());
   const DELAI_MS = premierAppel ? DELAI_DE_CHARGEMENT_MS : DELAI_DE_GENERATION_MS;
   let r: Response;
   try {
@@ -229,6 +257,7 @@ async function ollama(tier: TierName, prompt: string, schema: unknown): Promise<
       signal: AbortSignal.timeout(DELAI_MS),
       body: JSON.stringify({
         model: m.tag, prompt, stream: false, think: false, format: schema,
+        keep_alive: GARDER_EN_MEMOIRE,
         options: { temperature: 0, num_predict: 200 },
       }),
     });

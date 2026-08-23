@@ -489,22 +489,31 @@ test("le témoin négatif atteint le taux d'erreur de base, et un signal aveugle
   /* Un signal qui tire sans regarder : sa précision doit tomber sur le taux de base, 25 %. */
   const aveugle = evaluerSignal(lignes, "aveugle", "tire un cas sur cinq sans rien regarder",
     (t) => Number(t.caseId.slice(1)) % 5 === 1);
-  assert.ok(Math.abs((aveugle.precision ?? 0) - 0.25) < 0.1,
-    `un signal aveugle rend ${aveugle.precision} de précision au lieu du taux de base 0,25.`);
+  assert.ok(Math.abs((aveugle.precision?.taux ?? 0) - 0.25) < 0.1,
+    `un signal aveugle rend ${aveugle.precision?.taux} de précision au lieu du taux de base 0,25.`);
   /*
    * Le témoin est tiré au sort : comparer strictement un signal aveugle à sa moyenne tombe
    * une fois sur plusieurs, des deux côtés du seuil. Ce qu'on tient, c'est que l'écart soit
    * négligeable — un signal qui n'a rien appris ne doit pas s'en écarter de plus d'un point.
    */
-  assert.ok(Math.abs((aveugle.precision ?? 0) - aveugle.temoin.precisionMoyenne) < 0.01,
-    `un signal aveugle s'écarte de son témoin de ${(aveugle.precision ?? 0) - aveugle.temoin.precisionMoyenne}.`);
+  assert.ok(Math.abs((aveugle.precision?.taux ?? 0) - aveugle.temoin.precisionMoyenne) < 0.01,
+    `un signal aveugle s'écarte de son témoin de ${(aveugle.precision?.taux ?? 0) - aveugle.temoin.precisionMoyenne}.`);
   assert.ok(Math.abs(aveugle.temoin.precisionMoyenne - 0.25) < 0.06,
     `le témoin rend ${aveugle.temoin.precisionMoyenne} au lieu du taux de base 0,25.`);
 
   /* Un signal parfait doit le battre, et ne coûter aucune fausse alerte. */
   const parfait = evaluerSignal(lignes, "parfait", "tire exactement les fausses", (t) => t.outcome === "wrong");
-  assert.equal(parfait.precision, 1);
-  assert.equal(parfait.rappel, 1);
+  /* Le taux, pas l'objet qui le porte : depuis que `signal.ts` publie ses bornes, un taux est
+     un enregistrement — taux, bornes, n, rapportable — précisément pour qu'un taux nu ne soit
+     plus exprimable. Le témoin s'écrit donc sur `.taux`. */
+  assert.equal(parfait.precision?.taux, 1);
+  assert.equal(parfait.rappel?.taux, 1);
+  /* ET LA BORNE DOIT SUIVRE LE COMPTE : un signal parfait sur cent cas n'est pas un signal
+     parfait sur mille, et c'est exactement ce que la borne dit à la place du taux seul. */
+  assert.ok(parfait.precision!.bas > 0.9 && parfait.precision!.haut === 1,
+    `un taux de 100 % sur n=${parfait.precision!.n} rend l'intervalle `
+    + `[${parfait.precision!.bas}–${parfait.precision!.haut}] : la borne basse ne suit pas le compte.`);
+  assert.ok(parfait.precision!.rapportable, "cent cas devraient suffire à publier un taux.");
   assert.equal(parfait.faussesAlertes, 0, "un signal parfait n'envoie personne en relecture pour rien.");
   assert.equal(parfait.bat, true);
 
