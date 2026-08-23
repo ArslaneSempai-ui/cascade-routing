@@ -10,8 +10,8 @@ routed under a budget. The answer is rarely "buy the bigger model", and this say
 **[Try it in your browser →](https://arslanesempai-ui.github.io/cascade-routing/)** — take a
 cell to send a field to another tier and read what your routing costs. No model is called:
 the accuracy of each tier was measured once on held-out records and frozen, and the page
-replays the arithmetic on those measurements. Measuring them yourself is `npm run measure`,
-about two minutes.
+replays the arithmetic on those measurements. Measuring them yourself is `npm run measure`;
+what that pass actually cost is stated below, read from the relevé rather than rounded.
 
 ![Taking cells to move a field from one tier to another](images/routage.gif)
 
@@ -66,8 +66,12 @@ reproduces the numbers below.
 **What it actually costs you to reproduce it:** about 400 MB of npm packages, then **1.26 GB
 of model weights** on the first `npm run measure` — 474 MB for roberta-base-squad2, 448 MB for
 multilingual-e5-small, 249 MB for distilbert, 86 MB for MiniLM. On a 50 Mbit line that is
-three and a half minutes of download before anything is measured, and the encoder measurement
-itself takes a few minutes more. The generative ladder is a further eight gigabytes and is
+three and a half minutes of download before anything is measured.
+
+<!-- figures:coutDeReproduction -->
+**What the published pass actually took.** The provenance stamps of the profile shipped with this repository run from 10:08:32 to 10:40:28 — **32 minutes** of measurement on the machine named in the seal, on top of the weight download. That is the figure to plan for, not a round number: it is read from the relevé, so it moves when the relevé does.
+<!-- /figures:coutDeReproduction -->
+ The generative ladder is a further eight gigabytes and is
 optional for exactly that reason.
 
 ---
@@ -144,9 +148,11 @@ The ladders also disagree with themselves. On one chain a bigger generative mode
 than a smaller one; on the other the same three models rank strictly by size. Same models,
 same machine, same run, opposite verdicts depending on the task.
 
-**It stays optional.** The encoder ladder is what `npm run measure` measures: a few tens of
-megabytes, no server, and anyone who clones this reproduces those numbers in two minutes with
-no API key. The generative ladder needs Ollama running and about eight gigabytes of models,
+**It stays optional.** The encoder ladder is what `npm run measure` measures: no server and
+no API key, against the eight gigabytes and the running Ollama the generative ladder needs.
+Its own download and duration are stated above — this paragraph said "a few tens of megabytes"
+and "two minutes" while the paragraph above said 1.26 GB, which is the kind of contradiction a
+reader finds before any accuracy figure. The generative ladder needs Ollama running and about eight gigabytes of models,
 so it lives behind `npm run measure -- --llm`, and a run without the flag leaves its frozen
 figures untouched rather than deleting them.
 

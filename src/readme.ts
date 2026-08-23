@@ -525,6 +525,42 @@ const commandes = (() => {
    compte se calcule donc ici, là où le profil existe, et ne peut plus vieillir
    quand un palier s'ajoute. */
 const nCombinaisons = Math.pow(paliersMesures(p).length, FIELDS.length);
+/*
+ * CE QUE LA PASSE A RÉELLEMENT COÛTÉ, pris dans le relevé lui-même.
+ *
+ * Trois phrases écrites à la main annonçaient ce coût, et deux se contredisaient
+ * frontalement : « a few tens of megabytes » d'un côté, « 1.26 GB of model weights » de
+ * l'autre, pour la même commande. Et la durée annoncée — « about two minutes » — n'était
+ * celle d'aucune passe : les horodatages de provenance du relevé publié courent de 10:08:32
+ * à 10:40:28, soit trente-deux minutes. Un facteur seize sur le premier chiffre qu'un
+ * acheteur vérifie, puisqu'il le vérifie en lançant la commande.
+ *
+ * Aucune de ces trois phrases ne pouvait rester juste : elles étaient tapées à la main dans
+ * un dépôt dont la règle est que les chiffres ne s'écrivent pas à la main. Celle-ci se
+ * calcule depuis la donnée, donc elle vieillit avec elle.
+ */
+const coutDeReproduction = (() => {
+  const dates: string[] = [];
+  const ramasse = (o: unknown): void => {
+    if (Array.isArray(o)) { o.forEach(ramasse); return; }
+    if (o && typeof o === "object") {
+      for (const [k, v] of Object.entries(o as Record<string, unknown>)) {
+        if (k === "measuredAt" && typeof v === "string") dates.push(v);
+        else ramasse(v);
+      }
+    }
+  };
+  ramasse((p as unknown as { provenance?: unknown }).provenance);
+  if (dates.length < 2) return "";
+  dates.sort();
+  const min = (new Date(dates.at(-1)!).getTime() - new Date(dates[0]!).getTime()) / 60000;
+  return `**What the published pass actually took.** The provenance stamps of the profile `
+    + `shipped with this repository run from ${dates[0]!.slice(11, 19)} to `
+    + `${dates.at(-1)!.slice(11, 19)} — **${min.toFixed(0)} minutes** of measurement on the `
+    + `machine named in the seal, on top of the weight download. That is the figure to plan `
+    + `for, not a round number: it is read from the relevé, so it moves when the relevé does.`;
+})();
+
 const provenance = markdown(
   INVENTORY.map((e) => e.name === "routing"
     ? { ...e, note: `exhaustive over all ${nCombinaisons.toLocaleString("en-GB")} combinations of the measured tiers — no heuristic, nothing to tune` }
@@ -594,6 +630,6 @@ const tests = (() => {
 })();
 
 emit(fileURLToPath(new URL("../README.md", import.meta.url)),
-  { finding, extraction, classification, routing, shadow, gallery, baselines, provenance,
+  { finding, extraction, classification, routing, shadow, gallery, baselines, provenance, coutDeReproduction,
     echelles, latence, egalites, fuite, deuxfaits, retractations, public: publicJeu, commandes,
     tests });
