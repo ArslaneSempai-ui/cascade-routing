@@ -7,7 +7,7 @@ import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { execFileSync } from "node:child_process";
 import { generateRecords, generateAlerts, FIELDS, TYPOLOGIES } from "./corpus.ts";
-import { correct, TIERS, estLocal, OLLAMA } from "./tiers.ts";
+import { correct, TIERS, estLocal, OLLAMA, MODELES_LOCAUX, digestsQuiDivergent } from "./tiers.ts";
 import type { TierName } from "./paliers.ts";
 import { classify, empreinteDesEntrees, modulesAtteints } from "./failures.ts";
 import { readProfiles, empreinteDuReleve, RELEVE_DE_REFERENCE, type Profile, type ProvenanceDuPalier, type Provenance } from "./measure.ts";
@@ -1758,4 +1758,45 @@ test("la clé du cache suit la fermeture des imports, pas une liste figée", () 
   for (const attendu of ["failures.ts", "tiers.ts", "corpus.ts"]) {
     assert.ok(atteints.includes(attendu), `${attendu} n'est plus atteint depuis failures.ts.`);
   }
+});
+
+
+/*
+ * UN « OLLAMA PULL » CHANGE TOUS LES CHIFFRES GÉNÉRATIFS SANS TOUCHER UN FICHIER.
+ *
+ * `MODELES_LOCAUX` déclare le digest des trois modèles ; il ne servait qu'à remplir une
+ * colonne. La clé du cache ne pouvait pas l'attraper — elle hache le TEXTE des modules,
+ * donc le digest DÉCLARÉ, et un modèle réinstallé ne modifie aucune déclaration. La seule
+ * parade est de comparer le déclaré à l'installé, ce qui est le scellé du relevé appliqué
+ * au modèle plutôt qu'au fichier.
+ *
+ * Ce témoin ne demande pas qu'Ollama tourne : une absence n'est pas un écart, et prétendre
+ * le contraire ferait échouer la suite sur les machines qui n'ont pas l'échelle générative.
+ * Ce qu'il éprouve, c'est que la comparaison DISCRIMINE — un digest différent doit produire
+ * un écart, sinon la garde est décorative.
+ */
+test("un modèle réinstallé est détecté, et une absence n'est pas un écart", () => {
+  const tags = Object.values(MODELES_LOCAUX).map((m) => m.tag);
+  assert.ok(tags.length > 0, "aucun modèle génératif déclaré : la garde n'a rien à comparer.");
+
+  /* rien d'installé -> aucun écart : on ne confond pas silence et correspondance */
+  assert.deepEqual(digestsQuiDivergent(new Map()), [],
+    "une absence de modèle est rapportée comme un écart : la garde crierait sur toute machine "
+    + "sans Ollama.");
+
+  /* le déclaré, à l'identique -> aucun écart */
+  const conformes = new Map(Object.values(MODELES_LOCAUX)
+    .map((m) => [m.tag, { octets: 1, digest: m.digest }] as const));
+  assert.deepEqual(digestsQuiDivergent(conformes), [],
+    "le digest déclaré est rapporté comme divergent de lui-même.");
+
+  /* un seul digest changé -> exactement un écart, et il nomme le bon modèle */
+  const premier = Object.values(MODELES_LOCAUX)[0]!;
+  const falsifie = new Map(conformes);
+  falsifie.set(premier.tag, { octets: 1, digest: "000000000000" });
+  const ecarts = digestsQuiDivergent(falsifie);
+  assert.equal(ecarts.length, 1,
+    "un modèle réinstallé ne produit pas d'écart : la garde ne discrimine pas.");
+  assert.equal(ecarts[0]!.tag, premier.tag);
+  assert.equal(ecarts[0]!.declare, premier.digest);
 });

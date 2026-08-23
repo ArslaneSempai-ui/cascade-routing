@@ -210,12 +210,50 @@ export async function residents(): Promise<{ nom: string; octets: number }[]> {
 }
 
 /** La taille de chaque modèle sur disque, pour savoir lequel charger en premier. */
-async function tailles(): Promise<Map<string, number>> {
+/*
+ * LE DIGEST ÉTAIT LU, PUIS JETÉ À LA LIGNE OÙ IL AURAIT SERVI.
+ *
+ * `MODELES_LOCAUX` déclare le digest de chacun des trois modèles génératifs, et il ne
+ * servait qu'à l'affichage d'un tableau. `/api/tags` le renvoie ; cette fonction ne gardait
+ * que le nom et la taille. Conséquence : `ollama pull qwen3:4b` change tous les échecs
+ * génératifs, ne fait bouger aucune source, donc ne fait bouger aucune clé de cache et ne
+ * déclenche aucune garde. Pas besoin d'éditer quoi que ce soit — c'est un geste de routine.
+ *
+ * Et la clé du cache ne pouvait pas l'attraper, contrairement à ce qu'on pourrait croire :
+ * elle hache le TEXTE des modules, donc le digest DÉCLARÉ. Un modèle réinstallé ne modifie
+ * aucune déclaration. La seule parade possible est de comparer le déclaré à l'installé —
+ * exactement ce que fait le scellé du relevé, appliqué au modèle plutôt qu'au fichier.
+ *
+ * Trouvé par une relecture croisée. La forme est celle de la garde mémoire « documentée et
+ * importée par personne », en un cran plus vicieux : ici la valeur est lue, puis abandonnée.
+ */
+async function tailles(): Promise<Map<string, { octets: number; digest: string }>> {
   try {
     const r = await fetch(`${OLLAMA}/api/tags`, { signal: AbortSignal.timeout(10_000) });
-    const j = await r.json() as { models?: { name: string; size: number }[] };
-    return new Map((j.models ?? []).map((m) => [m.name, m.size]));
+    const j = await r.json() as { models?: { name: string; size: number; digest?: string }[] };
+    return new Map((j.models ?? []).map((m) =>
+      [m.name, { octets: m.size, digest: (m.digest ?? "").replace(/^sha256:/, "").slice(0, 12) }]));
   } catch { return new Map(); }
+}
+
+/**
+ * Le modèle installé est-il celui qu'on a déclaré mesurer ?
+ *
+ * Rend la liste des écarts. Vide si tout correspond, ou si Ollama n'a rien dit — on ne
+ * prétend pas qu'un silence est une correspondance, et l'appelant décide quoi en faire.
+ */
+export function digestsQuiDivergent(
+  installes: Map<string, { octets: number; digest: string }>,
+): { tier: string; tag: string; declare: string; installe: string }[] {
+  const ecarts: { tier: string; tag: string; declare: string; installe: string }[] = [];
+  for (const [tier, m] of Object.entries(MODELES_LOCAUX)) {
+    const vu = installes.get(m.tag);
+    if (!vu || !vu.digest) continue;          /* absent : ce n'est pas un écart, c'est une absence */
+    if (vu.digest !== m.digest) {
+      ecarts.push({ tier, tag: m.tag, declare: m.digest, installe: vu.digest });
+    }
+  }
+  return ecarts;
 }
 
 /**
@@ -239,7 +277,20 @@ export async function loadGeneratifs(): Promise<{ demandes: string[]; residents:
   const t = await tailles();
   const tiers = Object.keys(MODELES_LOCAUX) as TierName[];
   const ordre = [...tiers].sort((a, b) =>
-    (t.get(MODELES_LOCAUX[b]!.tag) ?? 0) - (t.get(MODELES_LOCAUX[a]!.tag) ?? 0));
+    (t.get(MODELES_LOCAUX[b]!.tag)?.octets ?? 0) - (t.get(MODELES_LOCAUX[a]!.tag)?.octets ?? 0));
+
+  /* ON REFUSE, ON NE PRÉVIENT PAS — même règle que le scellé du relevé. Un modèle réinstallé
+     rend toutes les mesures génératives fausses sans qu'aucun fichier ne change ; un
+     avertissement serait lu une fois puis enjambé, et les chiffres partiraient quand même. */
+  const ecarts = digestsQuiDivergent(t);
+  if (ecarts.length) {
+    throw new Error(
+      `${ecarts.length} modèle(s) installé(s) ne sont pas ceux qui ont été mesurés :\n`
+      + ecarts.map((e) => `  ${e.tag} — déclaré ${e.declare}, installé ${e.installe}`).join("\n")
+      + `\n  Un « ollama pull » change tous les résultats génératifs sans modifier un seul\n`
+      + `  fichier de ce dépôt. Remesurez, ou mettez MODELES_LOCAUX à jour en sachant que\n`
+      + `  les chiffres publiés ne viennent plus de ces modèles-là.`);
+  }
 
   for (const tier of ordre) {
     await ollama(tier, "ping",
