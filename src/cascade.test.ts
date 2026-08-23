@@ -3012,3 +3012,46 @@ test("tout ce sur quoi l'outil tourne figure dans l'inventaire de provenance", (
   assert.ok(genres.size >= 3,
     `l'inventaire n'emploie plus que ${genres.size} genre(s) de provenance : ${[...genres].join(", ")}.`);
 });
+
+
+/*
+ * DEUX FAILLES HAUTES ENTRAIENT AVEC LA BIBLIOTHÈQUE DE MODÈLES.
+ *
+ * `npm audit` rendait deux vulnérabilités hautes — des CVE de libvips héritées par `sharp`,
+ * que `@huggingface/transformers` tire en dépendance. Ce dépôt ne traite aucune image et
+ * n'appelle jamais `sharp` ; il le CHARGE quand même, neuf fois, par la chaîne d'import. Non
+ * atteignable n'est pas absent : un responsable sécurité qui lance `npm audit` avant d'acheter
+ * trouve deux CVE hautes que le vendeur n'a pas mentionnées.
+ *
+ * Une version corrigée existait — 0.35.3 — et la bibliothèque épinglait `^0.34.1`. Un
+ * `overrides` la force. Mesuré après : zéro vulnérabilité, et l'extraction rend les mêmes
+ * valeurs qu'avant, vérifiée sur des cas réels.
+ *
+ * CE TEST NE LANCE PAS `npm audit` : il demande le réseau, donc il rendrait vert sur une
+ * machine hors ligne — un vert par absence de réponse, indiscernable d'un vert par propreté.
+ * Il vérifie la condition locale qui produit ce zéro : l'override est déclaré, et la version
+ * installée est bien au-dessus de celle qui porte les CVE.
+ *
+ * ET J'AI FAILLI ACCUSER CETTE CORRECTION À TORT. Mon premier essai d'extraction après
+ * l'override rendait des chaînes vides ; j'ai cru qu'il cassait l'outil. Il rendait vide AVANT
+ * aussi : mon appel passait le texte du document là où la fonction attend le document. Mesurer
+ * l'état d'avant a coûté deux minutes et évité de rejeter un correctif juste.
+ */
+test("la version de sharp installée est au-dessus des CVE de libvips", () => {
+  const racine = fileURLToPath(new URL("..", import.meta.url));
+  const pkg = JSON.parse(readFileSync(join(racine, "package.json"), "utf8"));
+
+  assert.ok(pkg.overrides?.sharp,
+    "l'override de `sharp` a disparu de package.json. Sans lui, npm réinstalle la version "
+    + "épinglée par la bibliothèque de modèles, qui porte deux CVE hautes de libvips.");
+
+  const installee = join(racine, "node_modules", "sharp", "package.json");
+  if (!existsSync(installee)) return;   // dépendances non installées : rien à vérifier ici
+  const version = JSON.parse(readFileSync(installee, "utf8")).version as string;
+  const [majeur, mineur] = version.split(".").map(Number) as [number, number];
+  const corrigee = majeur > 0 || mineur >= 35;
+  assert.ok(corrigee,
+    `sharp ${version} est installée. Les CVE de libvips touchent tout ce qui est sous 0.35.0, `
+    + `et il n'existe pas de correctif en amont pour la branche 0.34 — c'est la mise à niveau `
+    + `ou rien. Vérifier que l'override est toujours honoré : \`npm install\` puis \`npm audit\`.`);
+});
