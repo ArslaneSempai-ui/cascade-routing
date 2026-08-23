@@ -26,7 +26,7 @@
  * reproductible, une passe qui répète ses conditions à chaque ligne est illisible.
  */
 
-import { appendFileSync, mkdirSync, readFileSync, existsSync, readdirSync } from "node:fs";
+import { appendFileSync, mkdirSync, readFileSync, existsSync, readdirSync, rmSync } from "node:fs";
 import { platform, arch, cpus, loadavg } from "node:os";
 import { join } from "node:path";
 import { normaliserReponse, correct } from "./tiers.ts";
@@ -75,9 +75,48 @@ export function issue(got: string, expected: string): Issue {
 }
 
 /** Ouvre un journal et rend de quoi y écrire ligne à ligne. */
+/*
+ * ÉLAGUER, PARCE QUE RIEN NE LE FAISAIT.
+ *
+ * Chaque passe écrit un journal de quelques centaines de kilo-octets et rien ne les purgeait :
+ * 353 fichiers et 91 Mo au moment où on l'a mesuré, sur une machine de travail. Ce n'est pas
+ * un défaut du produit, c'est un défaut d'hospitalité — un outil qui grossit en silence dans
+ * le dossier de quelqu'un d'autre.
+ *
+ * On garde les GARDE_DERNIERS plus récents et on efface le reste. Le nombre plutôt que l'âge :
+ * un dépôt qu'on n'ouvre pas pendant un mois ne doit pas perdre ses journaux au premier appel
+ * suivant, et un dépôt qu'on martèle une nuit ne doit pas accumuler trois cents fichiers.
+ *
+ * ET L'ÉLAGAGE SE DIT. Un outil qui efface en silence dans le dossier de quelqu'un est pire
+ * qu'un outil qui accumule : la première fois qu'on cherchera un journal disparu, on cherchera
+ * un bogue. C'est la même règle que partout ailleurs ici — tout chiffre qui résulte d'une
+ * sélection porte le compte de ce qui a été écarté.
+ */
+const GARDE_DERNIERS = 40;
+
+export function elaguer(dossier = DOSSIER, garde = GARDE_DERNIERS): number {
+  let fichiers: string[];
+  try { fichiers = readdirSync(dossier).filter((f) => f.endsWith(".jsonl")); }
+  catch { return 0; }
+  if (fichiers.length <= garde) return 0;
+  /* le nom porte l'horodatage ISO en tête : l'ordre lexical EST l'ordre chronologique,
+     et ça évite un stat() par fichier sur trois cents fichiers. */
+  const vieux = fichiers.sort().slice(0, fichiers.length - garde);
+  let efface = 0;
+  for (const f of vieux) {
+    try { rmSync(join(dossier, f)); efface++; } catch { /* déjà parti, ou pris */ }
+  }
+  if (efface) {
+    console.warn(`  ${efface} journal(aux) élagué(s) dans ${dossier.split("/").slice(-2).join("/")} — `
+      + `les ${garde} derniers sont gardés.`);
+  }
+  return efface;
+}
+
 export function ouvrirJournal(nom: string, conditions: Omit<Conditions, "plateforme" | "coeurs" | "machine" | "demarreLe">) {
   const run = `${new Date().toISOString().replace(/[:.]/g, "-")}-${nom}`;
   mkdirSync(DOSSIER, { recursive: true });
+  elaguer();
   const chemin = join(DOSSIER, `${run}.jsonl`);
   const entete: Conditions & { kind: "run"; run: string } = {
     kind: "run", run, ...conditions,

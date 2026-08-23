@@ -20,6 +20,7 @@ import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { REVISIONS } from "./tiers.ts";
+import { etatMachine, MEMOIRE_LIBRE_MINIMALE_MO } from "./contrainte.ts";
 import { isMain } from "./cli.ts";
 import { ouvrirJournal, issue } from "./journal.ts";
 import { ENCODEURS, GENERATIFS, TIERS, loadExtractors, extract, correct } from "./tiers.ts";
@@ -141,6 +142,40 @@ export async function collect(howMany = 120, paliers: TierName[] = ENCODEURS, re
 }
 
 async function calculerGalerie(howMany: number, paliers: TierName[], cle: string): Promise<Failure[]> {
+  /*
+   * DIRE COMBIEN DE MÉMOIRE IL FAUT, AVANT DE MOURIR SANS UN MOT.
+   *
+   * `npm run failures` est mort d'un signal 137 pendant le relevé — tué par le système, sans
+   * une ligne, et le dépôt ne dit nulle part combien de mémoire il demande. Un outil qui
+   * meurt en silence apprend à son utilisateur que l'outil est instable ; un outil qui refuse
+   * en disant pourquoi lui apprend ce qu'il lui faut.
+   *
+   * `MEMOIRE_LIBRE_MINIMALE_MO` existait, documenté, et n'était importé par PERSONNE : une
+   * garde écrite, jamais appelée. C'était le vert vide dans sa forme la plus pure — elle
+   * rassurait à la lecture du code et ne protégeait rien. Elle sert ici.
+   *
+   * Ce n'est pas un refus dur : on prévient et on continue. La mémoire libre au moment du
+   * relevé n'est pas celle du moment où le tas se remplit, et refuser sur cette base
+   * bloquerait des passes qui aboutissent. Ce qu'on garantit, c'est qu'une mort par OOM aura
+   * été ANNONCÉE — la différence entre un outil instable et un outil exigeant.
+   */
+  try {
+    const m = etatMachine();
+    if (m.memoireLibreMo < MEMOIRE_LIBRE_MINIMALE_MO) {
+      console.warn(`\n⚠ ${m.memoireLibreMo} Mo libres, ${MEMOIRE_LIBRE_MINIMALE_MO} recommandés pour cette passe.`);
+      console.warn(`  ${howMany} cas × ${FIELDS.length} champs × ${paliers.filter((t) => t !== "human").length} paliers,`);
+      console.warn(`  avec deux modèles résidents. Si le processus meurt d'un signal 137, c'est ça.\n`);
+    }
+    if (m.chargeParCoeur > 1) {
+      console.warn(`\n⚠ charge ${m.charge} sur ${m.coeurs} cœurs : cette passe a été mesurée entre`);
+      console.warn(`  41 s et 224 s selon la charge, pour une entrée identique. Les COMPTES ne`);
+      console.warn(`  bougent pas — ce sont des faits sur la sortie — mais la durée, si.\n`);
+    }
+  } catch {
+    /* `vm_stat` n'existe pas ailleurs que sur macOS. Une garde qui ne peut pas mesurer se
+       tait ; elle ne prétend pas que tout va bien. */
+  }
+
   const records = generateRecords(howMany, "heldout");
   await loadExtractors();
   const failures: Failure[] = [];

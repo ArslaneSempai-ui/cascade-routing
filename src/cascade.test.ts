@@ -1661,3 +1661,74 @@ test("aucun fichier n'emploie `.pathname` sur une URL de fichier", () => {
     "`.pathname` conserve le pourcent-encodage : emploie `fileURLToPath(new URL(...))`.\n  "
     + fautifs.join("\n  "));
 });
+
+
+/*
+ * UN RELEVÉ QUE PERSONNE NE LIT DOIT AU MOINS DIRE SON ÂGE.
+ *
+ * Huit fichiers de résultats à la racine sont écrits par un outil et lus par aucun autre :
+ * si le modèle change, rien ne s'apercevra qu'ils sont périmés. On ne peut pas les rendre
+ * vivants sans les relire à chaque passe — ce serait payer cher pour peu. Mais un artefact
+ * daté est honnête là où un artefact muet ment par omission : le lecteur voit qu'il regarde
+ * un instantané, et de quand.
+ *
+ * Sept portent déjà `mesureLe`. Deux seulement portent le commit — et sans lui on ne peut pas
+ * retrouver le code qui a produit le chiffre, ce qui est la moitié de ce que « reproductible »
+ * veut dire. Les cinq qui en manquent sont NOMMÉS ici : je ne peux pas leur inventer un commit
+ * que je n'ai pas mesuré, mais je peux empêcher qu'un sixième s'ajoute sans qu'on le voie.
+ * C'est la même forme que la liste des entrées du client : une dérogation nommée est une
+ * dérogation qui se compte.
+ */
+const SANS_COMMIT_HISTORIQUE = new Set([
+  "abstention.json", "contrainte.json", "escalade.json", "mur.json", "signal.json",
+]);
+
+/*
+ * DEUX RAISONS DE NE PAS PORTER DE COMMIT, ET ELLES NE SE VALENT PAS.
+ *
+ * Au-dessus : on ne peut pas retrouver le code qui a produit le fichier. C'est un manque,
+ * nommé pour qu'un sixième ne s'y ajoute pas en silence.
+ *
+ * Ici : le fichier porte une garde de FRAÎCHEUR au lieu d'une empreinte de code —
+ * `mesures-derivees.json` déclare `journalModifieLe`, et `derivees.ts` s'arrête si un journal
+ * est plus récent que lui. C'est plus fort qu'un commit : un commit dit d'où ça vient, une
+ * garde de fraîcheur dit que ça n'a pas vieilli. Ma première version de cette règle les
+ * confondait et accusait le fichier le mieux gardé du dépôt.
+ */
+const GARDE_DE_FRAICHEUR = new Set(["mesures-derivees.json"]);
+
+test("tout relevé de la racine dit quand il a été mesuré, et nomme son commit ou son absence", () => {
+  const racine = fileURLToPath(new URL("..", import.meta.url));
+  const sansDate: string[] = [];
+  const sansCommitNonDeclare: string[] = [];
+  const declareInutilement: string[] = [];
+
+  for (const f of readdirSync(racine)) {
+    if (!f.endsWith(".json")) continue;
+    if (/^(package|package-lock|tsconfig|tsconfig\.web|landing|failures-reference)\.json$/.test(f)) continue;
+    if (/^profiles-/.test(f)) continue;
+    let d: Record<string, unknown>;
+    try { d = JSON.parse(readFileSync(join(racine, f), "utf8")); } catch { continue; }
+    if (!d || typeof d !== "object" || Array.isArray(d)) continue;
+    /* un gabarit n'est pas un relevé : il ne prétend rien avoir mesuré */
+    if (!("quoi" in d) && !("mesureLe" in d) && !("calculeLe" in d)) continue;
+
+    const date = typeof d.mesureLe === "string" || typeof d.calculeLe === "string";
+    if (!date) sansDate.push(f);
+    const aCommit = typeof (d.code as { commit?: string } | undefined)?.commit === "string";
+    const gardeFraicheur = GARDE_DE_FRAICHEUR.has(f) && typeof d.journalModifieLe === "string";
+    if (!aCommit && !SANS_COMMIT_HISTORIQUE.has(f) && !gardeFraicheur) sansCommitNonDeclare.push(f);
+    if (aCommit && SANS_COMMIT_HISTORIQUE.has(f)) declareInutilement.push(f);
+  }
+
+  assert.deepEqual(sansDate, [],
+    `relevé(s) sans « mesureLe » ni « calculeLe » : ${sansDate.join(", ")}. Un artefact que personne ne relit `
+    + `doit au moins dire de quand il date.`);
+  assert.deepEqual(sansCommitNonDeclare, [],
+    `relevé(s) sans « code.commit » et non déclaré(s) : ${sansCommitNonDeclare.join(", ")}. `
+    + `Ajoute le commit à la production du fichier, ou inscris-le dans SANS_COMMIT_HISTORIQUE `
+    + `en sachant qu'on ne pourra pas retrouver le code qui l'a produit.`);
+  assert.deepEqual(declareInutilement, [],
+    `déclaré(s) sans commit alors qu'il(s) en porte(nt) un : ${declareInutilement.join(", ")}. `
+    + `Retire-le(s) de la liste, sinon elle ment dans l'autre sens et personne ne le verra.`);
+});
