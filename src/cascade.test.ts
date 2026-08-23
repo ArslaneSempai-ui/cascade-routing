@@ -1753,27 +1753,79 @@ test("l'empreinte du cache discrimine, elle ne dégrade pas en constante", () =>
  * Corriger quatre-vingt-onze sites ne sert à rien si le quatre-vingt-douzième revient
  * demain. Une faute déjà payée devient une règle exécutable, ou elle se repaie.
  */
+/**
+ * Le texte d'une source, mentions retirées : commentaires, chaînes et gabarits.
+ *
+ * UNE MENTION N'EST PAS UN EMPLOI, et cette règle a tiré sur ses propres commentaires au
+ * premier essai — la faute que ce dépôt décrit comme la plus fréquente de son catalogue,
+ * « commise dans l'outil même qui la surveillait ».
+ *
+ * DEUX DÉTAILS QUI DÉCIDENT DE SA JUSTESSE, et qui ont chacun coûté :
+ *
+ *   — LES LIGNES SONT PRÉSERVÉES. Un bloc écrasé en une espace décale tous les numéros
+ *     suivants et le diagnostic désigne une ligne innocente. Une session voisine a la forme
+ *     écrasante dans son propre catalogue ; elle est inoffensive tant que rien ne rapporte
+ *     de numéro de ligne, et fausse le jour où quelqu'un en ajoute un.
+ *   — LES GABARITS COMPTENT. Ils manquaient, et c'était un faux positif : un `.pathname`
+ *     dans un gabarit est du code destiné au navigateur, où `location.pathname` est la bonne
+ *     API. Une garde qui accuse l'innocent est retirée à la première plainte, et le défaut
+ *     revient avec elle. Le symétrique s'est payé le même jour chez une voisine : son
+ *     balayage a inséré un `import` À L'INTÉRIEUR d'un gabarit, son motif ayant reconnu une
+ *     ligne qui ressemblait à un import dans du code navigateur.
+ *
+ * Extraite d'un test parce qu'une décision qu'on ne peut pas appeler n'est jamais éprouvée.
+ */
+export function sansMentions(source: string): string {
+  return source
+    .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, " "))
+    .replace(/\/\/[^\n]*/g, (m) => " ".repeat(m.length))
+    .replace(/"(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'/g, (m) => " ".repeat(m.length))
+    /*
+     * LES GABARITS AUSSI, ET LEUR ABSENCE ÉTAIT UN FAUX POSITIF.
+     *
+     * Un `.pathname` écrit dans un gabarit est presque toujours du code destiné au
+     * navigateur, où `location.pathname` est la bonne API. La garde le comptait comme un
+     * usage fautif — et une garde qui accuse l'innocent finit par être retirée, ce qui coûte
+     * plus cher que le défaut qu'elle attrapait. Une session voisine a payé le symétrique le
+     * même jour : son balayage a inséré un `import` À L'INTÉRIEUR d'un gabarit parce que son
+     * motif avait reconnu une ligne qui ressemblait à un import dans du code navigateur.
+     */
+    .replace(/`(?:[^`\\]|\\.)*`/g, (m) => m.replace(/[^\n]/g, " "));
+}
+
 test("aucun fichier n'emploie `.pathname` sur une URL de fichier", () => {
   const racine = fileURLToPath(new URL(".", import.meta.url));
   const fautifs: string[] = [];
   for (const f of readdirSync(racine)) {
     if (!/\.(ts|mjs|js)$/.test(f)) continue;
-    /* UNE MENTION N'EST PAS UN EMPLOI, et cette règle a tiré sur ses propres
-       commentaires au premier essai — la faute que ce dépôt décrit comme la plus
-       fréquente de son catalogue, « commise dans l'outil même qui la surveillait ».
-       On retire donc commentaires et chaînes avant de regarder, EN PRÉSERVANT LES
-       LIGNES : un bloc écrasé en une espace décale tous les numéros et le
-       diagnostic désigne une ligne innocente. */
-    const src = readFileSync(join(racine, f), "utf8")
-      .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, " "))
-      .replace(/\/\/[^\n]*/g, (m) => " ".repeat(m.length))
-      .replace(/"(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'/g, (m) => " ".repeat(m.length));
+    const src = sansMentions(readFileSync(join(racine, f), "utf8"));
     src.split("\n").forEach((l, i) => {
       if (/import\.meta\.url\s*\)\s*\.pathname/.test(l) || /new URL\([^)]*\)\.pathname/.test(l)) {
         fautifs.push(`${f}:${i + 1}  ${l.trim().slice(0, 80)}`);
       }
     });
   }
+  /*
+   * LE TÉMOIN, QUI MANQUAIT. Quatre formes, parce que la garde doit trancher entre elles :
+   * un usage réel doit être vu, et une simple MENTION — en commentaire, en chaîne, en
+   * gabarit — ne doit pas l'être. Sans ces quatre-là, « zéro fautif » ne distingue pas un
+   * dépôt propre d'un motif qui ne matche plus rien.
+   */
+  const MOTIF = (l: string) => /import\.meta\.url\s*\)\s*\.pathname/.test(l) || /new URL\([^)]*\)\.pathname/.test(l);
+  const eprouve = (source: string) => sansMentions(source).split("\n").some(MOTIF);
+  for (const [quoi, src, attendu] of [
+    ["un usage réel", "const p = new URL(x).pathname;", true],
+    ["une mention en commentaire", "/* ne jamais employer new URL(x).pathname ici */", false],
+    ["une mention en chaîne", 'const m = "never use new URL(x).pathname";', false],
+    ["une mention en gabarit", "const h = `prefer new URL(x).pathname in the browser`;", false],
+  ] as [string, string, boolean][]) {
+    assert.equal(eprouve(src), attendu,
+      attendu
+        ? `la garde ne voit plus ${quoi} : son zéro ne vaut rien.`
+        : `la garde compte ${quoi} comme un usage fautif. Une garde qui accuse l'innocent est `
+          + `retirée à la première plainte, et le défaut revient avec elle.`);
+  }
+
   assert.deepEqual(fautifs, [],
     "`.pathname` conserve le pourcent-encodage : emploie `fileURLToPath(new URL(...))`.\n  "
     + fautifs.join("\n  "));

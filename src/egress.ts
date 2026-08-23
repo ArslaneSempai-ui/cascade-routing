@@ -37,6 +37,20 @@ const FICHIER = fileURLToPath(new URL("../data/egress.json", import.meta.url));
 
 export type Connexion = { hote: string; port: string; etat: string; vu: number };
 
+/**
+ * Ce qu'un échec de `lsof` veut dire — isolé ici parce que c'est LA décision du fichier.
+ *
+ * Elle vivait dans un `catch {}` sans argument, donc elle n'était pas testable, donc elle
+ * n'était pas testée, donc elle était fausse : les trois cas rendaient le même tableau vide et
+ * le rapport en concluait « aucune connexion réseau observée ». Une décision qu'on ne peut pas
+ * appeler depuis un test est une décision que personne ne relira.
+ */
+export function verdictDeLsof(err: { code?: string; status?: number }): "absent" | "sansSocket" | "inattendu" {
+  if (err.code === "ENOENT") return "absent";
+  if (err.status === 1) return "sansSocket";
+  return "inattendu";
+}
+
 /** Les connexions réseau d'un processus, à cet instant. */
 function connexions(pid: number): { hote: string; port: string; etat: string }[] {
   try {
@@ -49,8 +63,55 @@ function connexions(pid: number): { hote: string; port: string; etat: string }[]
       const i = cible.lastIndexOf(":");
       return { hote: i > 0 ? cible.slice(0, i) : cible, port: i > 0 ? cible.slice(i + 1) : "", etat: champs.at(-1) ?? "" };
     }).filter((c) => c.hote && c.hote !== "*");
-  } catch {
-    return [];   // lsof ne rend rien quand le processus n'a aucune socket : c'est le cas nominal
+  } catch (e) {
+    /*
+     * TROIS SITUATIONS RENDAIENT LE MÊME TABLEAU VIDE, ET LA TROISIÈME EST UN MENSONGE.
+     *
+     *   — `lsof` sort en 1 parce que le processus n'a aucune socket : c'est le cas nominal,
+     *     et le vide est la bonne réponse.
+     *   — `lsof` est absent de la machine : on n'a RIEN observé, et le vide se lisait
+     *     « aucune connexion ».
+     *   — `lsof` refuse par permission : idem.
+     *
+     * Le rapport conclut ensuite « Aucune connexion réseau observée » et adosse à cette
+     * phrase la promesse la plus vendable du dépôt — « nothing leaves the machine ». Chez un
+     * client dont la machine n'a pas `lsof`, ou le restreint, l'outil confirmait la promesse
+     * SANS AVOIR REGARDÉ. Une absence d'observation ne se distinguait pas d'une observation
+     * d'absence, et c'est précisément la confusion qu'un audit se fait payer pour éviter.
+     */
+    const err = e as { code?: string; status?: number };
+    if (verdictDeLsof(err) === "absent") {
+      throw new Error(
+        "`lsof` est introuvable sur cette machine, donc RIEN n'a été observé.\n"
+        + "  Cet outil refuse de conclure : « aucune connexion vue » et « aucune connexion »\n"
+        + "  sont deux phrases différentes, et c'est toute la valeur de ce contrôle.\n"
+        + "  Sur macOS `lsof` est livré avec le système ; sur Linux : apt install lsof.");
+    }
+    if (verdictDeLsof(err) === "inattendu") {
+      throw new Error(
+        `\`lsof\` a échoué avec le code ${err.status ?? "inconnu"} — ce n'est pas le code que\n`
+        + "  rend un processus sans socket (1). L'observation n'a donc pas eu lieu, et rendre\n"
+        + "  un tableau vide ici reviendrait à publier « aucune connexion » sans avoir regardé.");
+    }
+    return [];   // code 1 : le processus n'a aucune socket ouverte. Le vide est la mesure.
+  }
+}
+
+/**
+ * `lsof` répond-il, ici, maintenant ? Vérifié UNE FOIS avant de lancer quoi que ce soit.
+ *
+ * La garde ci-dessus n'attrape la panne qu'au premier relevé, c'est-à-dire après avoir lancé
+ * la mesure surveillée — donc après avoir laissé partir le trafic qu'on prétendait observer.
+ * Un contrôle qui découvre son impuissance en cours de route arrive trop tard pour la seule
+ * chose qu'il devait empêcher.
+ */
+export function lsofRepond(): boolean {
+  try {
+    execFileSync("lsof", ["-v"], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+    return true;
+  } catch (e) {
+    /* `lsof -v` écrit sa version sur stderr et sort parfois non nul : présent quand même. */
+    return (e as { code?: string }).code !== "ENOENT";
   }
 }
 
@@ -58,6 +119,14 @@ if (isMain(import.meta)) {
   const args = process.argv.slice(2).filter((a) => !a.startsWith("--"));
   const commande = args.length ? args : ["src/measure.ts"];
   const intervalle = Number(process.argv.find((a) => a.startsWith("--every="))?.split("=")[1] ?? 250);
+
+  if (!lsofRepond()) {
+    console.error("\n`lsof` est introuvable : ce contrôle ne peut rien observer, donc il ne");
+    console.error("  démarre pas. Publier « aucune connexion réseau observée » après n'avoir");
+    console.error("  rien pu observer serait exactement le défaut que ce fichier existe pour");
+    console.error("  empêcher.\n");
+    process.exit(1);
+  }
 
   console.log(`\nSurveillance du trafic réseau pendant : node ${commande.join(" ")}`);
   console.log(`Relevé toutes les ${intervalle} ms. Deux résultats sont publiables : aucune`);
