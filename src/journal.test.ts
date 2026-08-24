@@ -9,6 +9,7 @@
  */
 
 import { test } from "node:test";
+import { modulesEnRetard } from "./verifier-ecran.mjs";
 import { TIERS, ENCODEURS, GENERATIFS } from "./tiers.ts";
 import assert from "node:assert/strict";
 import { readFileSync, writeFileSync, mkdtempSync, rmSync, readdirSync, existsSync, statSync } from "node:fs";
@@ -1046,15 +1047,19 @@ test("la page publiée porte le code du dépôt, pas celui d'un commit passé", 
   const compiles = readdirSync(js).filter((n) => n.endsWith(".js"));
   assert.ok(compiles.length >= 3, `${compiles.length} module(s) compilé(s) : la lecture a échoué.`);
 
-  const enRetard: string[] = [];
-  for (const f of compiles) {
-    const source = join(racine, "src", f.replace(/\.js$/, ".ts"));
-    if (!existsSync(source)) continue;
-    /* Un compilé plus VIEUX que sa source est en retard. La comparaison de dates suffit et
-       ne dépend d'aucun compilateur ; elle rate un compilé retouché à la main, ce que le
-       contrôle d'écran attrape ailleurs. */
-    if (statSync(join(js, f)).mtimeMs + 1000 < statSync(source).mtimeMs) enRetard.push(f);
-  }
+  /*
+   * UNE SEULE DÉFINITION DE LA FRAÎCHEUR, ET ELLE VIT DANS LA COMMANDE QUI PRONONCE.
+   *
+   * Cette boucle était écrite ici, et son commentaire disait qu'un compilé retouché à la main
+   * est « attrapé ailleurs, par le contrôle d'écran ». Le contrôle d'écran n'en savait rien :
+   * il ouvrait la page et regardait ce qui s'affichait, sans jamais demander si cette page
+   * était celle du code d'aujourd'hui. Deux gardes qui se renvoient l'une à l'autre laissent
+   * le trou entier, et chacune se croit couverte.
+   *
+   * Elle vit dans `verifier-ecran.mjs` maintenant — la commande qui dit « écran vérifié » —
+   * et ce cas l'appelle. Une seule définition ne peut pas diverger d'elle-même.
+   */
+  const enRetard = modulesEnRetard(racine);
   assert.deepEqual(enRetard, [],
     `module(s) publié(s) plus vieux que leur source : ${enRetard.join(", ")}.\n`
     + "  → la page de vente fait tourner du code que le dépôt a déjà corrigé.\n"
