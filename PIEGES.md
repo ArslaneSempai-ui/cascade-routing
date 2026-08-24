@@ -128,6 +128,155 @@ Corollaire de la même famille : une boucle qui indexe à l'envers ne se signale
 Quand un script écrit N fichiers depuis N sources, vérifier **un** couple à la main coûte
 trois secondes et attrape l'inversion entière.
 
+## Le fait et son implication ne se vérifient pas au même endroit
+
+Formulé par la session qui l'a payé : *« le fait et son implication ne se vérifient pas au
+même endroit, et je n'avais vérifié que le fait. »*
+
+Un contrôle établit qu'une chose est vraie ici, et on en tire ce qu'elle implique ailleurs —
+sans aller voir ailleurs. Les deux moitiés ont l'air d'une seule vérification parce qu'elles
+sont dites dans la même phrase.
+
+Trois instances du même jour :
+
+- « la question affichée est celle qui est posée » — vrai du gabarit, faux du chemin qui
+  l'emprunte ; personne n'avait comparé les deux **chaînes**.
+- « `identite/provenance.ts` n'est pas modifié » — les trois contrôles disaient *propre
+  maintenant*, la conclusion écrite disait *n'a jamais été modifié*. Une copie prise avant
+  restauration a tranché : le marqueur avait bel et bien disparu.
+- « aucune dépendance n'exécute de code à l'installation » — voir l'entrée suivante.
+
+**Remède :** écrire la vérification et l'implication comme deux phrases, et se demander pour
+la seconde *quel fichier je devrais ouvrir pour l'établir*. Si la réponse est « aucun, ça
+découle », c'est qu'elle ne découle pas.
+
+## Un négatif sans dénominateur n'est pas une mesure
+
+Commité dans ce dépôt : *« No dependency runs code at install time, and every one is
+pinned. »* Mesuré depuis, sur l'arbre réel :
+
+    2 paquets sur 216 déclarent un script d'installation
+      onnxruntime-node, protobufjs@7.6.5 (postinstall: node scripts/postinstall)
+    npm config ignore-scripts : false
+
+L'affirmation est fausse, et **elle l'était probablement au moment où elle a été écrite** — ce
+qui n'a pas été vu, c'est qu'aucun compte ne l'accompagnait. « Aucune dépendance n'exécute de
+code » se lit comme un relevé alors que c'est une conviction ; « 0 sur 216 » aurait obligé à
+compter, et compter aurait rendu 2.
+
+Et la formule corrigée demandait la même rigueur : dire *« le blocage tient »* suppose un
+blocage, qu'il faut alors montrer. `ignore-scripts` vaut `false`, donc ce n'est pas lui. Mesuré
+ensuite, sur deux machines par deux sessions :
+
+    npm 12.0.1 · npm install-scripts ls
+    2 packages have install scripts blocked because they are not covered by allowScripts:
+      onnxruntime-node@1.21.0 (postinstall: node ./script/install)
+      protobufjs@7.6.5        (postinstall: node scripts/postinstall)
+
+**Le blocage existe — et il n'est pas dans ce dépôt.** C'est `allowScripts`, une porte de npm
+12 fermée par défaut. Un acheteur sur npm ≤ 11, sur yarn ou sur pnpm exécute les deux scripts.
+
+C'est la vraie conclusion et elle vaut plus que l'erreur d'origine : **la sûreté de la chaîne
+d'approvisionnement, ici, est héritée de l'outillage de celui qui installe, pas fournie par le
+dépôt.** Un audit vendu à une banque doit dire lequel des deux, parce que le client ne choisit
+pas notre code mais choisit son gestionnaire de paquets.
+
+Une supposition qui tombe au passage, mesurée par la session qui l'avait faite : le postinstall
+bloqué d'`onnxruntime-node` **ne laisse pas le binaire natif absent** — `bin/napi-v3/**` est
+identique, 208 Mo, entre un arbre où le script a été bloqué et un où il ne l'a pas été. Les
+binaires voyagent dans le tarball. Le blocage est sans conséquence fonctionnelle ici, ce qui
+est une raison de plus de ne pas le confondre avec une garde.
+
+**Remède :** tout énoncé d'absence porte son dénominateur et la commande qui l'a produit. Sans
+ça, c'est une opinion bien présentée — et celle-là a traversé un audit de sécurité.
+
+## Toute copie en bloc lit la liste d'exceptions AVANT d'écrire
+
+Deux sessions, le même jour, à une heure d'intervalle, ont recopié une couche partagée en
+bloc et écrasé les fichiers qu'une liste déclarait divergents **par construction** — l'une
+`DETACHES` dans `cascade` (dont le fichier de test qui porte la liste), l'autre `ADAPTES` et
+`baselines.ts`, ce qui a cassé la compilation d'un dépôt voisin.
+
+Les deux listes existaient, étaient justes, et portaient leur raison écrite. **Aucune des
+deux copies ne les a lues.** Ce n'est donc pas une question d'attention : une copie « tous
+les fichiers de même nom » est un motif, et **un motif est une affirmation** — celui-ci
+affirme que tout fichier partageant un nom doit partager un contenu, ce que la liste
+d'exceptions dit précisément être faux.
+
+**Et une comparaison en bloc doit la lire autant qu'une copie.** Une boucle qui compare
+fichier à fichier sans lire les dispenses rend des divergences qui n'en sont pas — six d'un
+coup, toutes `baselines.ts` — avec l'aplomb d'un relevé. La forme *mesure* du même piège, et
+elle est plus discrète : elle ne casse rien, elle fait chercher.
+
+**Remède :** la liste se lit dans le dépôt CIBLE, à chaque copie, jamais reportée de mémoire
+d'un dépôt à l'autre — deux dépôts n'ont pas les mêmes dispenses.
+
+    EX=$(grep -oE '^\s+"[a-z.-]+\.(ts|mjs|js|css)":' "$d/src/registre.test.ts" | tr -d ' ":')
+    for f in identite/*; do
+      echo "$EX" | grep -qx "$(basename "$f")" && continue     # dispensé : on passe
+      …
+    done
+
+Et vérifier l'extraction sur un dépôt dont on connaît déjà la réponse avant de s'en servir
+sur les autres : une extraction qui rend une liste vide dispense zéro fichier et ressemble
+exactement à une copie qui s'est bien passée.
+
+## Une recherche par nom rend la copie PUBLIÉE avant la source
+
+`find . -name graphes.js | head -1` rend `./docs/graphes.js`, pas `./src/graphes.js`. La
+copie atterrit donc dans la page construite ; puis `npm run pages` la réécrit depuis la
+source, **qui n'a jamais été mise à jour** — et la garde d'identité reste rouge exactement
+sur les fichiers dont la copie publiée est un artefact de construction.
+
+**Le symptôme désigne le mauvais endroit** : on regarde `docs/`, qui vient d'être régénéré et
+paraît correct, alors que le défaut est dans `src/`. C'est ce qui rend ce piège cher — il se
+répare en apparence tout seul à chaque construction.
+
+**Remède :** exclure les dossiers construits de toute recherche de source.
+
+    find "$d" -name "$b" -not -path "*/node_modules/*" -not -path "*/docs/*" -not -path "*/dist/*"
+
+## Changer la source partagée vire tous ses consommateurs au rouge
+
+Corollaire de « corrige dans la source, pas dans les copies », et il n'était écrit nulle
+part : la source fait foi, **donc la changer casse tous les dépôts qui la copient jusqu'à ce
+que chacun recopie.** Mesuré : un correctif porté dans `identite` a mis **dix dépôts** au
+rouge simultanément, et ceux dont personne ne s'occupait le sont restés.
+
+Ce n'est pas un défaut de la règle, c'est son coût, et il se paie en une fois. Mais il se
+paie **en silence chez les autres** : celui qui corrige la source voit son dépôt vert.
+
+**Remède :** annoncer avant de propager dans la source, pas après ; et propager aux copies
+dans la foulée, ou dire qui le fera. Une source corrigée sans ses copies est un travail à
+moitié fait qui ressemble à un travail fini.
+
+## Un clone sans `node_modules` rend une erreur d'import, pas un résultat
+
+Un clone frais pour éprouver un correctif n'a pas de dépendances. La commande échoue à la
+résolution des modules **avant d'atteindre le code qu'on teste**, et la sortie ressemble à
+une exécution : quatre cas « vérifiés », quatre fois le même code, aucun n'ayant chargé le
+fichier modifié.
+
+**Remède :** un contrôle positif avant toute série — `node -e 'console.log("ok")'` depuis le
+clone — ou lier les dépendances : `ln -sfn ../vrai-depot/node_modules node_modules`.
+
+## `timeout` n'existe pas sur macOS
+
+`timeout 20 cmd` rend **127** et le reste de la ligne ne tourne jamais. Une vérification
+écrite ainsi n'échoue pas : elle ne se produit pas, et son absence de sortie se lit comme
+« rien à signaler ». Deux vérifications d'affilée ont été perdues comme ça le même soir.
+
+C'est la famille du tube qui mange le code de sortie, en pire : là, la commande absente fait
+que **la ligne entière n'a pas d'effet**, donc il n'y a même pas de code faux à lire.
+
+**Remède :** ne pas dépendre d'un binaire non garanti. Pour borner une commande bavarde, le
+tube suffit — `head` ferme le tuyau et la commande reçoit SIGPIPE :
+
+    node src/cmd.ts --option 2>&1 | head -3
+
+Et si une vraie limite de durée est nécessaire, `gtimeout` (coreutils) en vérifiant sa
+présence, jamais `timeout` supposé.
+
 ## Un code de sortie ne se lit jamais après un tube
 
 Un tube remplace le code de sortie par celui du **dernier** maillon : `cmd | head -2` rend
