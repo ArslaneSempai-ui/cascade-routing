@@ -950,7 +950,7 @@ test("aucune sortie française sur les commandes déjà rendues à l'acheteur", 
     + "  → le compte ne doit que baisser. S'il monte, une commande neuve est arrivée en français.");
 });
 
-test("la page publiée porte le code du dépôt, pas celui d'un commit passé", () => {
+test("la page publiée porte le code du dépôt, pas celui d'un commit passé", (t) => {
   /*
    * `docs/` est la page de vente publiée. Elle embarque une copie compilée des modules du
    * dépôt, et RIEN dans `npm test` ne vérifiait qu'elle correspondait aux sources : six
@@ -968,7 +968,7 @@ test("la page publiée porte le code du dépôt, pas celui d'un commit passé", 
    */
   const racine = fileURLToPath(new URL("..", import.meta.url));
   const js = join(racine, "docs", "js");
-  if (!existsSync(js)) return;   // pas de page publiée dans cet arbre
+  if (!existsSync(js)) return t.skip("docs/js absent : il n'y a pas de page publiée dans cet arbre.");
 
   const compiles = readdirSync(js).filter((n) => n.endsWith(".js"));
   assert.ok(compiles.length >= 3, `${compiles.length} module(s) compilé(s) : la lecture a échoué.`);
