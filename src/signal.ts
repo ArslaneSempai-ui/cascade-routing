@@ -168,7 +168,14 @@ export function evaluerSignal(
 
 if (isMain(import.meta)) {
   const f = journaux().filter((x) => x.includes("-dur.jsonl")).pop();
-  if (!f) { console.error("aucun journal du corpus dur"); process.exit(1); }
+  if (!f) {
+    /* UN REFUS A BESOIN D'UNE ISSUE, et `data/` n'étant pas versionné, un clone frais tombe
+       toujours ici. Nommer le journal et la commande coûte trois lignes. */
+    console.error(`\n  Ce calcul rejoue les tentatives du corpus dur, et elles ne sont pas là.`);
+    console.error(`  \`data/\` n'est pas versionné : un clone frais n'en a jamais, c'est normal.`);
+    console.error(`\n  Le journal du corpus dur manque  →  npm run dur\n`);
+    process.exit(1);
+  }
   const { tentatives } = lireJournal(f);
   const textes = new Map([...corpusDur(), ...casAmbigus()].map((c) => [c.cle, c.texte]));
 

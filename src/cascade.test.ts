@@ -27,6 +27,7 @@ import { optimiseExtraction, optimiseClassification, budgetShadowPrice, latenceR
 import { exposition, optimiseExposition, ouLaRecommandationBascule, decompositionsIncoherentes } from "./exposition.ts";
 import { documentsComplets, comparer as comparerDocuments } from "./document.ts";
 import { rapportPourLeClient } from "./your-cases.ts";
+import { elaguer as elaguerInterne } from "./journal.ts";
 import { FORME as FORME_INTERNE } from "./signal.ts";
 import { PROMPTS as PROMPTS_INTERNES, questionPour as questionPourInterne } from "./tiers.ts";
 import { memoireDisponibleMo, etatMachine as etatMachineInterne } from "./contrainte.ts";
@@ -4047,4 +4048,44 @@ test("le rapport que le client garde porte la réserve, pas seulement le termina
   assert.match(fourni, /\*\*yours\*\*/, "une question fournie n'est plus signalée comme telle.");
   assert.ok(!/no `--rules` was given/.test(fourni),
     "le rapport dit qu'aucune règle n'a été donnée alors qu'il y en avait.");
+});
+
+test("l'élagage ne jette jamais le dernier journal d'un genre", () => {
+  /*
+   * IL GARDAIT LES QUARANTE DERNIERS PAR DATE, sans aucune notion de ce qui porte une figure
+   * publiée. Une passe de mesure a écrit assez de journaux pour pousser dehors le dernier du
+   * corpus dur, et `abstention`, `escalade` et `signal` sont morts ensemble — sur toutes les
+   * machines à la fois, puisque `data/` n'est pas versionné.
+   *
+   * Les chiffres publiés ont survécu, parce qu'ils sont gelés ailleurs. La capacité de les
+   * REFAIRE, non. **Un dépôt qui publie un chiffre qu'il ne sait plus recalculer a perdu
+   * exactement ce qui le distingue.**
+   */
+  const dossier = mkdtempSync(join(tmpdir(), "journaux-"));
+  try {
+    /* Un seul journal « dur », le plus ancien de tous — donc le premier que l'ordre par date
+       jetterait. Et douze journaux banals derrière lui. */
+    const noms = ["2026-08-01T00-00-00-000Z-dur.jsonl",
+      ...Array.from({ length: 12 }, (_, i) =>
+        `2026-08-2${Math.floor(i / 5)}T0${i % 5}-00-00-000Z-essai.jsonl`)];
+    for (const n of noms) writeFileSync(join(dossier, n), '{"kind":"run"}\n');
+
+    const efface = elaguerInterne(dossier, 5);
+    const restants = readdirSync(dossier);
+
+    assert.ok(efface > 0, "rien n'a été élagué : le cas ne met la garde à l'épreuve d'aucune façon.");
+    assert.ok(restants.includes("2026-08-01T00-00-00-000Z-dur.jsonl"),
+      `le dernier journal du genre « dur » a été jeté alors qu'il est le seul.\n`
+      + `  → trois commandes en dépendent, et data/ n'est pas versionné : il ne revient pas.`);
+
+    /* CONTRE-ÉPREUVE — la garde ne doit pas tout épargner. Un élagage qui ne jette plus rien
+       laisse les journaux s'accumuler, ce qu'il existe pour empêcher. */
+    assert.ok(restants.length < noms.length,
+      `les ${noms.length} journaux sont tous là : l'élagage n'élague plus rien.`);
+    /* Et le dernier « essai » survit aussi : c'est le dernier de SON genre. */
+    assert.ok(restants.some((f) => f.endsWith("-essai.jsonl")),
+      "aucun journal du genre « essai » ne subsiste : la règle ne garde pas le dernier de chaque genre.");
+  } finally {
+    rmSync(dossier, { recursive: true, force: true });
+  }
 });

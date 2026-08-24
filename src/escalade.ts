@@ -105,7 +105,18 @@ if (isMain(import.meta)) {
 
   const f = journaux().filter((x) => x.includes("-dur.jsonl")).pop();
   const p = readProfiles();
-  if (!f || !p) { console.error("journal ou relevé manquant"); process.exit(1); }
+  if (!f || !p) (() => {
+    /* UN REFUS A BESOIN D'UNE ISSUE. « journal ou relevé manquant » ne dit ni lequel manque,
+       ni quoi lancer — et `data/` n'étant pas versionné, un clone frais tombe TOUJOURS ici.
+       C'est le premier écran d'un acheteur sur la commande qui porte notre plus gros levier. */
+    console.error(`\n  Ce calcul rejoue les tentatives du corpus dur, et elles ne sont pas là.`);
+    console.error(`  \`data/\` n'est pas versionné : un clone frais n'en a jamais, c'est normal.\n`);
+    if (!p) console.error(`  Le relevé gelé manque aussi  →  npm run measure`);
+    if (!f) console.error(`  Le journal du corpus dur manque  →  npm run dur`);
+    console.error(`\n  Les chiffres publiés, eux, restent lisibles : ils sont gelés dans`);
+    console.error(`  landing.json et n'ont pas besoin de ce journal pour être cités.\n`);
+    process.exit(1);
+  })();
   const { tentatives } = lireJournal(f);
   const textes = new Map([...corpusDur(), ...casAmbigus()].map((c) => [c.cle, c.texte]));
   const rep = new Map<string, Tentative>();
