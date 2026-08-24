@@ -18,7 +18,7 @@ import { TIERS } from "./tiers.ts";
 import { run as emit, table } from "./figures.ts";
 import { citation, provenance as sourceDuTexte } from "./regulations.ts";
 import { rate, writeRate, distinguishable, precision } from "./interval.ts";
-import { GENERATIFS } from "./paliers.ts";
+import { GENERATIFS, type TierName } from "./paliers.ts";
 import { majorityClass, uniformGuess, verdict } from "./baselines.ts";
 import { generateAlerts } from "./corpus.ts";
 import { TYPOLOGIES } from "./corpus.ts";
@@ -73,6 +73,67 @@ const euro = (n: number) => "$" + Math.round(n).toLocaleString("en-GB");
  * ligne du CFR ne l'exige comme donnee propre. Un rattachement invente vaudrait moins que rien
  * dans un document dont l'argument est qu'une decision automatique doit etre defendable.
  */
+/*
+ * CE QUE CHAQUE PALIER COUTE SELON L'ENDROIT OU IL TOURNE.
+ *
+ * Ce depot mesure six paliers, et il les fait TOUS tourner sur la machine — les encodeurs
+ * dans le processus, l'echelle generative sur Ollama en boucle locale. Mais il n'en tarife
+ * que trois au temps machine : `small` et `large` portent un prix a l'appel, parce que
+ * l'hypothese declaree est que vous les appellerez chez un fournisseur en production. C'est
+ * defendable, et ce n'etait ecrit nulle part ou un lecteur le verrait.
+ *
+ * L'ecart est le fait le plus vendable de ce depot et il n'etait pas publie : un facteur cent
+ * sur `large`. Et il renverse la lecture du tableau — l'echelle generative locale coute moins
+ * cher que l'encodeur heberge ET se trompe moins souvent. Un acheteur qui se demande s'il a
+ * besoin d'une API payante a sa reponse ici, mesuree, sur ses propres axes.
+ *
+ * Les deux colonnes sortent du MEME relevé : aucune n'est estimee. La difference n'est pas
+ * une mesure de plus, c'est le meme temps facture selon deux regimes.
+ */
+const ouCaTourne = (() => {
+  const H = ASSUMPTIONS;
+  const surLaMachine = (t: TierName) => FIELDS.reduce((s, f) => {
+    const lat = p!.extraction[t]?.[f]?.latency;
+    return lat === undefined || t === "rules" ? s : s + (lat / 3_600_000) * H.machineHourlyCost * 1000;
+  }, 0);
+  const facture = (t: TierName) => FIELDS.reduce((s, f) => {
+    const lat = p!.extraction[t]?.[f]?.latency;
+    return lat === undefined ? s : s + pricePerThousandExtractions(t, H, lat);
+  }, 0);
+
+  const lignes = mesures.map((t) => {
+    const a = facture(t), b = surLaMachine(t);
+    const rapport = b > 0 && a / b > 1.05 ? `${(a / b).toFixed(0)}x` : "—";
+    const m = FIELDS.map((f) => p!.extraction[t][f].accuracy);
+    const moy = (m.reduce((x, y) => x + y, 0) / m.length) * 100;
+    return [`\`${t}\``, `$${a.toFixed(2)}`, `$${b.toFixed(2)}`, rapport, `${moy.toFixed(1)} %`];
+  });
+
+  /* Le renversement se calcule plutot que de s'affirmer : si un jour il cesse d'etre vrai,
+     la phrase disparait au lieu de rester juste sur le papier. */
+  const local = mesures.filter((t) => (GENERATIFS as string[]).includes(t))
+    .map((t) => ({ t, cout: surLaMachine(t), acc: FIELDS.reduce((s, f) => s + p!.extraction[t][f].accuracy, 0) / FIELDS.length }))
+    .sort((x, y) => y.acc - x.acc)[0];
+  const heberge = { t: "large" as TierName, cout: facture("large" as TierName),
+    acc: FIELDS.reduce((s, f) => s + p!.extraction["large" as TierName][f].accuracy, 0) / FIELDS.length };
+  const renverse = local && local.cout < heberge.cout && local.acc > heberge.acc;
+
+  return `**What each tier costs depends on where it runs.** Every tier here was measured ON `
+    + `THIS MACHINE. Two of them — \`small\` and \`large\` — are nonetheless priced per call, `
+    + `because the declared assumption is that you would call them at a provider in production. `
+    + `The other column prices the same measured time as machine time.\n\n`
+    + table(["Tier", "At a provider", "On your machine", "Ratio", "Accuracy"], lignes)
+    + `\n\n*Per thousand documents of five fields each, from the same frozen profile. Neither `
+    + `column is an estimate: it is the same measured latency billed under two regimes.*`
+    + (renverse
+        ? `\n\n**This reverses the table.** \`${local.t}\` running locally costs `
+          + `$${local.cout.toFixed(2)} at ${(local.acc * 100).toFixed(1)} % — cheaper AND more `
+          + `accurate than calling \`large\` at a provider for $${heberge.cout.toFixed(2)} at `
+          + `${(heberge.acc * 100).toFixed(1)} %. If you are asking whether you need a paid API, `
+          + `that is the measured answer on this corpus.`
+        : "");
+})();
+
 const obligation = (() => {
   const EXIGES: Partial<Record<Field, string>> = {
     name: "Name",
@@ -816,6 +877,6 @@ const tests = (() => {
 })();
 
 emit(fileURLToPath(new URL("../README.md", import.meta.url)),
-  { finding, obligation, extraction, classification, routing, shadow, gallery, baselines, provenance, coutDeReproduction, embauche,
+  { finding, obligation, ouCaTourne, extraction, classification, routing, shadow, gallery, baselines, provenance, coutDeReproduction, embauche,
     echelles, latence, egalites, fuite, deuxfaits, retractations, public: publicJeu, commandes,
     tests });

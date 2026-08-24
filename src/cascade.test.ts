@@ -11,6 +11,7 @@ import { createServer } from "node:http";
 import { generateRecords, generateAlerts, FIELDS, TYPOLOGIES } from "./corpus.ts";
 import { correct, TIERS, estLocal, OLLAMA, MODELES_LOCAUX, digestsQuiDivergent,
   DELAI_DE_GENERATION_MS, DELAI_DE_CHARGEMENT_MS, CHARGEMENTS_MESURES_MS } from "./tiers.ts";
+import { GENERATIFS } from "./paliers.ts";
 import type { TierName } from "./paliers.ts";
 import { classify, empreinteDesEntrees, modulesAtteints, cleDeLaGalerieLivree, cleDuFichierLivre } from "./failures.ts";
 import { comparer } from "./diff.ts";
@@ -2059,7 +2060,13 @@ test("le nombre de taux tapés dans la prose ne peut que baisser", () => {
      * l'a fait monter à cent quatre sans qu'un seul taux ait été ajouté.
      */
     t = t.replace(/```[\s\S]*?```/g, "");
-    t = t.replace(/<!-- figures:([a-z0-9-]+) -->[\s\S]*?<!-- \/figures:\1 -->/g, "");
+    /* LE MOTIF EXIGEAIT DES MINUSCULES, ET DEUX BLOCS Y ECHAPPAIENT.
+       `coutDeReproduction` et `ouCaTourne` portent des majuscules, donc ce nettoyage ne les
+       reconnaissait pas comme engendrés et comptait leurs figures comme de la prose. Le
+       plancher précédent les incluait sans que personne ne le sache — une convention non
+       écrite, imposée par une classe de caractères, qui rendait invisible ce qu'elle
+       prétendait exclure. */
+    t = t.replace(/<!-- figures:([A-Za-z0-9-]+) -->[\s\S]*?<!-- \/figures:\1 -->/g, "");
     t = t.replace(/`[^`\n]*`/g, "");
     const n = (t.match(/\d+(?:[.,]\d+)?\s*%/g) ?? []).length;
     if (n) parFichier.push([f, n]);
@@ -3119,4 +3126,61 @@ test("aucune valeur du client n'entre dans le fichier que l'outil lui rend", () 
   } finally {
     rmSync(dossier, { recursive: true, force: true });
   }
+});
+
+
+/*
+ * CE QUE CHAQUE PALIER COUTE SELON L'ENDROIT OU IL TOURNE.
+ *
+ * Le dépôt fait tourner SES SIX PALIERS sur la machine, et n'en tarife que trois au temps
+ * machine : `small` et `large` portent un prix à l'appel, sur l'hypothèse déclarée que le
+ * client les appellera chez un fournisseur. L'hypothèse est défendable et elle était invisible
+ * — un lecteur voyait 8 $ pour mille documents sur un modèle que le dépôt exécutait sous ses
+ * yeux pour huit centimes.
+ *
+ * L'écart est le fait le plus vendable de ce dépôt et il n'était pas publié : facteur cent. Et
+ * il renverse la lecture du tableau — l'échelle générative locale coûte moins cher que
+ * l'encodeur hébergé ET se trompe moins souvent.
+ *
+ * CE TÉMOIN TIENT LA PHRASE DE RENVERSEMENT. Elle est calculée, pas écrite : si un jour le
+ * local cesse d'être à la fois moins cher et plus juste, elle doit DISPARAITRE du README au
+ * lieu d'y rester vraie sur le papier. C'est la différence entre un argument mesuré et un
+ * argument qu'on a mesuré une fois.
+ */
+test("le coût selon l'endroit où le palier tourne sort du même relevé, et le renversement est calculé", () => {
+  const prof = readProfiles();
+  assert.ok(prof, "pas de profil gelé.");
+  const readme = readFileSync(fileURLToPath(new URL("../README.md", import.meta.url)), "utf8");
+  const bloc = readme.match(/<!-- figures:ouCaTourne -->([\s\S]*?)<!-- \/figures:ouCaTourne -->/)?.[1];
+  assert.ok(bloc, "le bloc a disparu du README.");
+
+  const cell = (t: string, f: string) => (prof as never as Record<string, Record<string, Record<string, { accuracy: number; latency: number }>>>)
+    .extraction[t]![f]!;
+  const surMachine = (t: string) => FIELDS.reduce((s, f) =>
+    t === "rules" ? s : s + (cell(t, f).latency / 3_600_000) * ASSUMPTIONS.machineHourlyCost * 1000, 0);
+
+  /* LES DEUX COLONNES VIENNENT DU MÊME RELEVÉ. Si l'une était estimée et l'autre mesurée, le
+     rapport publié comparerait deux choses différentes — exactement ce que ce dépôt refuse. */
+  for (const ligne of bloc!.split("\n").filter((l) => /^\| `/.test(l))) {
+    const t = ligne.match(/^\| `([^`]+)`/)![1]!;
+    const machine = Number(ligne.match(/\$[\d.]+ \| \$([\d.]+)/)?.[1]);
+    assert.equal(machine, Number(surMachine(t).toFixed(2)),
+      `\`${t}\` publie $${machine} sur la machine alors que sa latence mesurée donne `
+      + `$${surMachine(t).toFixed(2)}. Une des deux colonnes ne vient plus du relevé.`);
+  }
+
+  /* LA PHRASE DE RENVERSEMENT NE SURVIT PAS À SON PROPRE DÉMENTI. */
+  const meilleurLocal = (GENERATIFS as readonly string[])
+    .filter((t) => (prof as never as Record<string, Record<string, unknown>>).extraction[t])
+    .map((t) => ({ t, cout: surMachine(t), acc: FIELDS.reduce((s, f) => s + cell(t, f).accuracy, 0) / FIELDS.length }))
+    .sort((a, b) => b.acc - a.acc)[0];
+  const heberge = { cout: FIELDS.length * ASSUMPTIONS.pricePerThousandLarge,
+    acc: FIELDS.reduce((s, f) => s + cell("large", f).accuracy, 0) / FIELDS.length };
+  const devrait = !!meilleurLocal && meilleurLocal.cout < heberge.cout && meilleurLocal.acc > heberge.acc;
+
+  assert.equal(/This reverses the table/.test(bloc!), devrait,
+    devrait
+      ? "le local est moins cher ET plus juste, et le README ne le dit plus."
+      : "le README affirme encore le renversement alors que la mesure ne le porte plus : le "
+        + "local n'est plus à la fois moins cher et plus exact que l'encodeur hébergé.");
 });

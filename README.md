@@ -58,7 +58,7 @@ npm test           # types, README figures, landing.json, and the suite
 ```
 
 <!-- figures:tests -->
-**154 tests** across 9 files, counted from the sources rather than typed here.
+**155 tests** across 9 files, counted from the sources rather than typed here.
 <!-- /figures:tests -->
 
 Everything runs locally. No API key, nothing leaves the machine, and anyone who clones this
@@ -98,6 +98,23 @@ on another they never saw. Measured honestly, they collapse.
 
 **The `±` column is the widest half-interval on that row**, at 95 %, taken over the five fields — so it never flatters. Two rates on the same row that differ by less than twice it are not separated by this sample, and the generative tiers carry roughly 7 points of it against 3 for the encoders, because they were measured on fewer cases.
 <!-- /figures:extraction -->
+
+<!-- figures:ouCaTourne -->
+**What each tier costs depends on where it runs.** Every tier here was measured ON THIS MACHINE. Two of them — `small` and `large` — are nonetheless priced per call, because the declared assumption is that you would call them at a provider in production. The other column prices the same measured time as machine time.
+
+| Tier | At a provider | On your machine | Ratio | Accuracy |
+|---|---|---|---|---|
+| `rules` | $0.00 | $0.00 | — | 55.9 % |
+| `small` | $1.00 | $0.03 | 31x | 69.0 % |
+| `large` | $8.00 | $0.08 | 106x | 78.8 % |
+| `gen-0.6b` | $0.39 | $0.39 | — | 79.3 % |
+| `gen-4b` | $1.31 | $1.31 | — | 92.7 % |
+| `gen-8b` | $1.99 | $1.99 | — | 91.5 % |
+
+*Per thousand documents of five fields each, from the same frozen profile. Neither column is an estimate: it is the same measured latency billed under two regimes.*
+
+**This reverses the table.** `gen-4b` running locally costs $1.31 at 92.7 % — cheaper AND more accurate than calling `large` at a provider for $8.00 at 78.8 %. If you are asking whether you need a paid API, that is the measured answer on this corpus.
+<!-- /figures:ouCaTourne -->
 
 <!-- figures:obligation -->
 **Why these fields.** 31 CFR 1020.220(a)(2)(i)(A) — Before opening an account a bank must obtain, at a minimum, the customer's name, date of birth for an individual, address, and identification number.
