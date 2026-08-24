@@ -11,7 +11,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync, writeFileSync, mkdtempSync, rmSync, readdirSync, existsSync } from "node:fs";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { issue, ouvrirJournal, lireJournal, apparie, parDocument, issues, desaccord, latences, accordEntreMachines } from "./journal.ts";
@@ -765,4 +765,43 @@ test("les sorties brutes ne sont lues qu'à un seul endroit", () => {
   assert.ok(!/if\s*\(!profil\.sorties/.test(corps),
     "`justessePonderee` sort avant d'appeler la décomposition quand les sorties manquent :\n"
     + "  le repli sur la table gelée ne l'atteint pas, et les coûts d'erreur cessent de peser.");
+});
+
+test("aucun fichier suivi par git n'a disparu du disque", () => {
+  /*
+   * LE 24 AOÛT 2026, J'AI EFFACÉ src/rapport.test.ts SANS QUE RIEN NE TOMBE.
+   *
+   * Une commande d'assemblage contenait `mv src/rapport.test.ts src/rapport-licencie.test.ts`
+   * — ce qui a déplacé le fichier DU BANC, pas la copie licenciée — et le nettoyage qui
+   * suivait a effacé le fichier renommé. Dix cas perdus, dont tous les témoins d'attaque du
+   * rapport signé.
+   *
+   * La suite est passée : 200 au lieu de 209. Le bloc du README s'est régénéré à 200, et son
+   * contrôle a répondu « à jour ». UN CHIFFRE ENGENDRÉ QUI SUIT UNE RÉGRESSION LA REND
+   * INVISIBLE — c'est le prix de tout compter depuis les sources, et il se paie une fois.
+   *
+   * La garde est précise plutôt que large : un fichier RETIRÉ VOLONTAIREMENT quitte aussi
+   * l'index, donc ce cas ne se déclenche pas. Il ne parle que du fichier que git connaît
+   * encore et que le disque n'a plus, c'est-à-dire d'un effacement que personne n'a décidé.
+   */
+  const racine = fileURLToPath(new URL("..", import.meta.url));
+  const git = spawnSync("git", ["ls-files", "-z", "src", "*.json", "*.md"],
+    { cwd: racine, encoding: "utf8" });
+  if (git.status !== 0) return;   // pas un dépôt : on ne conclut pas
+
+  const suivis: string[] = git.stdout.split("\0").filter(Boolean);
+  assert.ok(suivis.length >= 20,
+    `${suivis.length} fichier(s) suivi(s) : la lecture a échoué et ce cas ne vérifie rien.`);
+
+  const disparus = suivis.filter((f) => !existsSync(join(racine, f)));
+  assert.deepEqual(disparus, [],
+    `fichier(s) suivi(s) par git et absent(s) du disque :\n`
+    + disparus.map((f) => `  - ${f}`).join("\n") + "\n"
+    + "  → soit ils ont été effacés par accident, soit leur retrait doit être commité.\n"
+    + "    Tant qu'ils sont dans l'index et pas sur le disque, personne n'a décidé leur sort.");
+
+  /* LE TÉMOIN. Un nom qui n'existe pas doit être vu comme disparu ; sinon `existsSync`
+     pourrait répondre vrai partout et ce zéro ne vaudrait rien. */
+  assert.equal(existsSync(join(racine, "src/ce-fichier-n-existe-pas.ts")), false,
+    "existsSync répond vrai sur un fichier absent : ce contrôle ne vérifie rien.");
 });
