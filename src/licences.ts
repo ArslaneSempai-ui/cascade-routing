@@ -249,9 +249,9 @@ function principal() {
   const controle = process.argv.includes("--check");
   const ratés = temoins();
   if (ratés.length > 0) {
-    console.error("La classification des licences ne reconnaît plus ce qu'elle prétend reconnaître :");
+    console.error("The licence classifier no longer recognises what it claims to recognise:");
     for (const r of ratés) console.error(`  - ${r}`);
-    console.error("\nSon verdict est sans valeur tant que ces témoins ne repassent pas. Rien n'est écrit.");
+    console.error("\nIts verdict is worthless until those witnesses pass again. Nothing was written.");
     process.exit(1);
   }
   if (!existsSync("node_modules")) {
@@ -270,7 +270,7 @@ function principal() {
       console.error(`${perimes.join(" et ")} ne correspond plus à l'arbre installé.\n\nRun: npm run licences`);
       process.exit(1);
     }
-    console.log(`LICENCES.md et sbom.json sont à jour (${paquets.length} paquets, ${temoins().length === 0 ? "témoins verts" : "TÉMOINS CASSÉS"}).`);
+    console.log(`LICENCES.md and sbom.json are up to date (${paquets.length} packages, ${temoins().length === 0 ? "witnesses green" : "WITNESSES BROKEN"}).`);
     return;
   }
   writeFileSync("LICENCES.md", md);

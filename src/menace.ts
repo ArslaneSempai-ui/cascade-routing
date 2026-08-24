@@ -485,7 +485,7 @@ function principal() {
   if (ratés.length > 0) {
     console.error("Les détecteurs ne reconnaissent plus ce qu'ils prétendent reconnaître :");
     for (const r of ratés) console.error(`  - ${r}`);
-    console.error("\nLeur verdict est sans valeur tant que ces témoins ne repassent pas. Rien n'est écrit.");
+    console.error("\nTheir verdict is worthless until those witnesses pass again. Nothing was written.");
     process.exit(1);
   }
   const relevé = join(racine, "menace-historique.json");
@@ -494,13 +494,13 @@ function principal() {
     writeFileSync(relevé, JSON.stringify(r, null, 2) + "\n");
     console.log(`${r.commits} commits balayés · ${r.trouves} trouvaille(s) dont ${r.declares} déclarée(s) · `
       + `${r.reels.length} non déclarée(s) · témoins ${r.temoins}/2 · scellé sous ${r.commit}.`);
-    if (r.temoins < 2) { console.error("Les témoins n'ont pas traversé le tuyau : ce zéro n'a aucune valeur."); process.exit(1); }
+    if (r.temoins < 2) { console.error("The witnesses did not make it through the pipe: this zero is worthless."); process.exit(1); }
     if (r.reels.length > 0) {
-      console.error("\nTrouvaille(s) non déclarée(s) — à traiter comme de vrais secrets tant qu'elles ne le sont pas :");
-      for (const t of r.reels) console.error(`  ${t.forme} dans ${t.fichier}  (empreinte ${t.empreinte})`);
-      console.error("\n  Si c'est un leurre de test, déclarez-le dans secrets-declares.json avec sa raison.\n"
-        + "  Si c'en est un vrai : il est dans l'historique pour toujours, il faut le RÉVOQUER,\n"
-        + "  pas le retirer du dernier commit.");
+      console.error("\nUndeclared match(es) — treat them as real secrets until they are declared:");
+      for (const t of r.reels) console.error(`  ${t.forme} in ${t.fichier}  (fingerprint ${t.empreinte})`);
+      console.error("\n  If it is a test decoy, declare it in secrets-declares.json with its reason.\n"
+        + "  If it is real: it is in the history forever, and it must be REVOKED —\n"
+        + "  not removed from the last commit.");
       process.exit(1);
     }
   }
@@ -521,7 +521,7 @@ function principal() {
       for (const x of nonTenus) console.error(`  - ${x.nom} : ${x.constat}`);
       process.exit(1);
     }
-    console.log(`SECURITE.md est à jour (${c.length} contrôles, témoins verts).`);
+    console.log(`SECURITE.md is up to date (${c.length} checks, witnesses green).`);
     return;
   }
   writeFileSync(join(racine, "SECURITE.md"), md);

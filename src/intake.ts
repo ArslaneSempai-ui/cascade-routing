@@ -147,7 +147,7 @@ if (isMain(import.meta)) {
   const l = lire(JSON.parse(readFileSync(fichier, "utf8")));
 
   if (l.bloquant.length) {
-    console.log("\nCE QUI EMPÊCHE DE MESURER :\n");
+    console.log("\nWHAT PREVENTS MEASURING AT ALL:\n");
     for (const b of l.bloquant) console.log(`  ✗ ${b}`);
     console.log("");
   }

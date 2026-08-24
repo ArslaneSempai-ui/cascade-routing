@@ -629,7 +629,7 @@ Nothing leaves your machine: the models are local and this path makes no network
    */
   if (sorties) {
     const corr = correspondance(cas, champs, sorties);
-    console.log(`\nVotre chaîne : « ${sorties.nom} ».`);
+    console.log(`\nYour chain: "${sorties.nom}".`);
     /*
      * Qui a noté, et avec quoi — sans quoi l'exactitude n'est plus mesurée mais crue.
      *
@@ -645,21 +645,21 @@ Nothing leaves your machine: the models are local and this path makes no network
       console.log(`  ⚠ exactitude : le fichier ne dit pas quelle version l'a notée.`);
       console.log(`    Sans \`notePar.version\`, « noté par cet outil chez vous » et « saisi à la`
         + ` main » sont indiscernables,`);
-      console.log(`    et seul le premier est une mesure. Le taux ci-dessous se lit comme déclaré.`);
+      console.log(`    and only the first is a measurement. The rate below reads as declared.`);
     }
-    console.log(`  aucune valeur extraite n'est reçue : seules les issues, par cas.`);
+    console.log(`  no extracted value is received: outcomes only, per case.`);
     console.log(`  coût et latence : ${sorties.declares ? "déclarés par vous" : "non déclarés"}`
       + ` — ${PROVENANCE_DES_DECLARES.provenance}, jamais mesurés ici.`);
     if (corr.champsSansAucuneValeur.length) {
-      console.log(`  ⚠ aucun résultat fourni pour : ${corr.champsSansAucuneValeur.join(", ")}`);
+      console.log(`  ⚠ no result supplied for: ${corr.champsSansAucuneValeur.join(", ")}`);
     }
     if (corr.total > 0) {
-      console.log(`  ⚠ ${corr.total} identifiant(s) sans correspondance — le taux ci-dessous ne porte`
+      console.log(`  ⚠ ${corr.total} identifier(s) with no match — the rate below therefore covers`
         + ` que sur les cas appariés :`);
       for (const champ of champs) {
         const m = corr.manquants[champ]!.length, i = corr.inconnus[champ]!.length;
         if (m || i) {
-          console.log(`      ${champ.padEnd(14)} ${m} de nos cas absents de votre fichier`
+          console.log(`      ${champ.padEnd(14)} ${m} of our cases missing from your file`
             + `${m ? ` (${corr.manquants[champ]!.slice(0, 3).join(", ")}${m > 3 ? "…" : ""})` : ""}`
             + `, ${i} des vôtres inconnus de nous`
             + `${i ? ` (${corr.inconnus[champ]!.slice(0, 3).join(", ")}${i > 3 ? "…" : ""})` : ""}`);

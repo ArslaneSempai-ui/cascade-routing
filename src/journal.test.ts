@@ -896,3 +896,56 @@ test("les collections partagées ne sont pas vides, sinon dix cas s'évaporent",
   assert.ok(FIELDS.length >= 3, `${FIELDS.length} champ(s) : trop peu pour que les cas qui comparent des champs veuillent dire quelque chose.`);
   assert.ok(TIERS.length >= 3, `${TIERS.length} palier(s) : trop peu pour que le routage soit un choix.`);
 });
+
+test("aucune sortie française sur les commandes déjà rendues à l'acheteur", () => {
+  /*
+   * LA DÉRIVE ÉTAIT SYSTÉMATIQUE, PAS UNE SÉRIE D'OUBLIS.
+   *
+   * Mesuré sur les commandes annoncées dans le README : 151 sorties en français sur 28
+   * fichiers. Le chemin client, l'écran, la règle exportée, le questionnaire, le vérificateur
+   * de rapport, deux documents engendrés — chacun trouvé séparément, tous la même cause.
+   *
+   * Ce cas garde ce qui a été rendu à l'acheteur, et COMPTE ce qui ne l'est pas encore. Une
+   * garde qui ne protégerait que le fait accompli laisserait le reste invisible ; un chiffre
+   * issu d'une sélection porte le compte de ce qu'il écarte.
+   */
+  const dossier = fileURLToPath(new URL(".", import.meta.url));
+  /** Les commandes dont la sortie a été rendue à l'acheteur, et qui ne doivent plus régresser. */
+  const RENDUES = ["premiere-reponse.mjs", "verifier-rapport.mjs", "your-cases.ts", "server.ts",
+    "intake.ts", "licences.ts", "menace.ts"];
+  const FRANCAIS = /\b(votre|vos|aucune?|n'est|n'a|qui|pour|dans|à la|ne se|données|refus|une|des|cette|celle|chaque|est |sont |avec |sans |déjà)\b/i;
+
+  const sorties = (src: string) =>
+    [...src.matchAll(/console\.(?:log|error|warn)\(\s*[`"]([^`"]{15,400})/g)].map((m) => m[1]!);
+
+  const fautifs: string[] = [];
+  let examinees = 0;
+  for (const f of RENDUES) {
+    const p = join(dossier, f);
+    if (!existsSync(p)) { fautifs.push(`${f} n'existe plus — la liste des commandes rendues est périmée`); continue; }
+    examinees++;
+    for (const t of sorties(readFileSync(p, "utf8"))) {
+      if (FRANCAIS.test(t.replace(/\\n/g, " "))) fautifs.push(`${f} — « ${t.replace(/\s+/g, " ").slice(0, 56)} »`);
+    }
+  }
+  assert.equal(examinees, RENDUES.length, "un fichier de la liste n'a pas été lu : ce cas vérifie moins qu'il n'annonce.");
+  assert.deepEqual(fautifs, [],
+    `sortie(s) en français sur une commande déjà rendue à l'acheteur :\n${fautifs.map((x) => `  - ${x}`).join("\n")}`);
+
+  /* LE TÉMOIN : le motif doit reconnaître du français, sinon ce zéro ne vaut rien. */
+  assert.ok(FRANCAIS.test("aucune valeur n'est refusée dans cette passe"),
+    "le motif ne reconnaît plus le français : le zéro ci-dessus est sans valeur.");
+  assert.ok(!FRANCAIS.test("no records were read from your file, and nothing was measured"),
+    "le motif mord sur de l'anglais : il refuserait une sortie correcte.");
+
+  /*
+   * ET CE QUI RESTE, COMPTÉ PLUTÔT QUE TU. Le nombre baisse à mesure qu'on rend les
+   * commandes ; le jour où il remonte, quelqu'un en a ajouté une en français.
+   */
+  const toutes = readdirSync(dossier).filter((n) => /\.(ts|mjs)$/.test(n) && !n.endsWith(".test.ts"));
+  const restantes = toutes.filter((n) => !RENDUES.includes(n))
+    .filter((n) => sorties(readFileSync(join(dossier, n), "utf8")).some((t) => FRANCAIS.test(t.replace(/\\n/g, " "))));
+  assert.ok(restantes.length <= 25,
+    `${restantes.length} commande(s) parlent encore français : ${restantes.slice(0, 6).join(", ")}…\n`
+    + "  → le compte ne doit que baisser. S'il monte, une commande neuve est arrivée en français.");
+});
