@@ -69,7 +69,37 @@ export function ceQuiManque(): string | null {
 export function lire(chemin: string): Bloc[] {
   const manque = ceQuiManque();
   if (manque) throw new Error(manque);
-  return JSON.parse(execFileSync(BINAIRE, [chemin], { encoding: "utf8", maxBuffer: 32 * 1024 * 1024 }));
+
+  /*
+   * LA RAISON DU BINAIRE, PAS « COMMAND FAILED ».
+   *
+   * `execFileSync` lève sur une sortie non nulle avec un message qui ne dit rien de ce qui
+   * s'est passé. Or le lecteur distingue quatre pannes — pas de chemin, fichier introuvable,
+   * fichier qui n'est pas une image, reconnaissance échouée — et les nommer une par une côté
+   * Swift ne sert à rien si le message meurt ici.
+   */
+  let sortie: string;
+  try {
+    sortie = execFileSync(BINAIRE, [chemin], {
+      encoding: "utf8", maxBuffer: 64 * 1024 * 1024, stdio: ["ignore", "pipe", "pipe"],
+    });
+  } catch (e) {
+    const err = e as { stderr?: Buffer | string; status?: number };
+    const dit = String(err.stderr ?? "").trim();
+    throw new Error(dit ? `${dit} (code ${err.status})`
+      : `le lecteur d'image a échoué sur ${chemin} sans rien dire (code ${err.status}).`);
+  }
+
+  /* Un tableau vide est un FAIT — « j'ai regardé, il n'y a pas de texte ». Une sortie qui ne
+     se parse pas est une panne, et les deux ne doivent pas se rapporter pareil. */
+  try {
+    const blocs = JSON.parse(sortie) as Bloc[];
+    if (!Array.isArray(blocs)) throw new Error("ce n'est pas une liste");
+    return blocs;
+  } catch (e) {
+    throw new Error(`le lecteur d'image a rendu ${sortie.length} caractère(s) que je ne sais pas `
+      + `lire (${(e as Error).message}) : ${JSON.stringify(sortie.slice(0, 120))}`);
+  }
 }
 
 /**

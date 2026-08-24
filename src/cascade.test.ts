@@ -28,7 +28,7 @@ import { ASSUMPTIONS, UNITS, BOUNDS, pricePerThousandExtractions, accuracy } fro
 import { wilson, rate, distinguishable, precision } from "./interval.ts";
 import { PLAUSIBLE, bands, ETIQUETTE, advise } from "./sensitivity.ts";
 import { litLeTexte } from "./mesurer-ocr.ts";
-import { inclinaison, texte as texteDesBlocs } from "./ocr.ts";
+import { inclinaison, texte as texteDesBlocs, lire, ceQuiManque } from "./ocr.ts";
 
 /* ── the split, which is the whole reason the measurement means anything ── */
 
@@ -3479,4 +3479,45 @@ test("la prose écrite à la main ne compte pas ce que la mesure détermine", ()
   const ancien = "Four tiers — rules, a small model, a large one, a human — measured on held-out data.";
   assert.ok(new RegExp(`\\b${MOTS}\\s+${NOMS}\\b`, "i").test(ancien),
     "le motif ne reconnaît plus « Four tiers » : il ne peut plus détecter ce qu'il prétend.");
+});
+
+test("le lecteur d'image distingue ses pannes, et une page sans texte n'en est pas une", () => {
+  /*
+   * PREMIÈRE VERSION : `try?` sur l'appel Vision et `exit(1)` muet sur une image illisible.
+   * Trois états rendaient la même chose — une page sans texte, un fichier qu'on n'a pas su
+   * ouvrir, une reconnaissance qui a échoué — et le premier est un FAIT quand les deux autres
+   * sont des PANNES. La mesure de fidélité aurait lu une panne comme un mauvais taux d'OCR,
+   * et on aurait cherché du côté du modèle.
+   *
+   * Ce cas éprouve les deux moitiés : la panne se nomme, et le tableau vide reste possible.
+   */
+  const manque = ceQuiManque();
+  if (manque) return;   // pas de Vision ici : rien à éprouver, et le dire est le refus lui-même
+
+  const dossier = mkdtempSync(join(tmpdir(), "ocr-"));
+  try {
+    /* UNE PANNE SE NOMME. Un fichier absent et un fichier qui n'est pas une image sont deux
+       raisons différentes, et le message doit permettre de les distinguer sans deviner. */
+    assert.throws(() => lire(join(dossier, "absent.png")), /introuvable/,
+      "un fichier absent ne se distingue plus d'une autre panne.");
+
+    const faux = join(dossier, "faux.png");
+    writeFileSync(faux, "ceci n'est pas une image");
+    assert.throws(() => lire(faux), /pas une image lisible/,
+      "un fichier qui n'est pas une image ne se distingue plus d'un fichier absent.");
+
+    /* CONTRE-ÉPREUVE — une vraie image rend des blocs, et le texte attendu est dedans. Sans
+       elle, un lecteur qui refuserait TOUT passerait les deux assertions du dessus. */
+    const vraie = fileURLToPath(new URL("../images/screen.png", import.meta.url));
+    if (existsSync(vraie)) {
+      const blocs = lire(vraie);
+      assert.ok(blocs.length > 5,
+        `${blocs.length} bloc(s) lus sur la capture de l'écran : le lecteur refuse tout, et les `
+        + `deux assertions ci-dessus passeraient sur n'importe quelle panne.`);
+      assert.ok(blocs.some((b) => /dollar/i.test(b.texte)),
+        "le titre de l'écran n'est pas retrouvé : ce ne sont pas les blocs de cette image.");
+    }
+  } finally {
+    rmSync(dossier, { recursive: true, force: true });
+  }
 });
