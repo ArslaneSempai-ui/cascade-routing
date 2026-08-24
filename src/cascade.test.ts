@@ -2873,14 +2873,21 @@ test("chaque route du serveur existe et répond, et une origine étrangère est 
        la première version annonçait `localhost` en se connectant à `127.0.0.1`. Un navigateur
        traite ces deux-là comme DEUX ORIGINES DIFFÉRENTES, donc le refus était juste et c'est le
        témoin qui était faux. Il l'a montré en tombant, ce qui est exactement son travail. */
+    /* LE CORPS DOIT ÊTRE LÉGITIME, PAS SEULEMENT L'ORIGINE. Ce cas envoyait `{}`, qui
+       rendait 200 par absence d'effet — donc il éprouvait la garde d'origine à travers une
+       requête que le serveur acceptait sans rien faire. Depuis qu'une requête sans effet est
+       refusée, il faut un vrai changement de routage : sinon on ne saurait pas si le 200
+       vient de l'origine acceptée ou d'un no-op. */
     const sienne = await fetch(`${base}/api/routage`, {
-      method: "POST", headers: { "content-type": "application/json", origin: `http://127.0.0.1:${PORT}` }, body: "{}",
+      method: "POST", headers: { "content-type": "application/json", origin: `http://127.0.0.1:${PORT}` },
+      body: JSON.stringify({ champ: FIELDS[0], palier: "rules" }),
     });
     assert.equal(sienne.status, 200, "l'écran lui-même est refusé : la garde mord son propre usage.");
 
     /* Et l'autre nom de la même machine EST une autre origine : le vérifier fige le choix. */
     const autreNom = await fetch(`${base}/api/routage`, {
-      method: "POST", headers: { "content-type": "application/json", origin: `http://localhost:${PORT}` }, body: "{}",
+      method: "POST", headers: { "content-type": "application/json", origin: `http://localhost:${PORT}` },
+      body: JSON.stringify({ champ: FIELDS[0], palier: "rules" }),
     });
     assert.equal(autreNom.status, 403,
       "`localhost` et `127.0.0.1` sont deux origines distinctes pour un navigateur ; les "
