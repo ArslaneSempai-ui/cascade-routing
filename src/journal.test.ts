@@ -986,7 +986,7 @@ test("aucune sortie française sur les commandes déjà rendues à l'acheteur", 
    * pas. Comparer les deux chiffres n'aurait aucun sens, et le prochain élargissement fera
    * pareil.
    */
-  assert.ok(restantes.length <= 26,
+  assert.ok(restantes.length <= 23,
     `${restantes.length} commande(s) parlent encore français : ${restantes.slice(0, 6).join(", ")}…\n`
     + "  → le compte ne doit que baisser. S'il monte, une commande neuve est arrivée en français.");
 });
