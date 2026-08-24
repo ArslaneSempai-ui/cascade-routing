@@ -184,7 +184,7 @@ test("aucun palier local ne coûte le même prix sur tous les champs", (t) => {
   if (!p) return t.skip("aucun relevé lisible : ce cas n'a rien regardé, et il le dit plutôt que de compter comme un cas passé.");
 
   const locaux = paliersMesures(p).filter((t) => t.startsWith("gen-"));
-  if (locaux.length === 0) return;   // échelle générative non mesurée : rien à tenir ici
+  if (locaux.length === 0) return t.skip("locaux.length === 0 — ce cas n'a rien regardé, et il le dit.");   // échelle générative non mesurée : rien à tenir ici
 
   for (const t of locaux) {
     const prix: number[] = FIELDS.map((c) => pricePerThousandExtractions(t, ASSUMPTIONS, p.extraction[t][c].latency));
@@ -256,7 +256,7 @@ test("Wilson does not invent certainty from four observations", () => {
 
 /* ── ce que l'échelle générative a appris, et qui doit le rester ── */
 
-test("le routage optimal traverse plusieurs familles de paliers", () => {
+test("le routage optimal traverse plusieurs familles de paliers", (t) => {
   /*
    * C'est la trouvaille centrale, et elle serait invisible sans le test.
    *
@@ -266,7 +266,7 @@ test("le routage optimal traverse plusieurs familles de paliers", () => {
    * la page dirait alors le contraire de ce qu'elle démontre.
    */
   const p = readProfiles();
-  if (!p || !p.extraction["gen-4b"]) return;   // profil encodeurs seuls : rien à tenir ici
+  if (!p || !p.extraction["gen-4b"]) return t.skip("!p || !p.extraction['gen-4b'] — ce cas n'a rien regardé, et il le dit.");   // profil encodeurs seuls : rien à tenir ici
   const s = optimiseExtraction(p, ASSUMPTIONS);
   assert.ok(s, "aucun routage sous ces budgets");
   const familles = new Set(FIELDS.map((c) => {
@@ -306,14 +306,14 @@ test("les règles gratuites gardent au moins trois champs sur cinq", (t) => {
     `les règles n'égalent ou ne battent tout le monde que sur ${gratuits.length} champs`);
 });
 
-test("un palier plus gros n'est pas supposé meilleur", () => {
+test("un palier plus gros n'est pas supposé meilleur", (t) => {
   /*
    * Sur l'adresse, gen-8b est sous gen-4b — et sur les encodeurs à 1 000 cas, `large` est
    * sous `small`. Un test qui ne tiendrait que « l'ordre monte » aurait empêché de voir la
    * seule chose intéressante de ce projet.
    */
   const p = readProfiles();
-  if (!p || !p.extraction["gen-8b"]) return;
+  if (!p || !p.extraction["gen-8b"]) return t.skip("!p || !p.extraction['gen-8b'] — ce cas n'a rien regardé, et il le dit.");
   const inversions = FIELDS.filter((c) =>
     p.extraction["gen-8b"][c].accuracy < p.extraction["gen-4b"][c].accuracy
     || p.extraction["large"][c].accuracy < p.extraction["small"][c].accuracy);
@@ -554,6 +554,10 @@ test("le routage est exhaustif, pas heuristique", (t) => {
   const large = { ...ASSUMPTIONS, budget: Number.MAX_SAFE_INTEGER, latencyBudgetMs: Number.MAX_SAFE_INTEGER };
   let vues = 0;
   const compter = (i: number, courant: Record<string, string>) => {
+    /* CE `return` N'EST PAS UNE SORTIE DE TEST : c'est le cas de base d'une récursion, à
+       l'intérieur d'une fonction imbriquée. Une conversion automatique l'a pris pour une
+       sortie muette et a fait ignorer le test entier — le contrôle qui cherche les cas qui
+       ne regardent pas doit compter la profondeur des accolades, pas se fier au texte. */
     if (i === FIELDS.length) { vues++; return; }
     for (const e of paliers) compter(i + 1, { ...courant, [FIELDS[i]!]: e });
   };
@@ -598,7 +602,7 @@ test("les gestes du pilote de capture mènent à l'optimum courant", (t) => {
   type Script = { images: { sortie: string; scenes?: string[][] }[] };
   const script: Script = JSON.parse(readFileSync(fileURLToPath(new URL("../captures.json", import.meta.url)), "utf8"));
   const gif = script.images.find((i) => i.sortie.endsWith(".gif"));
-  if (!gif?.scenes) return;   // pas de GIF piloté : rien à tenir
+  if (!gif?.scenes) return t.skip("!gif?.scenes — ce cas n'a rien regardé, et il le dit.");   // pas de GIF piloté : rien à tenir
 
   /* L'écran démarre avec tous les champs sur `large` — voir pages.ts. */
   const etat: Record<string, string> = Object.fromEntries(FIELDS.map((c) => [c, "large"]));
@@ -643,13 +647,13 @@ test("les gestes du pilote de capture mènent à l'optimum courant", (t) => {
  * `git log` qui ne trouve rien : sans une recherche dont on connaît la réponse, ce test
  * passerait au vert dans un dossier qui n'est même pas un dépôt.
  */
-test("aucun module licencié n'est atteignable dans l'historique de cette branche", () => {
+test("aucun module licencié n'est atteignable dans l'historique de cette branche", (t) => {
   const racine = fileURLToPath(new URL("..", import.meta.url));
   const git = (args: string[]) =>
     spawnSync("git", args, { cwd: racine, encoding: "utf8", timeout: 20_000 });
 
   const dedans = git(["rev-parse", "--is-inside-work-tree"]);
-  if (dedans.status !== 0 || dedans.stdout.trim() !== "true") return;   // archive, pas un dépôt
+  if (dedans.status !== 0 || dedans.stdout.trim() !== "true") return t.skip("dedans.status !== 0 || dedans.stdout.trim() !== 'true' — ce cas n'a rien regardé, et il le dit.");   // archive, pas un dépôt
 
   /* LE TÉMOIN : un chemin dont on SAIT qu'il est dans l'historique. S'il ne sort pas, la
      commande ne lit rien et son silence sur les autres ne veut rien dire. */
@@ -674,7 +678,7 @@ test("aucun module licencié n'est atteignable dans l'historique de cette branch
     + "    lisible dans « git log », et un dépôt public n'oublie rien.");
 });
 
-test("chaque rétractation nomme un test qui existe vraiment", () => {
+test("chaque rétractation nomme un test qui existe vraiment", (t) => {
   /*
    * Le journal des rétractations est un instrument anti-péremption, et il est lui-même
    * périssable : il est écrit à la main, et rien ne le relie au code. Le jour où un test est
@@ -685,7 +689,7 @@ test("chaque rétractation nomme un test qui existe vraiment", () => {
    * désigner un test réel du dépôt.
    */
   const f = fileURLToPath(new URL("../retractations.json", import.meta.url));
-  if (!existsSync(f)) return;
+  if (!existsSync(f)) return t.skip("!existsSync(f) — ce cas n'a rien regardé, et il le dit.");
   const journal = JSON.parse(readFileSync(f, "utf8")) as {
     entries: { claimed: string; heldBy: string | null; notHeld?: string; heldIn?: string }[] };
 
@@ -785,7 +789,7 @@ test("un relevé régénéré porte le commit qui l'a produit", (t) => {
   if (p.measuredAt === RELEVE_HISTORIQUE) {
     console.warn(`  ⚠ le profil gelé du ${RELEVE_HISTORIQUE} est antérieur à l'enregistrement du commit.\n`
       + `    Il est toléré par sa date, et par elle seule. \`npm run measure\` le rendra dur.`);
-    return;
+    return t.skip("condition non remplie — ce cas n'a rien regardé, et il le dit.");
   }
 
   assert.ok(p.code && typeof p.code.commit === "string" && p.code.commit.length > 0,
@@ -811,7 +815,7 @@ test("un relevé régénéré garde les réussites par cas, pour que McNemar pui
   if (p.measuredAt === RELEVE_HISTORIQUE) {
     console.warn(`  ⚠ le profil gelé du ${RELEVE_HISTORIQUE} ne conserve pas les réussites par cas :\n`
       + `    toutes ses égalités viennent du recouvrement d'intervalles, pas de McNemar.`);
-    return;
+    return t.skip("condition non remplie — ce cas n'a rien regardé, et il le dit.");
   }
 
   for (const t of paliersMesures(p)) {
@@ -899,7 +903,7 @@ test("les deux balayages de prix ne peuvent pas se contredire", (t) => {
   if (!p) return t.skip("aucun relevé lisible : ce cas n'a rien regardé, et il le dit plutôt que de compter comme un cas passé.");
 
   const optimum = optimiseExtraction(p, ASSUMPTIONS);
-  if (!optimum) return;
+  if (!optimum) return t.skip("!optimum — ce cas n'a rien regardé, et il le dit.");
   const retenus = new Set(FIELDS.map((c) => optimum.routing[c]));
 
   /* Balayage grossier : on vérifie une classification, pas la largeur d'une bande. */
@@ -1013,7 +1017,7 @@ test("un palier mesuré porte sa propre provenance", (t) => {
    */
   const p = readProfiles();
   if (!p) return t.skip("aucun relevé lisible : ce cas n'a rien regardé, et il le dit plutôt que de compter comme un cas passé.");
-  if (p.measuredAt === RELEVE_HISTORIQUE) return;
+  if (p.measuredAt === RELEVE_HISTORIQUE) return t.skip("p.measuredAt === RELEVE_HISTORIQUE — ce cas n'a rien regardé, et il le dit.");
 
   /*
    * Compter ce qu'on a réellement vérifié.
@@ -1163,7 +1167,7 @@ test("les deux fichiers classent une absence de seuil de la même façon", (t) =
   const p = readProfiles();
   if (!p) return t.skip("aucun relevé lisible : ce cas n'a rien regardé, et il le dit plutôt que de compter comme un cas passé.");
   const f = fileURLToPath(new URL("../landing.json", import.meta.url));
-  if (!existsSync(f)) return;
+  if (!existsSync(f)) return t.skip("!existsSync(f) — ce cas n'a rien regardé, et il le dit.");
 
   const publie = JSON.parse(readFileSync(f, "utf8")) as {
     sensitivity: { thresholds: Record<string, { reason: string; breaksAt: number | null }> } };
@@ -1297,12 +1301,12 @@ test("la décomposition des erreurs recompose l'exactitude du palier", (t) => {
   const p = readProfiles();
   if (!p) return t.skip("aucun relevé lisible : ce cas n'a rien regardé, et il le dit plutôt que de compter comme un cas passé.");
   const f = fileURLToPath(new URL("../landing.json", import.meta.url));
-  if (!existsSync(f)) return;
+  if (!existsSync(f)) return t.skip("!existsSync(f) — ce cas n'a rien regardé, et il le dit.");
   const l = JSON.parse(readFileSync(f, "utf8")) as {
     errorSplit: { perThousand: Record<string, { tier: string; blank: number | null; wrong: number | null }> } | null;
     cleanPerDocument: { pct: number; n: number; clean: number } | null;
   };
-  if (!l.errorSplit || !l.cleanPerDocument) return;
+  if (!l.errorSplit || !l.cleanPerDocument) return t.skip("!l.errorSplit || !l.cleanPerDocument — ce cas n'a rien regardé, et il le dit.");
 
   let verifies = 0;
   let pireChamp = 100;
@@ -1323,7 +1327,7 @@ test("la décomposition des erreurs recompose l'exactitude du palier", (t) => {
     + `du routage (${pireChamp.toFixed(1)} %) — impossible, un dossier n'est propre que si tous le sont.`);
 });
 
-test("chaque rétractation porte son résumé et dit si quelqu'un l'a vue", () => {
+test("chaque rétractation porte son résumé et dit si quelqu'un l'a vue", (t) => {
   /*
    * Deux champs qu'un générateur ne doit jamais déduire.
    *
@@ -1337,7 +1341,7 @@ test("chaque rétractation porte son résumé et dit si quelqu'un l'a vue", () =
    * qu'une entrée ajoutée demain ne parte pas sans elles.
    */
   const f = fileURLToPath(new URL("../retractations.json", import.meta.url));
-  if (!existsSync(f)) return;
+  if (!existsSync(f)) return t.skip("!existsSync(f) — ce cas n'a rien regardé, et il le dit.");
   const j = JSON.parse(readFileSync(f, "utf8")) as {
     entries: { date: string; headline?: string; caughtBeforeAnyoneSawIt?: boolean }[] };
 
@@ -1360,9 +1364,9 @@ test("chaque rétractation porte son résumé et dit si quelqu'un l'a vue", () =
  * copies à elles-mêmes. Un seul palier a réellement été mesuré deux fois, et c'est cette
  * mesure-là — une seule — qui porte l'affirmation.
  */
-test("l'égalité d'exactitude sous charge ne porte que sur les paliers réellement remesurés", () => {
+test("l'égalité d'exactitude sous charge ne porte que sur les paliers réellement remesurés", (t) => {
   const f = fileURLToPath(new URL("../landing.json", import.meta.url));
-  if (!existsSync(f)) return;
+  if (!existsSync(f)) return t.skip("!existsSync(f) — ce cas n'a rien regardé, et il le dit.");
   const ls = (JSON.parse(readFileSync(f, "utf8")) as {
     loadSweep: null | {
       tiers: { id: string; remeasuredUnderLoad: boolean; accuracyGapPct: number }[];
@@ -1440,9 +1444,9 @@ test("le commit qui introduit le choix de formulation est bien celui qu'on nomme
  * Un `movesRouting: false` obtenu en n'essayant aucun prix serait le vert vide habituel : la
  * page dirait « aucune baisse ne déplace le routage » sur la foi d'une boucle qui n'a pas tourné.
  */
-test("le balayage vers le bas essaie des prix, et le dit", () => {
+test("le balayage vers le bas essaie des prix, et le dit", (t) => {
   const f = fileURLToPath(new URL("../landing.json", import.meta.url));
-  if (!existsSync(f)) return;
+  if (!existsSync(f)) return t.skip("!existsSync(f) — ce cas n'a rien regardé, et il le dit.");
   const d = (JSON.parse(readFileSync(f, "utf8")) as {
     sensitivity: { downward: {
       tiers: { id: string; driver: string; from: number; to: number; movesRouting: boolean; driverAlsoPrices: string[] }[];
@@ -1475,9 +1479,9 @@ test("le balayage vers le bas essaie des prix, et le dit", () => {
  * supérieure. Un test qui ne vérifierait que la présence du mot laisserait le jour où la
  * mesure dit « sous-estime » passer pour « prudente ».
  */
-test("la composition des latences est nommée, et son écart au total réel est chiffré", () => {
+test("la composition des latences est nommée, et son écart au total réel est chiffré", (t) => {
   const f = fileURLToPath(new URL("../landing.json", import.meta.url));
-  if (!existsSync(f)) return;
+  if (!existsSync(f)) return t.skip("!existsSync(f) — ce cas n'a rien regardé, et il le dit.");
   const ls = (JSON.parse(readFileSync(f, "utf8")) as {
     latencySpread: { composition?: string; compositionCheck?: {
       measured: boolean; conservative?: boolean; note?: string;
@@ -1521,9 +1525,9 @@ test("la composition des latences est nommée, et son écart au total réel est 
  * suive la valeur jusque dans `landing.json`, seul endroit que le lecteur voit. Une unité juste
  * dans le code et absente de l'émission ne protège personne.
  */
-test("chaque seuil publié porte son unité, dénominateur compris", () => {
+test("chaque seuil publié porte son unité, dénominateur compris", (t) => {
   const f = fileURLToPath(new URL("../landing.json", import.meta.url));
-  if (!existsSync(f)) return;
+  if (!existsSync(f)) return t.skip("!existsSync(f) — ce cas n'a rien regardé, et il le dit.");
   const seuils = (JSON.parse(readFileSync(f, "utf8")) as {
     sensitivity: { thresholds: Record<string, { unit?: string }> };
   }).sensitivity.thresholds;
@@ -1593,16 +1597,16 @@ test("l'appel génératif impose une sortie structurée, sans quoi le prix publi
  * C'est mécanisable sans ambiguïté, et c'est exactement ce que la note fautive ne faisait pas —
  * elle ne prononçait pas le mot « country ».
  */
-test("la prose du plafond nomme l'exception que ses chiffres portent", () => {
+test("la prose du plafond nomme l'exception que ses chiffres portent", (t) => {
   const f = fileURLToPath(new URL("../landing.json", import.meta.url));
-  if (!existsSync(f)) return;
+  if (!existsSync(f)) return t.skip("!existsSync(f) — ce cas n'a rien regardé, et il le dit.");
   const bloc = (JSON.parse(readFileSync(f, "utf8")) as {
     latencySpread: { escalationCeiling: null | {
       perField: { field: string; overCeiling: boolean }[];
       everyFieldOverCeiling: boolean; fieldsOverCeiling: string[]; fieldsUnderCeiling: string[];
       note: string } };
   }).latencySpread.escalationCeiling;
-  if (!bloc) return;
+  if (!bloc) return t.skip("!bloc — ce cas n'a rien regardé, et il le dit.");
 
   assert.ok(bloc.perField.length >= 5, `${bloc.perField.length} champ(s) chiffré(s) : trop peu.`);
 
@@ -1657,9 +1661,9 @@ test("la prose du plafond nomme l'exception que ses chiffres portent", () => {
  * Ce test tient les deux bouts : la déclaration existe, et l'endroit qu'elle désigne porte
  * réellement des percentiles. Une déclaration qui pointe vers un objet vide serait pire que rien.
  */
-test("toute durée publiée déclare d'où elle vient, et cet endroit porte des percentiles", () => {
+test("toute durée publiée déclare d'où elle vient, et cet endroit porte des percentiles", (t) => {
   const f = fileURLToPath(new URL("../landing.json", import.meta.url));
-  if (!existsSync(f)) return;
+  if (!existsSync(f)) return t.skip("!existsSync(f) — ce cas n'a rien regardé, et il le dit.");
   const vue = JSON.parse(readFileSync(f, "utf8")) as {
     latencyFigures?: { origin: string; dispersionLivesIn: string; noFreshTimingHere: boolean;
       countedVersusTimed: string };
@@ -3011,9 +3015,9 @@ test("le tableau d'extraction publie la précision, pas seulement la taille d'é
  * La date est dans le nom, donc dérivable : le contrôle compare les deux plutôt que d'exiger
  * seulement une date quelconque, sinon un rapport pourrait porter la date d'un autre jour.
  */
-test("chaque rapport daté porte sa date dans son contenu, et c'est celle de son nom", () => {
+test("chaque rapport daté porte sa date dans son contenu, et c'est celle de son nom", (t) => {
   const racine = fileURLToPath(new URL("../rapports", import.meta.url));
-  if (!existsSync(racine)) return;
+  if (!existsSync(racine)) return t.skip("!existsSync(racine) — ce cas n'a rien regardé, et il le dit.");
   const MOIS = ["January", "February", "March", "April", "May", "June",
     "July", "August", "September", "October", "November", "December"];
 
@@ -3318,9 +3322,9 @@ test("un palier qui ne lit pas le document est écarté, et il est détecté par
     + "aveugle, la garde écarte des paliers valides et la mesure ne portera plus sur rien.");
 });
 
-test("le coût de l'étage de lecture est publié avec ce qu'il ne couvre pas", () => {
+test("le coût de l'étage de lecture est publié avec ce qu'il ne couvre pas", (t) => {
   const chemin = fileURLToPath(new URL("../ocr.json", import.meta.url));
-  if (!existsSync(chemin)) return;  // la mesure demande macOS et Chrome : absente, rien à vérifier
+  if (!existsSync(chemin)) return t.skip("!existsSync(chemin) — ce cas n'a rien regardé, et il le dit.");  // la mesure demande macOS et Chrome : absente, rien à vérifier
   const r = JSON.parse(readFileSync(chemin, "utf8"));
 
   /* LE PLANCHER SE DIT. Les images sont rendues, pas photographiées : l'écart mesuré est un
@@ -3575,7 +3579,7 @@ test("la prose écrite à la main ne compte pas ce que la mesure détermine", ()
     "le motif ne reconnaît plus « Four tiers » : il ne peut plus détecter ce qu'il prétend.");
 });
 
-test("le lecteur d'image distingue ses pannes, et une page sans texte n'en est pas une", () => {
+test("le lecteur d'image distingue ses pannes, et une page sans texte n'en est pas une", (t) => {
   /*
    * PREMIÈRE VERSION : `try?` sur l'appel Vision et `exit(1)` muet sur une image illisible.
    * Trois états rendaient la même chose — une page sans texte, un fichier qu'on n'a pas su
@@ -3586,7 +3590,7 @@ test("le lecteur d'image distingue ses pannes, et une page sans texte n'en est p
    * Ce cas éprouve les deux moitiés : la panne se nomme, et le tableau vide reste possible.
    */
   const manque = ceQuiManque();
-  if (manque) return;   // pas de Vision ici : rien à éprouver, et le dire est le refus lui-même
+  if (manque) return t.skip("manque — ce cas n'a rien regardé, et il le dit.");   // pas de Vision ici : rien à éprouver, et le dire est le refus lui-même
 
   const dossier = mkdtempSync(join(tmpdir(), "ocr-"));
   try {
@@ -3616,7 +3620,7 @@ test("le lecteur d'image distingue ses pannes, et une page sans texte n'en est p
   }
 });
 
-test("aucun chiffre de l'étage de lecture ne peut voyager sans son qualificatif", () => {
+test("aucun chiffre de l'étage de lecture ne peut voyager sans son qualificatif", (t) => {
   /*
    * Une session pair a relevé le vrai défaut de la première version : la réserve — « images
    * rendues, pas photographiées » — vivait dans une clé SŒUR du tableau des paliers. Un
@@ -3630,7 +3634,7 @@ test("aucun chiffre de l'étage de lecture ne peut voyager sans son qualificatif
   const bloc = (JSON.parse(readFileSync(chemin, "utf8")) as {
     readingStage: null | { tiers: Record<string, unknown>[]; [k: string]: unknown };
   }).readingStage;
-  if (bloc === null) return;   // pas de relevé sur cette machine : rien à tenir
+  if (bloc === null) return t.skip("bloc === null — ce cas n'a rien regardé, et il le dit.");   // pas de relevé sur cette machine : rien à tenir
 
   assert.ok(Array.isArray(bloc.tiers) && bloc.tiers.length >= 2,
     `${(bloc.tiers as unknown[])?.length} palier(s) dans le bloc : la lecture a échoué et ce cas `
@@ -3769,7 +3773,7 @@ test("la frontière d'abstention applique son plancher au bon dénominateur", ()
     "le bloc convertit des relectures en heures sans dire à quel temps par relecture.");
 });
 
-test("le dossier qu'un relecteur signe porte l'exactitude dans l'unité qu'il classe", () => {
+test("le dossier qu'un relecteur signe porte l'exactitude dans l'unité qu'il classe", (t) => {
   /*
    * VALIDATION.md annonçait la moyenne de cinq taux par champ, dans le document qu'une
    * personne signe de son nom. Elle ne classe pas des champs : elle classe des dossiers.
@@ -3779,7 +3783,7 @@ test("le dossier qu'un relecteur signe porte l'exactitude dans l'unité qu'il cl
    */
   const racine = fileURLToPath(new URL("..", import.meta.url));
   const chemin = join(racine, "document.json");
-  if (!existsSync(chemin)) return;   // mesure absente : le dossier a le droit de le dire
+  if (!existsSync(chemin)) return t.skip("!existsSync(chemin) — ce cas n'a rien regardé, et il le dit.");   // mesure absente : le dossier a le droit de le dire
 
   const d = JSON.parse(readFileSync(chemin, "utf8")) as
     { publie: { complets: number; n: number } };

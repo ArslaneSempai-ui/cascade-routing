@@ -679,10 +679,10 @@ test("aucun contrôle ne lit un produit que rien ne vérifie avant lui", () => {
     "le contrôle de landing.json passe après les tests : ils liraient un produit non vérifié.");
 });
 
-test("un produit plus ancien que sa source arrête le contrôle au lieu de l'avertir", async () => {
+test("un produit plus ancien que sa source arrête le contrôle au lieu de l'avertir", async (t) => {
   const { perime, lireDerivees } = await import("./derivees.ts");
   const d = lireDerivees();
-  if (!d) return;
+  if (!d) return t.skip("!d — ce cas n'a rien regardé, et il le dit.");
 
   const v = perime();
   assert.ok(typeof v.perime === "boolean" && v.raison.length > 20,
@@ -767,7 +767,7 @@ test("les sorties brutes ne sont lues qu'à un seul endroit", () => {
     + "  le repli sur la table gelée ne l'atteint pas, et les coûts d'erreur cessent de peser.");
 });
 
-test("aucun fichier suivi par git n'a disparu du disque", () => {
+test("aucun fichier suivi par git n'a disparu du disque", (t) => {
   /*
    * LE 24 AOÛT 2026, J'AI EFFACÉ src/rapport.test.ts SANS QUE RIEN NE TOMBE.
    *
@@ -787,7 +787,7 @@ test("aucun fichier suivi par git n'a disparu du disque", () => {
   const racine = fileURLToPath(new URL("..", import.meta.url));
   const git = spawnSync("git", ["ls-files", "-z", "src", "*.json", "*.md"],
     { cwd: racine, encoding: "utf8" });
-  if (git.status !== 0) return;   // pas un dépôt : on ne conclut pas
+  if (git.status !== 0) return t.skip("git.status !== 0 — ce cas n'a rien regardé, et il le dit.");   // pas un dépôt : on ne conclut pas
 
   const suivis: string[] = git.stdout.split("\0").filter(Boolean);
   assert.ok(suivis.length >= 20,
@@ -804,4 +804,64 @@ test("aucun fichier suivi par git n'a disparu du disque", () => {
      pourrait répondre vrai partout et ce zéro ne vaudrait rien. */
   assert.equal(existsSync(join(racine, "src/ce-fichier-n-existe-pas.ts")), false,
     "existsSync répond vrai sur un fichier absent : ce contrôle ne vérifie rien.");
+});
+
+test("un cas qui ne regarde pas le DIT, il ne rend pas la main en silence", (t) => {
+  /*
+   * `if (!p) return t.skip("!p — ce cas n'a rien regardé, et il le dit.");` — pas de relevé, le cas sort, et le lanceur le compte comme PASSÉ.
+   * Vingt-six cas faisaient ça sur la même condition : la suite aurait annoncé deux cent
+   * onze réussites pendant qu'un quart d'entre eux n'avait rien regardé.
+   *
+   * Ils rendent `t.skip()` avec la raison maintenant, et le lanceur affiche un compte
+   * d'ignorés. Ce cas-ci empêche le prochain retour muet d'entrer : un cas qui n'a pas
+   * regardé ne doit jamais ressembler à un cas qui a regardé.
+   *
+   * Ce qui est autorisé : un retour APRÈS au moins une assertion — le cas a alors vérifié
+   * quelque chose avant de s'arrêter, et son silence porte déjà sur un fait établi.
+   */
+  const dossier = fileURLToPath(new URL(".", import.meta.url));
+  const fichiers = readdirSync(dossier).filter((n) => n.endsWith(".test.ts")).sort();
+  assert.ok(fichiers.length >= 5, `${fichiers.length} fichier(s) de test : la lecture a échoué.`);
+
+  const muets: string[] = [];
+  let regardes = 0;
+  for (const f of fichiers) {
+    const src = readFileSync(join(dossier, f), "utf8");
+    /* Les cas, découpés sur leurs accolades — une expression régulière s'arrêterait à la
+       première accolade interne, et il y en a toujours une. */
+    for (const m of src.matchAll(/^test\(\s*("(?:[^"\\]|\\.)*")/gm)) {
+      let i = src.indexOf("{", m.index!), prof = 0, j = i;
+      for (; j < src.length; j++) {
+        if (src[j] === "{") prof++;
+        else if (src[j] === "}") { prof--; if (prof === 0) break; }
+      }
+      const corps = src.slice(m.index!, j + 1);
+      regardes++;
+      /*
+       * LA PROFONDEUR DES ACCOLADES DÉCIDE, PAS LE TEXTE.
+       *
+       * Un `return;` à l'intérieur d'une fonction imbriquée — le cas de base d'une récursion,
+       * par exemple — n'est pas une sortie de test. Une conversion automatique en a pris un
+       * pour tel et a fait IGNORER un cas entier : le contrôle censé rendre les silences
+       * visibles en a fabriqué un.
+       *
+       * On ne regarde donc que les retours au niveau du corps du cas.
+       */
+      const ouvre = corps.indexOf("{");
+      let niveau = 0, ret = -1;
+      for (let k = ouvre; k < corps.length; k++) {
+        if (corps[k] === "{") niveau++;
+        else if (corps[k] === "}") niveau--;
+        else if (niveau === 1 && corps.startsWith("return", k) && /^return\s*;/.test(corps.slice(k))) { ret = k; break; }
+      }
+      if (ret !== -1 && !/\bassert\b/.test(corps.slice(0, ret))) {
+        muets.push(`${f}:${src.slice(0, m.index!).split("\n").length}  ${JSON.parse(m[1]!).slice(0, 60)}`);
+      }
+    }
+  }
+  assert.ok(regardes >= 50, `${regardes} cas analysés : le découpage a échoué et ce contrôle ne vérifie rien.`);
+  assert.deepEqual(muets, [],
+    `cas rendant la main sans avoir rien vérifié :\n${muets.map((x) => `  - ${x}`).join("\n")}\n`
+    + "  → remplacez `return;` par `return t.skip(\"pourquoi\")`, et prenez `(t)` en paramètre.\n"
+    + "    Le lanceur comptera un ignoré au lieu d'une réussite, et la perte se verra.");
 });

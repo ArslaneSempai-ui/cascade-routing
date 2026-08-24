@@ -263,9 +263,9 @@ test("la paire à départager est le vainqueur et son second, pas une paire comm
  * aucun ne se sépare de son second. Ce test empêche qu'un fichier de ce dépôt renomme à nouveau
  * un maximum en résultat : soit le départage est dans le fichier, soit une réfutation y renvoie.
  */
-test("aucun réglage ne déclare une formulation retenue sans l'avoir départagée", () => {
+test("aucun réglage ne déclare une formulation retenue sans l'avoir départagée", (t) => {
   const f = fileURLToPath(new URL("../prompts-par-palier.json", import.meta.url));
-  if (!existsSync(f)) return;
+  if (!existsSync(f)) return t.skip("!existsSync(f) — ce cas n'a rien regardé, et il le dit.");
   const reglage = JSON.parse(readFileSync(f, "utf8")) as {
     retenu?: Record<string, string | null>;
     depart?: Record<string, { decidable: boolean }>;

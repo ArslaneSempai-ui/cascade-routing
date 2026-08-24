@@ -74,7 +74,7 @@ test("« aucun seuil » distingue ses deux causes, qui ne se corrigent pas parei
   const p = readProfiles();
   if (!p) return t.skip("aucun relevé lisible : ce cas n'a rien regardé, et il le dit plutôt que de compter comme un cas passé.");
   const s = seuilDeCout(p, ASSUMPTIONS, TITULAIRE(1500, 9));
-  if (s.calculable) return;                       // un seuil existe : rien à distinguer ici
+  if (s.calculable) return t.skip("s.calculable — ce cas n'a rien regardé, et il le dit.");                       // un seuil existe : rien à distinguer ici
   const d = s as { egauxMaisTropLents?: number; plusRapideDesEgauxMs?: number | null; pourquoi?: string };
   assert.ok(d.egauxMaisTropLents !== undefined,
     "l'absence de seuil doit dire si quelque chose égalait le titulaire mais dépassait le plafond.");

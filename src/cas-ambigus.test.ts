@@ -40,8 +40,8 @@ function bloc(prose: string, id: string): string {
   return prose.slice(i, j === -1 ? prose.length : j);
 }
 
-test("la clé ne déclare aucune lecture que le corpus ne contient pas", () => {
-  if (!existsSync(CLE) || !existsSync(PROSE)) return;
+test("la clé ne déclare aucune lecture que le corpus ne contient pas", (t) => {
+  if (!existsSync(CLE) || !existsSync(PROSE)) return t.skip("!existsSync(CLE) || !existsSync(PROSE) — ce cas n'a rien regardé, et il le dit.");
   const { cle, prose } = charger();
   const ajoutees = new Set(cle.additionsBeyondTheProse.map((a) => `${a.case}|${normaliserReponse(a.reading)}`));
 
@@ -60,8 +60,8 @@ test("la clé ne déclare aucune lecture que le corpus ne contient pas", () => {
   assert.ok(verifiees >= 20, `${verifiees} lecture(s) vérifiée(s) : trop peu pour que ce test ait regardé.`);
 });
 
-test("aucun cas déclaré par le corpus ne disparaît de la clé", () => {
-  if (!existsSync(CLE) || !existsSync(PROSE)) return;
+test("aucun cas déclaré par le corpus ne disparaît de la clé", (t) => {
+  if (!existsSync(CLE) || !existsSync(PROSE)) return t.skip("!existsSync(CLE) || !existsSync(PROSE) — ce cas n'a rien regardé, et il le dit.");
   const { cle, prose } = charger();
 
   /* Les cas ramenés en fin de fichier comme « pas assez ambigus » ne comptent pas : le corpus
@@ -78,8 +78,8 @@ test("aucun cas déclaré par le corpus ne disparaît de la clé", () => {
     "la clé contient un cas que le corpus ne déclare pas.");
 });
 
-test("un cas rendu non ambigu par notre schéma dit pourquoi, et n'en garde qu'une lecture", () => {
-  if (!existsSync(CLE)) return;
+test("un cas rendu non ambigu par notre schéma dit pourquoi, et n'en garde qu'une lecture", (t) => {
+  if (!existsSync(CLE)) return t.skip("!existsSync(CLE) — ce cas n'a rien regardé, et il le dit.");
   const { cle } = charger();
   const ramenes = cle.cases.filter((c) => !c.ambiguousHere);
   assert.ok(ramenes.length >= 1, "aucun cas ramené : le test ne vérifie rien.");
@@ -96,8 +96,8 @@ test("un cas rendu non ambigu par notre schéma dit pourquoi, et n'en garde qu'u
   }
 });
 
-test("toute lecture ajoutée porte sa date et sa raison", () => {
-  if (!existsSync(CLE)) return;
+test("toute lecture ajoutée porte sa date et sa raison", (t) => {
+  if (!existsSync(CLE)) return t.skip("!existsSync(CLE) — ce cas n'a rien regardé, et il le dit.");
   const { cle } = charger();
   for (const a of cle.additionsBeyondTheProse) {
     assert.ok(/before any measurement/.test(a.addedOn),

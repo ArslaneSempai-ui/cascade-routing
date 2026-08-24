@@ -47,9 +47,9 @@ test("le document nomme ce qui n'est pas tenu, il ne le compte pas", () => {
   assert.match(md, /Ce qu'ils ne voient pas/, "un angle mort non publié est une fausse assurance.");
 });
 
-test("le relevé d'historique est scellé sur un commit atteignable", () => {
+test("le relevé d'historique est scellé sur un commit atteignable", (t) => {
   const f = new URL("../menace-historique.json", import.meta.url);
-  if (!existsSync(f)) return;   // pas encore balayé : `npm run menace -- --historique`
+  if (!existsSync(f)) return t.skip("!existsSync(f) — ce cas n'a rien regardé, et il le dit.");   // pas encore balayé : `npm run menace -- --historique`
   const r = JSON.parse(readFileSync(f, "utf8")) as {
     commits: number; trouves: number; declares: number; temoins: number; commit: string; date: string;
     reels: Array<{ forme: string; fichier: string; empreinte: string }>;

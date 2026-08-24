@@ -73,14 +73,14 @@ test("aucune bande disqualifiée ne repose sur sa seule couleur", () => {
     "une clé de légende sans texte : la pastille porterait seule");
 });
 
-test("les couches partagées sont bien celles d'identite", () => {
+test("les couches partagées sont bien celles d'identite", (t) => {
   /*
    * Ces règles ne valent que si le fichier contrôlé est celui que l'écran sert. Une copie
    * oubliée dans un dépôt est un contrôle qui passe au vert sur un fichier que personne ne
    * regarde — c'est déjà arrivé avec la démo du RAG, deux versions en retard.
    */
   const source = fileURLToPath(new URL("../../identite/", import.meta.url));
-  if (!existsSync(source + "registre.css")) return; // dépôt cloné seul : rien à comparer
+  if (!existsSync(source + "registre.css")) return t.skip("!existsSync(source + 'registre.css') — ce cas n'a rien regardé, et il le dit."); // dépôt cloné seul : rien à comparer
 
   /*
    * LA LISTE VIENT DU DISQUE, PAS D'ICI.
