@@ -39,7 +39,8 @@
     "diff": "node src/diff.ts",
     "entree": "node src/entree.ts",
     "sonde": "node src/sonde.ts",
-    "ocr": "node src/mesurer-ocr.ts"
+    "ocr": "node src/mesurer-ocr.ts",
+    "exposition": "node src/exposition.ts"
   },
   "dependencies": {
     "@huggingface/transformers": "^3.0.0"

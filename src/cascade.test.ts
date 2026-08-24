@@ -24,6 +24,7 @@ import { comparerPopulations, plancherDeBruit, longueur, GRAINES_DE_BRUIT } from
 import { SEUIL_DE_L_INDUSTRIE, OBSERVATIONS_MINIMALES } from "./psi.ts";
 import { readProfiles, empreinteDuReleve, RELEVE_DE_REFERENCE, type Profile, type ProvenanceDuPalier, type Provenance } from "./measure.ts";
 import { optimiseExtraction, optimiseClassification, budgetShadowPrice, latenceRepresentative, paliersMesures, evaluer, pricePerThousandDocuments } from "./optimise.ts";
+import { exposition, optimiseExposition, ouLaRecommandationBascule, decompositionsIncoherentes } from "./exposition.ts";
 import { ASSUMPTIONS, UNITS, BOUNDS, pricePerThousandExtractions, accuracy } from "./assumptions.ts";
 import { wilson, rate, distinguishable, precision } from "./interval.ts";
 import { PLAUSIBLE, bands, ETIQUETTE, advise } from "./sensitivity.ts";
@@ -3560,4 +3561,84 @@ test("aucun chiffre de l'étage de lecture ne peut voyager sans son qualificatif
   /* Et la fidélité, qui porte la même condition, la porte dans son nom. */
   assert.ok("wordFidelityOnRenderedImages" in bloc && !("wordFidelity" in bloc),
     "la fidélité est publiée sans dire qu'elle porte sur des images rendues et non photographiées.");
+});
+
+/* ────────────────────────────────────────────────────────────────────────────
+   L'EXPOSITION — ce que le routage coûte quand il se trompe
+
+   Le solveur publié maximise un taux. Un client ne paie pas un point de
+   pourcentage : il paie le coût d'avoir tort, et l'outil mesure DEUX façons de
+   se tromper qui ne coûtent pas la même chose. Un vide déclenche une relecture,
+   un faux entre au dossier.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+test("l'exposition dépend des DEUX prix, sinon elle n'en mesure qu'un", () => {
+  const p = readProfiles();
+  if (!p) return;
+  const routage = optimiseExtraction(p, ASSUMPTIONS)?.routing;
+  assert.ok(routage, "l'optimiseur ne rend pas de routage : rien à exposer.");
+
+  const base = exposition(p, ASSUMPTIONS, routage!);
+  const plusCherFaux = exposition(p, { ...ASSUMPTIONS, costWrongValue: ASSUMPTIONS.costWrongValue * 3 }, routage!);
+  const plusCherVide = exposition(p, { ...ASSUMPTIONS, costBlankField: ASSUMPTIONS.costBlankField * 3 }, routage!);
+
+  /* SANS CES DEUX-LÀ, une exposition qui ne bouge qu'avec un seul prix serait une mesure de
+     ce prix-là, déguisée en mesure du risque. C'est la dégradation en constante, appliquée
+     à un terme sur deux. */
+  assert.ok(plusCherFaux > base,
+    "tripler le prix d'une valeur fausse ne change pas l'exposition : le terme des faux est mort.");
+  assert.ok(plusCherVide > base,
+    "tripler le prix d'un champ vide ne change pas l'exposition : le terme des vides est mort.");
+});
+
+test("une décomposition qui ne décrit pas le même relevé que le taux est refusée", () => {
+  const p = readProfiles();
+  if (!p) return;
+  const paliers = paliersMesures(p);
+
+  /* Sur le relevé livré, les deux doivent s'accorder — sinon on compose deux chiffres qui ne
+     parlent pas du même objet, ce que ce dépôt refuse partout ailleurs. */
+  assert.deepEqual(decompositionsIncoherentes(p, paliers), [],
+    "vide+faux ne vaut plus 1−justesse quelque part : la décomposition et le taux ne viennent\n"
+    + "  plus du même relevé, et les composer porterait sur deux objets différents.");
+
+  /* CONTRE-ÉPREUVE — la garde doit voir un désaccord qu'on lui plante. Sans elle, un contrôle
+     qui accepterait tout rendrait exactement le même vert. */
+  const abime = JSON.parse(JSON.stringify(p)) as typeof p;
+  /* LA CASE LA PLUS JUSTE, PAS LA PREMIÈRE. Le premier montage prenait `rules|name`, dont la
+     justesse vaut DÉJÀ zéro : le `max(0, …)` ne déplaçait rien et la garde se taisait pour
+     une raison parfaitement légitime. Un témoin dont le montage laisse une raison de se
+     taire ne prouve rien. */
+  let t = paliers[0]!, c = FIELDS[0]!, meilleure = -1;
+  for (const tt of paliers) for (const cc of FIELDS) {
+    const a = abime.extraction[tt][cc].accuracy;
+    if (a > meilleure) { meilleure = a; t = tt; c = cc; }
+  }
+  assert.ok(meilleure > 0.5,
+    `la case la plus juste vaut ${meilleure} : il n'y a rien à abîmer, ce témoin ne prouverait rien.`);
+  abime.extraction[t][c].accuracy = meilleure - 0.5;
+  assert.ok(decompositionsIncoherentes(abime, [t]).length > 0,
+    `la garde ne voit plus un écart d'un demi-point sur ${t}|${c} entre la décomposition et le taux.`);
+});
+
+test("le seuil de bascule est un encadrement, et il encadre vraiment", () => {
+  const p = readProfiles();
+  if (!p) return;
+  const r = ouLaRecommandationBascule(p, ASSUMPTIONS, [1, 5, 20, 50, 100]);
+  assert.ok(r, "aucun balayage rendu.");
+  if (!r!.seuil) return;   // pas de bascule dans la plage : rien à encadrer
+
+  const { bas, haut } = r!.seuil;
+  assert.ok(bas < haut, `encadrement vide : ${bas} ≥ ${haut}.`);
+
+  /* UN ENCADREMENT QUI N'ENCADRE PAS EST UN CHIFFRE INVENTÉ. On vérifie les deux bords :
+     à `bas` le routage est encore celui qu'on publie, à `haut` il ne l'est plus. */
+  const memeQue = (r2: number) => {
+    const opt = optimiseExposition(p, { ...ASSUMPTIONS, costWrongValue: ASSUMPTIONS.costBlankField * r2 });
+    return opt ? FIELDS.every((c) => opt.routing[c] === r!.publie[c]) : false;
+  };
+  assert.equal(memeQue(bas), true,
+    `à ${bas}, le routage optimal devrait encore être celui qu'on publie — la borne basse ment.`);
+  assert.equal(memeQue(haut), false,
+    `à ${haut}, le routage optimal devrait avoir changé — la borne haute ment.`);
 });

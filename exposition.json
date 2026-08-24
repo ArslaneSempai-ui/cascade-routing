@@ -1,0 +1,169 @@
+{
+  "quoi": "À quel rapport de prix entre une valeur fausse et un champ vide la recommandation change.",
+  "commentLire": "Les deux prix sont des hypothèses du client, pas des mesures. Ce qui est mesuré est la décomposition vide/faux de chaque case, et le routage optimal à chaque rapport.",
+  "prixDeclares": {
+    "costWrongValue": 0.587,
+    "costBlankField": 0.587
+  },
+  "publie": {
+    "name": "large",
+    "birth": "rules",
+    "document": "rules",
+    "country": "rules",
+    "address": "gen-4b"
+  },
+  "points": [
+    {
+      "rapport": 1,
+      "routage": {
+        "name": "large",
+        "birth": "rules",
+        "document": "rules",
+        "country": "rules",
+        "address": "gen-4b"
+      },
+      "identiqueAuPublie": true,
+      "traitement": 190.6581124999987,
+      "exposition": 16357.733333333334
+    },
+    {
+      "rapport": 1.5,
+      "routage": {
+        "name": "large",
+        "birth": "rules",
+        "document": "rules",
+        "country": "rules",
+        "address": "gen-4b"
+      },
+      "identiqueAuPublie": true,
+      "traitement": 190.6581124999987,
+      "exposition": 18578.550000000003
+    },
+    {
+      "rapport": 2,
+      "routage": {
+        "name": "large",
+        "birth": "rules",
+        "document": "rules",
+        "country": "rules",
+        "address": "gen-4b"
+      },
+      "identiqueAuPublie": true,
+      "traitement": 190.6581124999987,
+      "exposition": 20799.36666666667
+    },
+    {
+      "rapport": 3,
+      "routage": {
+        "name": "large",
+        "birth": "rules",
+        "document": "rules",
+        "country": "rules",
+        "address": "gen-4b"
+      },
+      "identiqueAuPublie": true,
+      "traitement": 190.6581124999987,
+      "exposition": 25241
+    },
+    {
+      "rapport": 5,
+      "routage": {
+        "name": "large",
+        "birth": "rules",
+        "document": "rules",
+        "country": "rules",
+        "address": "gen-4b"
+      },
+      "identiqueAuPublie": true,
+      "traitement": 190.6581124999987,
+      "exposition": 34124.26666666666
+    },
+    {
+      "rapport": 8,
+      "routage": {
+        "name": "large",
+        "birth": "rules",
+        "document": "rules",
+        "country": "rules",
+        "address": "gen-4b"
+      },
+      "identiqueAuPublie": true,
+      "traitement": 190.6581124999987,
+      "exposition": 47449.166666666664
+    },
+    {
+      "rapport": 12,
+      "routage": {
+        "name": "large",
+        "birth": "rules",
+        "document": "rules",
+        "country": "rules",
+        "address": "gen-4b"
+      },
+      "identiqueAuPublie": true,
+      "traitement": 190.6581124999987,
+      "exposition": 65215.700000000004
+    },
+    {
+      "rapport": 20,
+      "routage": {
+        "name": "large",
+        "birth": "rules",
+        "document": "rules",
+        "country": "rules",
+        "address": "gen-4b"
+      },
+      "identiqueAuPublie": true,
+      "traitement": 190.6581124999987,
+      "exposition": 100748.76666666665
+    },
+    {
+      "rapport": 50,
+      "routage": {
+        "name": "rules",
+        "birth": "rules",
+        "document": "rules",
+        "country": "rules",
+        "address": "gen-4b"
+      },
+      "identiqueAuPublie": false,
+      "traitement": 30.658112499998722,
+      "exposition": 192907.76666666666
+    },
+    {
+      "rapport": 100,
+      "routage": {
+        "name": "rules",
+        "birth": "rules",
+        "document": "rules",
+        "country": "rules",
+        "address": "gen-4b"
+      },
+      "identiqueAuPublie": false,
+      "traitement": 30.658112499998722,
+      "exposition": 315199.4333333333
+    }
+  ],
+  "bascule": {
+    "rapport": 50,
+    "routage": {
+      "name": "rules",
+      "birth": "rules",
+      "document": "rules",
+      "country": "rules",
+      "address": "gen-4b"
+    },
+    "identiqueAuPublie": false,
+    "traitement": 30.658112499998722,
+    "exposition": 192907.76666666666
+  },
+  "seuil": {
+    "bas": 29.14,
+    "haut": 29.38
+  },
+  "calculeLe": "2026-08-24T11:05:58.829Z",
+  "code": {
+    "commit": "f553b70",
+    "sale": true
+  }
+}

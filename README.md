@@ -59,6 +59,7 @@ what that pass actually cost is stated below, read from the relevé rather than 
 | `npm run pages` | build docs/ and verify the published screen — required before publishing: docs/ carries a compiled copy of the code and goes stale silently |
 | `npm run captures` | re-record the images on this page |
 | `npm run ocr` | read the same documents as images and measure what the reading stage costs (macOS: Vision, no API) |
+| `npm run exposition` | what the routing costs when it is wrong, and the price ratio at which the recommendation changes |
 <!-- /figures:commandes -->
 
 ```bash
@@ -66,7 +67,7 @@ npm test           # types, README figures, landing.json, and the suite
 ```
 
 <!-- figures:tests -->
-**164 tests** across 9 files, counted from the sources rather than typed here.
+**167 tests** across 9 files, counted from the sources rather than typed here.
 <!-- /figures:tests -->
 
 Everything runs locally. No API key, nothing leaves the machine, and anyone who clones this
@@ -347,6 +348,14 @@ The total is the **mean of the five field rates**, each measured on its own samp
 <!-- figures:shadow -->
 No budget buys better: the ceiling is in the tiers available.
 <!-- /figures:shadow -->
+
+<!-- figures:exposition -->
+**A tier can be wrong in two ways, and they do not cost the same.** A blank field says "I do not know" and triggers a review. A wrong value enters the record. This repository measures the split for every tier and field, and the asymmetry is the part the accuracy figure hides: **regexes fail by abstaining, models fail by inventing.** On 2 of the 5 fields, `rules` produces blanks and **not one wrong value**.
+
+**The recommendation is robust.** A wrong value would have to cost **29.14 reviews** before the optimal routing changes — bracketed by bisection between 29.14 and 29.38, not a point. Below that ratio, the published routing is also the one that minimises total exposure.
+
+**And the number that matters most is not the one being optimised.** At equal prices, the same volume costs $191 to process and $16,358 in expected cost of being wrong — **86x more**. The optimiser argues about the small variable. Both prices are yours to set: they are assumptions, marked as such, and only you know what a misfiled record costs.
+<!-- /figures:exposition -->
 
 That last sentence is the one worth carrying into a budget meeting. The instinct in the
 room is "we need a bigger model" or "we need more budget". The measurement says the money

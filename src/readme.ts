@@ -10,7 +10,7 @@ import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { INVENTORY } from "./inventory.ts";
 import { markdown } from "./provenance.ts";
-import { optimiseExtraction, optimiseClassification, budgetShadowPrice, latenceRepresentative, paliersMesures } from "./optimise.ts";
+import { optimiseExtraction, optimiseClassification, budgetShadowPrice, latenceRepresentative, paliersMesures, decompositionDe } from "./optimise.ts";
 import "./figer.ts";  /* pose la table figée : voir figer.ts */
 import { ASSUMPTIONS, pricePerThousandExtractions, accuracy } from "./assumptions.ts";
 import { collect, shape } from "./failures.ts";
@@ -698,6 +698,7 @@ const commandes = (() => {
     ["pages", "build docs/ and verify the published screen — required before publishing: docs/ carries a compiled copy of the code and goes stale silently"],
     ["captures", "re-record the images on this page"],
     ["ocr", "read the same documents as images and measure what the reading stage costs (macOS: Vision, no API)"],
+    ["exposition", "what the routing costs when it is wrong, and the price ratio at which the recommendation changes"],
   ];
   const classees = new Set(ordre.map(([n]) => n));
   const oubliees = Object.keys(pkg.scripts).filter((n) => !classees.has(n) && n !== "typage");
@@ -986,6 +987,61 @@ const chaines = (() => {
     + `your own chain is selling you someone else's.`;
 })();
 
+/**
+ * CE QUE LE ROUTAGE COUTE QUAND IL SE TROMPE.
+ *
+ * Le solveur maximise un taux. Un client ne paie pas un point de pourcentage : il paie le
+ * cout d'avoir tort. Et l'outil mesure deja DEUX facons de se tromper qui ne coutent pas la
+ * meme chose — un champ vide declenche une relecture, une valeur fausse entre au dossier.
+ *
+ * Deux faits sortent de la, et le second est le plus important :
+ *   1. la recommandation publiee tient sur un large intervalle de prix — c'est rassurant ;
+ *   2. l'exposition vaut des dizaines de fois le cout de traitement, donc **l'optimiseur se
+ *      dispute sur la petite variable**. Le dire est plus honnete que de le taire.
+ */
+const expositionBloc = (() => {
+  const chemin = fileURLToPath(new URL("../exposition.json", import.meta.url));
+  if (!existsSync(chemin)) {
+    throw new Error("exposition.json est absent — ce bloc publie une mesure. Lancez : npm run exposition");
+  }
+  const r = JSON.parse(readFileSync(chemin, "utf8")) as {
+    publie: Record<string, string>;
+    seuil: { bas: number; haut: number } | null;
+    points: { rapport: number; traitement: number | null; exposition: number | null }[];
+  };
+  const base = r.points[0]!;
+  const facteur = Math.round((base.exposition ?? 0) / (base.traitement || 1));
+
+  /* L'asymetrie se calcule : quel palier echoue en s'abstenant, lequel en inventant. */
+  const vide = (t: TierName, c: Field) => p!.extraction[t]?.[c]
+    ? decompositionDe(p!, t, c) : null;
+  const parAbstention = FIELDS.map((c) => ({ c, d: vide("rules" as TierName, c) }))
+    .filter((x) => x.d && x.d.vide > 0 && x.d.faux === 0);
+
+  return `**A tier can be wrong in two ways, and they do not cost the same.** A blank field `
+    + `says "I do not know" and triggers a review. A wrong value enters the record. This `
+    + `repository measures the split for every tier and field, and the asymmetry is the part `
+    + `the accuracy figure hides: **regexes fail by abstaining, models fail by inventing.**`
+    + (parAbstention.length
+        ? ` On ${parAbstention.length} of the ${FIELDS.length} fields, \`rules\` produces `
+          + `blanks and **not one wrong value**.`
+        : ``)
+    + `\n\n**The recommendation is robust.** `
+    + (r.seuil
+        ? `A wrong value would have to cost **${r.seuil.bas} reviews** before the optimal `
+          + `routing changes — bracketed by bisection between ${r.seuil.bas} and ${r.seuil.haut}, `
+          + `not a point. Below that ratio, the published routing is also the one that minimises `
+          + `total exposure.`
+        : `Across every price ratio tested, the optimal routing never moves away from the `
+          + `published one.`)
+    + `\n\n**And the number that matters most is not the one being optimised.** At equal `
+    + `prices, the same volume costs $${Math.round(base.traitement ?? 0).toLocaleString("en-GB")} `
+    + `to process and $${Math.round(base.exposition ?? 0).toLocaleString("en-GB")} in expected `
+    + `cost of being wrong — **${facteur}x more**. The optimiser argues about the small `
+    + `variable. Both prices are yours to set: they are assumptions, marked as such, and only `
+    + `you know what a misfiled record costs.`;
+})();
+
 const tests = (() => {
   const dossier = fileURLToPath(new URL(".", import.meta.url));
   const fichiers = readdirSync(dossier).filter((n: string) => n.endsWith(".test.ts"));
@@ -996,6 +1052,6 @@ const tests = (() => {
 })();
 
 emit(fileURLToPath(new URL("../README.md", import.meta.url)),
-  { chapeau, chaines, finding, obligation, ouCaTourne, lecture, extraction, classification, routing, shadow, gallery, baselines, provenance, coutDeReproduction, embauche,
+  { chapeau, chaines, finding, obligation, ouCaTourne, lecture, exposition: expositionBloc, extraction, classification, routing, shadow, gallery, baselines, provenance, coutDeReproduction, embauche,
     echelles, latence, egalites, fuite, deuxfaits, retractations, public: publicJeu, commandes,
     tests });
