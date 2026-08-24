@@ -52,13 +52,13 @@ if (isMain(import.meta)) {
   })();
 
   if (version?.sale) {
-    console.error("\nL'arbre porte des modifications non enregistrées : les variantes doivent être");
-    console.error("committées avant de tourner, sinon rien ne prouve qu'aucune n'a été ajoutée après.\n");
+    console.error("\nThe tree carries uncommitted changes: the variants must be committed before");
+    console.error("running, or nothing proves none of them was added afterwards.\n");
     process.exit(1);
   }
 
-  console.log(`\n${noms.length} formulations × ${FIELDS.length} champs × ${cas} cas sur ${PALIER}.`);
-  console.log(`Charge avant départ : ${loadavg()[0]!.toFixed(2)} sur ${cpus().length} cœurs.\n`);
+  console.log(`\n${noms.length} prompts × ${FIELDS.length} fields × ${cas} cases on ${PALIER}.`);
+  console.log(`Load before starting: ${loadavg()[0]!.toFixed(2)} on ${cpus().length} cores.\n`);
   await loadGeneratifs();
 
   const resultats: Record<string, Record<Field, number>> = {};
@@ -124,9 +124,9 @@ if (isMain(import.meta)) {
     },
   }, null, 2) + "\n");
 
-  console.log("\nchamp       formulation   entre paliers");
+  console.log("\nfield        prompt      between tiers");
   for (const c of FIELDS) {
     console.log(`  ${c.padEnd(10)} ${parFormulation[c].toFixed(1).padStart(8)} pts ${(entrePaliers[c] ?? 0).toFixed(1).padStart(11)} pts`);
   }
-  console.log(`\nÉcrit dans ${SORTIE.split("/").pop()}\n`);
+  console.log(`\nWritten to ${SORTIE.split("/").pop()}\n`);
 }
