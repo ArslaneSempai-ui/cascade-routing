@@ -2666,7 +2666,7 @@ test("un CSV client dont une guillemet reste ouverte est refusé, pas rétréci 
    * LE REFUS DOIT ÊTRE ACTIONNABLE. Sur un fichier de cinq mille lignes, « guillemet non
    * refermée quelque part » n'est pas une aide : c'est le même silence, formulé poliment.
    */
-  assert.match(refus!.message, /Ligne 4\b/,
+  assert.match(refus!.message, /Line 4\b/,
     `le refus ne nomme pas la ligne où la guillemet s'ouvre : « ${refus!.message.split("\n")[0]} »`);
   assert.match(refus!.message, /""/,
     "le refus doit dire comment écrire une guillemet dans une cellule — un refus sans issue "

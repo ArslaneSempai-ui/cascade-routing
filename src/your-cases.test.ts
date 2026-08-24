@@ -85,7 +85,7 @@ test("une cellule manquante devient une chaîne vide, pas undefined", () => {
 });
 
 test("un fichier à une seule colonne est refusé, avec une raison", () => {
-  assert.throws(() => lireCsv("text\nhello\n"), /at least two columns/,
+  assert.throws(() => lireCsv("text\nhello\n"), /needs at least two/,
     "un fichier inutilisable doit lever un message lisible, pas produire zéro cas en silence");
 });
 
@@ -109,7 +109,7 @@ test("aucune valeur extraite n'entre : seules les issues sont acceptées", async
      */
     const ancien = join(dossier, "ancien.json");
     writeFileSync(ancien, JSON.stringify({ nom: "la mienne", valeurs: { name: { d1: "Anna Petrova" } } }));
-    assert.throws(() => chargerSorties(ancien), /données personnelles/,
+    assert.throws(() => chargerSorties(ancien), /personal data/,
       "l'ancienne forme, qui porte des valeurs, doit être refusée en disant pourquoi.");
 
     const vide = join(dossier, "vide.json");
@@ -120,13 +120,13 @@ test("aucune valeur extraite n'entre : seules les issues sont acceptées", async
     /* Une valeur glissée à la place d'une issue est le chemin par lequel une donnée entrerait. */
     const glisse = join(dossier, "glisse.json");
     writeFileSync(glisse, JSON.stringify({ issues: { name: { d1: "Anna Petrova" } } }));
-    assert.throws(() => chargerSorties(glisse), /n'est pas une issue|donnée personnelle/,
+    assert.throws(() => chargerSorties(glisse), /not an outcome|personal data/,
       "une valeur là où une issue est attendue doit être refusée, pas comptée comme fausse.");
 
     const bon = join(dossier, "bon.json");
     writeFileSync(bon, JSON.stringify({ issues: { name: { d1: "clean", d2: "wrong" } } }));
     const s = chargerSorties(bon);
-    assert.equal(s.nom, "votre chaîne", "un fichier sans nom en reçoit un, il ne casse pas.");
+    assert.equal(s.nom, "your chain", "un fichier sans nom en reçoit un, il ne casse pas.");
     assert.equal(s.declares, undefined);
     assert.equal(s.notePar, undefined,
       "l'absence de `notePar` ne casse pas la lecture — c'est le rapport qui doit la signaler.");
@@ -247,4 +247,32 @@ test("le mode de notation du client est annoncé, et son absence dégrade le ran
     + "  donnée personnelle peut entrer, et l'outil déclare n'en recevoir aucune.");
   assert.ok(!/sorties\.valeurs/.test(src),
     "le code lit encore une clé `valeurs` : les valeurs extraites ne doivent plus entrer.");
+});
+
+test("aucun message que le client peut voir n'est en français", () => {
+  /*
+   * Le chemin client mélangeait les deux langues. Une banque américaine qui donne un CSV mal
+   * formé recevait « Ligne 2 de votre CSV ouvre une guillemet qui n'est jamais refermée » —
+   * un message par ailleurs excellent, qui dit la ligne, la raison du refus et comment
+   * trouver la faute, et que le lecteur ne comprend pas.
+   *
+   * Les commentaires du dépôt restent en français : ils s'adressent à celui qui maintient.
+   * Ce que le client voit ne s'y adresse pas.
+   */
+  const src = readFileSync(new URL("./your-cases.ts", import.meta.url), "utf8");
+  const FRANCAIS = /\b(votre|vos|aucun|n'est|n'a|qui|pour|dans|à la|ne se|données|refuse|fichier|ligne|colonne)\b/i;
+
+  const messages: string[] = [];
+  for (const m of src.matchAll(/(?:throw new Error\(|console\.error\()\s*([`"][\s\S]{10,400}?)\);/g)) {
+    messages.push(m[1]!);
+  }
+  assert.ok(messages.length >= 5,
+    `${messages.length} message(s) trouvé(s) : le motif ne lit plus les messages, et ce cas ne vérifie rien.`);
+
+  const fautifs = messages
+    .filter((t) => FRANCAIS.test(t.replace(/\$\{[^}]*\}/g, " ")))
+    .map((t) => t.replace(/\s+/g, " ").slice(0, 70));
+  assert.deepEqual(fautifs, [],
+    `message(s) en français sur le chemin d'un client anglophone :\n`
+    + fautifs.map((x) => `  - ${x}`).join("\n"));
 });

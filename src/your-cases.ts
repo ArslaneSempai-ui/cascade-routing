@@ -89,18 +89,22 @@ export function lireCsv(texte: string): { champs: string[]; cas: Cas[] } {
   }
   if (guillemets) {
     throw new Error(
-      `Ligne ${ouvertureLigne} de votre CSV ouvre une guillemet qui n'est jamais refermée.\n`
-      + `  Tout ce qui suit a été avalé comme le contenu d'une seule cellule : le fichier a été\n`
-      + `  lu jusqu'au bout, mais il ne reste que ${lignes.length} ligne(s) au lieu de vos données.\n`
-      + `  Cet outil refuse plutôt que de mesurer un taux sur ce qu'il n'a pas perdu.\n\n`
-      + `  Pour écrire une guillemet DANS une cellule, doublez-la : "il a dit ""bonjour""".\n`
-      + `  Pour trouver la ligne fautive : sed -n '${ouvertureLigne}p' <votre fichier>`);
+      `Line ${ouvertureLigne} of your CSV opens a quote that is never closed.\n`
+      + `  Everything after it was swallowed as the contents of a single cell: the file was read\n`
+      + `  to the end, but only ${lignes.length} row(s) remain instead of your data.\n`
+      + `  This tool refuses rather than report a rate over what it did not lose.\n\n`
+      + `  To write a quote INSIDE a cell, double it: "he said ""hello""".\n`
+      + `  To find the offending line: sed -n '${ouvertureLigne}p' <your file>`);
   }
   if (cellule !== "" || ligne.length) { ligne.push(cellule); if (ligne.some((x) => x.trim() !== "")) lignes.push(ligne); }
 
   const entete = lignes.shift();
   if (!entete || entete.length < 2) {
-    throw new Error("the file needs at least two columns: the input text and one expected answer");
+    throw new Error(
+      `Your file has ${entete?.length ?? 0} column(s). It needs at least two: the input text, and\n`
+      + `  one expected answer per field you want measured.\n\n`
+      + `  The first row is read as the header. If your file has no header, the first record\n`
+      + `  was consumed as one — add a header row naming the columns.`);
   }
   /*
    * Deux colonnes veut dire « texte, réponse » — pas d'identifiant.
@@ -198,14 +202,14 @@ export function chargerSorties(chemin: string): SortiesFournies {
    * pour empêcher.
    */
   if (brut.valeurs !== undefined) {
-    throw new Error(`${chemin} porte une clé \`valeurs\`, qui n'est plus acceptée.\n`
-      + `  Les valeurs extraites d'un dossier d'identité sont des données personnelles, et cet\n`
-      + `  outil déclare n'en recevoir aucune. Notez chez vous et n'envoyez que les issues :\n`
+    throw new Error(`${chemin} carries a \`valeurs\` key, which is no longer accepted.\n`
+      + `  Values extracted from an identity document are personal data, and this tool states\n`
+      + `  that it receives none. Grade on your side and send only the outcomes:\n`
       + `  { "nom": "…", "issues": { "<champ>": { "<id>": "clean" | "wrong" | "blank" } },\n`
       + `    "notePar": { "outil": "cascade", "version": "<commit>" } }`);
   }
   if (!brut.issues || typeof brut.issues !== "object") {
-    throw new Error(`${chemin} : pas de clé \`issues\`. Forme attendue :\n`
+    throw new Error(`${chemin}: no \`issues\` key. Expected shape:\n`
       + `  { "nom": "…", "issues": { "<champ>": { "<id du cas>": "clean" | "wrong" | "blank" } },\n`
       + `    "notePar": { "outil": "cascade", "version": "<commit>" },\n`
       + `    "declares": { "coutParMilleDocuments": …, "msParDocument": … } }`);
@@ -215,13 +219,13 @@ export function chargerSorties(chemin: string): SortiesFournies {
   for (const [champ, parCas] of Object.entries(brut.issues)) {
     for (const [id, v] of Object.entries(parCas as Record<string, unknown>)) {
       if (!ISSUES_VALIDES.includes(v as IssueClient)) {
-        throw new Error(`${chemin} : ${champ}/${id} vaut ${JSON.stringify(v)}, qui n'est pas une `
-          + `issue.\n  Les trois seules acceptées sont ${ISSUES_VALIDES.join(", ")}. Une valeur `
-          + `ici serait une donnée personnelle.`);
+        throw new Error(`${chemin}: ${champ}/${id} is ${JSON.stringify(v)}, which is not an `
+          + `outcome.\n  The only three accepted are ${ISSUES_VALIDES.join(", ")}. A value here `
+          + `would be personal data.`);
       }
     }
   }
-  return { nom: brut.nom ?? "votre chaîne", issues: brut.issues,
+  return { nom: brut.nom ?? "your chain", issues: brut.issues,
     notePar: brut.notePar, declares: brut.declares };
 }
 
@@ -493,13 +497,13 @@ Nothing leaves your machine: the models are local and this path makes no network
       const propre: Record<string, string> = {};
       for (const [k, v] of Object.entries(o)) {
         if (typeof v !== "string" || v.trim().length === 0) {
-          console.error(`--questions: « ${k} » n'a pas de question lisible.`); process.exit(1);
+          console.error(`--questions: "${k}" has no readable question.`); process.exit(1);
         }
         propre[k] = v.trim();
       }
       return propre;
     } catch (e) {
-      console.error(`--questions: ${chemin} ne se lit pas — ${(e as Error).message}`);
+      console.error(`--questions: cannot read ${chemin} — ${(e as Error).message}`);
       process.exit(1);
     }
   })();
