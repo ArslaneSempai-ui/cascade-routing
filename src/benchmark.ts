@@ -60,7 +60,7 @@ function recuperer(nom: NomJeu): { chemin: string; empreinte: string } {
   mkdirSync(DOSSIER + "data", { recursive: true });
   const chemin = `${DOSSIER}data/${nom}.csv`;
   if (!existsSync(chemin)) {
-    console.log(`téléchargement de ${nom} depuis ${j.url}`);
+    console.log(`downloading ${nom} from ${j.url}`);
     execFileSync("curl", ["-sL", "-o", chemin, j.url]);
   }
   const empreinte = createHash("sha256").update(readFileSync(chemin)).digest("hex").slice(0, 16);
@@ -162,9 +162,9 @@ if (isMain(import.meta)) {
   const r = Object.fromEntries(Object.entries(d.paliers).map(([k, v]) => [k, rate(v.bons, v.sur)]));
   const rangs = Object.entries(r).sort((a, b) => b[1].rate - a[1].rate);
 
-  console.log(`${d.cas} cas, ${d.etiquettes} étiquettes. Les références d'abord :\n`);
-  console.log(`  toujours « ${d.references.majoritaire.nom} »   ${(100 * d.references.majoritaire.taux).toFixed(1)} %`);
-  console.log(`  tirage uniforme                    ${(100 * d.references.uniforme).toFixed(1)} %\n`);
+  console.log(`${d.cas} cases, ${d.etiquettes} labels. The baselines first:\n`);
+  console.log(`  always \u201c${d.references.majoritaire.nom}\u201d   ${(100 * d.references.majoritaire.taux).toFixed(1)} %`);
+  console.log(`  uniform draw                       ${(100 * d.references.uniforme).toFixed(1)} %\n`);
   for (const [palier, taux] of rangs) {
     console.log(`  ${palier.padEnd(10)} ${writeRate(taux).padEnd(26)} ${d.paliers[palier]!.ms.toFixed(0)} ms`);
   }
@@ -172,23 +172,23 @@ if (isMain(import.meta)) {
   /* La phrase qui vaut le déplacement : le meilleur palier est-il seulement démontrable ? */
   const tete = rangs[0]!, rapide = rangs.reduce((a, b) => (d.paliers[b[0]]!.ms < d.paliers[a[0]]!.ms ? b : a));
   if (tete[0] !== rapide[0] && !distinguishable(tete[1], rapide[1])) {
-    console.log(`\n  → ${tete[0]} et ${rapide[0]} sont indiscernables sur ${d.cas} cas,`);
-    console.log(`    et ${tete[0]} est ${(d.paliers[tete[0]]!.ms / Math.max(d.paliers[rapide[0]]!.ms, 0.01)).toFixed(0)}× plus lent.`);
+    console.log(`\n  → ${tete[0]} and ${rapide[0]} are indistinguishable over ${d.cas} cases,`);
+    console.log(`    and ${tete[0]} is ${(d.paliers[tete[0]]!.ms / Math.max(d.paliers[rapide[0]]!.ms, 0.01)).toFixed(0)}× slower.`);
   }
   const bouge = ecart(precedent, d);
   if (bouge?.length) {
-    console.log(`\n  CE QUI A BOUGÉ depuis ${precedent.mesureLe.slice(0, 10)} :`);
+    console.log(`\n  WHAT MOVED since ${precedent.mesureLe.slice(0, 10)}:`);
     for (const l of bouge) {
       console.log(`    ${l.palier.padEnd(10)} ${(100 * l.avant).toFixed(1)} % → ${(100 * l.apres).toFixed(1)} %`
-        + `  ${l.points > 0 ? "+" : ""}${l.points.toFixed(1)} pts` + (l.reel ? "   ← écart réel" : ""));
+        + `  ${l.points > 0 ? "+" : ""}${l.points.toFixed(1)} pts` + (l.reel ? "   ← real gap" : ""));
     }
     if (bouge.some((l) => l.reel)) {
-      console.log(`\n  Au moins un écart est significatif : un modèle a changé sous vos pieds,`);
-      console.log(`  ou la mesure n'est pas reproductible. Les deux méritent d'être expliqués.`);
+      console.log(`\n  At least one gap is significant: a model changed under your feet,`);
+      console.log(`  or the measurement is not reproducible. Both deserve an explanation.`);
     }
   } else if (precedent) {
-    console.log(`\n  Rien n'a bougé depuis ${precedent.mesureLe.slice(0, 10)}.`);
+    console.log(`\n  Nothing moved since ${precedent.mesureLe.slice(0, 10)}.`);
   }
 
-  console.log(`\nRelevé écrit dans benchmarks/${nom}.json — \`npm run figures\` le met dans le README.\n`);
+  console.log(`\nRecord written to benchmarks/${nom}.json — \`npm run figures\` puts it in the README.\n`);
 }
