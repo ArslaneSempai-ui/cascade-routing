@@ -58,7 +58,7 @@ const etape = (nom, fn) => {
   const t = Date.now();
   process.stdout.write(`  ${nom.padEnd(34)}`);
   try { fn(); } catch (e) {
-    console.log(`ÉCHEC  (${((Date.now() - t) / 1000).toFixed(0)} s)`);
+    console.log(`FAILED (${((Date.now() - t) / 1000).toFixed(0)} s)`);
     /*
      * Montrer ce qui a échoué, pas les vingt-cinq dernières lignes.
      *
@@ -78,23 +78,23 @@ const etape = (nom, fn) => {
     const out = String(e.stdout ?? "").trim();
     const bruit = /^(⚠|  Lecture du relevé|  Ce sont NOS|dtype not specified|$)/;
     const utile = (t2) => t2.split("\n").filter((l) => !bruit.test(l));
-    if (err) { console.error(`\n  — sortie d'erreur —`); console.error(utile(err).join("\n")); }
+    if (err) { console.error(`\n  — error output —`); console.error(utile(err).join("\n")); }
     if (out) {
       const l = utile(out);
-      console.error(`\n  — sortie standard (${l.length} lignes utiles) —`);
+      console.error(`\n  — standard output (${l.length} useful lines) —`);
       console.error(l.slice(-60).join("\n"));
     }
     console.error("");
-    console.error(`Le clone est resté dans ${clone} pour inspection.`);
-    console.error(`\nLa lettre promet « vous clonez l'outil, vous le lancez ». Ce n'est pas une`);
-    console.error(`gêne de développement : c'est le premier geste de l'acheteur, et il échoue.`);
+    console.error(`The clone was left in ${clone} for inspection.`);
+    console.error(`\nThe letter promises \u201cyou clone the tool, you run it\u201d. This is not a`);
+    console.error(`development annoyance: it is the buyer's first move, and it fails.`);
     process.exit(1);
   }
   console.log(`ok     (${((Date.now() - t) / 1000).toFixed(0)} s)`);
 };
 
 try {
-  console.log(`\nClone neuf depuis ${ref ?? "HEAD"} — seulement ce que git transporte.\n`);
+  console.log(`\nFresh clone from ${ref ?? "HEAD"} — only what git carries.\n`);
 
   etape(`git clone --no-local${ref ? ` (${ref})` : ""}`, () => {
     execFileSync("git", ["clone", "--no-local", "--quiet",
@@ -109,7 +109,7 @@ try {
 
   etape("aucun node_modules hérité", () => {
     if (existsSync(join(clone, "node_modules"))) {
-      throw new Error("le clone porte déjà un node_modules : l'installation ne serait pas neuve.");
+      throw new Error("the clone already carries a node_modules: the install would not be fresh.");
     }
   });
 
@@ -158,15 +158,15 @@ try {
   });
 
   const s = ((Date.now() - t0) / 1000).toFixed(0);
-  console.log(`\n  Le clone passe. ${s} s au total.`);
+  console.log(`\n  The clone passes. ${s} s in total.`);
   if (tus.length > 0) {
-    console.log(`\n  ${tus.length} cas ne se sont PAS exécutés sur ce clone :`);
+    console.log(`\n  ${tus.length} case(s) did NOT run on this clone:`);
     for (const q of tus) console.log(`    ﹣ ${q}`);
-    console.log(`\n  Ils passeront quand les poids de modèle seront en cache — le premier`);
-    console.log(`  lancement d'un acheteur ne les éprouve pas, et c'est ce que dit cette ligne.`);
+    console.log(`\n  They will pass once the model weights are cached — a buyer's first run`);
+    console.log(`  does not exercise them, and that is what this line says.`);
   }
-  console.log(`  À lancer avant de livrer, et après tout changement de ce que git transporte —`);
-  console.log(`  un ajout au .gitignore, un fichier produit qui entre dans un contrôle.\n`);
+  console.log(`  Run before shipping, and after any change to what git carries —`);
+  console.log(`  an addition to .gitignore, a generated file that enters a check.\n`);
 } finally {
   rmSync(dossier, { recursive: true, force: true });
 }
