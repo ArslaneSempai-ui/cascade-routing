@@ -18,7 +18,7 @@ import { FIELDS, type Field } from "./corpus.ts";
 import { TIERS } from "./tiers.ts";
 import { run as emit, table } from "./figures.ts";
 import { citation, provenance as sourceDuTexte } from "./regulations.ts";
-import { rate, writeRate, distinguishable, precision } from "./interval.ts";
+import { rate, writeRate, distinguishable, precision, ENOUGH } from "./interval.ts";
 import { GENERATIFS, type TierName } from "./paliers.ts";
 import { majorityClass, uniformGuess, verdict } from "./baselines.ts";
 import { generateAlerts } from "./corpus.ts";
@@ -1155,6 +1155,108 @@ const leviers = (() => {
   }
 })();
 
+/**
+ * LA FRONTIERE D'ABSTENTION, DANS LA MONNAIE DU CLIENT.
+ *
+ * Le levier principal se lisait en points de precision. Un responsable conformite ne decide
+ * pas sur des points : il decide sur des HEURES d'analyste et sur des erreurs classees.
+ *
+ * La conversion ne demande qu'une hypothese — le temps d'une relecture — et elle est deja
+ * declaree dans `assumptions`, marquee comme supposee. Tout le reste est mesure.
+ *
+ * Ce qui n'est PAS fait ici, et qui se dit : extrapoler au volume du client. La frontiere est
+ * mesuree sur le corpus DUR, choisi difficile. Le rapport de bascule, lui, est sans dimension
+ * et se transporte ; le nombre d'heures ne se transporte qu'a proportion des valeurs douteuses
+ * du client, que nous ne connaissons pas.
+ */
+const frontiere = (() => {
+  const l = JSON.parse(readFileSync(fileURLToPath(new URL("../landing.json", import.meta.url)), "utf8")) as {
+    abstention: { documents: number; valuesMeasured: number; baselinePrecisionPct: number;
+      rules: { signalsRequired: number; abstentions: number; wrongRemoved: number;
+        correctSacrificed: number; delivered: number; deliveredPrecisionPct: number | null;
+        deliveredPrecisionInterval: number[] | null; breakEvenCostRatio: number | null;
+        neverSacrificesInterval: number[] | null }[] } | null;
+  };
+  const a = l.abstention;
+  if (!a) throw new Error("landing.json ne porte pas de frontiere d'abstention.");
+
+  const parCent = (x: number) => (100 * x) / a.valuesMeasured;
+  const heures = (n: number) => (n * h.humanSeconds) / 3600;
+
+  const lignes = a.rules.map((r) => {
+    const relectures = parCent(r.abstentions);
+    const evites = parCent(r.wrongRemoved);
+    /*
+     * LE PLANCHER PORTE SUR LE DENOMINATEUR DU TAUX, PAS SUR UN VOISIN.
+     *
+     * Premiere version : elle testait `wrongRemoved`. Or la precision livree se calcule sur
+     * les valeurs LIVREES — 146 a deux signaux — et le garde-fou supprimait donc un chiffre
+     * parfaitement citable, en laissant croire que la mesure est plus faible qu'elle n'est.
+     * Ce qui repose vraiment sur quatre observations, c'est « aucune juste sacrifiee », et
+     * cette reserve-la est portee separement, plus bas.
+     */
+    const precision = r.delivered >= ENOUGH && r.deliveredPrecisionPct !== null
+      ? `${r.deliveredPrecisionPct} % [${r.deliveredPrecisionInterval![0]}–${r.deliveredPrecisionInterval![1]}]`
+      : `— (${r.delivered} delivered, too few to quote)`;
+    return [
+      `**${r.signalsRequired}**`,
+      `${relectures.toFixed(0)} reviews · ${heures(relectures).toFixed(1)} h`,
+      `${evites.toFixed(0)}`,
+      `${parCent(r.correctSacrificed).toFixed(0)}`,
+      precision,
+      r.breakEvenCostRatio === null ? "—" : `${r.breakEvenCostRatio}`,
+    ];
+  });
+
+  const fort = a.rules.find((r) => r.wrongRemoved >= ENOUGH);
+  const gratuit = a.rules.find((r) => r.correctSacrificed === 0 && r.wrongRemoved > 0);
+
+  return `**In your currency, per hundred values processed.** The lever reads in precision `
+    + `points; nobody signs off on precision points. Below, the same measurement in analyst `
+    + `reviews and in errors that never reach a file.\n\n`
+    + table(["Signals required", "Reviews added", "Wrong values avoided", "Correct values lost",
+      "Precision of what is delivered", "Break-even ratio"], lignes)
+    + `\n\n*Reviews are converted at ${h.humanSeconds} seconds each — the one assumption in `
+    + `this table, and it is yours to change. Everything else is counted.*`
+    + (fort
+        ? `\n\n**At ${fort.signalsRequired} signal${fort.signalsRequired > 1 ? "s" : ""}, the trade `
+          + `is ${(fort.wrongRemoved / Math.max(fort.correctSacrificed, 1)).toFixed(1)} wrong values `
+          + `removed for every correct one lost**, and precision goes from `
+          + `${a.baselinePrecisionPct} % to ${fort.deliveredPrecisionPct} %. Whether that is worth `
+          + `${heures(parCent(fort.abstentions)).toFixed(1)} hours per hundred values is your `
+          + `arithmetic, not ours — it depends on what a misfiled record costs you.`
+        : ``)
+    /* DEUX TAUX VOISINS NE DISENT RIEN. Le seuil prudent ameliore-t-il la precision, ou
+       est-ce du bruit ? La question se tranche, elle ne se laisse pas suggerer. */
+    + (() => {
+        const prudent = a.rules.find((r) => r.correctSacrificed === 0 && r.deliveredPrecisionPct !== null);
+        if (!prudent || !prudent.deliveredPrecisionInterval) return "";
+        const base = rate(Math.round(a.baselinePrecisionPct / 100 * a.valuesMeasured), a.valuesMeasured);
+        const apres = rate(Math.round(prudent.deliveredPrecisionPct! / 100 * prudent.delivered), prudent.delivered);
+        return distinguishable(base, apres)
+          ? `\n\n**And the cautious threshold does move precision**, separably: `
+            + `${a.baselinePrecisionPct} % to ${prudent.deliveredPrecisionPct} %, intervals apart.`
+          : `\n\n**And the cautious threshold moves nothing.** ${a.baselinePrecisionPct} % to `
+            + `${prudent.deliveredPrecisionPct} % — the intervals overlap almost entirely, so the `
+            + `sample cannot tell the two apart. It is nearly free and nearly useless, which is `
+            + `worth saying rather than letting two adjacent numbers suggest a gain.`;
+      })()
+    + (gratuit && gratuit.wrongRemoved < ENOUGH
+        ? `\n\n**And a caution on the row that looks free.** At ${gratuit.signalsRequired} signals `
+          + `no correct value is lost at all — but on ${gratuit.abstentions} abstentions, which is `
+          + `below this repository's floor of ${ENOUGH}. "Never sacrifices a correct value" is a `
+          + `claim that sample cannot carry`
+          + (gratuit.neverSacrificesInterval
+              ? `: the interval on it runs from ${gratuit.neverSacrificesInterval[0]} % to `
+                + `${gratuit.neverSacrificesInterval[1]} %.`
+              : `.`)
+        : ``)
+    + `\n\n*Measured on the **hard corpus** — ${a.documents} deliberately difficult documents, `
+    + `${a.valuesMeasured} values. The break-even ratio carries no unit and transfers as is; the `
+    + `hours transfer only in proportion to how many of your values are doubtful, which we do `
+    + `not know.*`;
+})();
+
 const tests = (() => {
   const dossier = fileURLToPath(new URL(".", import.meta.url));
   const fichiers = readdirSync(dossier).filter((n: string) => n.endsWith(".test.ts"));
@@ -1165,6 +1267,6 @@ const tests = (() => {
 })();
 
 emit(fileURLToPath(new URL("../README.md", import.meta.url)),
-  { chapeau, chaines, finding, obligation, ouCaTourne, lecture, exposition: expositionBloc, document: documentBloc, leviers, extraction, classification, routing, shadow, gallery, baselines, provenance, coutDeReproduction, embauche,
+  { chapeau, chaines, finding, obligation, ouCaTourne, lecture, exposition: expositionBloc, document: documentBloc, leviers, frontiere, extraction, classification, routing, shadow, gallery, baselines, provenance, coutDeReproduction, embauche,
     echelles, latence, egalites, fuite, deuxfaits, retractations, public: publicJeu, commandes,
     tests });

@@ -27,7 +27,7 @@ import { optimiseExtraction, optimiseClassification, budgetShadowPrice, latenceR
 import { exposition, optimiseExposition, ouLaRecommandationBascule, decompositionsIncoherentes } from "./exposition.ts";
 import { documentsComplets, comparer as comparerDocuments } from "./document.ts";
 import { ASSUMPTIONS, UNITS, BOUNDS, pricePerThousandExtractions, accuracy } from "./assumptions.ts";
-import { wilson, rate, distinguishable, precision } from "./interval.ts";
+import { wilson, rate, distinguishable, precision, ENOUGH as ENOUGH_CAS } from "./interval.ts";
 import { PLAUSIBLE, bands, ETIQUETTE, advise } from "./sensitivity.ts";
 import { litLeTexte } from "./mesurer-ocr.ts";
 import { inclinaison, texte as texteDesBlocs, lire, ceQuiManque } from "./ocr.ts";
@@ -3743,4 +3743,68 @@ test("les deux seuils du bloc des leviers viennent de leurs mesures, et leur rap
      DUR ; publiés sans le dire, ils se liraient comme le corpus principal. */
   assert.match(bloc!, /hard corpus/,
     "le bloc publie les chiffres d'abstention sans dire qu'ils viennent du corpus dur.");
+});
+
+test("la frontière d'abstention applique son plancher au bon dénominateur", () => {
+  /*
+   * PREMIÈRE VERSION : le garde-fou testait `wrongRemoved` pour décider si la précision
+   * livrée était citable. Or cette précision se calcule sur les valeurs LIVRÉES — cent
+   * quarante-six au seuil prudent — et le plancher supprimait donc un chiffre parfaitement
+   * citable, en laissant croire que la mesure est plus faible qu'elle n'est.
+   *
+   * Un plancher appliqué au mauvais dénominateur ne protège de rien : il censure au hasard.
+   */
+  const racine = fileURLToPath(new URL("..", import.meta.url));
+  const bloc = readFileSync(join(racine, "README.md"), "utf8")
+    .match(/<!-- figures:frontiere -->([\s\S]*?)<!-- \/figures:frontiere -->/)?.[1];
+  assert.ok(bloc, "le bloc de la frontière a disparu du README.");
+
+  const a = (JSON.parse(readFileSync(join(racine, "landing.json"), "utf8")) as {
+    abstention: { rules: { signalsRequired: number; delivered: number; deliveredPrecisionPct: number | null;
+      wrongRemoved: number; correctSacrificed: number; abstentions: number }[] } | null;
+  }).abstention;
+  assert.ok(a, "landing.json ne porte plus de frontière.");
+
+  /*
+   * LA CELLULE DU TABLEAU, PAS LE BLOC.
+   *
+   * Première version : elle cherchait le chiffre n'importe où dans le bloc — et la phrase en
+   * prose sous le tableau le contient aussi. Le témoin passait donc même avec le plancher
+   * remis sur le mauvais dénominateur : il regardait un endroit où le chiffre survit de
+   * toute façon. Un témoin qui ne peut pas échouer ne prouve rien.
+   */
+  const celluleDe = (seuil: number) => {
+    const ligne = bloc!.split("\n").find((l) => new RegExp(`^\\|\\s*\\*\\*${seuil}\\*\\*\\s*\\|`).test(l));
+    if (!ligne) return null;
+    const cellules = ligne.split("|").map((x) => x.trim());
+    return cellules[5] ?? null;   // « Precision of what is delivered »
+  };
+
+  for (const r of a!.rules) {
+    if (r.deliveredPrecisionPct === null) continue;
+    const citable = r.delivered >= ENOUGH_CAS;
+    const cellule = celluleDe(r.signalsRequired);
+    assert.ok(cellule !== null, `pas de ligne de tableau pour le seuil ${r.signalsRequired}.`);
+    const present = cellule!.includes(`${r.deliveredPrecisionPct} %`);
+    assert.equal(present, citable,
+      citable
+        ? `la précision ${r.deliveredPrecisionPct} % repose sur ${r.delivered} valeurs livrées — `
+          + `au-dessus du plancher de ${ENOUGH_CAS} — et n'est pourtant pas publiée.`
+        : `la précision ${r.deliveredPrecisionPct} % est publiée alors qu'elle ne repose que sur `
+          + `${r.delivered} valeurs livrées.`);
+  }
+
+  /* ET CE QUI REPOSE VRAIMENT SUR TROP PEU EST NOMMÉ À PART. « aucune juste sacrifiée » tient
+     sur quatre abstentions, pas sur les cent quarante-six livrées. */
+  const gratuit = a!.rules.find((r) => r.correctSacrificed === 0 && r.wrongRemoved > 0);
+  if (gratuit && gratuit.abstentions < ENOUGH_CAS) {
+    assert.match(bloc!, /below this repository's floor/,
+      `« aucune valeur juste sacrifiée » repose sur ${gratuit.abstentions} abstentions et le bloc\n`
+      + `  ne dit plus que c'est sous le plancher.`);
+  }
+
+  /* ET LES HEURES PORTENT LEUR HYPOTHÈSE. Une conversion dont le facteur est tu se lit comme
+     une mesure. */
+  assert.match(bloc!, new RegExp(`${ASSUMPTIONS.humanSeconds} seconds each`),
+    "le bloc convertit des relectures en heures sans dire à quel temps par relecture.");
 });

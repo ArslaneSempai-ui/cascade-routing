@@ -68,7 +68,7 @@ npm test           # types, README figures, landing.json, and the suite
 ```
 
 <!-- figures:tests -->
-**170 tests** across 9 files, counted from the sources rather than typed here.
+**171 tests** across 9 files, counted from the sources rather than typed here.
 <!-- /figures:tests -->
 
 Everything runs locally. No API key, nothing leaves the machine, and anyone who clones this
@@ -383,6 +383,25 @@ No budget buys better: the ceiling is in the tiers available.
 
 *The abstention figures are measured on the **hard corpus** — 30 deliberately difficult documents, 150 values — not on the main sample. That is where abstention is worth measuring, and it is also why the baseline precision there is 29.3 % rather than the headline. The ratio itself carries no unit and does not depend on that choice.*
 <!-- /figures:leviers -->
+
+<!-- figures:frontiere -->
+**In your currency, per hundred values processed.** The lever reads in precision points; nobody signs off on precision points. Below, the same measurement in analyst reviews and in errors that never reach a file.
+
+| Signals required | Reviews added | Wrong values avoided | Correct values lost | Precision of what is delivered | Break-even ratio |
+|---|---|---|---|---|---|
+| **1** | 69 reviews · 0.9 h | 61 | 8 | 68.1 % [53.8–79.6] | 1.132 |
+| **2** | 3 reviews · 0.0 h | 3 | 0 | 30.1 % [23.3–38] | 1 |
+
+*Reviews are converted at 45 seconds each — the one assumption in this table, and it is yours to change. Everything else is counted.*
+
+**At 1 signal, the trade is 7.6 wrong values removed for every correct one lost**, and precision goes from 29.3 % to 68.1 %. Whether that is worth 0.9 hours per hundred values is your arithmetic, not ours — it depends on what a misfiled record costs you.
+
+**And the cautious threshold moves nothing.** 29.3 % to 30.1 % — the intervals overlap almost entirely, so the sample cannot tell the two apart. It is nearly free and nearly useless, which is worth saying rather than letting two adjacent numbers suggest a gain.
+
+**And a caution on the row that looks free.** At 2 signals no correct value is lost at all — but on 4 abstentions, which is below this repository's floor of 20. "Never sacrifices a correct value" is a claim that sample cannot carry: the interval on it runs from 51 % to 100 %.
+
+*Measured on the **hard corpus** — 30 deliberately difficult documents, 150 values. The break-even ratio carries no unit and transfers as is; the hours transfer only in proportion to how many of your values are doubtful, which we do not know.*
+<!-- /figures:frontiere -->
 
 That last sentence is the one worth carrying into a budget meeting. The instinct in the
 room is "we need a bigger model" or "we need more budget". The measurement says the money
