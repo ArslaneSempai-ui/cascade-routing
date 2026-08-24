@@ -1245,7 +1245,7 @@
     ]
   },
   "retractions": {
-    "total": 30,
+    "total": 31,
     "caughtBeforeAnyoneSawIt": 11,
     "entries": [
       {
@@ -1396,6 +1396,11 @@
       {
         "date": "2026-08-24",
         "headline": "The retraction that fixed the network promise carried an overclaim of its own: \"exactly one outbound call\".",
+        "caughtBeforeAnyoneSawIt": false
+      },
+      {
+        "date": "2026-08-25",
+        "headline": "\"No dependency runs code at install time\" — published in a commit message, and false. Two of 243 do.",
         "caughtBeforeAnyoneSawIt": false
       }
     ]

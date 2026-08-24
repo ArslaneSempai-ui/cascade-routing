@@ -314,6 +314,17 @@
       "heldBy": "tout ce qui peut ouvrir une connexion est déclaré, et le compte n'est pas une phrase",
       "notHeld": null,
       "caughtBeforeAnyoneSawIt": false
+    },
+    {
+      "date": "2026-08-25",
+      "headline": "\"No dependency runs code at install time\" — published in a commit message, and false. Two of 243 do.",
+      "claimed": "On 2026-08-25, commit 9e10b26 stated as a measurement: \"No dependency runs code at install time, and every one is pinned.\" It carried a figure — 81 packages, 0 install scripts — and a test was added to pin the property. It reads as a reading that was taken.",
+      "actually": "Two packages of 243 declare a postinstall. `protobufjs` rewrites a field of its own package.json in 32 lines, with no network and no subprocess. `onnxruntime-node` DOWNLOADS native binaries from github.com and Microsoft's Azure feed and extracts them with execFileSync — gated on Linux x64, therefore inert on macOS and active on an ubuntu-latest runner. WHETHER THEY RUN IS A PROPERTY OF THE CLIENT'S MACHINE, NOT OF THIS REPOSITORY: npm 12 blocks both behind `allowScripts`, closed by default, and `ignore-scripts` is false; on npm 11 or earlier, on yarn, and on pnpm they execute. Measured on both sides, and the blocking is without consequence here — onnxruntime-node's `bin/napi-v3/**` is byte-identical at 208 MB between a blocked clone and an unblocked one, because the binaries ship in the tarball.",
+      "caughtBy": "A peer session, told by a second, which measured before accepting and found it wider than reported — two packages rather than one. The guard now reads both the lockfile flag and the package.json actually on disk, and a disagreement between them is itself a finding.",
+      "cost": "A claim sold to banks, published in a commit message, contradicted by two packages. Nothing was exploited: the claim was wrong, not the software. What it cost is the thing hardest to get back — a figure of ours that does not survive being checked.",
+      "heldBy": "aucune dépendance n'exécute de code à l'installation, et toutes sont épinglées",
+      "caughtBeforeAnyoneSawIt": false,
+      "howItGotThrough": "The guard read `packages[].scripts.postinstall` in the lockfile. npm does not write a dependency's scripts there; it writes a boolean, `hasInstallScript`. The field read was always absent, the collection always empty, and the zero meant nothing. AND THE COUNTER-PROOF SHARED THE ERROR: I planted a postinstall and watched the guard fire, but planted it in `scripts` — the same wrong field the guard read. A witness placed in the same shape as the guard proves the guard reads that shape, not that the shape is where the truth lives. That is the failure mode of every witness written by the hand that wrote the guard."
     }
   ]
 }

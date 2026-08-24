@@ -1376,15 +1376,79 @@ test("aucune dépendance n'exécute de code à l'installation, et toutes sont é
     `${reels.length} paquet(s) lus dans package-lock.json : la lecture a échoué, et un zéro `
     + "obtenu sur une liste vide ne dit rien.");
 
+  /*
+   * ─── CE CONTRÔLE LISAIT UN CHAMP QUE NPM NE RENSEIGNE JAMAIS ───
+   *
+   * Il cherchait `packages[].scripts.postinstall` dans le verrou. npm n'y écrit PAS les
+   * scripts d'une dépendance : il pose un booléen `hasInstallScript`. Le champ lu était donc
+   * toujours absent, la collection toujours vide, et le zéro obtenu ne disait rien.
+   *
+   * Il a passé un audit de sécurité entier, et j'ai publié dans un message de commit :
+   * « No dependency runs code at install time ». C'était faux — DEUX paquets sur 243 en
+   * exécutent, et `ignore-scripts` vaut `false`, donc ils tournent. Trouvé par une session
+   * pair, signalé par une autre, mesuré par la première avant d'accepter.
+   *
+   * ET MA CONTRE-ÉPREUVE PARTAGEAIT L'ERREUR. J'avais planté un `postinstall` et vu la garde
+   * tirer — mais planté dans le champ `scripts`, celui que la garde lisait. Un témoin posé
+   * dans la même forme que la garde prouve que la garde lit cette forme, pas que la forme est
+   * là où se trouve la vérité. C'est la faille de tout témoin écrit par la main qui a écrit
+   * la garde.
+   *
+   * On lit donc les DEUX sources et on les confronte : le drapeau du verrou et le
+   * `package.json` réellement posé sur le disque. Un désaccord entre elles est lui-même une
+   * trouvaille — il veut dire que le verrou décrit un arbre qui n'est plus celui-là.
+   */
   const AUX_INSTALLATIONS = ["preinstall", "install", "postinstall"] as const;
-  const executent = reels
-    .filter(([, v]) => AUX_INSTALLATIONS.some((s) => v.scripts?.[s]))
-    .map(([k, v]) => `${k} (${AUX_INSTALLATIONS.filter((s) => v.scripts?.[s]).join(", ")})`);
-  assert.deepEqual(executent, [],
-    `${executent.length} paquet(s) exécutent du code pendant « npm install » :\n  ${executent.join("\n  ")}\n`
+  const parLeVerrou = reels.filter(([, v]) => (v as { hasInstallScript?: boolean }).hasInstallScript)
+    .map(([k]) => k).sort();
+  const surLeDisque: string[] = [];
+  for (const [k] of reels) {
+    const p = join(racine, k, "package.json");
+    if (!existsSync(p)) continue;
+    let sc: Record<string, string> = {};
+    try { sc = (JSON.parse(readFileSync(p, "utf8")).scripts ?? {}) as Record<string, string>; } catch { continue; }
+    if (AUX_INSTALLATIONS.some((s) => sc[s])) surLeDisque.push(k);
+  }
+  surLeDisque.sort();
+
+  /* L'arbre installé fait foi quand il est là ; sinon le verrou, en le disant. */
+  const lus = surLeDisque.length > 0 || reels.some(([k]) => existsSync(join(racine, k, "package.json")));
+  assert.ok(lus || parLeVerrou.length > 0,
+    "ni le verrou ni node_modules n'ont pu être lus : ce contrôle n'a rien regardé.");
+  if (lus) {
+    assert.deepEqual(surLeDisque, parLeVerrou,
+      `le verrou et l'arbre installé ne s'accordent pas sur qui exécute du code à l'installation.\n`
+      + `  verrou  : ${parLeVerrou.join(", ") || "aucun"}\n  disque  : ${surLeDisque.join(", ") || "aucun"}\n`
+      + "  → le verrou décrit un arbre qui n'est plus celui-ci. `npm ci` avant de conclure.");
+  }
+
+  /*
+   * LES DEUX SONT DÉCLARÉS, AVEC CE QUE FAIT CHACUN — mesuré en lisant leur script, pas en
+   * faisant confiance à leur nom. Un troisième qui arriverait ferait tomber ce cas, ce qui
+   * est le point : leur présence est un fait connu, pas une surprise.
+   */
+  const DECLARES: Record<string, string> = {
+    "node_modules/protobufjs":
+      "postinstall de 32 lignes qui réécrit un champ de son propre package.json ; aucun réseau, "
+      + "aucun sous-processus — lu, pas supposé",
+    "node_modules/onnxruntime-node":
+      "postinstall qui TÉLÉCHARGE des binaires natifs depuis github.com et le flux Azure de "
+      + "Microsoft, et les extrait par execFileSync. Conditionné à Linux x64, donc inerte sur "
+      + "macOS et actif sur un coureur ubuntu-latest. C'est la seule vraie surface d'exécution "
+      + "à l'installation de ce projet, et elle doit être dite à un acheteur, pas cachée",
+  };
+  const inconnus = surLeDisque.filter((k) => !(k in DECLARES));
+  assert.deepEqual(inconnus, [],
+    `${inconnus.length} paquet(s) exécutent du code pendant « npm install » sans être déclarés :\n`
+    + `  ${inconnus.join("\n  ")}\n`
+    + `  (${surLeDisque.length} sur ${reels.length} paquets en exécutent au total.)\n`
     + "  → ce code tourne sur la machine du client avant la nôtre, avec ses droits, et rien\n"
     + "    de ce que le produit promet ne s'y applique encore.\n"
-    + "  → si la dépendance est indispensable, `npm ci --ignore-scripts` et le dire au client.");
+    + "  → lisez ce que fait le script, inscrivez-le dans DECLARES avec ce que vous avez lu,\n"
+    + "    ou retirez la dépendance. `npm ci --ignore-scripts` si le projet s'en passe.");
+  const morts = Object.keys(DECLARES).filter((k) => !surLeDisque.includes(k));
+  assert.deepEqual(morts, [],
+    `déclaration(s) devenue(s) inutile(s) : ${morts.join(", ")} n'exécute(nt) plus rien.`);
 
   const sansEmpreinte = reels.filter(([, v]) => v.resolved && !v.integrity).map(([k]) => k);
   assert.deepEqual(sansEmpreinte, [],
