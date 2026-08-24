@@ -1,7 +1,7 @@
 {
   "quoi": "Quels signaux annoncent une valeur inutilisable, sans la clé de réponses.",
-  "mesureLe": "2026-08-23T20:46:22.748Z",
-  "journal": "tentatives/2026-08-23T20-37-27-283Z-dur.jsonl",
+  "mesureLe": "2026-08-24T12:39:53.868Z",
+  "journal": "tentatives/2026-08-24T12-32-20-859Z-dur.jsonl",
   "corpus": "hard-corpus",
   "denominateur": "toute valeur notée par un palier sur le corpus dur, blancs compris",
   "valeurs": 984,

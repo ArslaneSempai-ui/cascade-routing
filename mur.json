@@ -1,14 +1,14 @@
 {
   "quoi": "Jusqu'où le solveur exhaustif va, en champs et en paliers.",
   "solveur": "deux énumérations, mémoire constante",
-  "mesureLe": "2026-08-21T17:23:27.637Z",
-  "plafondParPointMs": 45000,
+  "mesureLe": "2026-08-24T12:40:53.603Z",
+  "plafondParPointMs": 60000,
   "grille": [
     {
       "paliers": 4,
       "champs": 4,
       "affectations": 256,
-      "ms": 1
+      "ms": 1.5
     },
     {
       "paliers": 4,
@@ -20,49 +20,49 @@
       "paliers": 4,
       "champs": 6,
       "affectations": 4096,
-      "ms": 6.8
+      "ms": 7.2
     },
     {
       "paliers": 4,
       "champs": 7,
       "affectations": 16384,
-      "ms": 24
+      "ms": 24.9
     },
     {
       "paliers": 4,
       "champs": 8,
       "affectations": 65536,
-      "ms": 117.2
+      "ms": 119.2
     },
     {
       "paliers": 5,
       "champs": 4,
       "affectations": 625,
-      "ms": 0.6
+      "ms": 0.7
     },
     {
       "paliers": 5,
       "champs": 5,
       "affectations": 3125,
-      "ms": 3.7
+      "ms": 3.6
     },
     {
       "paliers": 5,
       "champs": 6,
       "affectations": 15625,
-      "ms": 21
+      "ms": 21.2
     },
     {
       "paliers": 5,
       "champs": 7,
       "affectations": 78125,
-      "ms": 120.5
+      "ms": 123.4
     },
     {
       "paliers": 5,
       "champs": 8,
       "affectations": 390625,
-      "ms": 710.6
+      "ms": 707.3
     },
     {
       "paliers": 6,
@@ -74,109 +74,109 @@
       "paliers": 6,
       "champs": 5,
       "affectations": 7776,
-      "ms": 8.5
+      "ms": 9
     },
     {
       "paliers": 6,
       "champs": 6,
       "affectations": 46656,
-      "ms": 61.9
+      "ms": 63.7
     },
     {
       "paliers": 6,
       "champs": 7,
       "affectations": 279936,
-      "ms": 423.8
+      "ms": 441.7
     },
     {
       "paliers": 6,
       "champs": 8,
       "affectations": 1679616,
-      "ms": 2963.4
+      "ms": 2968.6
     },
     {
       "paliers": 7,
       "champs": 4,
       "affectations": 2401,
-      "ms": 2.2
+      "ms": 2.8
     },
     {
       "paliers": 7,
       "champs": 5,
       "affectations": 16807,
-      "ms": 18.6
+      "ms": 20
     },
     {
       "paliers": 7,
       "champs": 6,
       "affectations": 117649,
-      "ms": 154.8
+      "ms": 164
     },
     {
       "paliers": 7,
       "champs": 7,
       "affectations": 823543,
-      "ms": 1289.1
+      "ms": 1331.3
     },
     {
       "paliers": 7,
       "champs": 8,
       "affectations": 5764801,
-      "ms": 10237.5
+      "ms": 10539
     },
     {
       "paliers": 8,
       "champs": 4,
       "affectations": 4096,
-      "ms": 3.8
+      "ms": 4
     },
     {
       "paliers": 8,
       "champs": 5,
       "affectations": 32768,
-      "ms": 36.5
+      "ms": 38
     },
     {
       "paliers": 8,
       "champs": 6,
       "affectations": 262144,
-      "ms": 347.3
+      "ms": 365.4
     },
     {
       "paliers": 8,
       "champs": 7,
       "affectations": 2097152,
-      "ms": 3266.8
+      "ms": 3345.5
     },
     {
       "paliers": 8,
       "champs": 8,
       "affectations": 16777216,
-      "ms": 32292.4
+      "ms": 30597.6
     },
     {
       "paliers": 9,
       "champs": 4,
       "affectations": 6561,
-      "ms": 6
+      "ms": 6.2
     },
     {
       "paliers": 9,
       "champs": 5,
       "affectations": 59049,
-      "ms": 64.9
+      "ms": 67.5
     },
     {
       "paliers": 9,
       "champs": 6,
       "affectations": 531441,
-      "ms": 699.5
+      "ms": 739
     },
     {
       "paliers": 9,
       "champs": 7,
       "affectations": 4782969,
-      "ms": 7348
+      "ms": 7633
     },
     {
       "paliers": 9,
@@ -189,7 +189,7 @@
     "paliers": 8,
     "champs": 8,
     "affectations": 16777216,
-    "ms": 32292.4
+    "ms": 30597.6
   },
   "limite": "Le temps, pas la mémoire. Le solveur énumère deux fois sans rien retenir, donc il ralentit au lieu de s'arrêter — un point qui prend une minute se voit et se réduit, un tas épuisé ne dit pas quoi réduire. Les points marqués `—` n'ont pas été lancés : leur durée estimée depuis le point précédent dépassait le plafond.",
   "avantLaCorrection": "Le solveur retenait chaque solution admissible en mémoire pour la refiltrer. À sept paliers et huit champs, tas de quatre gigaoctets épuisé : arrêt, pas ralentissement."

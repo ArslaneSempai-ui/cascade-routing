@@ -30,7 +30,9 @@ import { rapportPourLeClient } from "./your-cases.ts";
 import { elaguer as elaguerInterne } from "./journal.ts";
 import { FORME as FORME_INTERNE } from "./signal.ts";
 import { PROMPTS as PROMPTS_INTERNES, questionPour as questionPourInterne } from "./tiers.ts";
-import { memoireDisponibleMo, etatMachine as etatMachineInterne } from "./contrainte.ts";
+import { memoireDisponibleMo, etatMachine as etatMachineInterne,
+  PLAFOND_JETONS as PLAFOND_JETONS_INTERNE,
+  MEMOIRE_LIBRE_MINIMALE_MO as MEMOIRE_MINIMALE_INTERNE } from "./contrainte.ts";
 import { normaliserReponse as normaliserReponseInterne } from "./tiers.ts";
 import { pathToFileURL } from "node:url";
 import { ASSUMPTIONS, UNITS, BOUNDS, pricePerThousandExtractions, accuracy } from "./assumptions.ts";
@@ -4088,4 +4090,66 @@ test("l'élagage ne jette jamais le dernier journal d'un genre", () => {
   } finally {
     rmSync(dossier, { recursive: true, force: true });
   }
+});
+
+test("un relevé publié porte les paramètres sous lesquels le code le prendrait aujourd'hui", () => {
+  /*
+   * `mur.json` enregistrait un plafond de 45 000 ms par point ; le code en utilise 60 000
+   * depuis un commit plus ancien que le fichier. **Le relevé publié n'a pas été pris sous les
+   * paramètres du code qui le produit**, et rien ne le disait.
+   *
+   * Ce n'est pas un chiffre faux : c'est un chiffre pris ailleurs. Un lecteur qui relance la
+   * commande obtient autre chose sans comprendre pourquoi, et conclut que la mesure est
+   * instable.
+   *
+   * LES ARTEFACTS S'ÉNUMÈRENT DEPUIS LE DISQUE. Une liste de fichiers écrite ici serait la
+   * couverture récitée qu'on refuse partout ailleurs : le prochain relevé porteur d'un
+   * paramètre n'y serait pas, et son silence passerait pour un accord.
+   */
+  const racine = fileURLToPath(new URL("..", import.meta.url));
+
+  /** Ce que le code utiliserait aujourd'hui, par paramètre. */
+  const AUJOURDHUI: Record<string, number> = {
+    plafondParPointMs: 60_000,
+    plafondJetons: PLAFOND_JETONS_INTERNE,
+    seuilMemoireLibreMo: MEMOIRE_MINIMALE_INTERNE,
+    plafondDeLatenceMs: ASSUMPTIONS.latencyBudgetMs,
+    /* LE GABARIT QUE LE CLIENT REMPLIT DOIT PORTER LES DÉFAUTS DU CODE, pas ceux du jour où
+       il a été écrit. Ils concordent aujourd'hui ; sans cette garde, rien ne le dirait le
+       jour où l'un des deux bouge, et le client partirait sur un réglage périmé. */
+    analystAnnualCost: ASSUMPTIONS.analystAnnualCost,
+    humanSeconds: ASSUMPTIONS.humanSeconds,
+  };
+  /** Ce qui est un COMPTE de la passe, pas un réglage du code — donc rien à confronter. */
+  const COMPTES = new Set(["documents", "champs", "cas", "passes", "valeurs", "cibleN", "tauxDeBase"]);
+  /* Le gabarit porte AUSSI les hypothèses éditables : elles se confrontent au code comme les
+     autres, mais sous leur propre nom. */
+  for (const k of ["volume", "budget", "latencyBudgetMs", "pricePerThousandSmall",
+    "pricePerThousandLarge"] as const) AUJOURDHUI[k] = ASSUMPTIONS[k];
+
+  const ecarts: string[] = [];
+  const nonClasses: string[] = [];
+  let confrontes = 0;
+  for (const f of readdirSync(racine).filter((n) => n.endsWith(".json"))) {
+    if (/^(package|package-lock|tsconfig|tsconfig\.web)\.json$/.test(f)) continue;
+    let d: Record<string, unknown>;
+    try { d = JSON.parse(readFileSync(join(racine, f), "utf8")); } catch { continue; }
+    if (!d || typeof d !== "object" || Array.isArray(d)) continue;
+    for (const [k, v] of Object.entries(d)) {
+      if (typeof v !== "number" || COMPTES.has(k)) continue;
+      if (!(k in AUJOURDHUI)) { nonClasses.push(`${f}:${k}`); continue; }
+      confrontes++;
+      if (v !== AUJOURDHUI[k]) ecarts.push(`${f} publie ${k}=${v}, le code utiliserait ${AUJOURDHUI[k]}`);
+    }
+  }
+
+  assert.ok(confrontes >= 3,
+    `${confrontes} paramètre(s) confronté(s) : la lecture a échoué et ce cas ne vérifie rien.`);
+  assert.deepEqual(nonClasses, [],
+    `paramètre(s) publié(s) que rien ne confronte au code : ${nonClasses.join(", ")}.\n`
+    + `  → l'ajouter à AUJOURDHUI avec sa valeur de code, ou à COMPTES si c'est un compte de\n`
+    + `    la passe et non un réglage.`);
+  assert.deepEqual(ecarts, [],
+    `relevé(s) pris sous d'autres paramètres que ceux du code :\n  ${ecarts.join("\n  ")}\n`
+    + `  → remesurer, ou dire dans le fichier pourquoi il reste pris sous l'ancien.`);
 });
