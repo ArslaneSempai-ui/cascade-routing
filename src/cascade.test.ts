@@ -3204,7 +3204,7 @@ test("la version de sharp installée est au-dessus des CVE de libvips", () => {
  * qui est ecrit. Une garde qui inspecte la source rate une valeur ecrite par un autre chemin ;
  * celle-ci regarde ce qui sort.
  */
-test("aucune valeur du client n'entre dans le fichier que l'outil lui rend", () => {
+test("aucune valeur du client n'entre dans le fichier que l'outil lui rend", (t) => {
   const dossier = mkdtempSync(join(tmpdir(), "cascade-clause-"));
   try {
     /* Des valeurs qu'aucun agregat ne pourrait produire par hasard : si l'une d'elles
@@ -3216,17 +3216,40 @@ test("aucune valeur du client n'entre dans le fichier que l'outil lui rend", () 
     const entree = join(dossier, "cas.csv");
     writeFileSync(entree, csv);
 
+    /*
+     * LE DÉLAI ÉTAIT PLUS COURT QUE CE QU'IL FAUT AU PREMIER LANCEMENT.
+     *
+     * Mesuré par une session de performance : le premier chargement de modèle prend 578 s
+     * et 740 Mo ; ce délai coupait à 300. Le sous-processus mourait en plein téléchargement,
+     * le cas partait par sa branche de repli — `r.status` vaut `null`, donc `status !== 0`
+     * est vrai — et LA PROMESSE N'ÉTAIT ÉPROUVÉE SUR RIEN. Le contrôle qui garantit à un
+     * acheteur que ses données ne sortent pas est précisément celui qui ne tournait pas à
+     * son premier lancement, c'est-à-dire celui où il regarde.
+     */
+    const DELAI_MS = 900_000;
     const r = spawnSync("node", [fileURLToPath(new URL("./your-cases.ts", import.meta.url)),
-      `--cases=${entree}`], { encoding: "utf8", timeout: 300_000 });
+      `--cases=${entree}`], { encoding: "utf8", timeout: DELAI_MS });
 
     const sortie = entree.replace(/\.csv$/, "") + "-measured.md";
     if (!existsSync(sortie)) {
-      /* L'outil n'a pas produit de fichier — souvent parce que les modeles ne sont pas en
-         cache. On ne rend pas un vert pour autant : un contrôle qui n'a rien vu le dit. */
+      /*
+       * L'OUTIL N'A PAS PRODUIT DE FICHIER, ET ÇA NE SE COMPTE PAS COMME UNE RÉUSSITE.
+       *
+       * Le cas sortait par `return`, donc il figurait parmi les passés, indiscernable d'un
+       * cas qui avait réellement cherché une fuite. Il le disait au code, dans son
+       * commentaire, et pas au relevé. Il sort maintenant par `t.skip()` : le lanceur compte
+       * un ignoré, et le silence se voit.
+       */
       assert.ok(r.status !== 0 || r.stdout.includes("Written to"),
         `l'outil n'a ecrit aucun fichier et n'a pas explique pourquoi. Sortie : `
         + `${(r.stderr || r.stdout).slice(0, 200)}`);
-      return;
+      /* Un sous-processus tué par NOTRE délai n'est pas un échec de l'outil : c'est un
+         contrôle qui n'a pas eu le temps de regarder, et il faut le dire autrement. */
+      const tue = r.status === null;
+      return t.skip(tue
+        ? `sous-processus tué par le délai de ${DELAI_MS / 1000} s — au premier lancement, le `
+          + "chargement du modèle prend 578 s mesurées. La promesse n'a été éprouvée sur rien."
+        : "l'outil n'a produit aucun fichier (modèles absents du cache) : rien à inspecter.");
     }
 
     const rendu = readFileSync(sortie, "utf8");
