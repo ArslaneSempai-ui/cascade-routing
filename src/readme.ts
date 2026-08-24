@@ -700,6 +700,7 @@ const commandes = (() => {
     ["ocr", "read the same documents as images and measure what the reading stage costs (macOS: Vision, no API)"],
     ["exposition", "what the routing costs when it is wrong, and the price ratio at which the recommendation changes"],
     ["document", "the rate per FILE — all five fields right together — against the mean per field"],
+    ["politique", "emit what the client takes away: the decision, its evidence, and the abstention rule as runnable dependency-free code"],
   ];
   const classees = new Set(ordre.map(([n]) => n));
   const oubliees = Object.keys(pkg.scripts).filter((n) => !classees.has(n) && n !== "typage");

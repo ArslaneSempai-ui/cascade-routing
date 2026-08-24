@@ -26,6 +26,9 @@ import { readProfiles, empreinteDuReleve, RELEVE_DE_REFERENCE, type Profile, typ
 import { optimiseExtraction, optimiseClassification, budgetShadowPrice, latenceRepresentative, paliersMesures, evaluer, pricePerThousandDocuments } from "./optimise.ts";
 import { exposition, optimiseExposition, ouLaRecommandationBascule, decompositionsIncoherentes } from "./exposition.ts";
 import { documentsComplets, comparer as comparerDocuments } from "./document.ts";
+import { FORME as FORME_INTERNE } from "./signal.ts";
+import { normaliserReponse as normaliserReponseInterne } from "./tiers.ts";
+import { pathToFileURL } from "node:url";
 import { ASSUMPTIONS, UNITS, BOUNDS, pricePerThousandExtractions, accuracy } from "./assumptions.ts";
 import { wilson, rate, writeRate, distinguishable, precision, ENOUGH as ENOUGH_CAS } from "./interval.ts";
 import { PLAUSIBLE, bands, ETIQUETTE, advise } from "./sensitivity.ts";
@@ -3839,4 +3842,64 @@ test("le dossier qu'un relecteur signe porte l'exactitude dans l'unité qu'il cl
      chiffres voisins dont un seul est encadré ressemblent à une négligence. */
   assert.match(dossier, /true proportion/,
     "VALIDATION.md publie les deux chiffres sans dire lequel peut porter un intervalle, ni pourquoi.");
+});
+
+/* ────────────────────────────────────────────────────────────────────────────
+   CE QUE LE CLIENT EMPORTE
+
+   Une règle exportée qui ne se comporte pas comme celle qu'on a mesurée est un
+   autre produit portant le même nom.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+test("la règle exportée se comporte exactement comme celle qui a été mesurée", async () => {
+  const racine = fileURLToPath(new URL("..", import.meta.url));
+  const chemin = join(racine, "politique.mjs");
+  assert.ok(existsSync(chemin), "politique.mjs n'est pas engendré : lancez `npm run politique`.");
+
+  const exportee = await import(pathToFileURL(chemin).href) as {
+    douteux: (v: string, texte: string | undefined, champ: string) => number;
+    normaliser: (x: string) => string;
+    FORME: Record<string, (v: string) => boolean>;
+  };
+
+  /* LES FORMES, UNE PAR UNE, SUR DES VALEURS QUI DISCRIMINENT. Comparer les sources ne
+     prouverait rien : deux textes identiques peuvent être engendrés depuis une source qui a
+     changé de sens. On éprouve le COMPORTEMENT. */
+  const epreuves: Record<string, [string, boolean][]> = {
+    birth: [["10/07/1987", true], ["1987", true], ["pas de date", false], ["3012", false]],
+    country: [["France", true], ["Republic of Korea", true], ["F4nce", false],
+      ["un pays avec beaucoup trop de mots ici", false]],
+    name: [["Nadia Okonkwo", true], ["N4dia", false]],
+    address: [["109 rue Victor Hugo", true], ["Milan, Italie", true], ["sans rien", false]],
+    document: [["idPT-6884-M", true], ["123456", false]],
+  };
+  let eprouves = 0;
+  for (const [champ, cas] of Object.entries(epreuves)) {
+    const ici = FORME_INTERNE[champ];
+    const la = exportee.FORME[champ];
+    assert.ok(ici !== undefined && la !== undefined,
+      `le champ ${champ} a perdu sa forme d'un côté ou de l'autre.`);
+    for (const [v, attendu] of cas) {
+      eprouves++;
+      assert.equal(la!(v), ici!(v),
+        `la forme exportée de ${champ} répond ${la!(v)} sur « ${v} » là où celle mesurée répond ${ici!(v)}.`);
+      assert.equal(ici!(v), attendu,
+        `la forme de ${champ} a changé de sens : « ${v} » devrait valoir ${attendu}.`);
+    }
+  }
+  assert.ok(eprouves >= 12,
+    `${eprouves} valeur(s) éprouvée(s) : trop peu pour que cette égalité veuille dire quelque chose.`);
+
+  /* ET LES TROIS SIGNAUX ENSEMBLE, y compris le vide qui compte pour un à lui seul. */
+  assert.equal(exportee.douteux("", "un texte", "name"), 1, "la valeur vide ne compte plus pour un signal.");
+  assert.equal(exportee.douteux("Nadia Okonkwo", "dossier de Nadia Okonkwo", "name"), 0,
+    "une valeur présente dans le texte et de bonne forme déclenche un signal.");
+  assert.equal(exportee.douteux("Nadia Okonkwo", "un texte sans elle", "name"), 1,
+    "une valeur absente du document ne déclenche plus le signal d'absence.");
+  assert.equal(exportee.douteux("N4dia 1", "N4dia 1", "name"), 1,
+    "une valeur présente mais de mauvaise forme ne déclenche plus le signal de forme.");
+
+  /* LA NORMALISATION VOYAGE AVEC, sinon les trois prédicats portent sur autre chose. */
+  assert.equal(exportee.normaliser(" 10 / 07 / 1987 ."), normaliserReponseInterne(" 10 / 07 / 1987 ."),
+    "la normalisation exportée diffère de celle sous laquelle la mesure a été faite.");
 });

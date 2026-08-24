@@ -41,7 +41,8 @@
     "sonde": "node src/sonde.ts",
     "ocr": "node src/mesurer-ocr.ts",
     "exposition": "node src/exposition.ts",
-    "document": "node src/document.ts"
+    "document": "node src/document.ts",
+    "politique": "node src/politique.ts"
   },
   "dependencies": {
     "@huggingface/transformers": "^3.0.0"

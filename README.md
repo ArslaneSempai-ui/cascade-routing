@@ -61,6 +61,7 @@ what that pass actually cost is stated below, read from the relevé rather than 
 | `npm run ocr` | read the same documents as images and measure what the reading stage costs (macOS: Vision, no API) |
 | `npm run exposition` | what the routing costs when it is wrong, and the price ratio at which the recommendation changes |
 | `npm run document` | the rate per FILE — all five fields right together — against the mean per field |
+| `npm run politique` | emit what the client takes away: the decision, its evidence, and the abstention rule as runnable dependency-free code |
 <!-- /figures:commandes -->
 
 ```bash
@@ -68,7 +69,7 @@ npm test           # types, README figures, landing.json, and the suite
 ```
 
 <!-- figures:tests -->
-**172 tests** across 9 files, counted from the sources rather than typed here.
+**173 tests** across 9 files, counted from the sources rather than typed here.
 <!-- /figures:tests -->
 
 Everything runs locally. No API key, nothing leaves the machine, and anyone who clones this
