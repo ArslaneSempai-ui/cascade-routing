@@ -71,8 +71,46 @@ export function empreinteDeCle(pem) {
 export function verifier(contenu, clePubliquePem) {
   const donnees = bloc(contenu, DEBUT_DONNEES);
   if (donnees === null) return { valide: false, motif: "aucun bloc de données : ce fichier n'est pas un rapport signé." };
-  const brutSignature = dernierBloc(contenu, DEBUT_SIGNATURE);
-  if (brutSignature === null) return { valide: false, motif: "le rapport ne porte aucune signature." };
+  if (contenu.lastIndexOf(DEBUT_SIGNATURE) === -1) return { valide: false, motif: "le rapport ne porte aucune signature." };
+
+  /*
+   * LA FIN DU BLOC SE TROUVE AVEC LA RÈGLE DU NAVIGATEUR, PAS AVEC UNE ÉGALITÉ DE CHAÎNE.
+   *
+   * `indexOf("</script>")` cherche neuf caractères exacts. Un navigateur, lui, ferme un
+   * `<script>` sur `</script` suivi d'un espace, d'une tabulation, d'un saut de ligne, d'un
+   * `/` ou d'un `>`. Les deux frontières divergent, et c'est tout l'espace de l'attaque :
+   * une charge glissée derrière `</script >` — avec espace — reste dans les octets EXCLUS
+   * pour le vérificateur, et se fait RENDRE par le navigateur. Quatre fermetures valides
+   * passaient ; vérifié dans un navigateur, l'écran affichait 96,7 % et 480 000 EUR pendant
+   * que la vérification imprimait une sortie identique au rapport authentique.
+   *
+   * On prend donc la première fermeture que le NAVIGATEUR reconnaîtrait. Tout ce qui la suit
+   * entre dans les octets signés.
+   */
+  const debut = contenu.lastIndexOf(DEBUT_SIGNATURE);
+  const apres = contenu.slice(debut + DEBUT_SIGNATURE.length);
+  const m = apres.match(/<\/script[\s/>]/i);
+  if (!m) return { valide: false, motif: "le bloc de signature n'est pas refermé." };
+  const finBloc = debut + DEBUT_SIGNATURE.length + m.index;
+  const finFermeture = finBloc + apres.slice(m.index).indexOf(">") + 1;
+  if (finFermeture <= finBloc) return { valide: false, motif: "la fermeture du bloc de signature est tronquée." };
+
+  /*
+   * ET LE BLOC NE PEUT CONTENIR AUCUN « < ».
+   *
+   * Une signature authentique est faite de base64, d'hexadécimal et de quelques mots fixes :
+   * aucun `<` n'y a sa place. L'interdire ferme d'un coup toute cette famille — le rembourrage
+   * qui rouvre une balise, celui qui en ouvre une autre, et celui qui glisse une table. Une
+   * garde qui interdit ce qui ne devrait jamais arriver vaut mieux qu'une garde qui essaie de
+   * suivre les règles d'analyse d'un navigateur.
+   */
+  if (contenu.slice(debut + DEBUT_SIGNATURE.length, finBloc).includes("<")) {
+    return { valide: false, motif:
+      "le bloc de signature contient un « < » : une signature authentique n'en porte jamais.\n"
+      + "  Ce caractère sert à rouvrir une balise depuis l'intérieur des octets exclus." };
+  }
+
+  const brutSignature = contenu.slice(debut + DEBUT_SIGNATURE.length, finBloc);
 
   let sig;
   try { sig = JSON.parse(brutSignature); }
@@ -111,10 +149,7 @@ export function verifier(contenu, clePubliquePem) {
    * Le contenu signé est donc le document PRIVÉ DE SON SEUL BLOC DE SIGNATURE : ce qui
    * précède, plus ce qui suit. Un octet ajouté n'importe où tombe dans l'un des deux.
    */
-  const debut = contenu.lastIndexOf(DEBUT_SIGNATURE);
-  const finBloc = contenu.indexOf(FIN, debut + DEBUT_SIGNATURE.length);
-  if (finBloc === -1) return { valide: false, motif: "le bloc de signature n'est pas refermé." };
-  const corps = contenu.slice(0, debut) + contenu.slice(finBloc + FIN.length);
+  const corps = contenu.slice(0, debut) + contenu.slice(finFermeture);
   if (corps.trim().length === 0) return { valide: false, motif: "le document signé est vide." };
 
   let ok;

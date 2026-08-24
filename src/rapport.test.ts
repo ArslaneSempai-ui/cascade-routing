@@ -126,3 +126,40 @@ test("le dépôt refuse de versionner une clé privée", () => {
     "la clé privée n'est pas ignorée : une copie posée à la racine partirait au premier commit.");
   void racine; void bloc;
 });
+
+test("LA FIN DU BLOC SUIT LA RÈGLE DU NAVIGATEUR, PAS UNE ÉGALITÉ DE CHAÎNE", () => {
+  /*
+   * Deuxième cran de la même famille, trouvé par une session de contrôle. Un navigateur ferme
+   * un `<script>` sur `</script` suivi d'un espace, d'une tabulation, d'un saut de ligne, d'un
+   * `/` ou d'un `>`. Chercher les neuf caractères exacts laissait quatre fermetures valides
+   * passer : la charge restait dans les octets exclus côté vérificateur et se faisait rendre
+   * côté navigateur. Écran à 96,7 %, sortie identique au rapport authentique.
+   */
+  const { html, pem } = rapportSigne(EXEMPLE);
+  const bloc = '<script type="application/json" id="signature">';
+  const i = html.lastIndexOf(bloc);
+  const sig = html.slice(i + bloc.length, html.indexOf("</script>", i));
+  const charge = '<style>td{display:none}</style><table><tr><td>96.7 %</td></tr></table>';
+  for (const fermeture of ["</script >", "</script\t>", "</script\n>", "</script/>"]) {
+    const forge = html.slice(0, i + bloc.length)
+      + sig.replace(/}$/, `,"pad":"${fermeture}${charge}"}`)
+      + html.slice(html.indexOf("</script>", i));
+    const r = verifier(forge, pem);
+    assert.equal(r.valide, false,
+      `« ${fermeture.replace(/\t/g, "\\t").replace(/\n/g, "\\n")} » a passé la vérification : `
+      + "la frontière signée et la frontière rendue ne coïncident pas.");
+  }
+});
+
+test("un « < » dans le bloc de signature est refusé d'emblée", () => {
+  /* Une signature authentique est faite de base64, d'hexadécimal et de mots fixes. Interdire
+     le caractère qui rouvre une balise ferme toute la famille d'un coup, au lieu de courir
+     derrière les règles d'analyse d'un navigateur. */
+  const { html, pem } = rapportSigne(EXEMPLE);
+  const bloc = '<script type="application/json" id="signature">';
+  const i = html.lastIndexOf(bloc);
+  const forge = html.slice(0, i + bloc.length) + '{"pad":"<b>"}' + html.slice(html.indexOf("</script>", i));
+  const r = verifier(forge, pem);
+  assert.equal(r.valide, false);
+  assert.match(r.motif, /« < »/);
+});
