@@ -126,4 +126,54 @@ test("les couches partagées sont bien celles d'identite", (t) => {
   assert.deepEqual(exceptionsMortes, [],
     `exception(s) devenue(s) inutile(s) : ${exceptionsMortes.join(", ")} ne diverge(nt) plus.\n`
     + `  → les retirer de DETACHES, sinon ces fichiers restent hors du contrôle pour rien.`);
+
+  /*
+   * ─── UN FICHIER PARTAGÉ DOIT LE DIRE LUI-MÊME ───
+   *
+   * Le contrôle ci-dessus attrape la divergence, mais APRÈS coup. Deux sessions ont chacune
+   * corrigé un fichier partagé sur place le même jour, découvert au commit que le crochet
+   * refusait, et refait le travail dans `identite`. Rien dans les fichiers ne le disait, et
+   * la règle vivait dans la mémoire de qui l'avait déjà payée.
+   *
+   * Une règle qui vit dans une mémoire ne survit pas à la session suivante. Celle-ci vit
+   * maintenant sur la première ligne de chaque fichier concerné, là où on la lit AVANT
+   * d'écrire plutôt qu'après.
+   *
+   * Et le contrôle part de la liste lue au disque : un fichier partagé ajouté demain arrive
+   * avec l'obligation sans que personne y pense.
+   *
+   * LES DÉTACHÉS N'EN PORTENT PAS, et c'est le point de la liste. Poser la marque en bloc a
+   * écrasé les quatre versions divergentes de ce dépôt — dont ce fichier-ci — parce que la
+   * recopie ne lisait pas `DETACHES`. Git les a rendues intactes ; la leçon est que la liste
+   * des exceptions doit être lue par TOUT ce qui touche aux fichiers partagés, pas seulement
+   * par le contrôle qui les compare.
+   */
+  /*
+   * `provenance.ts` EST EXCLU, ET LA RAISON EST INSTRUCTIVE.
+   *
+   * Il porte sa propre garde d'identité, qui le compare dans DOUZE dépôts — pas seulement
+   * entre celui-ci et identite. Y poser la marque l'a fait diverger des dix autres, et la
+   * propagation demandait d'écrire dans cinq dépôts qui portaient du travail non commité au
+   * même moment.
+   *
+   * Le marqueur y ira quand la session qui possède ces dépôts fera sa passe de propagation.
+   * En attendant, une exception déclarée avec sa date vaut mieux qu'un fichier écrasé sous
+   * les doigts de quelqu'un d'autre — et mieux qu'une garde affaiblie pour tenir.
+   */
+  const SANS_MARQUE_ENCORE: Record<string, string> = {
+    "provenance.ts": "sous garde d'identité à douze dépôts — marque à poser lors de la prochaine propagation (2026-08-25)",
+  };
+  const sansMarque = communs.filter((f) =>
+    !(f in DETACHES) && !(f in SANS_MARQUE_ENCORE)
+    && !readFileSync(source + f, "utf8").startsWith("/* PARTAGÉ"));
+  /* Et l'exception meurt d'elle-même : le jour où la marque est posée, elle devient inutile
+     et ce contrôle-ci le dit, au lieu de la laisser couvrir un fichier pour rien. */
+  const exemptionsMortes = Object.keys(SANS_MARQUE_ENCORE).filter((f) =>
+    communs.includes(f) && readFileSync(source + f, "utf8").startsWith("/* PARTAGÉ"));
+  assert.deepEqual(exemptionsMortes, [],
+    `${exemptionsMortes.join(", ")} porte(nt) la marque : retirez-les de SANS_MARQUE_ENCORE.`);
+  assert.deepEqual(sansMarque, [],
+    `${sansMarque.length} fichier(s) partagé(s) ne disent pas qu'ils le sont : ${sansMarque.join(", ")}.\n`
+    + "  → une session qui les ouvre corrigera la copie, et ne l'apprendra qu'au commit refusé.\n"
+    + "    Posez la marque « /* PARTAGÉ … */ » en première ligne, dans identite, puis recopiez.");
 });
