@@ -51,6 +51,9 @@ const t0 = Date.now();
 const dossier = mkdtempSync(join(tmpdir(), "cascade-clone-neuf-"));
 const clone = join(dossier, "cascade");
 
+/** Les cas qui ne se sont pas exécutés : ni une réussite, ni un échec. */
+const tus = [];
+
 const etape = (nom, fn) => {
   const t = Date.now();
   process.stdout.write(`  ${nom.padEnd(34)}`);
@@ -64,6 +67,13 @@ const etape = (nom, fn) => {
      * était au-dessus. Un contrôle qui trouve une panne et ne sait pas la nommer coûte autant
      * qu'une panne non trouvée, à ceci près qu'il donne l'impression d'avoir travaillé.
      */
+    /* ET LE MESSAGE DE L'ÉTAPE ELLE-MÊME. Cette fonction ne lisait que la sortie d'un
+       sous-processus ; une erreur levée par la logique de l'étape — « deux cas se sont
+       ignorés » — n'avait ni stdout ni stderr, et disparaissait. L'étape affichait ÉCHEC
+       sans dire quoi, ce qui est le refus sans raison qu'on refuse partout ailleurs. */
+    if (!e.stderr && !e.stdout && e.message) {
+      console.error(`\n  — ${e.message.split("\n").join("\n  ")}\n`);
+    }
     const err = String(e.stderr ?? "").trim();
     const out = String(e.stdout ?? "").trim();
     const bruit = /^(⚠|  Lecture du relevé|  Ce sont NOS|dtype not specified|$)/;
@@ -109,11 +119,52 @@ try {
   });
 
   etape("npm test", () => {
-    execFileSync("npm", ["test"], { cwd: clone, stdio: "pipe" });
+    /*
+     * `npm test` REND 0 QUAND DES CAS S'IGNORENT, ET C'EST TOUT L'INTÉRÊT DE CE CLONE.
+     *
+     * Un clone frais n'a pas les poids d'encodeur — 740 Mo qui ne sont pas dans git. Le cas
+     * qui vérifie qu'AUCUNE valeur du client n'entre dans le fichier rendu se déclare donc
+     * ignoré, la suite sort en 0, et cette étape annonçait « ok ». La commande dont le rôle
+     * est de reproduire le premier geste de l'acheteur passait au vert en n'éprouvant pas la
+     * promesse qui compte le plus pour lui.
+     *
+     * On lit le compte d'ignorés et on refuse. C'est le même défaut que l'intégration
+     * continue portait, trouvé le même jour, dans un troisième endroit — parce qu'un `exit 0`
+     * ne distingue pas « tout a été vérifié » de « ce qui n'a pas pu l'être s'est tu ».
+     */
+    const sortie = execFileSync("npm", ["test"], { cwd: clone, encoding: "utf8", stdio: "pipe" });
+    /* LE MARQUEUR N'EST PAS CELUI QUE JE CROYAIS. J'ai d'abord cherché « # skipped N », la
+       forme TAP. Le rapporteur par défaut écrit « ℹ skipped N ». La garde a donc annoncé
+       « ok » sur un clone où DEUX cas s'étaient tus — un contrôle qui cherche la mauvaise
+       chaîne rend le même silence que celui qu'il devait détecter. Les deux formes sont
+       acceptées maintenant. */
+    /*
+     * NI « OK » NI « ÉCHEC » : UN TROISIÈME ÉTAT.
+     *
+     * Un clone frais n'a pas les poids d'encodeur — 740 Mo qui ne sont pas dans git — donc le
+     * cas qui vérifie qu'aucune valeur du client ne sort se déclare ignoré. Le faire échouer
+     * rendrait cette commande rouge à chaque lancement chez un acheteur, et une commande
+     * toujours rouge cesse d'être lue. L'annoncer « ok » cacherait que la promesse la plus
+     * importante n'a pas été éprouvée.
+     *
+     * Elle passe donc, et elle DIT lesquels se sont tus. C'est le premier geste de l'acheteur
+     * reproduit fidèlement, y compris dans ce qu'il ne vérifie pas.
+     */
+    const ignores = Number(/^(?:#|ℹ) skipped (\d+)/m.exec(sortie)?.[1] ?? 0);
+    if (ignores > 0) {
+      const quoi = [...sortie.matchAll(/(?:# SKIP|﹣) *(.{0,88})/g)].map((m) => m[1].trim());
+      tus.push(...(quoi.length ? quoi : [`${ignores} cas, sans détail lisible dans la sortie`]));
+    }
   });
 
   const s = ((Date.now() - t0) / 1000).toFixed(0);
   console.log(`\n  Le clone passe. ${s} s au total.`);
+  if (tus.length > 0) {
+    console.log(`\n  ${tus.length} cas ne se sont PAS exécutés sur ce clone :`);
+    for (const q of tus) console.log(`    ﹣ ${q}`);
+    console.log(`\n  Ils passeront quand les poids de modèle seront en cache — le premier`);
+    console.log(`  lancement d'un acheteur ne les éprouve pas, et c'est ce que dit cette ligne.`);
+  }
   console.log(`  À lancer avant de livrer, et après tout changement de ce que git transporte —`);
   console.log(`  un ajout au .gitignore, un fichier produit qui entre dans un contrôle.\n`);
 } finally {
