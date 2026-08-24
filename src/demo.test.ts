@@ -116,3 +116,28 @@ test("le shim connaît toutes les routes que l'écran appelle", (t) => {
   assert.deepEqual(manquantes, [],
     `le shim ne traite pas ${manquantes.join(", ")} — l'écran recevra undefined, sans erreur`);
 });
+
+test("une requête qui ne change rien le DIT, au lieu de rendre un succès", () => {
+  /*
+   * Mesuré en frappant le serveur : `{"champ":"inexistant"}` et `{"palier":"gpt-9"}` rendaient
+   * tous les deux 200 avec un état inchangé. L'écran semble ne pas réagir, et celui qui le
+   * manipule n'a aucun moyen de savoir s'il s'est trompé ou si l'outil est cassé. Un corps
+   * vide, `null` ou un tableau passaient de la même façon.
+   *
+   * Un succès qui ne fait rien est pire qu'un refus : il enseigne au lecteur que l'outil ne
+   * marche pas, sans lui dire pourquoi.
+   *
+   * Le serveur n'exporte pas son écoute, donc on éprouve le code qui décide plutôt que la
+   * réponse — et on l'a vérifié en frappant le serveur pour de vrai avant d'écrire ce cas.
+   */
+  const src = readFileSync(new URL("./server.ts", import.meta.url), "utf8");
+  assert.match(src, /this request changes nothing/,
+    "le refus d'un champ ou d'un palier inconnu a disparu : une requête sans effet rendrait à nouveau 200.");
+  assert.match(src, /accepted: \$\{FIELDS\.join/,
+    "le refus ne nomme plus ce qui est accepté : sur cinq champs, « valeur inconnue » n'aide personne.");
+  assert.match(src, /the body must be a JSON object/,
+    "un corps `null` ou un tableau ne serait plus refusé avec un message lisible.");
+  /* Et le message ne doit pas être une erreur d'exécution recopiée : « Cannot read properties
+     of null » ne dit ni ce qui était attendu ni quoi faire. */
+  assert.match(src, /Expected something like/, "le refus ne montre plus la forme attendue.");
+});

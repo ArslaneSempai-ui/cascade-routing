@@ -65,7 +65,25 @@ function corps(req: IncomingMessage): Promise<Record<string, unknown>> {
       brut += b;
       if (brut.length > PLAFOND_CORPS) { req.destroy(); rejeter(new Error(`request too large (> ${PLAFOND_CORPS} octets)`)); }
     });
-    req.on("end", () => { try { resoudre(brut ? JSON.parse(brut) : {}); } catch (e) { rejeter(e); } });
+    req.on("end", () => {
+      /*
+       * `null` ET UN TABLEAU NE SONT PAS DES OBJETS, ET LE MESSAGE LE DISAIT EN JAVASCRIPT.
+       *
+       * Un corps valant `null` rendait « Cannot read properties of null (reading 'champ') »
+       * au client : un message d'exécution interne, qui ne dit ni ce qui était attendu ni
+       * quoi faire. Un tableau, lui, passait sans un mot et ne changeait rien.
+       */
+      try {
+        const v = brut ? JSON.parse(brut) : {};
+        if (v === null || typeof v !== "object" || Array.isArray(v)) {
+          rejeter(new Error(
+            `the body must be a JSON object, and this one is ${v === null ? "null" : Array.isArray(v) ? "an array" : typeof v}. `
+            + `Expected something like {"champ": "name", "palier": "rules"}.`));
+          return;
+        }
+        resoudre(v as Record<string, unknown>);
+      } catch (e) { rejeter(e); }
+    });
     req.on("error", rejeter);
   });
 }
@@ -212,11 +230,33 @@ const serveur = createServer(async (req, res) => {
 
     if (url.pathname === "/api/routage" && req.method === "POST") {
       const recu = await corps(req);
+      /*
+       * UN CHAMP OU UN PALIER INCONNU RENDAIT 200 ET NE FAISAIT RIEN.
+       *
+       * Mesuré en frappant le serveur : `{"champ":"inexistant"}` et `{"palier":"gpt-9"}`
+       * rendaient tous les deux un état inchangé avec un code de succès. L'écran semble ne
+       * pas réagir, et celui qui le manipule n'a aucun moyen de savoir pourquoi — ni s'il
+       * s'est trompé, ni si l'outil est cassé. Un corps vide, `null` ou un tableau passaient
+       * pareil.
+       *
+       * Le refus nomme ce qui est accepté : sur cinq champs et sept paliers, « valeur
+       * inconnue » n'aide personne.
+       */
       const champ = String(recu.champ ?? "");
       const palier = String(recu.palier ?? "") as TierName;
-      if (FIELDS.includes(champ as never) && TIERS.includes(palier)) {
-        routage = { ...routage, [champ]: palier };
+      const mauvais: string[] = [];
+      if (!FIELDS.includes(champ as never)) {
+        mauvais.push(`field "${champ || "(absent)"}" — accepted: ${FIELDS.join(", ")}`);
       }
+      if (!TIERS.includes(palier)) {
+        mauvais.push(`tier "${palier || "(absent)"}" — accepted: ${TIERS.join(", ")}`);
+      }
+      if (mauvais.length > 0) {
+        return json(res, {
+          erreur: `this request changes nothing, and here is why:\n  ${mauvais.join("\n  ")}`,
+        }, 400);
+      }
+      routage = { ...routage, [champ]: palier };
       return json(res, etat());
     }
 
@@ -232,8 +272,8 @@ const serveur = createServer(async (req, res) => {
       if (r.refuses.length) {
         return json(res, {
           erreur: `non-numeric value(s) refused: ${r.refuses.join(", ")}. `
-            + `Une hypothèse absente n'est pas une hypothèse à zéro : elle serait posée sur `
-            + `sa borne basse et le routage affiché serait calculé dessus.`,
+            + `An absent assumption is not an assumption of zero: it would be pinned to `
+            + `its lower bound, and the routing shown would be computed on that.`,
           ...etat(),
         }, 400);
       }
