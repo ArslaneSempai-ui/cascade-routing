@@ -23,9 +23,9 @@ const TITULAIRE = (ms?: number, cout?: number): Titulaire => ({
   declares: { msParDocument: ms, coutParMilleDocuments: cout },
 });
 
-test("le seuil de coût est refusé, pas rendu, sur un titulaire inadmissible", () => {
+test("le seuil de coût est refusé, pas rendu, sur un titulaire inadmissible", (t) => {
   const p = readProfiles();
-  if (!p) return;
+  if (!p) return t.skip("aucun relevé lisible : ce cas n'a rien regardé, et il le dit plutôt que de compter comme un cas passé.");
   const hors = seuilDeCout(p, ASSUMPTIONS, TITULAIRE(ASSUMPTIONS.latencyBudgetMs + 600, 3));
   assert.equal(hors.calculable, false);
   assert.equal((hors as { refuse?: boolean }).refuse, true,
@@ -34,9 +34,9 @@ test("le seuil de coût est refusé, pas rendu, sur un titulaire inadmissible", 
   assert.match(hors.pourquoi!, /plafond/);
 });
 
-test("les deux seuils sont rendus, que la condition soit remplie ou non", () => {
+test("les deux seuils sont rendus, que la condition soit remplie ou non", (t) => {
   const p = readProfiles();
-  if (!p) return;
+  if (!p) return t.skip("aucun relevé lisible : ce cas n'a rien regardé, et il le dit plutôt que de compter comme un cas passé.");
   for (const cout of [0.01, 9, 1000]) {
     const s = seuilsDeRemboursement(p, ASSUMPTIONS, TITULAIRE(1500, cout));
     assert.ok(s.admissibilite.calculable,
@@ -47,9 +47,9 @@ test("les deux seuils sont rendus, que la condition soit remplie ou non", () => 
   }
 });
 
-test("les seuils portent `assumed`, y compris quand la condition est confortable", () => {
+test("les seuils portent `assumed`, y compris quand la condition est confortable", (t) => {
   const p = readProfiles();
-  if (!p) return;
+  if (!p) return t.skip("aucun relevé lisible : ce cas n'a rien regardé, et il le dit plutôt que de compter comme un cas passé.");
   for (const [ms, cout] of [[1500, 0.01], [1500, 1000], [3000, 5]] as [number, number][]) {
     const s = seuilsDeRemboursement(p, ASSUMPTIONS, TITULAIRE(ms, cout));
     assert.equal(s.provenance, "assumed");
@@ -70,9 +70,9 @@ test("l'asymétrie de la latence déclarée est écrite, et elle ne va pas dans 
     "l'autre direction, celle qui rend les honoraires dus, doit l'être aussi.");
 });
 
-test("« aucun seuil » distingue ses deux causes, qui ne se corrigent pas pareil", () => {
+test("« aucun seuil » distingue ses deux causes, qui ne se corrigent pas pareil", (t) => {
   const p = readProfiles();
-  if (!p) return;
+  if (!p) return t.skip("aucun relevé lisible : ce cas n'a rien regardé, et il le dit plutôt que de compter comme un cas passé.");
   const s = seuilDeCout(p, ASSUMPTIONS, TITULAIRE(1500, 9));
   if (s.calculable) return;                       // un seuil existe : rien à distinguer ici
   const d = s as { egauxMaisTropLents?: number; plusRapideDesEgauxMs?: number | null; pourquoi?: string };
@@ -87,14 +87,14 @@ test("« aucun seuil » distingue ses deux causes, qui ne se corrigent pas parei
   }
 });
 
-test("le plafond de latence est comparé en millisecondes, pas en millisecondes fois mille", () => {
+test("le plafond de latence est comparé en millisecondes, pas en millisecondes fois mille", (t) => {
   /*
    * La première version multipliait `latency()` par mille en la croyant en secondes. Chaque
    * routage dépassait donc le plafond, et le seuil rendait « aucun routage admissible n'est
    * indistinguable » — une conclusion fausse, et de celles sur lesquelles on signe une clause.
    */
   const p = readProfiles();
-  if (!p) return;
+  if (!p) return t.skip("aucun relevé lisible : ce cas n'a rien regardé, et il le dit plutôt que de compter comme un cas passé.");
   const s = seuilDeCout(p, ASSUMPTIONS, TITULAIRE(1500, 9)) as { routagesAdmissibles?: number };
   assert.ok((s.routagesAdmissibles ?? 0) > 0,
     "aucun routage n'est jugé admissible : le plafond est comparé à des durées dans la mauvaise\n"

@@ -140,7 +140,7 @@ test("rules cost nothing, a human costs the most, a local tier is billed by the 
     "un palier local sans sa latence doit lever, pas être facturé gratuitement");
 });
 
-test("un document coûte cinq champs, et ce n'est pas cinq fois le prix d'un champ", () => {
+test("un document coûte cinq champs, et ce n'est pas cinq fois le prix d'un champ", (t) => {
   /*
    * L'erreur que ce test existe pour rendre impossible.
    *
@@ -155,7 +155,7 @@ test("un document coûte cinq champs, et ce n'est pas cinq fois le prix d'un cha
    * fait tomber ce test.
    */
   const p = readProfiles();
-  if (!p) return;   // pas de profil gelé : rien à comparer, et ce n'est pas une faute
+  if (!p) return t.skip("aucun relevé lisible : ce cas n'a rien regardé, et il le dit plutôt que de compter comme un cas passé.");   // pas de profil gelé : rien à comparer, et ce n'est pas une faute
 
   for (const t of paliersMesures(p)) {
     const parChamp: number[] = FIELDS.map((c) => pricePerThousandExtractions(t, ASSUMPTIONS, p.extraction[t][c].latency));
@@ -173,7 +173,7 @@ test("un document coûte cinq champs, et ce n'est pas cinq fois le prix d'un cha
   }
 });
 
-test("aucun palier local ne coûte le même prix sur tous les champs", () => {
+test("aucun palier local ne coûte le même prix sur tous les champs", (t) => {
   /*
    * Le test précédent ne mord que si un palier au temps machine existe réellement dans le
    * profil avec des latences inégales. Sans celui-ci, un jour où toutes les latences
@@ -181,7 +181,7 @@ test("aucun palier local ne coûte le même prix sur tous les champs", () => {
    * sans que rien ne tombe.
    */
   const p = readProfiles();
-  if (!p) return;
+  if (!p) return t.skip("aucun relevé lisible : ce cas n'a rien regardé, et il le dit plutôt que de compter comme un cas passé.");
 
   const locaux = paliersMesures(p).filter((t) => t.startsWith("gen-"));
   if (locaux.length === 0) return;   // échelle générative non mesurée : rien à tenir ici
@@ -195,18 +195,18 @@ test("aucun palier local ne coûte le même prix sur tous les champs", () => {
 
 /* ── the optimiser ── */
 
-test("the routing never exceeds the budget", () => {
+test("the routing never exceeds the budget", (t) => {
   const p = readProfiles();
-  if (!p) return;                       // nothing measured yet; not a failure of this test
+  if (!p) return t.skip("aucun relevé lisible : ce cas n'a rien regardé, et il le dit plutôt que de compter comme un cas passé.");                       // nothing measured yet; not a failure of this test
   for (const budget of [50, 200, 4_000, 100_000]) {
     const s = optimiseExtraction(p, { ...ASSUMPTIONS, budget });
     if (s) assert.ok(s.cost <= budget, `routing costs ${s.cost} on a budget of ${budget}`);
   }
 });
 
-test("a larger budget never produces a worse routing", () => {
+test("a larger budget never produces a worse routing", (t) => {
   const p = readProfiles();
-  if (!p) return;
+  if (!p) return t.skip("aucun relevé lisible : ce cas n'a rien regardé, et il le dit plutôt que de compter comme un cas passé.");
   let previous = -1;
   for (const budget of [200, 1_000, 10_000, 100_000, 1_000_000]) {
     const s = optimiseExtraction(p, { ...ASSUMPTIONS, budget });
@@ -216,9 +216,9 @@ test("a larger budget never produces a worse routing", () => {
   }
 });
 
-test("the shadow price reports a step, not a slope", () => {
+test("the shadow price reports a step, not a slope", (t) => {
   const p = readProfiles();
-  if (!p) return;
+  if (!p) return t.skip("aucun relevé lisible : ce cas n'a rien regardé, et il le dit plutôt que de compter comme un cas passé.");
   const f = budgetShadowPrice(p, ASSUMPTIONS);
   assert.ok(f);
   if (f.step) {
@@ -229,9 +229,9 @@ test("the shadow price reports a step, not a slope", () => {
   }
 });
 
-test("the two chains do not want the same tier", () => {
+test("the two chains do not want the same tier", (t) => {
   const p = readProfiles();
-  if (!p) return;
+  if (!p) return t.skip("aucun relevé lisible : ce cas n'a rien regardé, et il le dit plutôt que de compter comme un cas passé.");
   const a = optimiseExtraction(p, ASSUMPTIONS);
   const b = optimiseClassification(p, ASSUMPTIONS);
   assert.ok(a && b.chosen);
@@ -278,14 +278,14 @@ test("le routage optimal traverse plusieurs familles de paliers", () => {
     `le routage n'utilise que ${[...familles].join(" et ")} — la démonstration repose sur le mélange`);
 });
 
-test("les règles gratuites gardent au moins trois champs sur cinq", () => {
+test("les règles gratuites gardent au moins trois champs sur cinq", (t) => {
   /*
    * La phrase du titre et de la première ligne du README. Elle a déjà été fausse une fois —
    * « le grand modèle est pire que le petit sur deux champs sur cinq » — et publiée nulle
    * part uniquement parce qu'un contrôle l'a rattrapée à temps. Celle-ci est tenue.
    */
   const p = readProfiles();
-  if (!p) return;
+  if (!p) return t.skip("aucun relevé lisible : ce cas n'a rien regardé, et il le dit plutôt que de compter comme un cas passé.");
   /*
    * « égalent ou battent » se juge sur les intervalles, pas sur les points.
    *
@@ -321,28 +321,28 @@ test("un palier plus gros n'est pas supposé meilleur", () => {
     "plus aucune inversion : soit la mesure a changé, soit la page raconte autre chose");
 });
 
-test("l'optimiseur ne route jamais vers un palier absent du profil", () => {
+test("l'optimiseur ne route jamais vers un palier absent du profil", (t) => {
   /*
    * L'échelle est passée de quatre paliers à sept et l'optimiseur a lu `undefined` sur un
    * profil qui n'en contenait que quatre. Quiconque clone ce dépôt et lance `npm run measure`
    * sans Ollama est exactement dans ce cas.
    */
   const p = readProfiles();
-  if (!p) return;
+  if (!p) return t.skip("aucun relevé lisible : ce cas n'a rien regardé, et il le dit plutôt que de compter comme un cas passé.");
   const dispo = new Set(paliersMesures(p));
   const s = optimiseExtraction(p, ASSUMPTIONS);
   for (const c of FIELDS) assert.ok(dispo.has(s!.routing[c]),
     `${c} est routé vers ${s!.routing[c]}, absent du profil gelé`);
 });
 
-test("le budget de temps mord avant le budget d'argent", () => {
+test("le budget de temps mord avant le budget d'argent", (t) => {
   /*
    * La latence était mesurée et ne jouait aucun rôle : l'optimiseur envoyait volontiers un
    * champ temps réel sur le palier le plus lent. Serrer le plafond doit maintenant changer
    * le routage, sinon la contrainte est décorative et le README ment.
    */
   const p = readProfiles();
-  if (!p) return;
+  if (!p) return t.skip("aucun relevé lisible : ce cas n'a rien regardé, et il le dit plutôt que de compter comme un cas passé.");
   const large = optimiseExtraction(p, { ...ASSUMPTIONS, latencyBudgetMs: 100_000 });
   const serre = optimiseExtraction(p, { ...ASSUMPTIONS, latencyBudgetMs: 40 });
   assert.ok(large && serre, "un des deux plafonds ne laisse aucune solution");
@@ -351,14 +351,14 @@ test("le budget de temps mord avant le budget d'argent", () => {
     "serrer le temps ne coûte rien en justesse : la contrainte ne mord pas");
 });
 
-test("à écart non significatif, le moins cher est retenu", () => {
+test("à écart non significatif, le moins cher est retenu", (t) => {
   /*
    * La règle qui a rattrapé une affirmation fausse. Deux paliers indiscernables sur un
    * champ : payer le plus cher, c'est acheter du bruit — et c'est la première chose qu'un
    * validateur de modèles demandera.
    */
   const p = readProfiles();
-  if (!p) return;
+  if (!p) return t.skip("aucun relevé lisible : ce cas n'a rien regardé, et il le dit plutôt que de compter comme un cas passé.");
   const s = optimiseExtraction(p, ASSUMPTIONS);
   for (const c of FIELDS) {
     const choisi = s!.routing[c];
@@ -537,7 +537,7 @@ test("aucun chiffre n'est tapé à la main dans la prose du README, et la garde 
   }
 });
 
-test("le routage est exhaustif, pas heuristique", () => {
+test("le routage est exhaustif, pas heuristique", (t) => {
   /*
    * La page l'affirme en gras : « The routing is exhaustive, not heuristic. » C'est une
    * promesse forte — elle garantit l'optimum, ce qu'aucune heuristique ne fait — et rien ne
@@ -545,7 +545,7 @@ test("le routage est exhaustif, pas heuristique", () => {
    * exactement paliers^champs, sans quoi une branche est élaguée quelque part.
    */
   const p = readProfiles();
-  if (!p) return;
+  if (!p) return t.skip("aucun relevé lisible : ce cas n'a rien regardé, et il le dit plutôt que de compter comme un cas passé.");
   const paliers = paliersMesures(p);
   const attendu = Math.pow(paliers.length, FIELDS.length);
 
@@ -563,14 +563,14 @@ test("le routage est exhaustif, pas heuristique", () => {
   assert.ok(optimiseExtraction(p, large), "aucune solution sans contrainte : l'énumération est cassée");
 });
 
-test("le budget d'argent mord dès que le volume monte", () => {
+test("le budget d'argent mord dès que le volume monte", (t) => {
   /*
    * La page dit : « Not "the budget does not matter." It does not bind *here*, at this
    * volume, with these prices. Multiply the volume by fifty and it binds immediately. »
    * C'est une affirmation vérifiable, et elle ne l'était pas.
    */
   const p = readProfiles();
-  if (!p) return;
+  if (!p) return t.skip("aucun relevé lisible : ce cas n'a rien regardé, et il le dit plutôt que de compter comme un cas passé.");
   const ici = optimiseExtraction(p, ASSUMPTIONS);
   const gros = optimiseExtraction(p, { ...ASSUMPTIONS, volume: ASSUMPTIONS.volume * 50 });
   assert.ok(ici, "aucun routage au volume de référence");
@@ -579,7 +579,7 @@ test("le budget d'argent mord dès que le volume monte", () => {
     "multiplier le volume par cinquante ne change rien : la phrase de la page est fausse");
 });
 
-test("les gestes du pilote de capture mènent à l'optimum courant", () => {
+test("les gestes du pilote de capture mènent à l'optimum courant", (t) => {
   /*
    * Le pilote de capture est du code que rien ne compilait et que rien ne testait, et il
    * décrit un état du produit : la suite de gestes qui, partie de l'écran au démarrage,
@@ -594,7 +594,7 @@ test("les gestes du pilote de capture mènent à l'optimum courant", () => {
    * mesure suivante, et invisible entre les deux.
    */
   const p = readProfiles();
-  if (!p) return;
+  if (!p) return t.skip("aucun relevé lisible : ce cas n'a rien regardé, et il le dit plutôt que de compter comme un cas passé.");
   type Script = { images: { sortie: string; scenes?: string[][] }[] };
   const script: Script = JSON.parse(readFileSync(fileURLToPath(new URL("../captures.json", import.meta.url)), "utf8"));
   const gif = script.images.find((i) => i.sortie.endsWith(".gif"));
@@ -778,9 +778,9 @@ test("chaque rétractation nomme un test qui existe vraiment", () => {
  */
 const RELEVE_HISTORIQUE = "2026-08-19T09:51:25.978Z";
 
-test("un relevé régénéré porte le commit qui l'a produit", () => {
+test("un relevé régénéré porte le commit qui l'a produit", (t) => {
   const p = readProfiles();
-  if (!p) return;   // pas de profil : un clone frais n'a pas encore mesuré
+  if (!p) return t.skip("aucun relevé lisible : ce cas n'a rien regardé, et il le dit plutôt que de compter comme un cas passé.");   // pas de profil : un clone frais n'a pas encore mesuré
 
   if (p.measuredAt === RELEVE_HISTORIQUE) {
     console.warn(`  ⚠ le profil gelé du ${RELEVE_HISTORIQUE} est antérieur à l'enregistrement du commit.\n`
@@ -797,7 +797,7 @@ test("un relevé régénéré porte le commit qui l'a produit", () => {
     + "sur des modifications non committées n'est pas reproductible");
 });
 
-test("un relevé régénéré garde les réussites par cas, pour que McNemar puisse tourner", () => {
+test("un relevé régénéré garde les réussites par cas, pour que McNemar puisse tourner", (t) => {
   /*
    * Sans ces bits, `memeChamp` retombe sur le recouvrement d'intervalles de Wilson — un test
    * qui traite deux paliers notés sur les *mêmes* cas comme deux échantillons indépendants.
@@ -806,7 +806,7 @@ test("un relevé régénéré garde les réussites par cas, pour que McNemar pui
    * pas une. `pairedVerdict` attend ces bits et existait, inutilisé, depuis le premier jour.
    */
   const p = readProfiles();
-  if (!p) return;
+  if (!p) return t.skip("aucun relevé lisible : ce cas n'a rien regardé, et il le dit plutôt que de compter comme un cas passé.");
 
   if (p.measuredAt === RELEVE_HISTORIQUE) {
     console.warn(`  ⚠ le profil gelé du ${RELEVE_HISTORIQUE} ne conserve pas les réussites par cas :\n`
@@ -845,7 +845,7 @@ test("un relevé régénéré garde les réussites par cas, pour que McNemar pui
   }
 });
 
-test("toute hypothèse qui tarife un palier sélectionnable est balayée", () => {
+test("toute hypothèse qui tarife un palier sélectionnable est balayée", (t) => {
   /*
    * Un balayage incomplet est pire qu'un balayage absent.
    *
@@ -861,7 +861,7 @@ test("toute hypothèse qui tarife un palier sélectionnable est balayée", () =>
    * double, qui se serait désynchronisée exactement comme celle qu'elle remplace.
    */
   const p = readProfiles();
-  if (!p) return;
+  if (!p) return t.skip("aucun relevé lisible : ce cas n'a rien regardé, et il le dit plutôt que de compter comme un cas passé.");
 
   const paliers = paliersMesures(p);
   let gouvernantes = 0;
@@ -881,7 +881,7 @@ test("toute hypothèse qui tarife un palier sélectionnable est balayée", () =>
     + "et ce test ne garde plus le balayage.");
 });
 
-test("les deux balayages de prix ne peuvent pas se contredire", () => {
+test("les deux balayages de prix ne peuvent pas se contredire", (t) => {
   /*
    * Deux fichiers répondent à la même question, et ils ont divergé.
    *
@@ -896,7 +896,7 @@ test("les deux balayages de prix ne peuvent pas se contredire", () => {
    * le dit.
    */
   const p = readProfiles();
-  if (!p) return;
+  if (!p) return t.skip("aucun relevé lisible : ce cas n'a rien regardé, et il le dit plutôt que de compter comme un cas passé.");
 
   const optimum = optimiseExtraction(p, ASSUMPTIONS);
   if (!optimum) return;
@@ -1004,7 +1004,7 @@ test("un petit échantillon est le préfixe exact d'un grand", () => {
   }
 });
 
-test("un palier mesuré porte sa propre provenance", () => {
+test("un palier mesuré porte sa propre provenance", (t) => {
   /*
    * `code` décrivait une passe en prétendant décrire un fichier que `sauver` fusionne. Le
    * relevé a ainsi porté `sale: true` pour sept paliers dont trois venaient d'une passe sur
@@ -1012,7 +1012,7 @@ test("un palier mesuré porte sa propre provenance", () => {
    * palier mesuré après ce changement reparte sans elle.
    */
   const p = readProfiles();
-  if (!p) return;
+  if (!p) return t.skip("aucun relevé lisible : ce cas n'a rien regardé, et il le dit plutôt que de compter comme un cas passé.");
   if (p.measuredAt === RELEVE_HISTORIQUE) return;
 
   /*
@@ -1147,7 +1147,7 @@ test("l'écran n'écoute que la boucle locale", () => {
   }
 });
 
-test("les deux fichiers classent une absence de seuil de la même façon", () => {
+test("les deux fichiers classent une absence de seuil de la même façon", (t) => {
   /*
    * Ils ont divergé deux fois, et la seconde était de ma main.
    *
@@ -1161,7 +1161,7 @@ test("les deux fichiers classent une absence de seuil de la même façon", () =>
    * deux générateurs sur les hypothèses qu'ils ont en commun.
    */
   const p = readProfiles();
-  if (!p) return;
+  if (!p) return t.skip("aucun relevé lisible : ce cas n'a rien regardé, et il le dit plutôt que de compter comme un cas passé.");
   const f = fileURLToPath(new URL("../landing.json", import.meta.url));
   if (!existsSync(f)) return;
 
@@ -1248,7 +1248,7 @@ test("aucun relevé suivi par git ne transporte ses sorties brutes", () => {
   assert.ok(vus > 0, "aucun relevé suivi n'a pu être lu sur le disque : rien n'a été vérifié");
 });
 
-test("chaque latence enregistrée dit sous quelle charge elle a été prise", () => {
+test("chaque latence enregistrée dit sous quelle charge elle a été prise", (t) => {
   /*
    * Ce qui rend « mesuré sur machine au repos » vérifiable au lieu d'affirmable.
    *
@@ -1261,7 +1261,7 @@ test("chaque latence enregistrée dit sous quelle charge elle a été prise", ()
    * dans `INVENTORY`, comme le choix qu'il est.
    */
   const p = readProfiles();
-  if (!p) return;
+  if (!p) return t.skip("aucun relevé lisible : ce cas n'a rien regardé, et il le dit plutôt que de compter comme un cas passé.");
 
   let verifies = 0;
   for (const t of paliersMesures(p)) {
@@ -1281,7 +1281,7 @@ test("chaque latence enregistrée dit sous quelle charge elle a été prise", ()
     + "redevient une affirmation que personne ne peut contrôler.");
 });
 
-test("la décomposition des erreurs recompose l'exactitude du palier", () => {
+test("la décomposition des erreurs recompose l'exactitude du palier", (t) => {
   /*
    * Deux dérivations du même relevé doivent se rejoindre.
    *
@@ -1295,7 +1295,7 @@ test("la décomposition des erreurs recompose l'exactitude du palier", () => {
    * donc le taux propre ne peut pas dépasser le plus faible de ses cinq champs.
    */
   const p = readProfiles();
-  if (!p) return;
+  if (!p) return t.skip("aucun relevé lisible : ce cas n'a rien regardé, et il le dit plutôt que de compter comme un cas passé.");
   const f = fileURLToPath(new URL("../landing.json", import.meta.url));
   if (!existsSync(f)) return;
   const l = JSON.parse(readFileSync(f, "utf8")) as {
