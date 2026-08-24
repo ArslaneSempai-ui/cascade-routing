@@ -52,6 +52,56 @@ export function verdictDeLsof(err: { code?: string; status?: number }): "absent"
 }
 
 /** Les connexions réseau d'un processus, à cet instant. */
+/**
+ * La boucle locale n'est pas une sortie.
+ *
+ * `127.0.0.1` et `::1` désignent CETTE machine. Une connexion vers elles ne fait sortir
+ * aucune donnée — c'est la définition même. Elles étaient pourtant comptées comme « hôtes
+ * contactés », si bien que la seule présence d'un Ollama local empêchait l'outil de conclure
+ * « rien n'est sorti » : le verdict le plus vendable du dépôt devenait impossible à
+ * atteindre sur la machine où il est justement vrai.
+ *
+ * Elles restent RAPPORTÉES — savoir que la mesure a parlé à un modèle local est une
+ * information — mais dans leur propre catégorie.
+ */
+export function estBoucleLocale(hote: string): boolean {
+  const h = hote.replace(/^\[|\]$/g, "");
+  return h === "127.0.0.1" || h === "::1" || h === "localhost" || /^127\./.test(h);
+}
+
+export const ASSEZ_DE_RELEVES = 20;
+
+/**
+ * Ce qu'un relevé de trafic permet de conclure — et ce qu'il ne permet pas.
+ *
+ * Sorti en fonction pure pour la même raison que les autres : un témoin qui devrait lancer
+ * une vraie passe ne pourrait éprouver ni la passe trop courte, ni la sortie réelle. Les deux
+ * cas qui décident sont précisément ceux qu'on ne peut pas provoquer à volonté.
+ */
+export function verdictEgress(o: { releves: number; connexions: { hote: string; vu: number }[] }) {
+  const locales = o.connexions.filter((c) => estBoucleLocale(c.hote));
+  const sorties = o.connexions.filter((c) => !estBoucleLocale(c.hote));
+  /*
+   * LE PLANCHER GARDE LES DEUX SENS.
+   *
+   * Il ne refusait de conclure que sur « rien vu ». Une passe de cinq relevés qui avait vu
+   * quelque chose publiait pourtant « ces hôtes-là » — alors que **ce qu'elle n'a pas vu,
+   * elle ne l'a pas vu non plus**. Trop court est trop court dans les deux directions.
+   */
+  if (o.releves < ASSEZ_DE_RELEVES) {
+    return { concluant: false, locales, sorties,
+      verdict: `non concluant : ${o.releves} relevés, il en faut ${ASSEZ_DE_RELEVES}` };
+  }
+  return {
+    concluant: true, locales, sorties,
+    verdict: sorties.length === 0
+      ? (locales.length === 0
+        ? "aucune connexion observée pendant toute la passe"
+        : `aucune sortie observée ; ${locales.length} connexion(s) vers cette machine seulement`)
+      : `${sorties.length} hôte(s) hors de cette machine contacté(s)`,
+  };
+}
+
 function connexions(pid: number): { hote: string; port: string; etat: string }[] {
   try {
     const sortie = execFileSync("lsof", ["-nP", "-i", "-a", "-p", String(pid)],
@@ -117,7 +167,23 @@ export function lsofRepond(): boolean {
 
 if (isMain(import.meta)) {
   const args = process.argv.slice(2).filter((a) => !a.startsWith("--"));
-  const commande = args.length ? args : ["src/measure.ts"];
+  /*
+   * PAS DE COMMANDE PAR DÉFAUT, ET SURTOUT PAS CELLE-LÀ.
+   *
+   * Elle lançait `src/measure.ts` — une passe de mesure complète, qui RÉÉCRIT le relevé gelé.
+   * Vérifier la confidentialité ne doit pas avoir d'effet de bord, et encore moins celui-là :
+   * lancer ce contrôle « pour voir » remplaçait les chiffres publiés par une passe que
+   * personne n'avait décidé de prendre. C'est arrivé.
+   */
+  if (!args.length) {
+    console.error(`\n  Ce contrôle surveille le réseau PENDANT une commande, et il faut lui dire`);
+    console.error(`  laquelle. Il n'en choisit pas : la commande évidente — une mesure — réécrit`);
+    console.error(`  le relevé gelé, et un contrôle de confidentialité ne doit rien réécrire.\n`);
+    console.error(`      npm run egress -- src/measure.ts        surveille une vraie mesure`);
+    console.error(`      npm run egress -- src/optimise.ts       surveille une passe qui ne mesure rien\n`);
+    process.exit(1);
+  }
+  const commande = args;
   const intervalle = Number(process.argv.find((a) => a.startsWith("--every="))?.split("=")[1] ?? 250);
 
   if (!lsofRepond()) {
@@ -159,9 +225,18 @@ if (isMain(import.meta)) {
    * qu'un tirage sur quatre cas n'établit une exactitude — et un script qui conclurait quand
    * même serait exactement le genre d'outil que cette page passe sa vie à dénoncer.
    */
-  const ASSEZ = 20;
-  if (releves < ASSEZ && liste.length === 0) {
-    console.log(`${releves} relevés seulement — trop court pour établir quoi que ce soit.`);
+  const ASSEZ = ASSEZ_DE_RELEVES;
+  /*
+   * LE PLANCHER NE GARDAIT QU'UN SENS.
+   *
+   * Il refusait de conclure sur trop peu de relevés **quand rien n'avait été vu**, et
+   * concluait sans broncher quand quelque chose l'avait été. Or une passe de cinq relevés
+   * n'établit pas plus « ces hôtes-là et pas d'autres » qu'elle n'établit « aucun » : ce
+   * qu'elle n'a pas vu, elle ne l'a pas vu non plus.
+   */
+  if (releves < ASSEZ) {
+    console.log(`${releves} relevés seulement — trop court pour établir quoi que ce soit,`);
+    console.log(`${liste.length ? `y compris que les ${liste.length} hôte(s) vus soient les seuls.` : `dans un sens comme dans l'autre.`}`);
     console.log(`Il en faut au moins ${ASSEZ} : surveiller une vraie mesure, pas une commande instantanée.\n`);
     process.exitCode = 1;
     writeFileSync(FICHIER, JSON.stringify({
@@ -171,14 +246,22 @@ if (isMain(import.meta)) {
     }, null, 2));
     process.exit(1);
   }
+  /* LA BOUCLE LOCALE À PART. Elle ne fait rien sortir, et la compter empêchait le verdict
+     d'être atteignable sur la machine où il est justement vrai. */
+  const locales = liste.filter((c) => estBoucleLocale(c.hote));
+  const sorties = liste.filter((c) => !estBoucleLocale(c.hote));
+
   const releve = {
     mesureLe: new Date().toISOString(),
     commande: `node ${commande.join(" ")}`,
     releves, intervalleMs: intervalle, codeSortie: code,
-    connexions: liste,
-    verdict: liste.length === 0
-      ? "aucune connexion réseau observée pendant toute la mesure"
-      : `${liste.length} hôte(s) contacté(s)`,
+    connexions: sorties,
+    bouclesLocales: locales,
+    verdict: sorties.length === 0
+      ? (locales.length === 0
+        ? "aucune connexion observée pendant toute la passe"
+        : `aucune sortie observée ; ${locales.length} connexion(s) vers cette machine seulement`)
+      : `${sorties.length} hôte(s) hors de cette machine contacté(s)`,
     limite: "Un échantillonnage voit les connexions ouvertes aux instants où il regarde ; il "
       + "n'exclut pas un envoi bref entre deux relevés. Une preuve complète demanderait une "
       + "capture au niveau du noyau, avec les privilèges correspondants.",
@@ -187,12 +270,17 @@ if (isMain(import.meta)) {
   writeFileSync(FICHIER, JSON.stringify(releve, null, 2));
 
   console.log(`${releves} relevés, code de sortie ${code}.\n`);
-  if (!liste.length) {
-    console.log("Aucune connexion réseau observée. La phrase « nothing leaves the machine »");
+  if (locales.length) {
+    console.log("Vers cette machine — rien ne sort par là :");
+    for (const c of locales) console.log(`  ${c.hote}:${c.port}  vu ${c.vu} fois  (${c.etat})`);
+    console.log("");
+  }
+  if (!sorties.length) {
+    console.log("Aucune connexion hors de cette machine. La phrase « nothing leaves the machine »");
     console.log("tient telle quelle pour cette exécution.\n");
   } else {
-    console.log("Hôtes contactés :");
-    for (const c of liste) console.log(`  ${c.hote}:${c.port}  vu ${c.vu} fois  (${c.etat})`);
+    console.log("Hôtes contactés HORS de cette machine :");
+    for (const c of sorties) console.log(`  ${c.hote}:${c.port}  vu ${c.vu} fois  (${c.etat})`);
     console.log("\nSi ce sont des dépôts de modèles, la phrase à publier devient : « aucune de vos");
     console.log("données ne sort ; le seul trafic est le téléchargement, une fois, de poids publics ».\n");
   }

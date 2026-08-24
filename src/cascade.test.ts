@@ -28,6 +28,7 @@ import { exposition, optimiseExposition, ouLaRecommandationBascule, decompositio
 import { documentsComplets, comparer as comparerDocuments } from "./document.ts";
 import { rapportPourLeClient } from "./your-cases.ts";
 import { elaguer as elaguerInterne } from "./journal.ts";
+import { estBoucleLocale, verdictEgress, ASSEZ_DE_RELEVES as ASSEZ_INTERNE } from "./egress.ts";
 import { FORME as FORME_INTERNE } from "./signal.ts";
 import { PROMPTS as PROMPTS_INTERNES, questionPour as questionPourInterne } from "./tiers.ts";
 import { memoireDisponibleMo, etatMachine as etatMachineInterne,
@@ -4152,4 +4153,52 @@ test("un relevé publié porte les paramètres sous lesquels le code le prendrai
   assert.deepEqual(ecarts, [],
     `relevé(s) pris sous d'autres paramètres que ceux du code :\n  ${ecarts.join("\n  ")}\n`
     + `  → remesurer, ou dire dans le fichier pourquoi il reste pris sous l'ancien.`);
+});
+
+test("le contrôle de sortie réseau distingue la boucle locale, et son plancher garde les deux sens", () => {
+  /*
+   * TROIS DÉFAUTS SUR LA COMMANDE QUI SOUTIENT « rien ne sort de votre machine ».
+   *
+   * La boucle locale comptait comme un hôte contacté — or `127.0.0.1` désigne CETTE machine,
+   * et une connexion vers elle ne fait rien sortir, par définition. La seule présence d'un
+   * Ollama local rendait donc le verdict le plus vendable du dépôt **impossible à atteindre
+   * sur la machine où il est justement vrai**.
+   *
+   * Et le plancher ne gardait qu'un sens : il refusait de conclure sur trop peu de relevés
+   * quand rien n'avait été vu, et concluait sans broncher quand quelque chose l'avait été.
+   * **Ce qu'une passe trop courte n'a pas vu, elle ne l'a pas vu non plus.**
+   */
+  for (const h of ["127.0.0.1", "::1", "[::1]", "localhost", "127.1.2.3"]) {
+    assert.equal(estBoucleLocale(h), true, `${h} n'est plus reconnu comme cette machine.`);
+  }
+  for (const h of ["huggingface.co", "10.0.0.5", "1.2.3.4", "[2600:9000::1]"]) {
+    assert.equal(estBoucleLocale(h), false,
+      `${h} est pris pour cette machine : une vraie sortie serait classée comme locale.`);
+  }
+
+  const assez = ASSEZ_INTERNE;
+
+  /* Le verdict vendable doit être ATTEIGNABLE quand un modèle local tourne. */
+  const avecOllama = verdictEgress({ releves: assez,
+    connexions: [{ hote: "127.0.0.1", vu: 30 }] });
+  assert.equal(avecOllama.concluant, true);
+  assert.equal(avecOllama.sorties.length, 0,
+    "une connexion locale est comptée comme une sortie : le verdict devient inatteignable.");
+  assert.match(avecOllama.verdict, /aucune sortie/,
+    "avec un modèle local, l'outil ne conclut plus qu'aucune donnée n'est sortie.");
+
+  /* Une vraie sortie doit être vue. */
+  const vraieSortie = verdictEgress({ releves: assez,
+    connexions: [{ hote: "127.0.0.1", vu: 30 }, { hote: "huggingface.co", vu: 4 }] });
+  assert.equal(vraieSortie.sorties.length, 1,
+    "un hôte hors de la machine n'est plus signalé : la garde ne garde plus rien.");
+
+  /* ET LE PLANCHER, DANS LES DEUX SENS. Une passe trop courte ne conclut ni « rien »
+     ni « ceux-là et pas d'autres ». */
+  assert.equal(verdictEgress({ releves: assez - 1, connexions: [] }).concluant, false,
+    "une passe trop courte conclut « aucune connexion » : c'est un zéro qui n'a rien regardé.");
+  assert.equal(verdictEgress({ releves: assez - 1,
+    connexions: [{ hote: "huggingface.co", vu: 1 }] }).concluant, false,
+    "une passe trop courte conclut sur les hôtes vus — mais ce qu'elle n'a pas vu, elle ne\n"
+    + "  l'a pas vu non plus. C'était le sens que le plancher ne gardait pas.");
 });
