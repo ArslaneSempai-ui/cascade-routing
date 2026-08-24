@@ -56,7 +56,7 @@
  */
 
 import { writeFileSync } from "node:fs";
-import { isMain } from "./cli.ts";
+import { isMain, refuserDrapeauxInconnus } from "./cli.ts";
 import { journaux, lireJournal } from "./journal.ts";
 import { normaliserReponse } from "./tiers.ts";
 import { corpusDur } from "./corpus-dur.ts";
@@ -91,6 +91,10 @@ export function echelle(p: NonNullable<ReturnType<typeof readProfiles>>): TierNa
 }
 
 if (isMain(import.meta)) {
+  /* Un drapeau inconnu fait refuser, il ne se laisse pas avaler : une passe qui tourne avec
+     les réglages par défaut et rend un chiffre juste à une question qu'on n'a pas posée est
+     un succès qui ment sur ce qu'il a fait. */
+  refuserDrapeauxInconnus(["--budget", "--par-doc"]);
   /*
    * Le budget déclaré, écrit AVANT les résultats.
    *

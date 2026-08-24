@@ -11,7 +11,7 @@
  * est du gaspillage, et c'est ailleurs qu'il faut regarder.
  */
 import { TIERS } from "./paliers.js";
-import { isMain } from "./cli.js";
+import { isMain, refuserDrapeauxInconnus } from "./cli.js";
 import { FIELDS } from "./corpus.js";
 import { pricePerThousandExtractions, accuracy, latency, ASSUMPTIONS } from "./assumptions.js";
 import { rate, distinguishable, pairedVerdict } from "./interval.js";
@@ -433,6 +433,7 @@ export function budgetShadowPrice(p, h) {
     };
 }
 if (isMain(import.meta)) {
+    refuserDrapeauxInconnus([]);
     /* Chargé ici et pas en tête : `measure.ts` ouvre des fichiers et tire le runtime des
      * modèles. L'écran importe ce module dans un navigateur, où ni l'un ni l'autre n'existe. */
     const { readProfiles } = await import("./measure.js");

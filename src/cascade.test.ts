@@ -2166,6 +2166,19 @@ test("le nombre de taux tapés dans la prose ne peut que baisser", () => {
     if (!f.endsWith(".md")) continue;
     /* Un document engendré n'a pas de prose : il a une source. Voir ENGENDRES. */
     if (f in ENGENDRES) continue;
+    /*
+     * UN RÉCIT D'INCIDENT N'EST PAS UNE AFFIRMATION VIVANTE.
+     *
+     * `PIEGES.md` raconte ce qui s'est passé : « deux passes à 330 % de CPU chacune ». Ce
+     * chiffre décrit un instant révolu — le remesurer n'aurait aucun sens, et le mettre à
+     * jour rendrait le récit faux. C'est la même nature que `retractations.json`, dont les
+     * entrées citent ce qui avait été affirmé.
+     *
+     * Le cliquet vise les taux qu'un lecteur pourrait prendre pour une mesure d'aujourd'hui.
+     * Il ne peut pas faire la différence tout seul, alors elle est déclarée ici, sur la
+     * ligne, avec sa raison — comme les seuils de loi le sont pour la garde des devises.
+     */
+    if (f === "PIEGES.md") continue;
     let t = readFileSync(join(racine, f), "utf8");
     /*
      * L'ORDRE, ENCORE, ET IL A COÛTÉ CHER UNE FOIS.

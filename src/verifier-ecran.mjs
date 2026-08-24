@@ -21,6 +21,7 @@ import { spawn, spawnSync, execFileSync } from "node:child_process";
 import { inscrire, rayer, ramasserOrphelins } from "./capturer.mjs";
 import { existsSync, readFileSync, rmSync, cpSync, writeFileSync, mkdirSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 
 const CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 
@@ -271,6 +272,33 @@ export function modulesEnRetard(racineDepot) {
   return enRetard;
 }
 
+/*
+ * ─── CE FICHIER AGISSAIT À L'IMPORT, ET C'EST UN DÉFAUT À PART ENTIÈRE ───
+ *
+ * Tout ce qui suit était au niveau du module : importer `verifier-ecran.mjs` pour une seule
+ * de ses fonctions lançait la vérification d'écran entière — construction lue, serveur
+ * ouvert, Chrome démarré — puis terminait le processus appelant par `process.exit`.
+ *
+ * Constaté en une fois : une suite de tests qui importe `modulesEnRetard` est passée de
+ * vingt-neuf cas verts à « 0 passé, 1 échoué », sans qu'aucune assertion soit en cause. Le
+ * fichier de tests n'avait pas échoué, il avait été TUÉ.
+ *
+ * Une session voisine s'est fait exactement la même chose le même jour, dans l'autre sens :
+ * elle a importé un harnais de contrôle, ce qui l'a exécuté — soixante-quatre lancements non
+ * voulus. La faute est symétrique et elle a une seule parade : un module ne fait rien tant
+ * qu'on ne l'a pas lancé comme une commande.
+ *
+ * `import.meta.url === "file://" + process.argv[1]` ne suffit pas : la comparaison échoue dès
+ * qu'un chemin contient un espace ou un accent, et le programme se termine alors SANS RIEN
+ * FAIRE, code 0. `pathToFileURL` fait l'encodage que la concaténation ne fait pas.
+ */
+function estLancéDirectement() {
+  const a = process.argv[1];
+  return a !== undefined && import.meta.url === pathToFileURL(a).href;
+}
+
+if (estLancéDirectement()) {
+
 const racine = (process.argv[2] ?? ".").replace(/\/$/, "") + "/";
 const attendu = Number(process.argv[3] ?? 1);
 const docs = racine + "docs";
@@ -450,3 +478,5 @@ try {
   rayer(serveur.pid);
   rmSync(temp, { recursive: true, force: true });
 }
+
+}   /* fin du bloc « lancé directement » */

@@ -26,7 +26,12 @@ const PAS_ENCORE = [
   /* Mesuré, pas récité : c'est exactement la liste que ce cas produit aujourd'hui.
      `escalade.ts` et `readme.ts` appartiennent à une autre session, d'où leur présence. */
   "measure.ts", "sensibilite-prompt.ts", "regler-prompt.ts", "apparier-prompt.ts",
-  "departager-reglage.ts", "mesurer-dur.ts", "escalade.ts", "your-cases.ts", "egress.ts",
+  "departager-reglage.ts", "mesurer-dur.ts", "your-cases.ts",
+  /* `egress` surveille une AUTRE commande : `egress --every=250 script.ts --cases=x.csv`.
+     Les drapeaux qui suivent le nom de script appartiennent à la commande observée, et les
+     refuser ici réintroduirait le défaut qui empêchait `egress` de regarder le chemin
+     client. Couverte dès que la garde acceptera une borne haute. */
+  "egress.ts",
   "clone-neuf.mjs", "mesurer-ocr.ts", "licences.ts", "menace.ts",
 ];
 

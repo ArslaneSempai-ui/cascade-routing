@@ -186,6 +186,16 @@ export function lsofRepond(): boolean {
 
 if (isMain(import.meta)) {
   /*
+   * CETTE COMMANDE EST UN CAS À PART, ET SA GARDE S'ARRÊTE AU PREMIER NON-DRAPEAU.
+   *
+   * `egress` en surveille une autre : `egress --every=250 src/your-cases.ts --cases=x.csv`.
+   * Les drapeaux qui suivent le nom de script appartiennent à la commande OBSERVÉE, et les
+   * refuser ici réintroduirait précisément le défaut qu'on vient de corriger — celui qui
+   * empêchait `egress` de regarder le chemin client.
+   */
+  /* En attente d'une borne haute dans `refuserDrapeauxInconnus` : voir PAS_ENCORE, où cette
+     commande est déclarée non couverte AVEC sa raison, plutôt que couverte à moitié. */
+  /*
    * LES ARGUMENTS DE LA COMMANDE SURVEILLÉE NE SE JETTENT PAS.
    *
    * Ce filtre écartait tout ce qui commence par `--`, y compris les arguments DESTINÉS à la
