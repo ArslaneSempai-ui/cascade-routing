@@ -163,15 +163,15 @@ if (isMain(import.meta)) {
   const paliers = ["gen-0.6b", "gen-4b", "gen-8b"] as const;
 
   const depart = etatMachine();
-  console.log(`\nContrainte de sortie — ${paliers.length} paliers × 2 bras × ${passes} passes `
-    + `× ${cas} cas × ${FIELDS.length} champs.`);
-  console.log(`Plafond de jetons : ${PLAFOND_JETONS}, choisi après un pilote qui a montré qu'il ne mord pas.`);
-  console.log(`Machine au départ : charge ${depart.charge}, ${depart.memoireLibreMo} Mo libres — `
-    + `durées ${depart.dureesTransportables ? "transportables" : "NON transportables"}.`);
+  console.log(`\nOutput constraint — ${paliers.length} tiers × 2 arms × ${passes} passes `
+    + `× ${cas} cases × ${FIELDS.length} fields.`);
+  console.log(`Token ceiling: ${PLAFOND_JETONS}, chosen after a pilot that showed it does not bite.`);
+  console.log(`Machine at the start: load ${depart.charge}, ${depart.memoireLibreMo} MB free — `
+    + `durations ${depart.dureesTransportables ? "transportable" : "NOT transportable"}.`);
   if (!depart.dureesTransportables) {
-    console.log(`  Sous ${MEMOIRE_LIBRE_MINIMALE_MO} Mo, une durée de ce dépôt ne se transporte pas.`);
-    console.log(`  Le banc tourne quand même : le résultat qu'il cherche est un **compte de jetons**,`);
-    console.log(`  qui est un fait sur la sortie et non sur la machine. Les durées seront marquées.\n`);
+    console.log(`  Below ${MEMOIRE_LIBRE_MINIMALE_MO} MB, a duration from this repository does not transport.`);
+    console.log(`  The bench runs anyway: what it looks for is a **token count**, which is a fact`);
+    console.log(`  about the output and not about the machine. The durations will be marked.\n`);
   }
 
   /*
@@ -184,16 +184,16 @@ if (isMain(import.meta)) {
    * appels et on rend l'estimation restante, qui devient bonne au bout de quelques-uns.
    */
   const totalAppels = paliers.length * 2 * passes * cas * FIELDS.length;
-  console.log(`\n${totalAppels} appels au modèle. La durée par appel n'est pas connue d'avance :`);
-  console.log(`  elle sera estimée sur les premiers, et l'estimation s'affichera à chaque cellule.`);
-  console.log(`  Ctrl-C est sans danger : chaque cellule finie est écrite dans ${PARTIEL}.\n`);
+  console.log(`\n${totalAppels} model calls. The time per call is not known in advance:`);
+  console.log(`  it is estimated from the first ones, and the estimate is shown at each cell.`);
+  console.log(`  Ctrl-C is safe: every finished cell is written to ${PARTIEL}.\n`);
   const debutTotal = Date.now();
   let faits = 0;
 
   const lignes: Record<string, unknown>[] = [];
   for (let passe = 1; passe <= passes; passe++) {
     const etat = etatMachine();
-    console.log(`  passe ${passe} — charge ${etat.charge}, ${etat.memoireLibreMo} Mo libres`);
+    console.log(`  pass ${passe} — load ${etat.charge}, ${etat.memoireLibreMo} MB free`);
     for (const tier of paliers) {
       for (const avecSchema of [true, false]) {
         const jetons: number[] = [], ms: number[] = [];
@@ -230,8 +230,8 @@ if (isMain(import.meta)) {
           memoireLibreMoAuDepart: etat.memoireLibreMo,
           dureesTransportables: etat.dureesTransportables,
         });
-        console.log(`    ${tier.padEnd(9)} ${avecSchema ? "avec schéma " : "sans schéma "}`
-          + `jetons ${String(med(jetons)).padStart(5)} [${bas(jetons)}–${haut(jetons)}]   `
+        console.log(`    ${tier.padEnd(9)} ${avecSchema ? "with schema " : "no schema   "}`
+          + `tokens ${String(med(jetons)).padStart(5)} [${bas(jetons)}–${haut(jetons)}]   `
           + `${String(med(ms).toFixed(0)).padStart(6)} ms${etat.dureesTransportables ? "" : "*"} `
           + `[${bas(ms).toFixed(0)}–${haut(ms).toFixed(0)}]   `
           + `juste ${(100 * justes / jetons.length).toFixed(0)} %   plafond atteint ${plafonds}/${jetons.length}`);
@@ -244,8 +244,8 @@ if (isMain(import.meta)) {
         }, null, 2) + "\n");
         const parAppel = (Date.now() - debutTotal) / Math.max(faits, 1);
         const reste = Math.round((totalAppels - faits) * parAppel / 1000);
-        console.log(`      ${faits}/${totalAppels} appels · ~${Math.round(parAppel)} ms/appel mesuré ici · `
-          + `il reste ~${reste < 90 ? `${reste} s` : `${Math.round(reste / 60)} min`}`);
+        console.log(`      ${faits}/${totalAppels} calls · ~${Math.round(parAppel)} ms/call measured here · `
+          + `~${reste < 90 ? `${reste} s` : `${Math.round(reste / 60)} min`} left`);
       }
     }
   }
@@ -271,5 +271,5 @@ if (isMain(import.meta)) {
     machineAuDepart: depart, mesureLe: new Date().toISOString(),
     cas, passes, lignes,
   }, null, 2) + "\n");
-  console.log(`\nÉcrit dans ${SORTIE.split("/").pop()}\n`);
+  console.log(`\nWritten to ${SORTIE.split("/").pop()}\n`);
 }
