@@ -94,6 +94,12 @@ export function porteDesInvisibles(v: string): boolean {
  * translittéré à moitié, ce qui arrive légitimement. C'est le MOT qui trahit : aucun mot réel
  * ne mélange du latin et du cyrillique, et c'est précisément ce que fait un homoglyphe.
  *
+ * SA TABLE EST DÉCLARÉE DANS SON CORPS, ET C'EST VOULU. Cette fonction est livrée au client
+ * par `toString()`, qui emporte le corps et pas la portée : une constante de module
+ * référencée ici partait sans sa définition, et le fichier livré levait
+ * `ECRITURES is not defined` à la première valeur. Ce commentaire-ci, lui, est hors du corps
+ * — il reste en français, et il ne voyage pas.
+ *
  * CE DÉTECTEUR NE VOIT QUE LA SUBSTITUTION PARTIELLE, ET IL FAUT LE SAVOIR. Une valeur dont
  * CHAQUE lettre a un sosie devient monoscripte, et plus rien ne se mélange : `PT-1856-M` en
  * cyrillique intégral — `РТ-1856-М` — ne déclenche rien ici. Mesuré par une session de
@@ -106,10 +112,8 @@ export function porteDesInvisibles(v: string): boolean {
  * valeur entièrement cyrillique est parfaitement normale.
  */
 export function melangeDEcritures(v: string): boolean {
-  /* LA TABLE EST DANS LA FONCTION, PAS À CÔTÉ. Cette fonction est livrée au client par
-     `toString()`, qui n'emporte que le corps — pas la portée. Une constante de module
-     référencée ici partait sans sa définition, et la règle exportée plantait à la première
-     valeur avec `ECRITURES is not defined`. Elle serait partie comme ça. */
+  /* The table lives inside the function, not beside it: this function is shipped to the
+     client by toString(), which carries the body and not the scope. */
   const ECRITURES = [
     /[A-Za-z\u00C0-\u024F]/,      // latin
     /[\u0400-\u04FF]/,            // cyrillique
