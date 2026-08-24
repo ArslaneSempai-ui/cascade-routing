@@ -237,7 +237,7 @@ test("le mode de notation du client est annoncé, et son absence dégrade le ran
 
   assert.match(src, /notePar\?\.version/,
     "rien ne regarde la version du correcteur qui a produit les issues.");
-  assert.match(src, /indiscernables/,
+  assert.match(src, /indistinguishable/,
     "l'absence de version doit être dite au lecteur, pas seulement constatée.");
 
   /* Et aucune valeur extraite ne doit pouvoir traverser le chargeur. */

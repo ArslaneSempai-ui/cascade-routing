@@ -483,7 +483,7 @@ function principal() {
   const racine = fileURLToPath(new URL("..", import.meta.url));
   const ratés = temoins();
   if (ratés.length > 0) {
-    console.error("Les détecteurs ne reconnaissent plus ce qu'ils prétendent reconnaître :");
+    console.error("The detectors no longer recognise what they claim to recognise:");
     for (const r of ratés) console.error(`  - ${r}`);
     console.error("\nTheir verdict is worthless until those witnesses pass again. Nothing was written.");
     process.exit(1);
@@ -492,8 +492,8 @@ function principal() {
   if (process.argv.includes("--historique")) {
     const r = balayerLHistorique(racine);
     writeFileSync(relevé, JSON.stringify(r, null, 2) + "\n");
-    console.log(`${r.commits} commits balayés · ${r.trouves} trouvaille(s) dont ${r.declares} déclarée(s) · `
-      + `${r.reels.length} non déclarée(s) · témoins ${r.temoins}/2 · scellé sous ${r.commit}.`);
+    console.log(`${r.commits} commits swept · ${r.trouves} match(es), ${r.declares} declared · `
+      + `${r.reels.length} undeclared · witnesses ${r.temoins}/2 · sealed at ${r.commit}.`);
     if (r.temoins < 2) { console.error("The witnesses did not make it through the pipe: this zero is worthless."); process.exit(1); }
     if (r.reels.length > 0) {
       console.error("\nUndeclared match(es) — treat them as real secrets until they are declared:");
@@ -517,7 +517,7 @@ function principal() {
     }
     const nonTenus = c.filter((x) => x.verdict === "non tenu");
     if (nonTenus.length > 0) {
-      console.error(`${nonTenus.length} contrôle(s) de sécurité non tenu(s) :`);
+      console.error(`${nonTenus.length} security check(s) not held:`);
       for (const x of nonTenus) console.error(`  - ${x.nom} : ${x.constat}`);
       process.exit(1);
     }
@@ -526,7 +526,7 @@ function principal() {
   }
   writeFileSync(join(racine, "SECURITE.md"), md);
   const nt = c.filter((x) => x.verdict === "non tenu").length;
-  console.log(`${c.length} contrôles · ${nt} non tenu(s) · SECURITE.md écrit.`);
+  console.log(`${c.length} checks · ${nt} not held · SECURITE.md written.`);
 }
 
 /**

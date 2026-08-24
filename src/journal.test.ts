@@ -913,7 +913,24 @@ test("aucune sortie française sur les commandes déjà rendues à l'acheteur", 
   /** Les commandes dont la sortie a été rendue à l'acheteur, et qui ne doivent plus régresser. */
   const RENDUES = ["premiere-reponse.mjs", "verifier-rapport.mjs", "your-cases.ts", "server.ts",
     "intake.ts", "licences.ts", "menace.ts", "egress.ts", "entree.ts", "measure.ts"];
-  const FRANCAIS = /\b(votre|vos|aucune?|n'est|n'a|qui|pour|dans|à la|ne se|données|refus|une|des|cette|celle|chaque|est |sont |avec |sans |déjà)\b/i;
+  /*
+   * UNE LISTE DE MOTS ATTRAPE LA PROSE, PAS LES ÉTIQUETTES.
+   *
+   * L'en-tête de tableau d'`abstention.ts` était entièrement en français — « règle · abst. ·
+   * faux élim. · justes perdus · échange · livrées · précision livrée · coût » — et aucun de
+   * ces mots n'est dans la liste ci-dessous. La garde ne l'a jamais vu, et n'aurait vu aucun
+   * tableau du même genre. Or les étiquettes sont ce qu'un acheteur lit EN PREMIER dans une
+   * sortie tabulaire.
+   *
+   * L'accent, lui, ne dépend d'aucun vocabulaire : une sortie anglaise n'en porte pas. Les
+   * deux signaux ensemble couvrent la prose et les étiquettes.
+   *
+   * Un seul mot accentué survivait dans nos sorties anglaises : « relevé », notre propre
+   * jargon. Plutôt que de lui ouvrir une exception — qui aurait servi de porte au suivant —
+   * il a été traduit. Une règle sans exception se tient ; une règle avec une exception en
+   * accumule.
+   */
+  const FRANCAIS = /\b(votre|vos|aucune?|n'est|n'a|qui|pour|dans|à la|ne se|données|refus|une|des|cette|celle|chaque|est |sont |avec |sans |déjà)\b|[àâäçéèêëîïôöùûüÿœæÀÂÄÇÉÈÊËÎÏÔÖÙÛÜŸŒÆ]/i;
 
   /*
    * CE QUE CETTE EXTRACTION NE VOYAIT PAS, ET QUI COMPTAIT LE PLUS.
@@ -969,7 +986,7 @@ test("aucune sortie française sur les commandes déjà rendues à l'acheteur", 
    * pas. Comparer les deux chiffres n'aurait aucun sens, et le prochain élargissement fera
    * pareil.
    */
-  assert.ok(restantes.length <= 25,
+  assert.ok(restantes.length <= 26,
     `${restantes.length} commande(s) parlent encore français : ${restantes.slice(0, 6).join(", ")}…\n`
     + "  → le compte ne doit que baisser. S'il monte, une commande neuve est arrivée en français.");
 });

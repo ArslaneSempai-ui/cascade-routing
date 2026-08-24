@@ -36,7 +36,7 @@ function lire(nom) {
   if (!existsSync(p)) {
     throw new Error(
       `${nom} is missing.\n\n`
-      + "  This relevé ships with the repository. If it is gone, the clone is incomplete —\n"
+      + "  This reading ships with the repository. If it is gone, the clone is incomplete —\n"
       + `  restore it with \`git checkout ${nom}\`. Nothing here is typed by hand, so\n`
       + "  without it there is nothing to say.");
   }
@@ -56,10 +56,10 @@ const pct = (x) => (x * 100).toFixed(1);
 export function reponse(exposition, doc) {
   const publie = exposition.points?.find((p) => p.identiqueAuPublie);
   if (!publie) {
-    throw new Error("no exposure point matches the published routing: the relevé and the code have diverged.");
+    throw new Error("no exposure point matches the published routing: the reading and the code have diverged.");
   }
   const t = doc.publie?.taux;
-  if (!t || !(t.n > 0)) throw new Error("the per-record relevé carries no sample size: there is nothing to report.");
+  if (!t || !(t.n > 0)) throw new Error("the per-record reading carries no sample size: there is nothing to report.");
 
   const rapport = publie.exposition / publie.traitement;
   const b = exposition.seuil;

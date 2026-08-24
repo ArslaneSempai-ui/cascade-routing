@@ -36,7 +36,7 @@ const PROFILS = (() => {
   const p = readProfiles();
   if (!p) {
     console.error(
-      "no relevé to build the page from.\n\n"
+      "no reading to build the page from.\n\n"
       + "  This is normally impossible: a reference relevé ships with the repository.\n"
       + "  If it is gone, restore it with `git checkout profiles-*.json`.");
     process.exit(1);

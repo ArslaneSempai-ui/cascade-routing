@@ -467,7 +467,7 @@ async function principal(): Promise<void> {
     console.log(`
 Measure your own cases, not mine.
 
-  npm run measure:yours -- --cases=your-file.csv [--rules=rules.json] [--sorties=vôtres.json] [--llm]
+  npm run measure:yours -- --cases=your-file.csv [--rules=rules.json] [--sorties=yours.json] [--llm]
 
 The CSV wants an id, the input text, then one column per field to extract:
 
@@ -639,17 +639,17 @@ Nothing leaves your machine: the models are local and this path makes no network
      * même fichier, et le second n'est pas une mesure.
      */
     if (sorties.notePar?.version) {
-      console.log(`  exactitude : mesurée par ${sorties.notePar.outil ?? "cet outil"}`
-        + ` ${sorties.notePar.version}, exécuté chez vous sur votre clé.`);
+      console.log(`  accuracy: graded by ${sorties.notePar.outil ?? "this tool"}`
+        + ` ${sorties.notePar.version}, run on your side against your key.`);
     } else {
-      console.log(`  ⚠ exactitude : le fichier ne dit pas quelle version l'a notée.`);
-      console.log(`    Sans \`notePar.version\`, « noté par cet outil chez vous » et « saisi à la`
-        + ` main » sont indiscernables,`);
+      console.log(`  ⚠ accuracy: the file does not say which version graded it.`);
+      console.log(`    Without \`notePar.version\`, "graded by this tool on your side" and "typed`
+        + ` in by hand" are indistinguishable,`);
       console.log(`    and only the first is a measurement. The rate below reads as declared.`);
     }
     console.log(`  no extracted value is received: outcomes only, per case.`);
-    console.log(`  coût et latence : ${sorties.declares ? "déclarés par vous" : "non déclarés"}`
-      + ` — ${PROVENANCE_DES_DECLARES.provenance}, jamais mesurés ici.`);
+    console.log(`  cost and latency: ${sorties.declares ? "declared by you" : "not declared"}`
+      + ` — ${PROVENANCE_DES_DECLARES.provenance}, never measured here.`);
     if (corr.champsSansAucuneValeur.length) {
       console.log(`  ⚠ no result supplied for: ${corr.champsSansAucuneValeur.join(", ")}`);
     }
