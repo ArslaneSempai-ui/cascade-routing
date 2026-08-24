@@ -5,6 +5,7 @@
   "type": "module",
   "description": "Where should the next euro go? A measured cascade: rules, a small model, a large one, a human.",
   "scripts": {
+    "premiere-reponse": "node src/premiere-reponse.mjs",
     "measure": "node src/measure.ts",
     "optimise": "node src/optimise.ts",
     "typage": "tsc --noEmit",
