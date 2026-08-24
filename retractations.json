@@ -301,7 +301,8 @@
       "cost": "Nothing published outside this repository. The claim stood at the top of the README for weeks, and the per-record figure it contradicts was already in landing.json the whole time — measured, and never surfaced.",
       "heldBy": "le taux par dossier se recalcule depuis les réussites, et retombe sur la mesure publiée",
       "notHeld": null,
-      "caughtBeforeAnyoneSawIt": false
+      "caughtBeforeAnyoneSawIt": false,
+      "heldIn": "composant licencié"
     },
     {
       "date": "2026-08-24",

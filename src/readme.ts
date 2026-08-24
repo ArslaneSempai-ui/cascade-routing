@@ -700,7 +700,6 @@ const commandes = (() => {
     ["ocr", "read the same documents as images and measure what the reading stage costs (macOS: Vision, no API)"],
     ["exposition", "what the routing costs when it is wrong, and the price ratio at which the recommendation changes"],
     ["document", "the rate per FILE — all five fields right together — against the mean per field"],
-    ["politique", "emit what the client takes away: the decision, its evidence, and the abstention rule as runnable dependency-free code"],
   ];
   const classees = new Set(ordre.map(([n]) => n));
   const oubliees = Object.keys(pkg.scripts).filter((n) => !classees.has(n) && n !== "typage");
@@ -1053,7 +1052,7 @@ const chaines = (() => {
 const expositionBloc = (() => {
   const chemin = fileURLToPath(new URL("../exposition.json", import.meta.url));
   if (!existsSync(chemin)) {
-    throw new Error("exposition.json est absent — ce bloc publie une mesure. Lancez : npm run exposition");
+    throw new Error("exposition.json est absent. Ce relevé est livré avec le dépôt : restaurez-le avec « git checkout exposition.json ». Il est produit par un composant qui n'est pas dans ce dépôt.");
   }
   const r = JSON.parse(readFileSync(chemin, "utf8")) as {
     publie: Record<string, string>;
@@ -1108,7 +1107,7 @@ const expositionBloc = (() => {
 const documentBloc = (() => {
   const chemin = fileURLToPath(new URL("../document.json", import.meta.url));
   if (!existsSync(chemin)) {
-    throw new Error("document.json est absent — ce bloc publie une mesure. Lancez : npm run document");
+    throw new Error("document.json est absent. Ce relevé est livré avec le dépôt : restaurez-le avec « git checkout document.json ». Il est produit par un composant qui n'est pas dans ce dépôt.");
   }
   const d = JSON.parse(readFileSync(chemin, "utf8")) as {
     publie: { routing: Record<string, string>; complets: number; n: number; cost: number };
@@ -1158,7 +1157,7 @@ const documentBloc = (() => {
  */
 const leviers = (() => {
   const cheminExp = fileURLToPath(new URL("../exposition.json", import.meta.url));
-  if (!existsSync(cheminExp)) throw new Error("exposition.json absent — lancez : npm run exposition");
+  if (!existsSync(cheminExp)) throw new Error("exposition.json absent — restaurez-le avec « git checkout exposition.json ».");
   const exp = JSON.parse(readFileSync(cheminExp, "utf8")) as { seuil: { bas: number; haut: number } | null };
 
   const abst = (() => {

@@ -163,7 +163,7 @@ export function dossier(p: Profiles, h: Assumptions): string {
   } else {
     w(`**Per record: not computed here.** The delivered profile does not carry per-case`);
     w(`outcomes for every chosen cell, and a per-record rate over four fields instead of`);
-    w(`${FIELDS.length} would be wrong in the one direction that flatters this report. Run \`npm run document\`.`);
+    w(`${FIELDS.length} would be wrong in the one direction that flatters this report. Restore document.json with \`git checkout document.json\`.`);
   }
 
   /* ── 2. Les choix qui ne sont pas mesurables ── */

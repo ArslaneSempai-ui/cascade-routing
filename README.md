@@ -59,9 +59,10 @@ what that pass actually cost is stated below, read from the relevé rather than 
 | `npm run pages` | build docs/ and verify the published screen — required before publishing: docs/ carries a compiled copy of the code and goes stale silently |
 | `npm run captures` | re-record the images on this page |
 | `npm run ocr` | read the same documents as images and measure what the reading stage costs (macOS: Vision, no API) |
-| `npm run exposition` | what the routing costs when it is wrong, and the price ratio at which the recommendation changes |
-| `npm run document` | the rate per FILE — all five fields right together — against the mean per field |
-| `npm run politique` | emit what the client takes away: the decision, its evidence, and the abstention rule as runnable dependency-free code |
+
+⚠ 1 command(s) exist in package.json and are not classified above: `licences`.
+
+⚠ 2 command(s) are described above and no longer exist: `exposition`, `document`.
 <!-- /figures:commandes -->
 
 ```bash
@@ -69,7 +70,7 @@ npm test           # types, README figures, landing.json, and the suite
 ```
 
 <!-- figures:tests -->
-**181 tests** across 9 files, counted from the sources rather than typed here.
+**181 tests** across 10 files, counted from the sources rather than typed here.
 <!-- /figures:tests -->
 
 Everything runs locally. No API key, nothing leaves the machine, and anyone who clones this

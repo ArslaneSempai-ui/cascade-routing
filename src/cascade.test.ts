@@ -24,12 +24,9 @@ import { comparerPopulations, plancherDeBruit, longueur, GRAINES_DE_BRUIT } from
 import { SEUIL_DE_L_INDUSTRIE, OBSERVATIONS_MINIMALES } from "./psi.ts";
 import { readProfiles, empreinteDuReleve, RELEVE_DE_REFERENCE, type Profile, type ProvenanceDuPalier, type Provenance } from "./measure.ts";
 import { optimiseExtraction, optimiseClassification, budgetShadowPrice, latenceRepresentative, paliersMesures, evaluer, pricePerThousandDocuments } from "./optimise.ts";
-import { exposition, optimiseExposition, ouLaRecommandationBascule, decompositionsIncoherentes } from "./exposition.ts";
-import { documentsComplets, comparer as comparerDocuments } from "./document.ts";
 import { rapportPourLeClient } from "./your-cases.ts";
 import { elaguer as elaguerInterne } from "./journal.ts";
 import { estBoucleLocale, verdictEgress, ASSEZ_DE_RELEVES as ASSEZ_INTERNE } from "./egress.ts";
-import { FORME as FORME_INTERNE } from "./signal.ts";
 import { PROMPTS as PROMPTS_INTERNES, questionPour as questionPourInterne } from "./tiers.ts";
 import { memoireDisponibleMo, etatMachine as etatMachineInterne,
   PLAFOND_JETONS as PLAFOND_JETONS_INTERNE,
@@ -641,7 +638,11 @@ test("chaque rétractation nomme un test qui existe vraiment", () => {
   const f = fileURLToPath(new URL("../retractations.json", import.meta.url));
   if (!existsSync(f)) return;
   const journal = JSON.parse(readFileSync(f, "utf8")) as {
-    entries: { claimed: string; heldBy: string | null; notHeld?: string }[] };
+    entries: { claimed: string; heldBy: string | null; notHeld?: string; heldIn?: string }[] };
+
+  /** Les seuls ailleurs admis. Une chaîne libre laisserait écrire n'importe quoi. */
+  const DESTINATIONS = new Set(["composant licencié"]);
+  let ailleurs = 0;
 
   /*
    * La liste des fichiers de test était écrite à la main, et `outils.test.ts` n'y était pas.
@@ -672,11 +673,43 @@ test("chaque rétractation nomme un test qui existe vraiment", () => {
         + `    soit elle explique dans « nonTenue » ce qui l'empêche d'en avoir un.`);
       continue;
     }
+    /*
+     * UN TEST PEUT VIVRE HORS DE CE DÉPÔT, ET ÇA SE DÉCLARE.
+     *
+     * Trois modules ont quitté le banc public pour le composant licencié, et un test est
+     * parti avec eux. La rétractation qu'il tient, elle, reste ici : une erreur publiée se
+     * rétracte publiquement, sinon le journal ne vaut rien.
+     *
+     * Mais « son test est ailleurs » est exactement l'excuse qui viderait ce contrôle. Elle
+     * n'est donc admise que déclarée, sur une destination connue, et **comptée** : le nombre
+     * d'entrées que ce dépôt ne peut pas vérifier lui-même est publié plus bas. Un chiffre
+     * issu d'une sélection porte le compte de ce qu'il écarte.
+     */
+    if (e.heldIn) {
+      assert.ok(DESTINATIONS.has(e.heldIn),
+        `la rétractation « ${e.claimed} » dit que son test vit dans « ${e.heldIn} », qui n'est pas une destination connue.\n`
+        + `  → destinations admises : ${[...DESTINATIONS].join(", ")}.`);
+      assert.ok(!noms.has(e.heldBy),
+        `la rétractation « ${e.claimed} » dit que son test est dans « ${e.heldIn} », mais « ${e.heldBy} » existe ici.\n`
+        + `  → retirez « tenuAilleurs » : une entrée vérifiable ne doit pas se déclarer invérifiable.`);
+      ailleurs++;
+      continue;
+    }
     assert.ok(noms.has(e.heldBy),
       `une rétractation dit être tenue par le test « ${e.heldBy} », qui n'existe pas.\n`
       + `  → soit le test a été renommé et l'entrée doit suivre,\n`
-      + `    soit le contrôle a disparu et l'erreur peut revenir sans que rien ne tombe.`);
+      + `    soit le contrôle a disparu et l'erreur peut revenir sans que rien ne tombe,\n`
+      + `    soit il a suivi un module hors de ce dépôt, et l'entrée le déclare dans « heldIn ».`);
   }
+
+  /*
+   * Le compte de ce qu'on n'a pas pu vérifier. Il est borné : si la moitié du journal
+   * devenait invérifiable depuis ce dépôt, le contrôle passerait toujours au vert tout en
+   * ne regardant plus rien — le vert vide sous sa forme la plus lente.
+   */
+  assert.ok(ailleurs <= Math.floor(journal.entries.length / 4),
+    `${ailleurs} rétractation(s) sur ${journal.entries.length} sont tenues par un test hors de ce dépôt.\n`
+    + `  → au-delà du quart, ce contrôle ne vérifie plus assez pour valoir quelque chose.`);
 });
 
 /* ── la provenance du relevé lui-même ── */
@@ -3583,138 +3616,6 @@ test("aucun chiffre de l'étage de lecture ne peut voyager sans son qualificatif
    un faux entre au dossier.
    ──────────────────────────────────────────────────────────────────────────── */
 
-test("l'exposition dépend des DEUX prix, sinon elle n'en mesure qu'un", () => {
-  const p = readProfiles();
-  if (!p) return;
-  const routage = optimiseExtraction(p, ASSUMPTIONS)?.routing;
-  assert.ok(routage, "l'optimiseur ne rend pas de routage : rien à exposer.");
-
-  const base = exposition(p, ASSUMPTIONS, routage!);
-  const plusCherFaux = exposition(p, { ...ASSUMPTIONS, costWrongValue: ASSUMPTIONS.costWrongValue * 3 }, routage!);
-  const plusCherVide = exposition(p, { ...ASSUMPTIONS, costBlankField: ASSUMPTIONS.costBlankField * 3 }, routage!);
-
-  /* SANS CES DEUX-LÀ, une exposition qui ne bouge qu'avec un seul prix serait une mesure de
-     ce prix-là, déguisée en mesure du risque. C'est la dégradation en constante, appliquée
-     à un terme sur deux. */
-  assert.ok(plusCherFaux > base,
-    "tripler le prix d'une valeur fausse ne change pas l'exposition : le terme des faux est mort.");
-  assert.ok(plusCherVide > base,
-    "tripler le prix d'un champ vide ne change pas l'exposition : le terme des vides est mort.");
-});
-
-test("une décomposition qui ne décrit pas le même relevé que le taux est refusée", () => {
-  const p = readProfiles();
-  if (!p) return;
-  const paliers = paliersMesures(p);
-
-  /* Sur le relevé livré, les deux doivent s'accorder — sinon on compose deux chiffres qui ne
-     parlent pas du même objet, ce que ce dépôt refuse partout ailleurs. */
-  assert.deepEqual(decompositionsIncoherentes(p, paliers), [],
-    "vide+faux ne vaut plus 1−justesse quelque part : la décomposition et le taux ne viennent\n"
-    + "  plus du même relevé, et les composer porterait sur deux objets différents.");
-
-  /* CONTRE-ÉPREUVE — la garde doit voir un désaccord qu'on lui plante. Sans elle, un contrôle
-     qui accepterait tout rendrait exactement le même vert. */
-  const abime = JSON.parse(JSON.stringify(p)) as typeof p;
-  /* LA CASE LA PLUS JUSTE, PAS LA PREMIÈRE. Le premier montage prenait `rules|name`, dont la
-     justesse vaut DÉJÀ zéro : le `max(0, …)` ne déplaçait rien et la garde se taisait pour
-     une raison parfaitement légitime. Un témoin dont le montage laisse une raison de se
-     taire ne prouve rien. */
-  let t = paliers[0]!, c = FIELDS[0]!, meilleure = -1;
-  for (const tt of paliers) for (const cc of FIELDS) {
-    const a = abime.extraction[tt][cc].accuracy;
-    if (a > meilleure) { meilleure = a; t = tt; c = cc; }
-  }
-  assert.ok(meilleure > 0.5,
-    `la case la plus juste vaut ${meilleure} : il n'y a rien à abîmer, ce témoin ne prouverait rien.`);
-  abime.extraction[t][c].accuracy = meilleure - 0.5;
-  assert.ok(decompositionsIncoherentes(abime, [t]).length > 0,
-    `la garde ne voit plus un écart d'un demi-point sur ${t}|${c} entre la décomposition et le taux.`);
-});
-
-test("le seuil de bascule est un encadrement, et il encadre vraiment", () => {
-  const p = readProfiles();
-  if (!p) return;
-  const r = ouLaRecommandationBascule(p, ASSUMPTIONS, [1, 5, 20, 50, 100]);
-  assert.ok(r, "aucun balayage rendu.");
-  if (!r!.seuil) return;   // pas de bascule dans la plage : rien à encadrer
-
-  const { bas, haut } = r!.seuil;
-  assert.ok(bas < haut, `encadrement vide : ${bas} ≥ ${haut}.`);
-
-  /* UN ENCADREMENT QUI N'ENCADRE PAS EST UN CHIFFRE INVENTÉ. On vérifie les deux bords :
-     à `bas` le routage est encore celui qu'on publie, à `haut` il ne l'est plus. */
-  const memeQue = (r2: number) => {
-    const opt = optimiseExposition(p, { ...ASSUMPTIONS, costWrongValue: ASSUMPTIONS.costBlankField * r2 });
-    return opt ? FIELDS.every((c) => opt.routing[c] === r!.publie[c]) : false;
-  };
-  assert.equal(memeQue(bas), true,
-    `à ${bas}, le routage optimal devrait encore être celui qu'on publie — la borne basse ment.`);
-  assert.equal(memeQue(haut), false,
-    `à ${haut}, le routage optimal devrait avoir changé — la borne haute ment.`);
-});
-
-/* ────────────────────────────────────────────────────────────────────────────
-   LE DOSSIER, PAS LE CHAMP
-
-   Le titre annonce la moyenne de cinq taux par champ. Un responsable
-   conformité classe des dossiers, et un dossier n'est complet que si les cinq
-   champs sont justes ENSEMBLE.
-   ──────────────────────────────────────────────────────────────────────────── */
-
-test("le taux par dossier se recalcule depuis les réussites, et retombe sur la mesure publiée", () => {
-  const p = readProfiles();
-  if (!p) return;
-  const routage = optimiseExtraction(p, ASSUMPTIONS)?.routing;
-  assert.ok(routage, "aucun routage à évaluer.");
-
-  const d = documentsComplets(p, routage!);
-  assert.deepEqual(d.manquent, [],
-    `case(s) sans réussites cas par cas : ${d.manquent.join(", ")} — un taux par dossier calculé\n`
-    + `  sur moins de cinq champs serait faux dans la seule direction qui nous avantage.`);
-
-  /* LE CHIFFRE DOIT RETOMBER SUR CELUI QUE landing.json PUBLIE. Deux chemins de calcul qui
-     divergent ne sont pas une approximation : ce sont deux objets différents. */
-  const publie = JSON.parse(readFileSync(
-    join(fileURLToPath(new URL("..", import.meta.url)), "landing.json"), "utf8")) as
-    { cleanPerDocument: { clean: number; n: number } | null };
-  if (publie.cleanPerDocument) {
-    assert.equal(d.complets, publie.cleanPerDocument.clean,
-      `recalculé ${d.complets} dossiers complets, landing.json en publie ${publie.cleanPerDocument.clean}.`);
-    assert.equal(d.n, publie.cleanPerDocument.n, "les deux chemins ne portent pas sur le même effectif.");
-  }
-
-  /* L'EFFECTIF EST CELUI DU PRÉFIXE COMMUN, jamais le plus grand. Les encodeurs sont mesurés
-     sur mille cas et les génératifs sur cent vingt : prendre le maximum comparerait des
-     documents qui n'ont pas été mesurés partout. */
-  const longueurs = FIELDS.map((c) => p.extraction[routage![c]][c].reussites!.length);
-  assert.equal(d.n, Math.min(...longueurs),
-    `l'effectif retenu (${d.n}) n'est pas le minimum des cases choisies (${Math.min(...longueurs)}).`);
-});
-
-test("viser le dossier ne dégrade jamais le dossier, et le dit quand ça ne se distingue pas", () => {
-  const p = readProfiles();
-  if (!p) return;
-  const r = comparerDocuments(p, ASSUMPTIONS);
-  assert.ok(r, "aucune comparaison rendue.");
-
-  /* Un optimiseur du dossier qui sortirait MOINS de dossiers complets que celui du champ
-     serait cassé : il cherche exactement cette quantité, sous les mêmes contraintes. */
-  assert.ok(r!.vise.complets >= r!.publie.complets,
-    `le routage qui vise le dossier en sort ${r!.vise.complets} contre ${r!.publie.complets} `
-    + `pour celui du champ : l'optimiseur ne trouve pas ce qu'il cherche.`);
-
-  /* ET LE VERDICT NE SE LIT PAS DANS L'ÉCART DES TOTAUX. Trois paires discordantes ne
-     tranchent pas, quel que soit l'écart apparent — c'est le test apparié qui décide, et il
-     doit le dire au lieu de laisser deux totaux voisins suggérer une victoire. */
-  assert.equal(typeof r!.apparie.discordant, "number");
-  if (r!.apparie.discordant < 6) {
-    assert.equal(r!.apparie.decidable, false,
-      `${r!.apparie.discordant} paire(s) discordante(s) rendent un verdict décidable : le test\n`
-      + `  apparié conclurait sur trop peu de cas, ce qui est exactement ce qu'il existe pour refuser.`);
-  }
-});
-
 test("les deux seuils du bloc des leviers viennent de leurs mesures, et leur rapport est calculé", () => {
   /*
    * Ce bloc met côte à côte deux chiffres qui vivaient dans deux fichiers différents, et en
@@ -3849,66 +3750,6 @@ test("le dossier qu'un relecteur signe porte l'exactitude dans l'unité qu'il cl
      chiffres voisins dont un seul est encadré ressemblent à une négligence. */
   assert.match(dossier, /true proportion/,
     "VALIDATION.md publie les deux chiffres sans dire lequel peut porter un intervalle, ni pourquoi.");
-});
-
-/* ────────────────────────────────────────────────────────────────────────────
-   CE QUE LE CLIENT EMPORTE
-
-   Une règle exportée qui ne se comporte pas comme celle qu'on a mesurée est un
-   autre produit portant le même nom.
-   ──────────────────────────────────────────────────────────────────────────── */
-
-test("la règle exportée se comporte exactement comme celle qui a été mesurée", async () => {
-  const racine = fileURLToPath(new URL("..", import.meta.url));
-  const chemin = join(racine, "politique.mjs");
-  assert.ok(existsSync(chemin), "politique.mjs n'est pas engendré : lancez `npm run politique`.");
-
-  const exportee = await import(pathToFileURL(chemin).href) as {
-    douteux: (v: string, texte: string | undefined, champ: string) => number;
-    normaliser: (x: string) => string;
-    FORME: Record<string, (v: string) => boolean>;
-  };
-
-  /* LES FORMES, UNE PAR UNE, SUR DES VALEURS QUI DISCRIMINENT. Comparer les sources ne
-     prouverait rien : deux textes identiques peuvent être engendrés depuis une source qui a
-     changé de sens. On éprouve le COMPORTEMENT. */
-  const epreuves: Record<string, [string, boolean][]> = {
-    birth: [["10/07/1987", true], ["1987", true], ["pas de date", false], ["3012", false]],
-    country: [["France", true], ["Republic of Korea", true], ["F4nce", false],
-      ["un pays avec beaucoup trop de mots ici", false]],
-    name: [["Nadia Okonkwo", true], ["N4dia", false]],
-    address: [["109 rue Victor Hugo", true], ["Milan, Italie", true], ["sans rien", false]],
-    document: [["idPT-6884-M", true], ["123456", false]],
-  };
-  let eprouves = 0;
-  for (const [champ, cas] of Object.entries(epreuves)) {
-    const ici = FORME_INTERNE[champ];
-    const la = exportee.FORME[champ];
-    assert.ok(ici !== undefined && la !== undefined,
-      `le champ ${champ} a perdu sa forme d'un côté ou de l'autre.`);
-    for (const [v, attendu] of cas) {
-      eprouves++;
-      assert.equal(la!(v), ici!(v),
-        `la forme exportée de ${champ} répond ${la!(v)} sur « ${v} » là où celle mesurée répond ${ici!(v)}.`);
-      assert.equal(ici!(v), attendu,
-        `la forme de ${champ} a changé de sens : « ${v} » devrait valoir ${attendu}.`);
-    }
-  }
-  assert.ok(eprouves >= 12,
-    `${eprouves} valeur(s) éprouvée(s) : trop peu pour que cette égalité veuille dire quelque chose.`);
-
-  /* ET LES TROIS SIGNAUX ENSEMBLE, y compris le vide qui compte pour un à lui seul. */
-  assert.equal(exportee.douteux("", "un texte", "name"), 1, "la valeur vide ne compte plus pour un signal.");
-  assert.equal(exportee.douteux("Nadia Okonkwo", "dossier de Nadia Okonkwo", "name"), 0,
-    "une valeur présente dans le texte et de bonne forme déclenche un signal.");
-  assert.equal(exportee.douteux("Nadia Okonkwo", "un texte sans elle", "name"), 1,
-    "une valeur absente du document ne déclenche plus le signal d'absence.");
-  assert.equal(exportee.douteux("N4dia 1", "N4dia 1", "name"), 1,
-    "une valeur présente mais de mauvaise forme ne déclenche plus le signal de forme.");
-
-  /* LA NORMALISATION VOYAGE AVEC, sinon les trois prédicats portent sur autre chose. */
-  assert.equal(exportee.normaliser(" 10 / 07 / 1987 ."), normaliserReponseInterne(" 10 / 07 / 1987 ."),
-    "la normalisation exportée diffère de celle sous laquelle la mesure a été faite.");
 });
 
 test("aucune formulation ne peut demander « Question: undefined » sur un champ inconnu", () => {
