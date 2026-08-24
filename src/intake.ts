@@ -48,11 +48,34 @@ export function lire(r: Reponses): Lecture {
       /* Une valeur hors bornes n'est pas corrigée en silence : c'est presque toujours une
          unité mal comprise — des secondes données en minutes, un budget annuel donné au mois —
          et deviner laquelle produirait un rapport faux avec l'air d'être personnalisé. */
-      refus.push(`${cle} = ${v} est hors des bornes [${bas}, ${haut}] — unité probablement autre, à confirmer`);
+      refus.push(`${cle} = ${v} is outside [${bas}, ${haut}] — probably a different unit; confirm before continuing`);
       continue;
     }
     (hypotheses[cle] as number) = v;
     fournies.push(cle);
+  }
+
+  /*
+   * UNE CLÉ MAL ORTHOGRAPHIÉE EST PIRE QU'UNE CLÉ ABSENTE.
+   *
+   * Ce module existe pour qu'un chiffre absent ne devienne jamais un chiffre inventé. Mais
+   * une clé inconnue était ignorée sans un mot : `volumee` au lieu de `volume`, et le client
+   * recevait un rapport calculé sur NOS défauts en croyant avoir fourni le sien. La
+   * différence ne se voit nulle part — le rapport dit « défaut du dépôt » pour une clé que le
+   * client a cru remplir.
+   *
+   * On propose la clé la plus proche quand il y en a une : sur douze noms, « clé inconnue »
+   * laisse le lecteur relire son fichier ligne à ligne.
+   */
+  const connues = new Set([...Object.keys(ASSUMPTIONS), "aUnJeuAnnote", "paliersDisponibles"]);
+  const proche = (k: string) => [...connues].find((c) =>
+    c.toLowerCase().startsWith(k.toLowerCase().slice(0, Math.max(3, k.length - 2)))
+    || k.toLowerCase().startsWith(c.toLowerCase().slice(0, Math.max(3, c.length - 2))));
+  for (const k of Object.keys(r)) {
+    if (connues.has(k)) continue;
+    const suggestion = proche(k);
+    refus.push(`"${k}" is not a key of this questionnaire${suggestion ? ` — did you mean "${suggestion}"?` : ""}`
+      + " — its value was used nowhere");
   }
 
   const defauts = (Object.keys(ASSUMPTIONS) as (keyof Assumptions)[]).filter((c) => !fournies.includes(c));
@@ -60,11 +83,11 @@ export function lire(r: Reponses): Lecture {
   /* Ce qui empêche de mesurer quoi que ce soit, par opposition à ce qui manque simplement. */
   const bloquant: string[] = [];
   if (r.aUnJeuAnnote === false) {
-    bloquant.push("pas de jeu avec les réponses attendues : il n'y a rien à mesurer, et le "
-      + "premier chantier honnête est d'en construire un");
+    bloquant.push("no set with the expected answers: there is nothing to measure, and the first honest "
+      + "piece of work is to build one");
   }
   if (r.paliersDisponibles && r.paliersDisponibles.length < 2) {
-    bloquant.push("un seul palier appelable : il n'y a pas de routage à optimiser");
+    bloquant.push("only one callable tier: there is no routing to optimise");
   }
 
   return { hypotheses, fournies, defauts, refus, bloquant };
@@ -72,7 +95,31 @@ export function lire(r: Reponses): Lecture {
 
 if (isMain(import.meta)) {
   const fichier = process.argv.find((a) => a.startsWith("--file="))?.split("=")[1];
-  if (!fichier || !existsSync(fichier)) {
+
+  /*
+   * UN CHEMIN PASSÉ SANS `--file=` ÉCRIVAIT UN GABARIT.
+   *
+   * `node src/intake.ts mes-reponses.json` — la forme que tout le monde tape en premier —
+   * ne trouvait pas de `--file=`, tombait dans la branche du gabarit, et ÉCRASAIT un fichier
+   * dans le dossier courant en annonçant un succès. Le client croit avoir soumis ses
+   * réponses ; il vient de recevoir un modèle vide, et son fichier n'a jamais été lu.
+   */
+  const positionnel = process.argv.slice(2).find((a) => !a.startsWith("-"));
+  if (!fichier && positionnel) {
+    console.error(
+      `The path "${positionnel}" was passed without "--file=", so it was not read.\n\n`
+      + `  Write:  npm run intake -- --file=${positionnel}\n\n`
+      + `  Without that flag this command writes a blank template — which would have\n`
+      + `  overwritten a file and produced a report on our default values.`);
+    process.exit(2);
+  }
+
+  if (fichier && !existsSync(fichier)) {
+    console.error(`"${fichier}" does not exist. Nothing was read, and no template was written.`);
+    process.exit(2);
+  }
+
+  if (!fichier) {
     const gabarit: Reponses = {
       chaine: "extract five fields from onboarding documents",
       paliersDisponibles: ["rules", "small hosted model", "large hosted model", "human review"],
@@ -90,10 +137,10 @@ if (isMain(import.meta)) {
     };
     const sortie = "intake-template.json";
     writeFileSync(sortie, JSON.stringify(gabarit, null, 2) + "\n");
-    console.log(`\nGabarit écrit dans ${sortie}. Le remplir, puis :\n`);
+    console.log(`\nTemplate written to ${sortie}. Fill it in, then:\n`);
     console.log(`  npm run intake -- --file=${sortie}\n`);
-    console.log(`Tout est facultatif. Ce qui reste vide garde le défaut du dépôt, et le rapport`);
-    console.log(`le dit — un chiffre absent ne devient jamais un chiffre inventé.\n`);
+    console.log(`Everything is optional. What stays empty keeps this repository's default, and the report`);
+    console.log(`says so — a missing figure never becomes an invented one.\n`);
     process.exit(0);
   }
 
@@ -105,13 +152,13 @@ if (isMain(import.meta)) {
     console.log("");
   }
   if (l.refus.length) {
-    console.log("REFUSÉ, À CONFIRMER AVANT DE CONTINUER :\n");
+    console.log("REFUSED — CONFIRM BEFORE CONTINUING:\n");
     for (const x of l.refus) console.log(`  ? ${x}`);
     console.log("");
   }
-  console.log(`FOURNI PAR LE CLIENT (${l.fournies.length}) :`);
+  console.log(`SUPPLIED BY THE CLIENT (${l.fournies.length}) :`);
   for (const c of l.fournies) console.log(`  ${c.padEnd(24)} ${l.hypotheses[c]}`);
-  console.log(`\nRESTÉ AU DÉFAUT DU DÉPÔT (${l.defauts.length}) — à dire dans le rapport :`);
+  console.log(`\nLEFT AT THIS REPOSITORY'S DEFAULT (${l.defauts.length}) — to be stated in the report:`);
   for (const c of l.defauts) console.log(`  ${c.padEnd(24)} ${l.hypotheses[c]}`);
 
   /*
@@ -145,6 +192,6 @@ if (isMain(import.meta)) {
     refuses: l.refus,
     bloquant: l.bloquant,
   }, null, 2) + "\n");
-  console.log(`\nÉcrit dans ${sortie}. Les ${l.defauts.length} valeurs non fournies y sont`);
-  console.log(`listées séparément : un défaut du dépôt ne doit jamais passer pour un chiffre du client.\n`);
+  console.log(`\nWritten to ${sortie}. The ${l.defauts.length} values you did not supply are listed`);
+  console.log(`separately: a repository default must never pass for a client's figure.\n`);
 }

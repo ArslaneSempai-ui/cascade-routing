@@ -87,12 +87,12 @@ test("une valeur hors bornes est refusée, pas corrigée", () => {
 test("l'absence de jeu annoté bloque, elle ne dégrade pas", () => {
   const l = lire({ aUnJeuAnnote: false });
   assert.equal(l.bloquant.length, 1);
-  assert.match(l.bloquant[0]!, /rien à mesurer/);
+  assert.match(l.bloquant[0]!, /nothing to measure/);
 });
 
 test("un seul palier appelable veut dire qu'il n'y a pas de routage", () => {
   const l = lire({ paliersDisponibles: ["one hosted model"] });
-  assert.ok(l.bloquant.some((b) => /pas de routage/.test(b)));
+  assert.ok(l.bloquant.some((b) => /no routing to optimise/.test(b)));
 });
 
 test("les valeurs valides passent et sont comptées comme fournies", () => {
@@ -299,4 +299,34 @@ test("aucun réglage ne déclare une formulation retenue sans l'avoir départag�
     `${verifies} palier(s) vérifié(s) sur ${nommes.length} nommé(s).`);
   assert.ok(nommes.length > 0 || reglage.refutePar,
     "aucune formulation nommée et aucune réfutation : le relevé ne dit plus rien, et ce test ne vérifie rien.");
+});
+
+test("une clé mal orthographiée est refusée, pas ignorée en silence", () => {
+  /*
+   * Ce module existe pour qu'un chiffre absent ne devienne jamais un chiffre inventé. Mais
+   * une clé inconnue était ignorée sans un mot : « volumee » au lieu de « volume », et le
+   * client recevait un rapport calculé sur NOS défauts en croyant avoir fourni le sien. Le
+   * rapport annonce alors « défaut du dépôt » pour une clé que le client a cru remplir, et
+   * la différence ne se voit nulle part.
+   */
+  const faute = lire({ volumee: 100_000 } as never);
+  assert.equal(faute.refus.length, 1, "une clé inconnue passe sans un mot");
+  assert.match(faute.refus[0]!, /is not a key/);
+  assert.match(faute.refus[0]!, /did you mean "volume"/,
+    "sur douze noms, « clé inconnue » laisse le lecteur relire son fichier ligne à ligne");
+  assert.match(faute.refus[0]!, /used nowhere/,
+    "le refus doit dire que la valeur n'a servi à rien, pas seulement que la clé est inconnue");
+
+  /* Un nom qui ne ressemble à rien n'a pas de suggestion, et c'est correct : proposer au
+     hasard ferait relire la mauvaise ligne. */
+  const inventee = lire({ zzzTotalementInvente: 1 } as never);
+  assert.equal(inventee.refus.length, 1);
+  assert.doesNotMatch(inventee.refus[0]!, /did you mean/);
+
+  /* LES TÉMOINS NÉGATIFS : une clé valide et un questionnaire vide ne doivent rien déclencher,
+     sinon la garde refuse l'usage normal et sera retirée. */
+  assert.deepEqual(lire({ volume: 100_000 }).refus, []);
+  assert.deepEqual(lire({}).refus, []);
+  assert.deepEqual(lire({ aUnJeuAnnote: true, paliersDisponibles: ["a", "b"] }).refus, [],
+    "les clés non numériques du questionnaire sont légitimes et ne doivent pas être refusées");
 });
