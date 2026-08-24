@@ -4121,8 +4121,17 @@ test("un relevé publié porte les paramètres sous lesquels le code le prendrai
     analystAnnualCost: ASSUMPTIONS.analystAnnualCost,
     humanSeconds: ASSUMPTIONS.humanSeconds,
   };
-  /** Ce qui est un COMPTE de la passe, pas un réglage du code — donc rien à confronter. */
-  const COMPTES = new Set(["documents", "champs", "cas", "passes", "valeurs", "cibleN", "tauxDeBase"]);
+  /*
+   * Ce qui est un COMPTE de la passe, pas un réglage du code — donc rien à confronter.
+   *
+   * Une entrée peut être qualifiée par son fichier (`sbom.json:version`). C'est nécessaire
+   * quand le nom est générique : `version` désigne ici le numéro de révision de la
+   * nomenclature, mais dans n'importe quel autre relevé il désignerait un réglage. Exempter
+   * `version` tout court aurait ouvert un vert vide dans chaque fichier à la fois — un
+   * élargissement qui n'aurait rien fermé.
+   */
+  const COMPTES = new Set(["documents", "champs", "cas", "passes", "valeurs", "cibleN", "tauxDeBase",
+    "sbom.json:version"]);
   /* Le gabarit porte AUSSI les hypothèses éditables : elles se confrontent au code comme les
      autres, mais sous leur propre nom. */
   for (const k of ["volume", "budget", "latencyBudgetMs", "pricePerThousandSmall",
@@ -4137,7 +4146,7 @@ test("un relevé publié porte les paramètres sous lesquels le code le prendrai
     try { d = JSON.parse(readFileSync(join(racine, f), "utf8")); } catch { continue; }
     if (!d || typeof d !== "object" || Array.isArray(d)) continue;
     for (const [k, v] of Object.entries(d)) {
-      if (typeof v !== "number" || COMPTES.has(k)) continue;
+      if (typeof v !== "number" || COMPTES.has(k) || COMPTES.has(`${f}:${k}`)) continue;
       if (!(k in AUJOURDHUI)) { nonClasses.push(`${f}:${k}`); continue; }
       confrontes++;
       if (v !== AUJOURDHUI[k]) ecarts.push(`${f} publie ${k}=${v}, le code utiliserait ${AUJOURDHUI[k]}`);
