@@ -1,0 +1,54 @@
+# La revue de sécurité automatique, sur chaque proposition de changement.
+#
+# ─── POURQUOI ELLE EST ICI ───
+#
+# Ce dépôt est vendu à des institutions financières, et il porte déjà sa propre analyse de
+# surface d'attaque — `SECURITE.md`, engendré et contrôlé. Mais cette analyse-là est la
+# NÔTRE : elle regarde ce qu'on a pensé à regarder. Une revue extérieure sur chaque diff
+# regarde ce qu'on n'a pas pensé à regarder, et c'est exactement la différence qui compte.
+#
+# ─── CE QU'ELLE NE FAIT PAS ───
+#
+# Elle ne remplace ni `npm test`, ni le balayage de secrets, ni le relevé de non-transmission.
+# Elle analyse le CHANGEMENT, pas l'état : un défaut déjà présent avant qu'elle soit installée
+# ne lui sera jamais montré. Les deux se complètent, aucune ne couvre l'autre.
+#
+# ─── DEUX CHOSES À SAVOIR AVANT DE COMPTER DESSUS ───
+#
+# Elle a besoin d'une clé d'API, posée en secret de dépôt sous le nom `CLAUDE_API_KEY`. Sans
+# elle, cette passe échoue — bruyamment, ce qui est le bon comportement : une revue de
+# sécurité qui se tait faute de clé serait un vert vide de plus.
+#
+# Et sa propre documentation prévient qu'elle n'est PAS durcie contre l'injection de consignes.
+# Elle ne doit donc lire que des propositions de confiance. Le déclencheur `pull_request`
+# n'exécute rien du dépôt proposant, mais le CONTENU du diff est lu par un modèle : une
+# proposition venue de l'extérieur peut y écrire ce qu'elle veut. Sur un dépôt public, il faut
+# exiger l'approbation d'un mainteneur avant qu'une contribution extérieure déclenche les
+# actions — c'est un réglage du dépôt, pas de ce fichier, et il n'est pas encore posé.
+name: securite
+
+permissions:
+  pull-requests: write   # pour déposer ses constats sur la proposition
+  contents: read
+
+on:
+  pull_request:
+
+jobs:
+  revue:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          # La profondeur 2 suffit : elle compare la proposition à son parent.
+          fetch-depth: 2
+
+      - uses: anthropics/claude-code-security-review@main
+        with:
+          comment-pr: true
+          claude-api-key: ${{ secrets.CLAUDE_API_KEY }}
+          # `docs/` porte une copie COMPILÉE des modules du dépôt. La faire analyser ferait
+          # rendre chaque constat en double — une fois sur la source, une fois sur le compilé —
+          # et un rapport qui répète est un rapport qu'on cesse de lire.
+          exclude-directories: docs
