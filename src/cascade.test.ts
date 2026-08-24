@@ -1,5 +1,6 @@
 import { test } from "node:test";
 import { porteDesInvisibles, melangeDEcritures, horsRepertoire } from "./signal.ts";
+import { poidsEnCache } from "./tiers.ts";
 import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
 import { PREMIER_COMMIT_MULTI_FORMULATION } from "./landing.ts";
@@ -3217,7 +3218,25 @@ test("aucune valeur du client n'entre dans le fichier que l'outil lui rend", (t)
     writeFileSync(entree, csv);
 
     /*
-     * LE DÉLAI ÉTAIT PLUS COURT QUE CE QU'IL FAUT AU PREMIER LANCEMENT.
+     * LA PRÉSENCE DES POIDS DÉCIDE, PAS UNE DURÉE.
+     *
+     * Un délai suppose une vitesse de réseau. Le premier chargement prend 578 s mesurées sur
+     * un lien ; sur un lien deux fois plus lent, n'importe quelle marge se fait dépasser —
+     * un chiffre de marge est un chiffre contre un seul réseau. On regarde donc si les poids
+     * sont là, ce qui ne dépend d'aucun réseau, et on se déclare ignoré s'ils n'y sont pas.
+     *
+     * Le délai reste, mais en filet : il ne décide plus, il empêche seulement une passe de
+     * pendre indéfiniment.
+     */
+    if (!poidsEnCache()) {
+      return t.skip(
+        "les poids d'encodeur ne sont pas en cache : ce cas lancerait un téléchargement de\n"
+        + "  740 Mo et n'éprouverait rien pendant ce temps. Lancez d'abord une commande qui\n"
+        + "  charge les modèles, puis relancez la suite.");
+    }
+
+    /*
+     * ET LE DÉLAI ÉTAIT PLUS COURT QUE CE QU'IL FAUT AU PREMIER LANCEMENT.
      *
      * Mesuré par une session de performance : le premier chargement de modèle prend 578 s
      * et 740 Mo ; ce délai coupait à 300. Le sous-processus mourait en plein téléchargement,

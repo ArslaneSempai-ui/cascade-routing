@@ -10,6 +10,9 @@
  */
 
 import { pipeline } from "@huggingface/transformers";
+import { fileURLToPath } from "node:url";
+import { join } from "node:path";
+import { existsSync, readdirSync, statSync } from "node:fs";
 import { FIELDS, TYPOLOGIES } from "./corpus.ts";
 import type { Field, ClientFile, Alert, Typology } from "./corpus.ts";
 
@@ -163,6 +166,37 @@ export const MODELES_LOCAUX: Record<string, { tag: string; digest: string }> = {
  * refuse de partir vers un hôte distant sans un consentement écrit dans la commande.
  */
 export const OLLAMA = process.env.OLLAMA_HOST ?? "http://localhost:11434";
+
+/**
+ * Les poids d'encodeur sont-ils déjà sur cette machine ?
+ *
+ * POURQUOI CETTE QUESTION REMPLACE UNE QUESTION DE DURÉE. Un cas qui lance le chemin client
+ * et l'entoure d'un délai suppose une vitesse de réseau. Le premier chargement prend 578 s
+ * mesurées sur un lien ; sur un lien deux fois plus lent, n'importe quel délai qu'on choisit
+ * se fait dépasser. Un chiffre de marge est un chiffre contre un seul réseau.
+ *
+ * La présence des poids, elle, ne dépend d'aucun réseau. On la regarde, et le mur de dix
+ * minutes devient une étape nommée au lieu d'un cas de test qui meurt à mi-téléchargement.
+ *
+ * Les poids vivent sous `node_modules`, ce que le paquet décide et pas nous — donc on cherche
+ * les dossiers de modèles plutôt que d'affirmer un chemin de fichier. Si la bibliothèque
+ * change sa disposition, cette fonction rend `false` et le cas se déclare ignoré : c'est la
+ * bonne dégradation, elle ne fabrique pas un vert.
+ */
+export function poidsEnCache(racine?: string): boolean {
+  const base = racine ?? fileURLToPath(new URL("../node_modules/@huggingface/transformers/.cache", import.meta.url));
+  if (!existsSync(base)) return false;
+  /* Un dossier de modèle vide compte pour absent : un téléchargement coupé en laisse. */
+  const pese = (d: string): number => {
+    let n = 0;
+    for (const e of readdirSync(d, { withFileTypes: true })) {
+      const p = join(d, e.name);
+      n += e.isDirectory() ? pese(p) : statSync(p).size;
+    }
+    return n;
+  };
+  try { return pese(base) > 50_000_000; } catch { return false; }
+}
 
 /**
  * Les modèles déjà sollicités DANS CE PROCESSUS.
