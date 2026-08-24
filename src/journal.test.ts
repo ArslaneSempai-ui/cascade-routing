@@ -1342,3 +1342,53 @@ test("les crochets qui refusent sont versionnés, et installés", () => {
     `crochet(s) inutilisable(s) : ${manquants.join(", ")}.\n`
     + "  → un dépôt public sans son refus de poussée n'a que l'intention de ne pas se tromper.");
 });
+
+/*
+ * ─── AUCUN PAQUET N'EXÉCUTE DE CODE À L'INSTALLATION, ET CHACUN EST ÉPINGLÉ ───
+ *
+ * Deux propriétés qu'un service de sécurité bancaire demande sur un questionnaire, et qui
+ * se perdent en silence le jour où quelqu'un ajoute une dépendance.
+ *
+ * UN SCRIPT D'INSTALLATION EST DU CODE QUI TOURNE SUR LA MACHINE DU CLIENT avant qu'une
+ * seule ligne de la nôtre s'exécute — pendant `npm install`, avec ses droits, et sans que
+ * rien de notre promesse s'applique encore. C'est la voie qu'empruntent les compromissions
+ * de chaîne d'approvisionnement, et elle contredit directement « rien ne sort de votre
+ * machine » : à ce moment-là, ce n'est plus notre outil qui décide.
+ *
+ * UNE EMPREINTE MANQUANTE veut dire qu'un paquet peut être remplacé sur le registre sans
+ * que l'installation le refuse. `npm ci` vérifie ce que le verrou déclare ; ce qu'il ne
+ * déclare pas n'est pas vérifié.
+ *
+ * Mesuré le 25 août 2026 avec l'auditeur de chaîne d'approvisionnement de Trail of Bits :
+ * 81 paquets, 0 avis de sécurité connu, 0 script d'installation, 0 sans empreinte. Ce cas
+ * fige les deux propriétés pour qu'elles ne se perdent pas entre deux `npm install`.
+ */
+test("aucune dépendance n'exécute de code à l'installation, et toutes sont épinglées", () => {
+  const racine = fileURLToPath(new URL("..", import.meta.url));
+  const verrou = JSON.parse(readFileSync(join(racine, "package-lock.json"), "utf8")) as {
+    packages: Record<string, { resolved?: string; integrity?: string; link?: boolean; scripts?: Record<string, string> }>;
+  };
+  const reels = Object.entries(verrou.packages).filter(([k, v]) => k !== "" && !v.link);
+
+  /* LE DÉNOMINATEUR D'ABORD : un verrou vide passerait les deux assertions suivantes sans
+     avoir rien regardé, et c'est exactement la forme du vert vide. */
+  assert.ok(reels.length >= 50,
+    `${reels.length} paquet(s) lus dans package-lock.json : la lecture a échoué, et un zéro `
+    + "obtenu sur une liste vide ne dit rien.");
+
+  const AUX_INSTALLATIONS = ["preinstall", "install", "postinstall"] as const;
+  const executent = reels
+    .filter(([, v]) => AUX_INSTALLATIONS.some((s) => v.scripts?.[s]))
+    .map(([k, v]) => `${k} (${AUX_INSTALLATIONS.filter((s) => v.scripts?.[s]).join(", ")})`);
+  assert.deepEqual(executent, [],
+    `${executent.length} paquet(s) exécutent du code pendant « npm install » :\n  ${executent.join("\n  ")}\n`
+    + "  → ce code tourne sur la machine du client avant la nôtre, avec ses droits, et rien\n"
+    + "    de ce que le produit promet ne s'y applique encore.\n"
+    + "  → si la dépendance est indispensable, `npm ci --ignore-scripts` et le dire au client.");
+
+  const sansEmpreinte = reels.filter(([, v]) => v.resolved && !v.integrity).map(([k]) => k);
+  assert.deepEqual(sansEmpreinte, [],
+    `${sansEmpreinte.length} paquet(s) sans empreinte d'intégrité : ${sansEmpreinte.slice(0, 5).join(", ")}\n`
+    + "  → « npm ci » ne vérifie que ce que le verrou déclare. Ce qui n'est pas déclaré peut\n"
+    + "    être remplacé sur le registre sans que l'installation le refuse.");
+});
