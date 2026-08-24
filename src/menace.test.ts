@@ -48,10 +48,27 @@ test("le document nomme ce qui n'est pas tenu, il ne le compte pas", () => {
 test("le relevé d'historique est scellé sur un commit atteignable", () => {
   const f = new URL("../menace-historique.json", import.meta.url);
   if (!existsSync(f)) return;   // pas encore balayé : `npm run menace -- --historique`
-  const r = JSON.parse(readFileSync(f, "utf8")) as { commits: number; trouves: number; temoins: number; commit: string; date: string };
+  const r = JSON.parse(readFileSync(f, "utf8")) as {
+    commits: number; trouves: number; declares: number; temoins: number; commit: string; date: string;
+    reels: Array<{ forme: string; fichier: string; empreinte: string }>;
+  };
   assert.equal(r.temoins, 2,
     "le balayage de l'historique n'a pas retrouvé ses deux témoins : son zéro ne vaut rien.");
   assert.ok(r.commits > 0 && /^\d{4}-\d{2}-\d{2}$/.test(r.date));
+
+  /*
+   * AUCUNE TROUVAILLE NON DÉCLARÉE. Et le compte publié doit se boucler : `trouves` moins
+   * `declares` doit valoir exactement ce que `reels` énumère, sinon le relevé annonce un
+   * chiffre que sa propre liste contredit — le rouge vide, où le nombre et le verdict ne
+   * viennent pas de la même source.
+   */
+  assert.deepEqual(r.reels, [],
+    "des chaînes de forme secrète sont dans l'historique sans être déclarées.");
+  assert.equal(r.trouves - r.declares, r.reels.length,
+    `le relevé annonce ${r.trouves} trouvailles dont ${r.declares} déclarées, mais énumère ${r.reels.length} non déclarée(s).`);
+  assert.ok(r.declares > 0,
+    "aucune trouvaille déclarée : les leurres plantés dans nos propres cas de test ne sont plus vus,\n"
+    + "  donc le détecteur ne détecte plus, donc ce zéro ne vaut rien.");
   /* UN RELEVÉ SCELLÉ SUR UNE BRANCHE ABANDONNÉE RASSURE SUR UN DÉPÔT QUI N'EXISTE PLUS.
      On vérifie que le commit est réellement dans l'historique d'où l'on parle. */
   const vu = spawnSync("git", ["cat-file", "-e", `${r.commit}^{commit}`], { cwd: racine });

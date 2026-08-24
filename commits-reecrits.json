@@ -15,6 +15,36 @@
       "contentEvidence": "The relevé records `charge.externalBefore` for every tier. `19d19e8` introduces that field to src/measure.ts (4 occurrences); its predecessor `c199da4` has none. The relevé cannot have been produced by any earlier commit.",
       "timeEvidence": "The pass ran 2026-08-20T10:08:32Z to 10:40:28Z with a clean tree. `19d19e8` was committed at 10:07:29Z, 63 seconds before it started, and the next commit in the repository is 4871dd8 at 16:56:53Z — six hours and forty-eight minutes after the pass finished.",
       "limit": "The original object is gone from this repository and from its reflog, so the two hashes cannot be shown to name the same tree. The claim is that they name the same code, established by the two arguments above, not that the mapping was recorded at the time. It was not."
+    },
+    {
+      "missing": "4b4f2b4",
+      "nowAt": "9494259",
+      "citedBy": [
+        "document.json"
+      ],
+      "establishedBy": "recorded at rewrite time, 2026-08-24",
+      "contentEvidence": "Both commits carry the subject « The optimiser was arguing about the small variable » and the same tree for every path except the three licensed modules, which the rewrite removed.",
+      "why": "History from origin/main to HEAD was rewritten to keep politique.ts, exposition.ts and document.ts out of the public repository before any push. The rewrite changed every hash after the first affected commit."
+    },
+    {
+      "missing": "5474cee",
+      "nowAt": "4c5b64e",
+      "citedBy": [
+        "dur.json"
+      ],
+      "establishedBy": "recorded at rewrite time, 2026-08-24",
+      "contentEvidence": "Both commits carry the subject « Pruning had no notion of which journal anything depends on ».",
+      "why": "Same rewrite as 4b4f2b4."
+    },
+    {
+      "missing": "075f0c9",
+      "nowAt": "3386da1",
+      "citedBy": [
+        "menace-historique.json"
+      ],
+      "establishedBy": "recorded at rewrite time, 2026-08-24",
+      "contentEvidence": "Same tree; only the commit message changed, from French to English, in the second rewrite.",
+      "why": "A second rewrite translated six commit messages back into English, the language of the rest of the history. Message-only, but a message is part of the commit, so the hash changed."
     }
   ]
 }

@@ -27,6 +27,7 @@
 import { readFileSync, existsSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
 
 export type Verdict = "tenu" | "non tenu" | "hors de portée";
@@ -289,7 +290,13 @@ que ça ne se lit dans aucun fichier.
 ## Les secrets dans l'historique
 
 ${secretsHistorique
-  ? `${secretsHistorique.trouves} occurrence${secretsHistorique.trouves === 1 ? "" : "s"} sur **${secretsHistorique.commits} commits**, témoins retrouvés : ${secretsHistorique.temoins}/2 — relevé du ${secretsHistorique.date}, sous \`${secretsHistorique.commit}\`.
+  ? `**${secretsHistorique.reels.length} secret${secretsHistorique.reels.length === 1 ? "" : "s"} non déclaré${secretsHistorique.reels.length === 1 ? "" : "s"}** sur ${secretsHistorique.commits} commits — relevé du ${secretsHistorique.date}, sous \`${secretsHistorique.commit}\`.
+
+Le balayage a relevé ${secretsHistorique.trouves} trouvaille${secretsHistorique.trouves === 1 ? "" : "s"} au total, dont ${secretsHistorique.declares} déclarée${secretsHistorique.declares === 1 ? "" : "s"} dans
+\`secrets-declares.json\` : ce sont les leurres plantés dans nos propres cas de test, qui
+existent pour prouver que le détecteur détecte encore. Un chiffre issu d'une sélection porte
+le compte de ce qu'il écarte, et chaque écarté est nommé avec sa raison. Témoins retrouvés :
+${secretsHistorique.temoins}/2.
 
 Un fichier effacé reste dans les objets git : un secret retiré du dernier commit reste
 lisible pour toujours, et un dépôt public n'oublie rien. Le balayage porte donc sur
@@ -315,13 +322,24 @@ rien ne sort de la machine pendant une mesure — est un relevé distinct, rendu
  * même chemin que les vrais : c'est la seule façon de distinguer « rien trouvé » de « rien
  * lu », et c'est exactement l'erreur qui rend un audit de sécurité sans valeur.
  */
-export type ReleveHistorique = { commits: number; trouves: number; temoins: number; date: string; commit: string };
+/**
+ * Une trouvaille porte l'EMPREINTE de la valeur, jamais la valeur.
+ *
+ * Déclarer par « forme + fichier » excuserait n'importe quelle clé AWS déposée un jour dans
+ * ce fichier — un élargissement qui ouvre un faux vert sans rien fermer. Avec l'empreinte, la
+ * déclaration ne couvre que la chaîne exacte qui a été examinée, et une vraie clé posée à
+ * côté d'un leurre ressort.
+ *
+ * On garde l'empreinte plutôt que la valeur pour que ce fichier reste publiable même le jour
+ * où la trouvaille sera un vrai secret.
+ */
+export type Trouvaille = { forme: string; fichier: string; empreinte: string };
+export type ReleveHistorique = {
+  commits: number; trouves: number; declares: number; reels: Trouvaille[];
+  temoins: number; date: string; commit: string;
+};
 
 function balayerLHistorique(racine: string): ReleveHistorique {
-  /* Deux secrets synthétiques, injectés en tête du flux. Ils doivent être retrouvés PAR LE
-     DÉTECTEUR, pas par une recherche de chaîne : vérifier qu'une chaîne qu'on vient d'écrire
-     est présente ne prouve rien du tout. C'était la première version de cette garde, et elle
-     était vide. */
   const TEMOINS = "AKIAIOSFODNN7EXAMPLE\nhf_aBcDeFgHiJkLmNoPqRsTuVwXyZ0123456789\n";
   const ATTENDUS = ["clé AWS", "jeton Hugging Face"];
 
@@ -333,11 +351,6 @@ function balayerLHistorique(racine: string): ReleveHistorique {
 
   const patch = spawnSync("git", ["log", "-p", "--all", "--no-color"],
     { cwd: racine, encoding: "utf8", maxBuffer: 1024 * 1024 * 1024 });
-  /* TROIS FAÇONS DE NE RIEN LIRE, ET UNE SEULE SE VOIT DANS LE CODE DE RETOUR. Un dépassement
-     de tampon TRONQUE la sortie et pose `error` ; un `git` absent la laisse vide avec un code
-     non nul ; et une sortie anormalement courte pour le nombre de commits trahit les deux
-     sans les nommer. Les trois sont refusées, parce que chacune produit le même « rien
-     trouvé » rassurant. */
   if (patch.error) throw new Error(`git log a échoué : ${patch.error.message}. La sortie est tronquée, rien n'est publié.`);
   if (patch.status !== 0) throw new Error(`git log a rendu le code ${patch.status} : rien n'est publié.`);
   const PLANCHER = commits * 200;
@@ -348,14 +361,54 @@ function balayerLHistorique(racine: string): ReleveHistorique {
       + "  un balayage qui n'a rien lu ne trouve rien non plus.");
   }
 
-  const flux = TEMOINS + patch.stdout;
-  const vus = secretsDans(flux);
-  const temoins = ATTENDUS.filter((a) => vus.includes(a)).length;
-  /* Le réel, c'est ce que le détecteur trouve SANS les témoins. */
-  const trouves = secretsDans(patch.stdout).length;
+  const temoins = ATTENDUS.filter((a) => secretsDans(TEMOINS).includes(a)).length;
+
+  /*
+   * ON RETIENT LE FICHIER, PAS SEULEMENT LA FORME.
+   *
+   * Le premier balayage rendait « 3 secrets » sans dire où. Les trois étaient les leurres
+   * plantés dans nos propres cas de test — synthétiques, volontaires, et impossibles à
+   * distinguer d'une vraie fuite depuis un compte. Un relevé de sécurité qui crie au loup est
+   * celui qu'on finit par ne plus lire ; et les écarter en silence serait pire, parce qu'une
+   * vraie clé posée dans un fichier de test passerait avec eux.
+   *
+   * Chaque trouvaille est donc localisée — forme et fichier — puis confrontée aux
+   * déclarations. Ce qui n'est pas déclaré fait échouer le contrôle.
+   */
+  const trouvailles = new Map<string, Trouvaille>();
+  let fichier = "?";
+  for (const ligne of patch.stdout.split("\n")) {
+    if (ligne.startsWith("+++ b/")) { fichier = ligne.slice(6); continue; }
+    if (ligne.startsWith("--- ")) continue;
+    for (const [nom, motif] of FORMES_DE_SECRET) {
+      const m = ligne.match(motif);
+      if (!m) continue;
+      const empreinte = createHash("sha256").update(m[0]).digest("hex").slice(0, 16);
+      trouvailles.set(`${nom}|${fichier}|${empreinte}`, { forme: nom, fichier, empreinte });
+    }
+  }
+
+  const declares = lireDeclarations(racine);
+  const estDeclare = (t: Trouvaille) =>
+    declares.some((d) => d.forme === t.forme && d.fichier === t.fichier && d.empreinte === t.empreinte);
+  const reels = [...trouvailles.values()].filter((t) => !estDeclare(t));
 
   const tete = spawnSync("git", ["rev-parse", "--short", "HEAD"], { cwd: racine, encoding: "utf8" });
-  return { commits, trouves, temoins, date: new Date().toISOString().slice(0, 10), commit: tete.stdout.trim() };
+  return {
+    commits, temoins,
+    trouves: trouvailles.size,
+    declares: trouvailles.size - reels.length,
+    reels: reels.sort((a, b) => (a.fichier + a.forme).localeCompare(b.fichier + b.forme)),
+    date: new Date().toISOString().slice(0, 10),
+    commit: tete.stdout.trim(),
+  };
+}
+
+function lireDeclarations(racine: string): Trouvaille[] {
+  const f = join(racine, "secrets-declares.json");
+  if (!existsSync(f)) return [];
+  const j = JSON.parse(readFileSync(f, "utf8")) as { entries: Array<Trouvaille & { pourquoi: string }> };
+  return j.entries ?? [];
 }
 
 function principal() {
@@ -371,8 +424,17 @@ function principal() {
   if (process.argv.includes("--historique")) {
     const r = balayerLHistorique(racine);
     writeFileSync(relevé, JSON.stringify(r, null, 2) + "\n");
-    console.log(`${r.commits} commits balayés · ${r.trouves} secret(s) · témoins ${r.temoins}/2 · relevé scellé sous ${r.commit}.`);
+    console.log(`${r.commits} commits balayés · ${r.trouves} trouvaille(s) dont ${r.declares} déclarée(s) · `
+      + `${r.reels.length} non déclarée(s) · témoins ${r.temoins}/2 · scellé sous ${r.commit}.`);
     if (r.temoins < 2) { console.error("Les témoins n'ont pas traversé le tuyau : ce zéro n'a aucune valeur."); process.exit(1); }
+    if (r.reels.length > 0) {
+      console.error("\nTrouvaille(s) non déclarée(s) — à traiter comme de vrais secrets tant qu'elles ne le sont pas :");
+      for (const t of r.reels) console.error(`  ${t.forme} dans ${t.fichier}  (empreinte ${t.empreinte})`);
+      console.error("\n  Si c'est un leurre de test, déclarez-le dans secrets-declares.json avec sa raison.\n"
+        + "  Si c'en est un vrai : il est dans l'historique pour toujours, il faut le RÉVOQUER,\n"
+        + "  pas le retirer du dernier commit.");
+      process.exit(1);
+    }
   }
   const historique = existsSync(relevé)
     ? JSON.parse(readFileSync(relevé, "utf8")) as ReleveHistorique : null;

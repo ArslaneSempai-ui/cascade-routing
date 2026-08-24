@@ -38,7 +38,13 @@ que ça ne se lit dans aucun fichier.
 
 ## Les secrets dans l'historique
 
-0 occurrences sur **196 commits**, témoins retrouvés : 2/2 — relevé du 2026-08-24, sous `075f0c9`.
+**0 secrets non déclarés** sur 206 commits — relevé du 2026-08-24, sous `ad4f9c5`.
+
+Le balayage a relevé 4 trouvailles au total, dont 4 déclarées dans
+`secrets-declares.json` : ce sont les leurres plantés dans nos propres cas de test, qui
+existent pour prouver que le détecteur détecte encore. Un chiffre issu d'une sélection porte
+le compte de ce qu'il écarte, et chaque écarté est nommé avec sa raison. Témoins retrouvés :
+2/2.
 
 Un fichier effacé reste dans les objets git : un secret retiré du dernier commit reste
 lisible pour toujours, et un dépôt public n'oublie rien. Le balayage porte donc sur

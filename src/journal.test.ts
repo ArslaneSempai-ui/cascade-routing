@@ -200,8 +200,29 @@ test("chaque ligne porte sa formulation, référence comprise", () => {
  */
 test("aucun relevé livré ne cite un commit introuvable", () => {
   const racine = fileURLToPath(new URL("..", import.meta.url));
-  const releves = readdirSync(racine).filter((n) => /^profiles-.*\.json$/.test(n));
+  /*
+   * LA LISTE DES RELEVÉS SE DÉDUIT, ELLE NE SE RÉCITE PAS.
+   *
+   * Ce test ne regardait que `profiles-*.json`. Quatre autres relevés livrés portent un
+   * commit — document.json, dur.json, mur.json, menace-historique.json — et aucun n'était
+   * contrôlé. Un relevé neuf porteur d'un commit ne l'aurait pas été non plus, et son silence
+   * serait passé pour un accord. On prend donc tout fichier JSON de la racine qui CITE un
+   * commit, quel que soit son nom.
+   */
+  const citeUnCommit = (o: unknown): boolean => {
+    if (o === null || typeof o !== "object") return false;
+    for (const [k, v] of Object.entries(o as Record<string, unknown>)) {
+      if (k === "commit" && typeof v === "string" && /^[0-9a-f]{7,40}$/.test(v)) return true;
+      if (citeUnCommit(v)) return true;
+    }
+    return false;
+  };
+  const releves = readdirSync(racine)
+    .filter((n) => n.endsWith(".json") && !/^(package|package-lock|tsconfig)/.test(n))
+    .filter((n) => { try { return citeUnCommit(JSON.parse(readFileSync(join(racine, n), "utf8"))); } catch { return false; } });
   assert.ok(releves.length >= 3, `${releves.length} relevé(s) trouvé(s) : la lecture a échoué.`);
+  assert.ok(releves.some((n) => /^profiles-/.test(n)),
+    "aucun relevé de profils n'a été trouvé : la déduction de la liste a échoué et ce cas ne vérifie rien.");
 
   const carte = (() => {
     const f = join(racine, "commits-reecrits.json");
@@ -210,10 +231,44 @@ test("aucun relevé livré ne cite un commit introuvable", () => {
     return new Map(j.entries.map((e) => [e.missing, e.nowAt]));
   })();
 
-  const existe = (c: string) => {
-    try { execFileSync("git", ["cat-file", "-e", `${c}^{commit}`], { cwd: racine, stdio: "ignore" }); return true; }
+  /*
+   * ATTEIGNABLE DEPUIS HEAD, PAS SEULEMENT EXISTANT.
+   *
+   * `git cat-file -e` répond oui pour tout objet encore présent dans ce dépôt — y compris un
+   * commit que seule une branche de sauvegarde ou `refs/original` maintient en vie après une
+   * réécriture d'historique. Ces objets-là N'EXISTENT PAS dans un clone : la poussée n'envoie
+   * que ce qui est atteignable depuis la branche.
+   *
+   * Le test passait donc au vert ici et aurait échoué chez le lecteur — la pire forme du vert
+   * vide, celle qui ne se voit que chez quelqu'un d'autre. Deux réécritures ont eu lieu le
+   * 24 août 2026 et trois citations étaient orphelines sans que rien ne tombe.
+   */
+  const atteignable = (c: string) => {
+    try { execFileSync("git", ["merge-base", "--is-ancestor", c, "HEAD"], { cwd: racine, stdio: "ignore" }); return true; }
     catch { return false; }
   };
+
+  /*
+   * LE TÉMOIN. Un commit qui EXISTE mais n'est pas ancêtre de HEAD doit être vu comme perdu ;
+   * sinon la distinction ci-dessus n'est qu'une intention. Les branches de sauvegarde en
+   * fournissent un quand il y en a ; sinon on ne conclut pas plutôt que de faire semblant.
+   */
+  const horsLigne = (() => {
+    try {
+      const b = execFileSync("git", ["for-each-ref", "--format=%(refname:short)", "refs/heads/"],
+        { cwd: racine, encoding: "utf8" }).split("\n").filter(Boolean);
+      for (const nom of b) {
+        const h = execFileSync("git", ["rev-parse", nom], { cwd: racine, encoding: "utf8" }).trim();
+        if (!atteignable(h)) return h;
+      }
+    } catch { /* pas de git : on ne conclut pas */ }
+    return null;
+  })();
+  if (horsLigne) {
+    assert.equal(atteignable(horsLigne), false,
+      `${horsLigne} existe mais n'est pas dans l'historique de HEAD, et le contrôle le voit atteignable :\n`
+      + "  il teste l'existence, pas l'atteignabilité, et laisserait passer une citation morte.");
+  }
 
   let verifies = 0;
   const sansCommit: string[] = [];
@@ -231,7 +286,7 @@ test("aucun relevé livré ne cite un commit introuvable", () => {
     if (cites.size === 0) sansCommit.push(n);
     for (const c of cites) {
       verifies++;
-      if (existe(c)) continue;
+      if (atteignable(c)) continue;
       const vers = carte.get(c);
       assert.ok(vers,
         `${n} cite le commit ${c}, qui n'existe pas dans ce dépôt et n'est déclaré nulle part.\n`
@@ -239,7 +294,7 @@ test("aucun relevé livré ne cite un commit introuvable", () => {
         + `    ce qui est la seule raison d'enregistrer un commit.\n`
         + `  → soit l'historique a été réécrit et commits-reecrits.json doit le dire,\n`
         + `    soit le relevé doit être refait sous un commit qui existe.`);
-      assert.ok(existe(vers!),
+      assert.ok(atteignable(vers!),
         `${n} cite ${c}, redirigé vers ${vers}, qui n'existe pas non plus.`);
     }
   }
