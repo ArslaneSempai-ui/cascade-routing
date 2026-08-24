@@ -47,6 +47,47 @@ const SORTIE = fileURLToPath(new URL("../signal.json", import.meta.url));
 export const DENOMINATEUR = "toute valeur notée par un palier sur le corpus dur, blancs compris";
 
 /** Les règles de forme, déclarées ici et non apprises de la clé. */
+/**
+ * DEUX FAMILLES DE CARACTÈRES QUI NE SE VOIENT PAS, ET QUI DÉCIDENT.
+ *
+ * Une session de contrôle a mesuré ce qu'un fraudeur pourrait faire d'un document. Résultat
+ * sur le corpus, pilote : un ESPACE DE LARGEUR NULLE glissé dans un numéro de pièce fait
+ * basculer 100 % des extractions du palier le moins cher, et 0 % du suivant. Des HOMOGLYPHES
+ * cyrilliques — des lettres qui s'affichent comme des latines — font basculer les DEUX à
+ * 100 %. Aucun palier n'en protège.
+ *
+ * Ce n'est pas une question de justesse, c'est une question de sécurité, et elle est plus
+ * sévère : une chaîne dont le « a » est cyrillique s'affiche exactement comme la bonne, et
+ * ne s'appariera à AUCUNE liste de sanctions en aval. Personne ne le verra. Une valeur juste
+ * à l'œil et fausse à la comparaison est pire qu'une valeur vide.
+ *
+ * Ces deux fonctions ne corrigent rien — elles font douter. La correction serait une
+ * décision sur les données du client, et ce n'est pas à nous de la prendre en silence.
+ */
+
+/** Les caractères qui ne s'affichent pas mais comptent : largeur nulle, marques de sens, espaces exotiques. */
+export function porteDesInvisibles(v: string): boolean {
+  return /[\u200B-\u200F\u202A-\u202E\u2060-\u2064\uFEFF\u00AD\u180E]/.test(v)
+    /* L'espace insécable et ses variantes : visibles comme une espace, différentes à la comparaison. */
+    || /[\u00A0\u2000-\u200A\u202F\u205F\u3000]/.test(v);
+}
+
+/**
+ * Deux écritures dans un même mot. Pas dans une même valeur — « Владимир Petrov » est un nom
+ * translittéré à moitié, ce qui arrive légitimement. C'est le MOT qui trahit : aucun mot réel
+ * ne mélange du latin et du cyrillique, et c'est précisément ce que fait un homoglyphe.
+ */
+export function melangeDEcritures(v: string): boolean {
+  for (const mot of v.split(/\s+/)) {
+    if (mot.length < 2) continue;
+    const latin = /[A-Za-z\u00C0-\u024F]/.test(mot);
+    const cyrillique = /[\u0400-\u04FF]/.test(mot);
+    const grec = /[\u0370-\u03FF]/.test(mot);
+    if ([latin, cyrillique, grec].filter(Boolean).length > 1) return true;
+  }
+  return false;
+}
+
 export const FORME: Record<string, (v: string) => boolean> = {
   /* Une date de naissance porte une année à quatre chiffres. */
   birth: (v) => /\b(1[89]|20)\d{2}\b/.test(v),

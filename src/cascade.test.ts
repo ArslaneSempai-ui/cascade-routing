@@ -1,4 +1,5 @@
 import { test } from "node:test";
+import { porteDesInvisibles, melangeDEcritures } from "./signal.ts";
 import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
 import { PREMIER_COMMIT_MULTI_FORMULATION } from "./landing.ts";
@@ -4157,4 +4158,30 @@ test("tout ce qui peut ouvrir une connexion est déclaré, et le compte n'est pa
   const mortes = Object.keys(DECLARES).filter((f) => !trouves.has(f));
   assert.deepEqual(mortes, [],
     `déclaration(s) sans appel correspondant : ${mortes.join(", ")} — à retirer.`);
+});
+
+test("les deux caractères qui ne se voient pas déclenchent un doute", () => {
+  /*
+   * Mesuré sur le corpus par une session de contrôle, en pilote : un espace de largeur nulle
+   * glissé dans un numéro de pièce fait basculer 100 % des extractions du palier le moins
+   * cher et 0 % du suivant ; des homoglyphes cyrilliques font basculer les DEUX à 100 %.
+   * Aucun palier n'en protège, et la politique d'abstention ne les regardait pas.
+   *
+   * Ce n'est pas de la justesse, c'est de la sécurité, et c'est plus sévère : une valeur dont
+   * le « a » est cyrillique s'affiche exactement comme la bonne et ne s'appariera à AUCUNE
+   * liste de sanctions en aval. Personne ne le verra.
+   */
+  assert.equal(porteDesInvisibles("idPT​-6884-M"), true, "espace de largeur nulle");
+  assert.equal(porteDesInvisibles("Milan, Italie"), true, "espace insécable");
+  assert.equal(porteDesInvisibles("﻿Nadia"), true, "marque d'ordre des octets");
+  assert.equal(porteDesInvisibles("idPT-6884-M"), false, "témoin négatif : rien d'invisible");
+
+  assert.equal(melangeDEcritures("Ivаn"), true, "un « а » cyrillique dans un mot latin");
+  assert.equal(melangeDEcritures("Petrov"), false, "témoin négatif : un mot latin");
+  assert.equal(melangeDEcritures("Владимир"), false, "témoin négatif : un mot entièrement cyrillique");
+  /* C'EST LE MOT QUI TRAHIT, PAS LA VALEUR. « Владимир Petrov » est un nom translittéré à
+     moitié, ce qui arrive légitimement ; le refuser ferait s'abstenir sur des dossiers
+     parfaitement normaux, et un taux d'abstention gonflé par du bruit ne décide plus rien. */
+  assert.equal(melangeDEcritures("Владимир Petrov"), false, "deux mots, deux écritures, légitime");
+  assert.equal(melangeDEcritures("A"), false, "une lettre seule ne mélange rien");
 });
