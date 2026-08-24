@@ -2893,8 +2893,11 @@ test("chaque route du serveur existe et répond, et une origine étrangère est 
       "`localhost` et `127.0.0.1` sont deux origines distinctes pour un navigateur ; les "
       + "confondre reviendrait à accepter un hôte qu'on n'a pas servi.");
 
+    /* Même raison que ci-dessus : un corps légitime, sinon le 200 attendu pourrait venir
+       d'une requête sans effet plutôt que d'une origine absente acceptée. */
     const sansOrigine = await fetch(`${base}/api/routage`, {
-      method: "POST", headers: { "content-type": "application/json" }, body: "{}",
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ champ: FIELDS[0], palier: "rules" }),
     });
     assert.equal(sansOrigine.status, 200,
       "un client hors navigateur — curl, un script, nos propres contrôles — est refusé alors "
