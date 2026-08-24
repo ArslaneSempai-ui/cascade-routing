@@ -26,6 +26,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # L'HISTORIQUE ENTIER, ET C'EST LA RAISON POUR LAQUELLE CETTE PASSE ÉTAIT ROUGE.
+          #
+          # `checkout` clone à profondeur 1 par défaut : un seul commit. Or plusieurs cas
+          # interrogent l'historique — quel commit a introduit un choix de formulation, si la
+          # notation d'un corpus a bien été committée AVANT la mesure qu'elle régit, si un
+          # relevé livré cite un commit qui existe. Sur un clone tronqué, ils tombent tous, et
+          # ils ont raison de tomber : l'historique n'est pas là.
+          #
+          # Cinq passes rouges d'affilée, et le dépôt public portait une croix sur son dernier
+          # commit. Les cas n'étaient pas faux — l'environnement l'était. Corrigé après avoir
+          # lu les journaux plutôt qu'après avoir supposé.
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: '24'

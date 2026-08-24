@@ -1028,3 +1028,29 @@ test("la page publiée porte le code du dépôt, pas celui d'un commit passé", 
     + "  → la page de vente fait tourner du code que le dépôt a déjà corrigé.\n"
     + "    Relancez `npm run pages`.");
 });
+
+test("l'intégration continue clone l'historique entier, sinon quatre cas tombent chez elle seule", () => {
+  /*
+   * `actions/checkout` clone à PROFONDEUR 1 par défaut : un seul commit. Or plusieurs cas de
+   * cette suite interrogent l'historique — quel commit a introduit un choix de formulation,
+   * si la notation d'un corpus a été committée AVANT la mesure qu'elle régit, si un relevé
+   * livré cite un commit qui existe, si la galerie versionnée porte encore sa clé.
+   *
+   * Sur un clone tronqué ils tombent tous, et ils ont raison de tomber : l'historique n'est
+   * pas là. CINQ PASSES ROUGES D'AFFILÉE, et le dépôt public portait une croix sur son dernier
+   * commit pendant ce temps. Les cas n'étaient pas faux ; l'environnement l'était.
+   *
+   * Contre-épreuve faite dans les deux sens avant d'écrire ce cas : un clone `--depth 1` par
+   * `file://` fait tomber exactement quatre cas, un clone complet n'en fait tomber aucun. Le
+   * premier essai était vide — `git clone --depth 1 .` depuis un chemin local partage le
+   * magasin d'objets et n'est pas tronqué du tout.
+   */
+  const f = fileURLToPath(new URL("../.github/workflows/verifier.yml", import.meta.url));
+  if (!existsSync(f)) return t2skip();
+  const y = readFileSync(f, "utf8");
+  assert.match(y, /uses: actions\/checkout/, "la passe ne récupère plus le dépôt : ce cas ne vérifie rien.");
+  assert.match(y, /fetch-depth:\s*0/,
+    "l'intégration continue clone en profondeur 1 : les cas qui lisent l'historique tomberont\n"
+    + "  chez elle et nulle part ailleurs, et personne ne saura pourquoi.");
+});
+function t2skip(): void { throw new Error(".github/workflows/verifier.yml est absent : la passe d'intégration continue a disparu."); }
