@@ -1287,3 +1287,58 @@ test("le détecteur de devise se déclenche, et se tait sur le français", () =>
     "`écrit dans ${SORTIE}`",
   ]) assert.ok(!DEVISE_RENDUE.test(t), `faux positif : ${t}`);
 });
+
+/*
+ * ─── UNE PROTECTION QUI N'EST PAS INSTALLÉE EST UNE INTENTION ───
+ *
+ * Les crochets de ce dépôt refusent deux choses qui ne se rattrapent pas : un commit dont
+ * l'arbre de travail diffère de ce qui serait enregistré, et une poussée qui emporterait du
+ * code licencié dans son historique. Ce dépôt est public ; une publication ne s'annule pas.
+ *
+ * Ils vivaient dans `.git/hooks`, que git ne transporte pas. Donc un clone neuf, une autre
+ * machine, ou simplement un `git clone` fait pour vérifier quelque chose, n'avait AUCUNE de
+ * ces deux protections — et rien ne le disait. La protection existait sur exactement une
+ * machine, et personne n'aurait su laquelle.
+ *
+ * Ils sont versionnés maintenant, et `core.hooksPath` les désigne. Ce cas vérifie les deux :
+ * le réglage ET le contenu. Le réglage seul laisserait passer un dossier vide.
+ */
+test("les crochets qui refusent sont versionnés, et installés", () => {
+  const racine = fileURLToPath(new URL("..", import.meta.url));
+
+  /*
+   * `git config <clé>` SORT EN ERREUR quand la clé n'existe pas — il ne rend pas une chaîne
+   * vide. Sans ce `catch`, le cas mourait sur l'exception de git et le lecteur voyait le
+   * message de git, pas le mien : « Command failed », sans la ligne qui dit quoi taper.
+   *
+   * Trouvé en jouant la contre-épreuve, qui n'a rien affiché du tout là où j'attendais mon
+   * refus. Le contrôle détectait bien ; c'est sa façon de le dire qui était cassée, et ce cas
+   * de figure — la garde juste au message inutilisable — est le troisième en deux jours.
+   */
+  const chemin = (() => {
+    try {
+      return execFileSync("git", ["config", "core.hooksPath"],
+        { cwd: racine, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
+    } catch { return ""; }
+  })();
+  assert.equal(chemin, ".githooks",
+    `core.hooksPath vaut « ${chemin} » : les crochets de ce dépôt ne sont pas ceux qui tournent.\n`
+    + "  → git config core.hooksPath .githooks");
+
+  /* Le contenu, pas seulement la présence : un fichier vide passerait le contrôle ci-dessus. */
+  const attendus: Record<string, RegExp> = {
+    "pre-push": /LICENCIE|cascade-licencie/,
+    "pre-commit": /git diff --name-only|MODIFICATION NON INDEXÉE/,
+  };
+  const manquants: string[] = [];
+  for (const [nom, motif] of Object.entries(attendus)) {
+    const p = join(racine, ".githooks", nom);
+    if (!existsSync(p)) { manquants.push(`${nom} (absent)`); continue; }
+    if (!motif.test(readFileSync(p, "utf8"))) manquants.push(`${nom} (ne porte plus son refus)`);
+    /* Un crochet non exécutable est ignoré par git EN SILENCE — le pire des trois états. */
+    if ((statSync(p).mode & 0o111) === 0) manquants.push(`${nom} (non exécutable : git l'ignore sans rien dire)`);
+  }
+  assert.deepEqual(manquants, [],
+    `crochet(s) inutilisable(s) : ${manquants.join(", ")}.\n`
+    + "  → un dépôt public sans son refus de poussée n'a que l'intention de ne pas se tromper.");
+});

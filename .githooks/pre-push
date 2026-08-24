@@ -1,0 +1,99 @@
+#!/bin/sh
+#
+# QUI A POUSSÉ, ET QUAND.
+#
+# Le 24 août 2026, dix-sept dépôts sont partis en ligne entre 01:51 et 02:59 depuis cette
+# machine. Personne n'a pu dire qui : toutes les sessions committent et poussent sous la même
+# identité git, le territoire ne dit plus qui écrit, et l'horodatage seul a fait attribuer
+# deux fois de suite un travail au mauvais auteur.
+#
+# Ce crochet ne juge rien et ne bloque JAMAIS — une garde qui empêche une poussée légitime se
+# fait retirer, et on perdrait aussi la trace. Il écrit une ligne, et sort à zéro quoi qu'il
+# arrive.
+#
+# Ce qu'il enregistre en plus de la date : la chaîne des processus parents. C'est le seul
+# élément qui sépare deux sessions partageant tout le reste.
+JOURNAL="$HOME/Documents/rapports/poussees.log"
+# Le dossier d'abord. Sans lui la redirection échoue, la poussée aboutit quand même, et
+# l'absence de ligne se lit comme une absence de poussée — le silence exact que ce crochet
+# existe pour empêcher. Signalé par une session pair qui a monté le cas plutôt que le supposer.
+mkdir -p "$(dirname "$JOURNAL")" 2>/dev/null
+{
+  DEPOT=$(basename "$(git rev-parse --show-toplevel 2>/dev/null)" 2>/dev/null)
+  TETE=$(git rev-parse --short HEAD 2>/dev/null)
+  # La chaîne des parents, remontée tant qu'il y en a une.
+  CHAINE=""; P=$PPID; N=0
+  while [ -n "$P" ] && [ "$P" -gt 1 ] && [ $N -lt 6 ]; do
+    NOM=$(ps -o comm= -p "$P" 2>/dev/null | sed 's|.*/||')
+    [ -z "$NOM" ] && break
+    CHAINE="$CHAINE$NOM($P)<-"
+    P=$(ps -o ppid= -p "$P" 2>/dev/null | tr -d ' ')
+    N=$((N + 1))
+  done
+  # `tty` sort en erreur ET écrit « not a tty » : sans ça la ligne se coupait en deux, et un
+  # journal dont une entrée tient sur deux lignes ne se relit plus à la commande.
+  TTY=$(tty 2>/dev/null)
+  case "$TTY" in "" | *"not a tty"*) TTY="aucun" ;; esac
+  printf '%s  %-16s HEAD=%-10s tty=%-12s %s\n' \
+    "$(date '+%Y-%m-%d %H:%M:%S')" "$DEPOT" "$TETE" "$TTY" "$CHAINE"
+} >> "$JOURNAL" 2>/dev/null
+# ─── RIEN DE LICENCIÉ NE FRANCHIT CETTE LIGNE ───
+#
+# Ce dépôt est PUBLIC. Le composant licencié vit ailleurs — c'est ce qu'on vend, et il ne se
+# republie pas. Avant la séparation des dépôts, ses fichiers ont vécu ici : la branche
+# `avant-coupure-2026-08-24` les porte encore dans son historique, et retirer un fichier de
+# HEAD ne le retire pas du dépôt. Un `git push` de cette branche les publie pour toujours.
+#
+# Trouvé le 25 août 2026 par une session pair, avec 110 commits en attente de poussée. Le
+# crochet journalisait et rendait 0 : il n'y avait AUCUN mécanisme entre ces fichiers et le
+# public, seulement l'intention de ne pas se tromper de branche.
+#
+# LA LISTE EST DÉRIVÉE DU DÉPÔT LICENCIÉ, PAS ÉCRITE ICI. Une liste écrite à la main oublie
+# le fichier ajouté demain — c'est la faute que ce dépôt passe ses journées à corriger. Et si
+# la dérivation ne marche pas, on REFUSE : un contrôle qui ne sait pas ce qu'il protège ne
+# doit pas rendre « rien à signaler ».
+LICENCIE="$HOME/Documents/cascade-licencie/src"
+if [ ! -d "$LICENCIE" ]; then
+  echo "" >&2
+  echo "  DÉPÔT LICENCIÉ INTROUVABLE — impossible de savoir ce qui ne doit pas sortir." >&2
+  echo "  Cherché : $LICENCIE" >&2
+  echo "" >&2
+  echo "  → clonez-le à côté, ou   git push --no-verify   si vous savez pourquoi." >&2
+  exit 1
+fi
+NOMS=$(ls "$LICENCIE" | grep -E '\.ts$' | grep -v '\.test\.ts$')
+if [ -z "$NOMS" ]; then
+  echo "  aucun module licencié trouvé dans $LICENCIE : la dérivation ne marche plus, on refuse." >&2
+  exit 1
+fi
+
+TROUVES=""
+while read -r ref_local sha_local ref_dist sha_dist; do
+  [ "$sha_local" = "0000000000000000000000000000000000000000" ] && continue   # suppression
+  # Une nouvelle branche n'a pas de « depuis » : on regarde tout son historique.
+  case "$sha_dist" in
+    0000000000000000000000000000000000000000) PORTEE="$sha_local --not --remotes" ;;
+    *) PORTEE="$sha_dist..$sha_local" ;;
+  esac
+  for n in $NOMS; do
+    if git log --oneline $PORTEE --name-only -- "src/$n" 2>/dev/null | grep -q "^src/$n$"; then
+      TROUVES="$TROUVES\n    src/$n  (dans $ref_local)"
+    fi
+  done
+done
+
+if [ -n "$TROUVES" ]; then
+  echo "" >&2
+  echo "  POUSSÉE REFUSÉE — du code licencié est dans l'historique de ce qui partirait." >&2
+  printf "%b\n" "$TROUVES" >&2
+  echo "" >&2
+  echo "  Ce dépôt est public. Retirer un fichier de HEAD ne le retire pas du dépôt :" >&2
+  echo "  quiconque clone récupère l'objet, et une publication ne se rattrape pas." >&2
+  echo "" >&2
+  echo "  → ne poussez PAS cette branche. Poussez « main », qui n'en porte aucun." >&2
+  echo "  → ou réécrivez l'historique de la branche avant de la pousser." >&2
+  echo "  → git push --no-verify   passe outre, et publie. Il n'y a pas de retour." >&2
+  exit 1
+fi
+
+exit 0

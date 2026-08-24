@@ -1,0 +1,77 @@
+#!/bin/sh
+#
+# ET LA SUITE, PARCE QUE J'AI COMMITÉ ROUGE TROIS FOIS EN UNE JOURNÉE.
+#
+# Ce crochet ne lançait que les contrôles de documents engendrés — treize secondes, ce qui
+# était le bon arbitrage tant que la suite en prenait quarante. Elle en prend trente
+# aujourd'hui, et trois commits sont partis avec un cas rouge dedans parce que je ne l'avais
+# pas lancée. « Je la lance toujours avant » est une intention ; un crochet n'en est pas une.
+#
+# `--no-verify` reste là pour qui sait pourquoi il passe outre.
+#
+# CE DÉPÔT LIVRE DES DOCUMENTS ENGENDRÉS, ET ILS SE PÉRIMENT EN SILENCE.
+#
+# README.md, landing.json, VALIDATION.md et SONDE.md sont écrits par le code. Un commit qui
+# change le code sans les régénérer livre une page qui ment — c'est déjà arrivé, et la garde
+# qui l'attrape vit dans `npm test`, donc APRÈS le moment où l'on commite.
+#
+# Le 24 août 2026, un commit est parti avec le README périmé parce que la commande qui le
+# vérifiait était séparée du `git commit` par un point-virgule au lieu d'un `&&`. La règle
+# existait, elle attendait qu'on s'en souvienne. Celle-ci se déclenche.
+#
+# Elle ne remplace pas `npm test` : elle ne joue AUCUN cas. Elle vérifie seulement que les
+# documents livrés correspondent au code — treize secondes, la partie qui se périme.
+#
+# Pour passer outre une fois : git commit --no-verify
+echo "  contrôle des documents engendrés…"
+if ! (node src/readme.ts --check && node src/landing.ts --check \
+      && node src/dossier.ts --check && node src/sonde.ts --check) > /tmp/cascade-pre-commit.log 2>&1; then
+  echo ""
+  echo "  DOCUMENT ENGENDRÉ PÉRIMÉ — ce commit livrerait une page qui ne suit plus le code."
+  echo ""
+  sed 's/^/    /' /tmp/cascade-pre-commit.log
+  echo ""
+  echo "  → npm run figures    puis recommencer."
+  echo "  → git commit --no-verify   si vous savez pourquoi vous passez outre."
+  exit 1
+fi
+
+# ─── CE CROCHET CONTRÔLE L'ARBRE DE TRAVAIL, DONC LE COMMIT DOIT LUI ÊTRE ÉGAL ───
+#
+# Tout ce qui précède et tout ce qui suit lit les fichiers SUR LE DISQUE. Si un fichier
+# modifié n'est pas dans l'index, le crochet valide une chose et git en enregistre une autre.
+#
+# Payé le 25 août 2026, et trouvé par une session voisine, pas par moi : le commit `a0fb723`
+# est parti sans `README.md` ni `failures-reference.json`, tous deux régénérés juste avant.
+# Chez moi tout était vert ; dans un clone neuf de ce commit, `readme.ts --check` sortait 1 et
+# la galerie versionnée échouait. J'avais publié un état qui ne tenait pas debout tout seul.
+#
+# La cause est le revers d'une bonne règle : on ajoute les fichiers PAR LEUR NOM, jamais avec
+# `-A`, pour ne pas emporter le travail en cours d'une autre session. Une liste écrite à la
+# main oublie — c'est la faute que ce dépôt passe ses journées à corriger ailleurs. Il lui
+# manquait sa moitié : quelque chose qui confronte la liste à ce qui a bougé.
+#
+# On ne devine pas ce qui est « engendré » : toute modification non indexée fait refuser, avec
+# la liste. Une liste de fichiers engendrés serait exactement la liste écrite à la main qui a
+# causé le problème.
+naipas=$(git diff --name-only)
+if [ -n "$naipas" ]; then
+  printf '\n  MODIFICATION NON INDEXÉE — le crochet contrôle le disque, git enregistrerait autre chose.\n\n'
+  printf '%s\n' "$naipas" | sed 's/^/    /'
+  printf '\n  → git add <ces fichiers>   si le commit doit les emporter (souvent : un artefact régénéré).\n'
+  printf '  → git stash push -- <fichiers>   si le commit ne doit PAS les emporter.\n'
+  printf '  → git commit --no-verify   si vous savez pourquoi vous livrez un état non contrôlé.\n'
+  exit 1
+fi
+
+printf '  suite de cas…\n'
+if ! sortie=$(node --test src/*.test.ts 2>&1); then
+  printf '\n  CAS ROUGE — ce commit emporterait un test qui échoue.\n\n'
+  printf '%s\n' "$sortie" | grep -E '^✖|AssertionError' | head -8 | sed 's/^/    /'
+  printf '\n  → corriger, ou   git commit --no-verify   si vous savez pourquoi.\n'
+  exit 1
+fi
+ignores=$(printf '%s' "$sortie" | grep -oE '^# skipped [0-9]+' | grep -oE '[0-9]+')
+[ "${ignores:-0}" != "0" ] && printf '  %s cas ignoré(s) — un cas qui ne regarde pas ne compte pas comme un cas passé.\n' "$ignores"
+
+exit 0
