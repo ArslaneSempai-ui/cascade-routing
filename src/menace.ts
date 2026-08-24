@@ -247,40 +247,40 @@ export function controles(racine: string): Controle[] {
    * Les trois contrôles existent toujours, dans les deux cas. Trouvé par une session de
    * contrôle le 24 août 2026.
    */
-  const CONTROLES_SERVEUR = ["Adresse d'écoute", "Racine servie", "Corps de requête borné"] as const;
+  const CONTROLES_SERVEUR = ["Listening address", "Served root", "Request body bounded"] as const;
   const serveur = lire("src/server.ts");
   if (serveur === null) {
     for (const nom of CONTROLES_SERVEUR) {
-      ajout(nom, null, "src/server.ts est absent : ce contrôle n'a rien pu regarder.", "0 fichier lu");
+      ajout(nom, null, "src/server.ts is missing: this check could look at nothing.", "0 files read");
     }
   } else {
     const a = adresseDEcoute(serveur);
-    ajout("Adresse d'écoute", a === "boucle locale",
-      `Le serveur écoute sur ${a}. Une écoute sur toutes les interfaces le rend joignable depuis le réseau local, donc depuis un wifi partagé.`,
+    ajout("Listening address", a === "boucle locale",
+      `The server listens on ${a === "boucle locale" ? "the loopback" : a === "toutes interfaces" ? "all interfaces" : "nothing"}. Listening on all interfaces makes it reachable from the local network, and therefore from a shared wifi.`,
       "src/server.ts");
     const r = racineServie(serveur);
-    ajout("Racine servie", !r.construitDepuisLUrl,
+    ajout("Served root", !r.construitDepuisLUrl,
       r.construitDepuisLUrl
-        ? "Un chemin de fichier est assemblé à partir de l'URL : le serveur peut être sorti de sa racine."
-        : `Seuls des chemins littéraux sont servis (${r.liste.join(", ") || "aucun"}). L'URL est comparée, jamais concaténée.`,
+        ? "A file path is assembled from the URL: the server can be walked out of its root."
+        : `Only literal paths are served (${r.liste.join(", ") || "none"}). The URL is compared, never concatenated.`,
       "src/server.ts");
     const b = bornePosee(serveur);
-    ajout("Corps de requête borné", b.plafond && b.fluxCoupe,
+    ajout("Request body bounded", b.plafond && b.fluxCoupe,
       b.plafond && !b.fluxCoupe
-        ? "Un plafond existe mais le flux n'est pas coupé : la promesse est réglée pendant que les octets continuent d'arriver."
-        : b.plafond ? "Le corps est plafonné et la socket est détruite à la borne."
-        : "Aucun plafond sur le corps d'une requête.",
+        ? "A cap exists but the stream is not cut: the promise settles while the bytes keep arriving."
+        : b.plafond ? "The body is capped and the socket destroyed at the limit."
+        : "No cap on a request body at all.",
       "src/server.ts");
   }
 
   const ecran = lire("src/ui.html");
-  if (ecran === null) ajout("Ressources externes", null, "src/ui.html est absent.", "0 fichier lu");
+  if (ecran === null) ajout("Third-party resources", null, "src/ui.html is missing.", "0 files read");
   else {
     const h = hotesExternes(ecran);
-    ajout("Ressources externes", h.length === 0,
+    ajout("Third-party resources", h.length === 0,
       h.length === 0
-        ? "L'écran ne charge rien depuis un domaine tiers. Une dépendance chargée depuis un domaine qu'on ne contrôle pas s'exécute avec les droits de la page."
-        : `Hôtes contactés : ${h.join(", ")}.`,
+        ? "The screen loads nothing from a third-party domain. A dependency loaded from a domain you do not control runs with the page's privileges."
+        : `Hosts contacted: ${h.join(", ")}.`,
       "src/ui.html");
   }
 
@@ -289,23 +289,23 @@ export function controles(racine: string): Controle[] {
   /* LE CONSTAT DISAIT LA MÊME CHOSE DANS LES DEUX CAS. Quand il échouait, la phrase
      affirmait exactement ce qui était faux — un tableau où l'on doit lire la colonne
      « verdict » pour savoir si la colonne « constat » ment. */
-  ajout("Données du client non versionnées", dataIgnore,
+  ajout("Client data unversioned", dataIgnore,
     dataIgnore
-      ? "Les mesures faites sur les données d'un client vivent dans data/, qui est ignoré par git. Ce qui n'est pas versionné ne part pas dans un dépôt public."
+      ? "Measurements taken on a client's data live in data/, which git ignores. What is not versioned does not travel into a public repository."
       : ignore === null
-        ? "Aucun .gitignore : rien n'empêche les mesures faites sur les données d'un client de partir au premier commit."
-        : "data/ n'est pas ignoré par git : les mesures faites sur les données d'un client partiraient dans le dépôt public au premier commit.",
+        ? "No .gitignore at all: nothing stops measurements taken on a client's data from leaving at the first commit."
+        : "data/ is not ignored by git: measurements taken on a client's data would go into the public repository at the first commit.",
     ".gitignore");
 
   const verrou = lire("package-lock.json");
-  if (verrou === null) ajout("Empreinte des dépendances", null, "package-lock.json est absent.", "0 fichier lu");
+  if (verrou === null) ajout("Dependency fingerprints", null, "package-lock.json is missing.", "0 files read");
   else {
     const i = integriteDuVerrou(JSON.parse(verrou));
-    ajout("Empreinte des dépendances", i.sans.length === 0,
+    ajout("Dependency fingerprints", i.sans.length === 0,
       i.sans.length === 0
-        ? "Chaque dépendance porte une empreinte de contenu : le paquet installé est celui qui a été mesuré."
-        : `Sans empreinte : ${i.sans.join(", ")}.`,
-      `${i.total} dépendances`);
+        ? "Every dependency carries a content fingerprint: the package installed is the one that was measured."
+        : `Without a fingerprint: ${i.sans.join(", ")}.`,
+      `${i.total} dependencies`);
   }
 
   /* Le scan de secrets porte sur les fichiers SUIVIS, pas sur le disque : ce sont eux qui
@@ -320,63 +320,63 @@ export function document(c: Controle[], secretsHistorique: ReleveHistorique | nu
   const horsPortee = c.filter((x) => x.verdict === "hors de portée");
 
   const ligne = (x: Controle) =>
-    `| ${x.nom} | ${x.verdict === "tenu" ? "tenu" : x.verdict === "non tenu" ? "**non tenu**" : "hors de portée"} | ${x.constat} | \`${x.denominateur}\` |`;
+    `| ${x.nom} | ${x.verdict === "tenu" ? "held" : x.verdict === "non tenu" ? "**not held**" : "out of reach"} | ${x.constat} | \`${x.denominateur}\` |`;
 
-  return `<!-- ENGENDRÉ PAR src/menace.ts — NE PAS ÉDITER À LA MAIN -->
-# Surface d'attaque
+  return `<!-- GENERATED BY src/menace.ts — DO NOT EDIT BY HAND -->
+# Attack surface
 
-${tenus} contrôle${tenus > 1 ? "s" : ""} tenu${tenus > 1 ? "s" : ""} sur ${c.length}${nonTenus.length > 0 ? `, ${nonTenus.length} non tenu${nonTenus.length > 1 ? "s" : ""}` : ""}${horsPortee.length > 0 ? `, ${horsPortee.length} hors de portée` : ""}.
+${tenus} check${tenus > 1 ? "s" : ""} held out of ${c.length}${nonTenus.length > 0 ? `, ${nonTenus.length} not held` : ""}${horsPortee.length > 0 ? `, ${horsPortee.length} out of reach` : ""}.
 
-Chaque ligne porte **ce qui a été lu**. « Aucune menace » sans dénominateur est la phrase
-qu'un contrôle cassé produit aussi, et c'est l'erreur la plus chère de ce domaine.
+Every row carries **what was read**. "No threats found" without a denominator is the sentence
+a broken scan produces too, and that is the most expensive mistake in this field.
 
-| Contrôle | Verdict | Constat | Lu |
+| Check | Verdict | Finding | Read |
 | --- | --- | --- | --- |
 ${c.map(ligne).join("\n")}
 
-${nonTenus.length > 0 ? `## À corriger\n\n${nonTenus.map((x) => `- **${x.nom}** — ${x.constat}`).join("\n")}\n` : ""}
-## Ce que ces contrôles valent
+${nonTenus.length > 0 ? `## To fix\n\n${nonTenus.map((x) => `- **${x.nom}** — ${x.constat}`).join("\n")}\n` : ""}
+## What these checks are worth
 
-Ils sont rendus par des fonctions du **contenu**, pas du disque, et chacune est éprouvée sur
-un texte dont la réponse est connue avant que le verdict soit écrit. Si l'un des détecteurs
-cesse de reconnaître ce qu'il prétend reconnaître, rien n'est publié.
+They are functions of **content**, not of the disk, and each one is proved against a text
+whose answer is known before any verdict is written. If a detector stops recognising what it
+claims to recognise, nothing is published at all.
 
-C'est la seule réponse au scan qui rend « aucune menace » sur un dossier qu'il n'a pas pu
-lire : ce zéro-là est vrai et ne dit rien.
+That is the only answer to the scan that reports "no threats found" on a directory it could
+not read: that zero is true and says nothing.
 
-## Ce qu'ils ne voient pas
+## What they do not see
 
-Un angle mort qu'on ne publie pas est une fausse assurance, alors le voici. Le contrôle de la
-racine servie regarde ce qui entre **directement** dans une lecture de fichier. Si un morceau
-d'URL passe d'abord par une variable, il ne le suit pas — un témoin le dit explicitement dans
-\`temoins()\`, et il échouera là où un humain doit encore regarder.
+A blind spot nobody publishes is a false reassurance, so here it is. The served-root check
+looks at what enters a file read **directly**. If a piece of URL passes through a variable
+first, it does not follow it — a witness says so explicitly in \`temoins()\`, and it will fail
+exactly where a human still has to look.
 
-Ce sont des contrôles de source. Ils ne remplacent pas l'observation en marche : c'est
-\`npm run egress\` qui constate qu'aucun octet ne quitte la machine pendant une mesure, parce
-que ça ne se lit dans aucun fichier.
+These are source checks. They do not replace watching the thing run: it is \`npm run egress\`
+that establishes no byte leaves the machine during a measurement, because that cannot be read
+in any file.
 
-## Les secrets dans l'historique
+## Secrets in the history
 
 ${secretsHistorique
-  ? `**${secretsHistorique.reels.length} secret${secretsHistorique.reels.length === 1 ? "" : "s"} non déclaré${secretsHistorique.reels.length === 1 ? "" : "s"}** sur ${secretsHistorique.commits} commits — relevé du ${secretsHistorique.date}, sous \`${secretsHistorique.commit}\`.
+  ? `**${secretsHistorique.reels.length} undeclared secret${secretsHistorique.reels.length === 1 ? "" : "s"}** across ${secretsHistorique.commits} commits — swept on ${secretsHistorique.date}, sealed at \`${secretsHistorique.commit}\`.
 
-Le balayage a relevé ${secretsHistorique.trouves} trouvaille${secretsHistorique.trouves === 1 ? "" : "s"} au total, dont ${secretsHistorique.declares} déclarée${secretsHistorique.declares === 1 ? "" : "s"} dans
-\`secrets-declares.json\` : ce sont les leurres plantés dans nos propres cas de test, qui
-existent pour prouver que le détecteur détecte encore. Un chiffre issu d'une sélection porte
-le compte de ce qu'il écarte, et chaque écarté est nommé avec sa raison. Témoins retrouvés :
+The sweep found ${secretsHistorique.trouves} match${secretsHistorique.trouves === 1 ? "" : "es"} in total, of which ${secretsHistorique.declares} ${secretsHistorique.declares === 1 ? "is" : "are"} declared in
+\`secrets-declares.json\`: those are the decoys planted in our own test cases, which exist to
+prove the detector still detects. A figure drawn from a selection carries the count of what it
+excludes, and every exclusion is named with its reason. Witnesses recovered:
 ${secretsHistorique.temoins}/2.
 
-Un fichier effacé reste dans les objets git : un secret retiré du dernier commit reste
-lisible pour toujours, et un dépôt public n'oublie rien. Le balayage porte donc sur
-l'historique entier, pas sur le répertoire de travail. Il est lent — il tourne hors de
-\`npm test\`, avec \`npm run menace -- --historique\`.`
-  : `Non balayé dans cette passe. Lancez \`npm run menace -- --historique\` : le balayage porte sur l'historique entier, parce qu'un fichier effacé reste dans les objets git.`}
+A deleted file stays in git's objects: a secret removed from the last commit remains readable
+forever, and a public repository forgets nothing. The sweep therefore covers the entire
+history, not the working tree. It is slow — it runs outside \`npm test\`, with
+\`npm run menace -- --historique\`.`
+  : `Not swept in this pass. Run \`npm run menace -- --historique\`: the sweep covers the whole history, because a deleted file stays in git's objects.`}
 
-## Ce qui n'est pas couvert ici
+## What is not covered here
 
-L'inventaire des licences vit dans \`LICENCES.md\`. La garantie de non-transmission — que
-rien ne sort de la machine pendant une mesure — est un relevé distinct, rendu par
-\`npm run egress\`, parce qu'elle s'observe en marche et ne se lit pas dans une source.
+The licence inventory lives in \`LICENCES.md\`. The non-transmission guarantee — that nothing
+leaves the machine during a measurement — is a separate relevé, produced by \`npm run egress\`,
+because it is observed while running and cannot be read from a source file.
 `;
 }
 

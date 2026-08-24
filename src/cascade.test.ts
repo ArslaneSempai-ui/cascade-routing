@@ -1,5 +1,5 @@
 import { test } from "node:test";
-import { porteDesInvisibles, melangeDEcritures } from "./signal.ts";
+import { porteDesInvisibles, melangeDEcritures, horsRepertoire } from "./signal.ts";
 import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
 import { PREMIER_COMMIT_MULTI_FORMULATION } from "./landing.ts";
@@ -4185,7 +4185,14 @@ test("les deux caractères qui ne se voient pas déclenchent un doute", () => {
    * liste de sanctions en aval. Personne ne le verra.
    */
   assert.equal(porteDesInvisibles("idPT​-6884-M"), true, "espace de largeur nulle");
-  assert.equal(porteDesInvisibles("Milan, Italie"), true, "espace insécable");
+  /* L'ESPACE INSÉCABLE N'EST PLUS UN SIGNAL, et c'est une correction mesurée. Une session de
+     contrôle a montré que « 12 rue de la Paix : Paris » et « 1 000 EUR » en portent
+     légitimement — c'est la typographie française normale. La règle exportée faisait douter
+     sur des dossiers français corrects, et une règle qui crie sur l'usage légitime se fait
+     retirer à la première plainte. Dans un numéro de pièce, c'est le répertoire du champ qui
+     l'attrape. */
+  assert.equal(porteDesInvisibles("Milan,\u00A0Italie"), false, "l'espace insécable est légitime en français");
+  assert.equal(horsRepertoire("PT-18\u00A056-M", "document"), true, "un insécable dans un numéro de pièce sort du répertoire");
   assert.equal(porteDesInvisibles("﻿Nadia"), true, "marque d'ordre des octets");
   assert.equal(porteDesInvisibles("idPT-6884-M"), false, "témoin négatif : rien d'invisible");
 
@@ -4197,4 +4204,25 @@ test("les deux caractères qui ne se voient pas déclenchent un doute", () => {
      parfaitement normaux, et un taux d'abstention gonflé par du bruit ne décide plus rien. */
   assert.equal(melangeDEcritures("Владимир Petrov"), false, "deux mots, deux écritures, légitime");
   assert.equal(melangeDEcritures("A"), false, "une lettre seule ne mélange rien");
+
+  /*
+   * LA SUBSTITUTION COMPLÈTE EST PLUS FACILE QUE LA PARTIELLE, PAS PLUS DIFFICILE.
+   *
+   * Une valeur dont CHAQUE lettre a un sosie devient monoscripte et ne mélange plus rien.
+   * Mesuré par une session de contrôle : 3 375 numéros sur 17 576 de la forme XX-0000-X,
+   * soit 19,2 %, passaient les deux détecteurs sans un signal — et parmi les huit préfixes
+   * pays du corpus, PT, IT et ES sont clonables en entier. La défense attrapait l'attaquant
+   * maladroit et laissait passer celui qui finit son travail.
+   *
+   * Pour un champ dont la forme est connue et ASCII, la bonne question n'est pas « ce mot
+   * mélange-t-il deux alphabets » mais « ce caractère a-t-il quelque chose à faire ici ».
+   */
+  assert.equal(melangeDEcritures("\u0420\u0422-1856-\u041C"), false, "substitution complète : rien à mélanger, par construction");
+  assert.equal(horsRepertoire("\u0420\u0422-1856-\u041C", "document"), true, "et le répertoire du champ l'attrape");
+  assert.equal(horsRepertoire("\uFF26\uFF32\uFF0D\uFF11\uFF18\uFF15\uFF16\uFF0D\uFF2D", "document"), true, "pleine chasse");
+  assert.equal(horsRepertoire("\u13AC\u13A2-1856-\u13C6", "document"), true, "cherokee");
+  assert.equal(horsRepertoire("PT-1856-M", "document"), false, "témoin négatif : un numéro propre");
+  /* Un champ sans répertoire déclaré n'a pas de contrainte : un nom peut être écrit dans
+     n'importe quelle écriture, et le refuser serait une faute. */
+  assert.equal(horsRepertoire("\u0412\u043B\u0430\u0434\u0438\u043C\u0438\u0440", "name"), false, "un nom n'a pas de répertoire imposé");
 });

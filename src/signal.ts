@@ -65,27 +65,88 @@ export const DENOMINATEUR = "toute valeur notée par un palier sur le corpus dur
  * décision sur les données du client, et ce n'est pas à nous de la prendre en silence.
  */
 
-/** Les caractères qui ne s'affichent pas mais comptent : largeur nulle, marques de sens, espaces exotiques. */
+/**
+ * Les caractères qui ne s'affichent pas : largeur nulle, marques de sens, marque d'ordre.
+ *
+ * L'ESPACE INSÉCABLE N'EN FAIT PLUS PARTIE, et c'est une correction, pas un oubli. La
+ * première version l'incluait — or `12 rue de la Paix : Paris` et `1 000 EUR` en portent
+ * légitimement : c'est la typographie française normale. La règle exportée aurait fait douter
+ * sur des dossiers français parfaitement corrects, et une règle qui crie sur l'usage
+ * légitime est une règle qu'on retire à la première plainte.
+ *
+ * Un espace insécable dans un NUMÉRO DE PIÈCE reste suspect — mais c'est le répertoire du
+ * champ qui l'attrape, pas ce détecteur-ci.
+ */
 export function porteDesInvisibles(v: string): boolean {
-  return /[\u200B-\u200F\u202A-\u202E\u2060-\u2064\uFEFF\u00AD\u180E]/.test(v)
-    /* Non-breaking space and its variants: they look like a space and compare as something else. */
-    || /[\u00A0\u2000-\u200A\u202F\u205F\u3000]/.test(v);
+  return /[\u200B-\u200F\u202A-\u202E\u2060-\u2064\uFEFF\u00AD\u180E]/.test(v);
 }
+
+/**
+ * Les écritures qui imitent le latin, au-delà du cyrillique et du grec.
+ *
+ * Une session de contrôle a mesuré deux blocs de plus qui passaient sans un signal :
+ * la pleine chasse — `ＦＲ－１８５６－Ｍ` — et le cherokee, `ᎬᎢ-1856-Ꮇ`. Ce ne sont pas des
+ * écritures « mélangées » : ce sont d'autres blocs Unicode qui ressemblent au latin.
+ */
 
 /**
  * Deux écritures dans un même mot. Pas dans une même valeur — « Владимир Petrov » est un nom
  * translittéré à moitié, ce qui arrive légitimement. C'est le MOT qui trahit : aucun mot réel
  * ne mélange du latin et du cyrillique, et c'est précisément ce que fait un homoglyphe.
+ *
+ * CE DÉTECTEUR NE VOIT QUE LA SUBSTITUTION PARTIELLE, ET IL FAUT LE SAVOIR. Une valeur dont
+ * CHAQUE lettre a un sosie devient monoscripte, et plus rien ne se mélange : `PT-1856-M` en
+ * cyrillique intégral — `РТ-1856-М` — ne déclenche rien ici. Mesuré par une session de
+ * contrôle : 3 375 numéros sur 17 576, soit 19,2 %, passent ainsi. Et parmi les huit préfixes
+ * pays du corpus, PT, IT et ES sont clonables en entier.
+ *
+ * **La substitution complète est plus facile que la partielle, pas plus difficile.** C'est
+ * `horsRepertoire` qui la ferme, sur les champs dont la forme est connue. Ici on garde le
+ * mélange, qui reste le bon test pour un nom — où l'alphabet n'est pas contraint et où une
+ * valeur entièrement cyrillique est parfaitement normale.
  */
 export function melangeDEcritures(v: string): boolean {
+  /* LA TABLE EST DANS LA FONCTION, PAS À CÔTÉ. Cette fonction est livrée au client par
+     `toString()`, qui n'emporte que le corps — pas la portée. Une constante de module
+     référencée ici partait sans sa définition, et la règle exportée plantait à la première
+     valeur avec `ECRITURES is not defined`. Elle serait partie comme ça. */
+  const ECRITURES = [
+    /[A-Za-z\u00C0-\u024F]/,      // latin
+    /[\u0400-\u04FF]/,            // cyrillique
+    /[\u0370-\u03FF]/,            // grec
+    /[\u13A0-\u13FF\uAB70-\uABBF]/, // cherokee
+    /[\uFF01-\uFF5E]/,            // pleine chasse
+    /[\u0530-\u058F]/,            // arménien
+  ];
   for (const mot of v.split(/\s+/)) {
     if (mot.length < 2) continue;
-    const latin = /[A-Za-z\u00C0-\u024F]/.test(mot);
-    const cyrillique = /[\u0400-\u04FF]/.test(mot);
-    const grec = /[\u0370-\u03FF]/.test(mot);
-    if ([latin, cyrillique, grec].filter(Boolean).length > 1) return true;
+    if (ECRITURES.filter((m) => m.test(mot)).length > 1) return true;
   }
   return false;
+}
+
+/**
+ * Un caractère hors du répertoire que le champ peut légitimement porter.
+ *
+ * LE MÉLANGE D'ÉCRITURES EST LE MAUVAIS TEST POUR UN CHAMP STRUCTURÉ. Un numéro de pièce a
+ * une forme connue et entièrement ASCII ; la question n'est donc pas « ce mot mélange-t-il
+ * deux alphabets » mais « ce caractère a-t-il quoi que ce soit à faire ici ». Posée ainsi,
+ * elle attrape la substitution complète, la pleine chasse, le cherokee et l'espace insécable
+ * d'un seul coup, sans table de sosies à tenir à jour.
+ *
+ * Un champ absent de cette table n'a pas de répertoire : un nom, un pays ou une adresse
+ * peuvent porter n'importe quelle écriture, et c'est `melangeDEcritures` qui s'en occupe.
+ */
+export const REPERTOIRE: Record<string, RegExp> = {
+  /* Un identifiant de document : ASCII imprimable, rien d'autre. */
+  document: /^[\x20-\x7E]*$/,
+  /* Une date : chiffres, séparateurs, et les lettres d'un mois écrit en toutes lettres. */
+  birth: /^[\x20-\x7E]*$/,
+};
+
+export function horsRepertoire(valeur: string, champ: string): boolean {
+  const permis = REPERTOIRE[champ];
+  return permis !== undefined && !permis.test(valeur);
 }
 
 export const FORME: Record<string, (v: string) => boolean> = {

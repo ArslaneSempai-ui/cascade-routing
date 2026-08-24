@@ -35,16 +35,16 @@ test("le serveur reste lié à la boucle locale", () => {
 
 test("le document nomme ce qui n'est pas tenu, il ne le compte pas", () => {
   const sale: Controle[] = [
-    { nom: "Adresse d'écoute", verdict: "non tenu", constat: "écoute sur toutes les interfaces.", denominateur: "src/server.ts" },
-    { nom: "Empreinte des dépendances", verdict: "tenu", constat: "toutes empreintes.", denominateur: "82 dépendances" },
+    { nom: "Listening address", verdict: "non tenu", constat: "listens on all interfaces.", denominateur: "src/server.ts" },
+    { nom: "Dependency fingerprints", verdict: "tenu", constat: "all fingerprinted.", denominateur: "82 dependencies" },
   ];
   const md = document(sale, null);
-  assert.match(md, /## À corriger/);
-  assert.match(md, /Adresse d'écoute.*toutes les interfaces/s);
+  assert.match(md, /## To fix/);
+  assert.match(md, /Listening address.*all interfaces/s);
   /* Chaque ligne porte son dénominateur : « aucune menace » sans ce qui a été lu est la
      phrase qu'un contrôle cassé produit aussi. */
-  assert.match(md, /82 dépendances/);
-  assert.match(md, /Ce qu'ils ne voient pas/, "un angle mort non publié est une fausse assurance.");
+  assert.match(md, /82 dependencies/);
+  assert.match(md, /What they do not see/, "un angle mort non publié est une fausse assurance.");
 });
 
 test("le relevé d'historique est scellé sur un commit atteignable", (t) => {
@@ -105,7 +105,7 @@ test("LE DÉNOMINATEUR NE RÉTRÉCIT PAS QUAND UN FICHIER MANQUE", () => {
       `${partiel.length} contrôles sans src/server.ts contre ${complet} avec : le tableau en perd en route,\n`
       + "  et le document publierait un total qui n'est pas le nombre de contrôles.");
     const horsPortee = partiel.filter((c) => c.verdict === "hors de portée").map((c) => c.nom);
-    assert.deepEqual(horsPortee.sort(), ["Adresse d'écoute", "Corps de requête borné", "Racine servie"],
+    assert.deepEqual(horsPortee.sort(), ["Listening address", "Request body bounded", "Served root"],
       "les trois contrôles du serveur doivent tous se déclarer, pas seulement le premier.");
   } finally {
     rmSync(tmp, { recursive: true, force: true });
@@ -120,11 +120,11 @@ test("le constat ne dit pas la même chose selon qu'il tient ou non", () => {
   try {
     mkdirSync(join(tmp, "src"));
     writeFileSync(join(tmp, ".gitignore"), "node_modules/\n");   // data/ absent, volontairement
-    const c = controles(tmp).find((x) => x.nom === "Données du client non versionnées");
+    const c = controles(tmp).find((x) => x.nom === "Client data unversioned");
     assert.ok(c);
     assert.equal(c!.verdict, "non tenu");
-    assert.match(c!.constat, /partiraient dans le dépôt public|n'est pas ignoré/);
-    assert.doesNotMatch(c!.constat, /qui est ignoré par git\./,
+    assert.match(c!.constat, /would go into the public repository|is not ignored/);
+    assert.doesNotMatch(c!.constat, /which git ignores\./,
       "le constat affirme ce que le verdict dément.");
   } finally {
     rmSync(tmp, { recursive: true, force: true });

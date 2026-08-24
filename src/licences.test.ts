@@ -20,17 +20,17 @@ test("la LGPL n'est pas confondue avec la GPL qu'elle cite dans son corps", () =
 test("le document refuse d'affirmer un zéro sans dire d'où il vient", () => {
   const propres: Paquet[] = [{ nom: "a", version: "1.0.0", declaree: "MIT", classe: "permissive", fichier: "LICENSE" }];
   const md = document(propres, null);
-  assert.match(md, /Aucun copyleft fort/);
-  assert.match(md, /témoins/, "un zéro publié sans nommer ce qui le garantit est un vert vide");
+  assert.match(md, /No strong copyleft/);
+  assert.match(md, /witnesses/, "un zéro publié sans nommer ce qui le garantit est un vert vide");
   // Et l'absence de licence du dépôt doit se lire comme une décision à prendre, pas comme un détail.
-  assert.match(md, /tous droits réservés/);
+  assert.match(md, /all rights reserved/);
 });
 
 test("une licence bloquante est nommée, pas comptée", () => {
   const sale: Paquet[] = [{ nom: "poison", version: "2.0.0", declaree: "AGPL-3.0", classe: "bloquante", fichier: "LICENSE" }];
   const md = document(sale, "MIT");
   assert.match(md, /`poison`/);
-  assert.doesNotMatch(md, /Aucun copyleft fort/);
+  assert.doesNotMatch(md, /No strong copyleft/);
 });
 
 test("la nomenclature porte un identifiant de paquet exploitable", () => {
