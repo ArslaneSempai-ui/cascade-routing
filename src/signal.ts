@@ -68,7 +68,7 @@ export const DENOMINATEUR = "toute valeur notée par un palier sur le corpus dur
 /** Les caractères qui ne s'affichent pas mais comptent : largeur nulle, marques de sens, espaces exotiques. */
 export function porteDesInvisibles(v: string): boolean {
   return /[\u200B-\u200F\u202A-\u202E\u2060-\u2064\uFEFF\u00AD\u180E]/.test(v)
-    /* L'espace insécable et ses variantes : visibles comme une espace, différentes à la comparaison. */
+    /* Non-breaking space and its variants: they look like a space and compare as something else. */
     || /[\u00A0\u2000-\u200A\u202F\u205F\u3000]/.test(v);
 }
 

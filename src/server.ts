@@ -189,9 +189,9 @@ const serveur = createServer(async (req, res) => {
       const etrangere = origineEtrangere(req);
       if (etrangere !== null) {
         return json(res, {
-          erreur: `écriture refusée : la requête vient de ${etrangere}, pas de cet écran. `
-            + `Écouter la boucle locale protège du réseau, pas du navigateur — une page ouverte `
-            + `dans un autre onglet peut poster ici sans que rien ne le montre.`,
+          erreur: `write refused: this request comes from ${etrangere}, not from this screen. `
+            + `Listening on the loopback protects against the network, not against the browser — `
+            + `a page open in another tab can post here with nothing to show for it.`,
         }, 403);
       }
     }
@@ -231,7 +231,7 @@ const serveur = createServer(async (req, res) => {
       const r = appliquerHypotheses(recu as Record<string, unknown>, hypotheses);
       if (r.refuses.length) {
         return json(res, {
-          erreur: `valeur(s) non numérique(s) refusée(s) : ${r.refuses.join(", ")}. `
+          erreur: `non-numeric value(s) refused: ${r.refuses.join(", ")}. `
             + `Une hypothèse absente n'est pas une hypothèse à zéro : elle serait posée sur `
             + `sa borne basse et le routage affiché serait calculé dessus.`,
           ...etat(),
