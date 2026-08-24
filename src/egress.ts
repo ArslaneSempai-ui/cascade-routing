@@ -132,16 +132,16 @@ function connexions(pid: number): { hote: string; port: string; etat: string }[]
     const err = e as { code?: string; status?: number };
     if (verdictDeLsof(err) === "absent") {
       throw new Error(
-        "`lsof` est introuvable sur cette machine, donc RIEN n'a été observé.\n"
-        + "  Cet outil refuse de conclure : « aucune connexion vue » et « aucune connexion »\n"
-        + "  sont deux phrases différentes, et c'est toute la valeur de ce contrôle.\n"
-        + "  Sur macOS `lsof` est livré avec le système ; sur Linux : apt install lsof.");
+        "`lsof` is not on this machine, so NOTHING was observed.\n"
+        + "  This tool refuses to conclude: \u201cno connection seen\u201d and \u201cno connection\u201d\n"
+        + "  are two different sentences, and that difference is this check's whole value.\n"
+        + "  On macOS `lsof` ships with the system; on Linux: apt install lsof.");
     }
     if (verdictDeLsof(err) === "inattendu") {
       throw new Error(
-        `\`lsof\` a échoué avec le code ${err.status ?? "inconnu"} — ce n'est pas le code que\n`
-        + "  rend un processus sans socket (1). L'observation n'a donc pas eu lieu, et rendre\n"
-        + "  un tableau vide ici reviendrait à publier « aucune connexion » sans avoir regardé.");
+        `\`lsof\` failed with code ${err.status ?? "unknown"} — that is not the code a\n`
+        + "  process with no socket returns (1). The observation therefore did not happen, and\n"
+        + "  returning an empty table here would publish \u201cno connection\u201d without having looked.");
     }
     return [];   // code 1 : le processus n'a aucune socket ouverte. Le vide est la mesure.
   }
@@ -176,27 +176,27 @@ if (isMain(import.meta)) {
    * personne n'avait décidé de prendre. C'est arrivé.
    */
   if (!args.length) {
-    console.error(`\n  Ce contrôle surveille le réseau PENDANT une commande, et il faut lui dire`);
-    console.error(`  laquelle. Il n'en choisit pas : la commande évidente — une mesure — réécrit`);
-    console.error(`  le relevé gelé, et un contrôle de confidentialité ne doit rien réécrire.\n`);
-    console.error(`      npm run egress -- src/measure.ts        surveille une vraie mesure`);
-    console.error(`      npm run egress -- src/optimise.ts       surveille une passe qui ne mesure rien\n`);
+    console.error(`\n  This check watches the network DURING a command, and you have to tell it`);
+    console.error(`  which one. It does not choose: the obvious command — a measurement — rewrites`);
+    console.error(`  the frozen record, and a confidentiality check must rewrite nothing.\n`);
+    console.error(`      npm run egress -- src/measure.ts        watches a real measurement`);
+    console.error(`      npm run egress -- src/optimise.ts       watches a pass that measures nothing\n`);
     process.exit(1);
   }
   const commande = args;
   const intervalle = Number(process.argv.find((a) => a.startsWith("--every="))?.split("=")[1] ?? 250);
 
   if (!lsofRepond()) {
-    console.error("\n`lsof` est introuvable : ce contrôle ne peut rien observer, donc il ne");
-    console.error("  démarre pas. Publier « aucune connexion réseau observée » après n'avoir");
-    console.error("  rien pu observer serait exactement le défaut que ce fichier existe pour");
-    console.error("  empêcher.\n");
+    console.error("\n`lsof` is not available: this check can observe nothing, so it does not");
+    console.error("  start. Publishing \u201cno network connection observed\u201d after having been");
+    console.error("  able to observe nothing would be exactly the defect this file exists to");
+    console.error("  prevent.\n");
     process.exit(1);
   }
 
-  console.log(`\nSurveillance du trafic réseau pendant : node ${commande.join(" ")}`);
-  console.log(`Relevé toutes les ${intervalle} ms. Deux résultats sont publiables : aucune`);
-  console.log(`connexion, ou des connexions vers le dépôt de modèles seulement.\n`);
+  console.log(`\nWatching network traffic during: node ${commande.join(" ")}`);
+  console.log(`Sampled every ${intervalle} ms. Two results are publishable: no`);
+  console.log(`connection, or connections to the model hub only.\n`);
 
   const enfant = spawn("node", commande, { stdio: ["ignore", "ignore", "ignore"] });
   const vues = new Map<string, Connexion>();
@@ -235,9 +235,9 @@ if (isMain(import.meta)) {
    * qu'elle n'a pas vu, elle ne l'a pas vu non plus.
    */
   if (releves < ASSEZ) {
-    console.log(`${releves} relevés seulement — trop court pour établir quoi que ce soit,`);
-    console.log(`${liste.length ? `y compris que les ${liste.length} hôte(s) vus soient les seuls.` : `dans un sens comme dans l'autre.`}`);
-    console.log(`Il en faut au moins ${ASSEZ} : surveiller une vraie mesure, pas une commande instantanée.\n`);
+    console.log(`${releves} samples only — too short to establish anything,`);
+    console.log(`${liste.length ? `including that the ${liste.length} host(s) seen are the only ones.` : `in either direction.`}`);
+    console.log(`At least ${ASSEZ} are needed: watch a real measurement, not an instant command.\n`);
     process.exitCode = 1;
     writeFileSync(FICHIER, JSON.stringify({
       mesureLe: new Date().toISOString(), commande: `node ${commande.join(" ")}`,
@@ -269,20 +269,20 @@ if (isMain(import.meta)) {
   mkdirSync(dirname(FICHIER), { recursive: true });
   writeFileSync(FICHIER, JSON.stringify(releve, null, 2));
 
-  console.log(`${releves} relevés, code de sortie ${code}.\n`);
+  console.log(`${releves} samples, exit code ${code}.\n`);
   if (locales.length) {
-    console.log("Vers cette machine — rien ne sort par là :");
-    for (const c of locales) console.log(`  ${c.hote}:${c.port}  vu ${c.vu} fois  (${c.etat})`);
+    console.log("To this machine — nothing leaves through these:");
+    for (const c of locales) console.log(`  ${c.hote}:${c.port}  seen ${c.vu} times  (${c.etat})`);
     console.log("");
   }
   if (!sorties.length) {
-    console.log("Aucune connexion hors de cette machine. La phrase « nothing leaves the machine »");
-    console.log("tient telle quelle pour cette exécution.\n");
+    console.log("No connection outside this machine. The sentence \u201cnothing leaves the machine\u201d");
+    console.log("holds as written for this run.\n");
   } else {
-    console.log("Hôtes contactés HORS de cette machine :");
-    for (const c of sorties) console.log(`  ${c.hote}:${c.port}  vu ${c.vu} fois  (${c.etat})`);
-    console.log("\nSi ce sont des dépôts de modèles, la phrase à publier devient : « aucune de vos");
-    console.log("données ne sort ; le seul trafic est le téléchargement, une fois, de poids publics ».\n");
+    console.log("Hosts contacted OUTSIDE this machine:");
+    for (const c of sorties) console.log(`  ${c.hote}:${c.port}  seen ${c.vu} times  (${c.etat})`);
+    console.log("\nIf these are model hubs, the sentence to publish becomes: \u201cnone of your");
+    console.log("data leaves; the only traffic is the one-time download of public weights\u201d.\n");
   }
-  console.log(`Relevé écrit dans data/egress.json.\n`);
+  console.log(`Record written to data/egress.json.\n`);
 }
