@@ -6,3 +6,9 @@ data/
 # garde l'adresse, l'empreinte et le relevé, ce qui suffit à refaire le calcul.
 benchmarks/data/
 .build-source
+
+# Le binaire que `swiftc` produit depuis src/ocr/lire.swift. Il n'est pas seulement
+# inutile à versionner : non ignoré, il salissait l'arbre et faisait refuser la mesure
+# à une passe dont le code, lui, était bien committé. Une garde qui crie à tort finit
+# commentée.
+src/ocr/lire
