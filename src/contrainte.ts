@@ -32,7 +32,7 @@
  *     npm run contrainte
  */
 
-import { writeFileSync } from "node:fs";
+import { writeFileSync, existsSync, rmSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { loadavg, cpus } from "node:os";
 import { isMain } from "./cli.ts";
@@ -42,6 +42,8 @@ import { FIELDS, generateRecords } from "./corpus.ts";
 import type { Field } from "./corpus.ts";
 import { fileURLToPath } from "node:url";
 
+/** Le partiel porte un nom distinct : aucune garde ne doit le confondre avec le relevé. */
+const PARTIEL = fileURLToPath(new URL("../contrainte-partiel.json", import.meta.url));
 const SORTIE = fileURLToPath(new URL("../contrainte.json", import.meta.url));
 
 /** Le plafond, choisi après un pilote qui a montré qu'il ne mord pas. */
@@ -170,6 +172,22 @@ if (isMain(import.meta)) {
     console.log(`  qui est un fait sur la sortie et non sur la machine. Les durées seront marquées.\n`);
   }
 
+  /*
+   * CE BANC COÛTE CHER ET NE LE DISAIT PAS.
+   *
+   * Il annonce sa forme — paliers × bras × passes × cas × champs — et pas sa durée. Une
+   * session de mesure l'a lancé et l'a tué à trente minutes sans qu'il ait fini. Le nombre
+   * d'appels est connu d'avance ; la durée par appel ne l'est pas, et l'inventer ici serait
+   * précisément le chiffre non mesuré que ce dépôt refuse. On la MESURE sur les premiers
+   * appels et on rend l'estimation restante, qui devient bonne au bout de quelques-uns.
+   */
+  const totalAppels = paliers.length * 2 * passes * cas * FIELDS.length;
+  console.log(`\n${totalAppels} appels au modèle. La durée par appel n'est pas connue d'avance :`);
+  console.log(`  elle sera estimée sur les premiers, et l'estimation s'affichera à chaque cellule.`);
+  console.log(`  Ctrl-C est sans danger : chaque cellule finie est écrite dans ${PARTIEL}.\n`);
+  const debutTotal = Date.now();
+  let faits = 0;
+
   const lignes: Record<string, unknown>[] = [];
   for (let passe = 1; passe <= passes; passe++) {
     const etat = etatMachine();
@@ -180,6 +198,7 @@ if (isMain(import.meta)) {
         let justes = 0, plafonds = 0, vides = 0;
         for (const d of dossiers) for (const c of FIELDS) {
           const r = await appeler(MODELES_LOCAUX[tier]!.tag, PROMPTS.reference(d.text, c), avecSchema);
+          faits++;
           jetons.push(r.jetons); ms.push(r.ms);
           if (r.plafondAtteint) plafonds++;
           if (normaliserReponse(r.valeur).length === 0) vides++;
@@ -214,9 +233,24 @@ if (isMain(import.meta)) {
           + `${String(med(ms).toFixed(0)).padStart(6)} ms${etat.dureesTransportables ? "" : "*"} `
           + `[${bas(ms).toFixed(0)}–${haut(ms).toFixed(0)}]   `
           + `juste ${(100 * justes / jetons.length).toFixed(0)} %   plafond atteint ${plafonds}/${jetons.length}`);
+
+        /* CHAQUE CELLULE FINIE EST ÉCRITE. Une passe tuée à vingt-neuf minutes perdait tout ;
+           le partiel porte un nom distinct pour qu'aucune garde ne le prenne pour le relevé. */
+        writeFileSync(PARTIEL, JSON.stringify({
+          quoi: "Passe de contrainte INCOMPLÈTE — écrite cellule par cellule pour qu'une interruption ne coûte que la cellule en cours.",
+          complet: false, faits, totalAppels, lignes,
+        }, null, 2) + "\n");
+        const parAppel = (Date.now() - debutTotal) / Math.max(faits, 1);
+        const reste = Math.round((totalAppels - faits) * parAppel / 1000);
+        console.log(`      ${faits}/${totalAppels} appels · ~${Math.round(parAppel)} ms/appel mesuré ici · `
+          + `il reste ~${reste < 90 ? `${reste} s` : `${Math.round(reste / 60)} min`}`);
       }
     }
   }
+
+  /* La passe a abouti : le partiel n'a plus de raison d'être, et un partiel qui traîne se
+     lit un jour comme un relevé. */
+  if (existsSync(PARTIEL)) rmSync(PARTIEL);
 
   writeFileSync(SORTIE, JSON.stringify({
     quoi: "Ce que la contrainte de sortie achète, à plafond de jetons non mordant.",

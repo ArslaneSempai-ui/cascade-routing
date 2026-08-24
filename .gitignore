@@ -14,3 +14,4 @@ benchmarks/data/
 src/ocr/lire
 cle-privee.pem
 *.key
+contrainte-partiel.json
