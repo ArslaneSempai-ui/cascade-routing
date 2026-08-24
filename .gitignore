@@ -15,3 +15,6 @@ src/ocr/lire
 cle-privee.pem
 *.key
 contrainte-partiel.json
+
+# Stryker écrit ici pendant une campagne de mutation ; rien n'y survit à la passe.
+.stryker-tmp/
