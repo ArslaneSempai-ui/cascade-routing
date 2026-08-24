@@ -160,7 +160,22 @@ export function justessePonderee(p: Profiles, h: Assumptions, tier: TierName, ch
  * La clé porte `measuredAt` : une re-mesure invalide le cache d'elle-même, sans que personne
  * ait à s'en souvenir.
  */
-const CACHE = new Map<string, { vide: number; faux: number } | null>();
+/**
+ * LA MÉMO EST INDEXÉE SUR L'IDENTITÉ DU RELEVÉ, PLUS SUR UNE CLÉ DE CHAÎNE.
+ *
+ * La version précédente construisait `${p.measuredAt}|${tier}|${champ}` à chaque appel. Le
+ * calcul, lui, était déjà mémorisé — c'était la CLÉ qui coûtait. Profilé sur
+ * `landing --check` : `decomposition` portait 5,3 s sur 11,1, soit près de la moitié du
+ * temps, pour un travail déjà fait. L'énumération exhaustive du routage fait 7⁵ affectations
+ * × 5 champs, et le balayage des prix la relance des dizaines de fois : quelques millions de
+ * concaténations et autant d'allocations.
+ *
+ * Deux accès de propriété maintenant, aucune allocation. Le `WeakMap` se vide tout seul quand
+ * le relevé est libéré, et deux relevés différents ne peuvent pas se confondre puisque c'est
+ * l'objet lui-même qui indexe.
+ */
+type Decomposition = { vide: number; faux: number } | null;
+const MEMO = new WeakMap<Profiles, Record<string, Record<string, Decomposition>>>();
 
 /**
  * Le repli sur les comptes gelés, quand le relevé n'a pas ses sorties brutes.
@@ -180,8 +195,11 @@ export function decompositionDe(p: Profiles, tier: TierName, champ: Field) {
 }
 
 function decomposition(p: Profiles, tier: TierName, champ: Field): { vide: number; faux: number } | null {
-  const cle = `${p.measuredAt}|${tier}|${champ}`;
-  const connu = CACHE.get(cle);
+  let parPalier = MEMO.get(p);
+  if (parPalier === undefined) { parPalier = Object.create(null) as Record<string, Record<string, Decomposition>>; MEMO.set(p, parPalier); }
+  let parChamp = parPalier[tier];
+  if (parChamp === undefined) { parChamp = Object.create(null) as Record<string, Decomposition>; parPalier[tier] = parChamp; }
+  const connu = parChamp[champ];
   if (connu !== undefined) return connu;
 
   const profil = p.extraction[tier][champ];
@@ -195,7 +213,7 @@ function decomposition(p: Profiles, tier: TierName, champ: Field): { vide: numbe
     const n = profil.sorties.length;
     out = { vide: vide / n, faux: faux / n };
   }
-  CACHE.set(cle, out);
+  parChamp[champ] = out;
   return out;
 }
 
