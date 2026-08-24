@@ -27,6 +27,8 @@ import { optimiseExtraction, optimiseClassification, budgetShadowPrice, latenceR
 import { exposition, optimiseExposition, ouLaRecommandationBascule, decompositionsIncoherentes } from "./exposition.ts";
 import { documentsComplets, comparer as comparerDocuments } from "./document.ts";
 import { FORME as FORME_INTERNE } from "./signal.ts";
+import { PROMPTS as PROMPTS_INTERNES, questionPour as questionPourInterne } from "./tiers.ts";
+import { memoireDisponibleMo, etatMachine as etatMachineInterne } from "./contrainte.ts";
 import { normaliserReponse as normaliserReponseInterne } from "./tiers.ts";
 import { pathToFileURL } from "node:url";
 import { ASSUMPTIONS, UNITS, BOUNDS, pricePerThousandExtractions, accuracy } from "./assumptions.ts";
@@ -3902,4 +3904,104 @@ test("la règle exportée se comporte exactement comme celle qui a été mesuré
   /* LA NORMALISATION VOYAGE AVEC, sinon les trois prédicats portent sur autre chose. */
   assert.equal(exportee.normaliser(" 10 / 07 / 1987 ."), normaliserReponseInterne(" 10 / 07 / 1987 ."),
     "la normalisation exportée diffère de celle sous laquelle la mesure a été faite.");
+});
+
+test("aucune formulation ne peut demander « Question: undefined » sur un champ inconnu", () => {
+  /*
+   * LE PIRE DES DEUX ÉCHECS ÉTAIT LE SILENCIEUX.
+   *
+   * `QUESTIONS` ne connaissait que nos cinq champs. Un client lançant `measure:yours` avec
+   * ses propres colonnes obtenait deux pannes différentes : l'encodeur s'arrêtait sur un
+   * message de bibliothèque qui parle d'autre chose, et le génératif demandait littéralement
+   * « Question: undefined » puis rendait du bruit **sans rien signaler**.
+   *
+   * Mesuré sur un jeu de vingt-cinq cas clients : sous une question déduite du nom de
+   * colonne, `large` marque 0 % sur le nom ; sous la question du client, 100 %. La question
+   * vaut cent points, et l'échec silencieux les faisait passer pour la faute du modèle.
+   */
+  const inconnu = "nom_complet" as never;
+  for (const [nom, gabarit] of Object.entries(PROMPTS_INTERNES)) {
+    const sansQuestion = gabarit("un document", inconnu);
+    assert.ok(!/Question:\s*undefined/.test(sansQuestion),
+      `la formulation « ${nom} » demande « Question: undefined » sur un champ qu'elle ne connaît pas.\n`
+      + `  → le modèle répond quelque chose, et rien ne signale que la question était vide.`);
+
+    /* ET LA QUESTION FOURNIE EST BIEN CELLE QUI PART. Une question acceptée puis ignorée
+       serait la même panne, avec un paramètre de plus pour la cacher. */
+    const avecQuestion = gabarit("un document", inconnu, "What is the client's full name?");
+    assert.ok(avecQuestion.includes("What is the client's full name?"),
+      `la formulation « ${nom} » accepte une question et ne la pose pas.`);
+  }
+});
+
+test("la question d'un champ porte sa provenance, et une déduction n'est pas une mesure", () => {
+  /* Trois provenances, trois sens différents pour le lecteur d'un taux :
+     fournie = son choix · mesurée = le taux publié a été mesuré sous celle-ci · déduite =
+     notre choix à sa place, et le taux n'est plus comparable au nôtre. */
+  const nôtre = questionPourInterne("birth");
+  assert.equal(nôtre.provenance, "mesuree",
+    "un de nos cinq champs ne se reconnaît plus : son taux publié ne serait plus rattachable.");
+
+  const sienne = questionPourInterne("birth", { birth: "Quelle est la date de naissance ?" });
+  assert.equal(sienne.provenance, "fournie", "une question fournie par le client est ignorée.");
+  assert.equal(sienne.texte, "Quelle est la date de naissance ?");
+
+  const deduite = questionPourInterne("date_naissance");
+  assert.equal(deduite.provenance, "deduite",
+    "une colonne inconnue ne se signale plus comme déduite : le lecteur croirait le taux comparable.");
+  assert.match(deduite.texte, /date naissance/,
+    "la déduction ne repart plus du nom de colonne.");
+
+  /* ET ELLE NE TRADUIT NI NE DEVINE. Inventer « date de naissance » depuis `date_naissance`
+     marcherait ici et échouerait sur la colonne suivante. */
+  assert.ok(!/birth|naissance de/i.test(deduite.texte),
+    "la déduction interprète le nom de colonne au lieu de le reprendre.");
+
+  /* Une question vide ou blanche n'est pas une question fournie. */
+  assert.equal(questionPourInterne("birth", { birth: "   " }).provenance, "mesuree",
+    "une question vide passe pour un choix du client.");
+});
+
+test("la mémoire disponible se lit avec la taille de page annoncée, inactif compris", () => {
+  /*
+   * DEUX DÉFAUTS DANS TROIS LIGNES, ET LES DEUX FAISAIENT MENTIR LA MÊME GARDE.
+   *
+   * La taille de page était écrite en dur à 4096 quand `vm_stat` en annonce 16384 sur cette
+   * machine : chaque octet valait le quart du vrai. Et les pages INACTIVES — récupérables
+   * immédiatement, et l'essentiel du disponible sur une machine qui travaille — étaient
+   * exclues. Résultat : 532 Mo annoncés là où 5,6 Go étaient réutilisables.
+   *
+   * Une garde qui crie à tort finit ignorée, et les vraies alertes partent avec elle.
+   */
+  const vmStat = (page: number, libre: number, spec: number, inactif: number) =>
+    `Mach Virtual Memory Statistics: (page size of ${page} bytes)\n`
+    + `Pages free:                              ${libre}.\n`
+    + `Pages active:                            999999.\n`
+    + `Pages inactive:                          ${inactif}.\n`
+    + `Pages speculative:                       ${spec}.\n`
+    + `Pages wired down:                        123456.\n`;
+
+  /* LA TAILLE DE PAGE VIENT DE LA SORTIE. Les mêmes comptes, deux tailles, deux résultats —
+     sinon le paramètre est décoratif. */
+  const a4k = memoireDisponibleMo(vmStat(4096, 10_000, 1_000, 20_000));
+  const a16k = memoireDisponibleMo(vmStat(16384, 10_000, 1_000, 20_000));
+  assert.equal(a4k, Math.round(31_000 * 4096 / 1e6),
+    `à 4 Ko la page, 31 000 pages font ${Math.round(31_000 * 4096 / 1e6)} Mo, pas ${a4k}.`);
+  assert.equal(a16k, Math.round(31_000 * 16384 / 1e6),
+    `à 16 Ko la page, le même compte fait ${Math.round(31_000 * 16384 / 1e6)} Mo, pas ${a16k}.`);
+  assert.ok(a16k > a4k * 3.5,
+    "la taille de page annoncée ne change plus le résultat : elle est redevenue décorative.");
+
+  /* L'INACTIF COMPTE. Sans lui, la garde crie sur une machine qui va parfaitement bien. */
+  const sansInactif = memoireDisponibleMo(vmStat(16384, 10_000, 1_000, 0));
+  const avecInactif = memoireDisponibleMo(vmStat(16384, 10_000, 1_000, 20_000));
+  assert.ok(avecInactif > sansInactif * 2,
+    `l'inactif n'est plus compté : ${avecInactif} Mo avec 20 000 pages inactives contre `
+    + `${sansInactif} sans, alors qu'elles sont réutilisables immédiatement.`);
+
+  /* ET LA VRAIE MACHINE EST D'ACCORD AVEC LA FONCTION PURE — sinon l'une des deux lit autre
+     chose, et c'est celle qui décide en production qui aurait tort. */
+  const reelle = etatMachineInterne();
+  assert.ok(reelle.memoireLibreMo > 0,
+    "la lecture réelle rend zéro : `vm_stat` n'a pas été lu, et le zéro se lirait comme une machine pleine.");
 });

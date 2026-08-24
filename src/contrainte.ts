@@ -51,13 +51,46 @@ export const PLAFOND_JETONS = 4000;
 export const MEMOIRE_LIBRE_MINIMALE_MO = 1024;
 
 /** L'état de la machine, relevé et jamais supposé. */
+/**
+ * Ce qu'une sortie de `vm_stat` dit de la mémoire réellement disponible.
+ *
+ * Sorti en fonction pure pour une seule raison : le témoin. Une lecture qui shelle
+ * directement ne peut être éprouvée que sur la machine qui la lance, donc jamais sur les cas
+ * qui l'ont fait mentir — une autre taille de page, un inactif volumineux.
+ */
+export function memoireDisponibleMo(sortieVmStat: string): number {
+  /*
+   * LA TAILLE DE PAGE SE LIT, ELLE NE S'ÉCRIT PAS.
+   *
+   * Elle était en dur à 4096. `vm_stat` annonce **16384** sur cette machine — Apple Silicon —
+   * donc chaque octet rendu ici valait le quart du vrai. La première ligne porte le chiffre ;
+   * l'écrire à la main revenait à supposer un modèle de processeur.
+   */
+  const taillePage = Number(/page size of (\d+) bytes/.exec(sortieVmStat)?.[1] ?? 4096);
+  const lire = (nom: string) => {
+    const m = new RegExp(`${nom}:\\s+(\\d+)`).exec(sortieVmStat);
+    return m ? Number(m[1]) * taillePage : 0;
+  };
+  /*
+   * ET « LIBRE » SUR macOS N'EST PAS CE QUI EST DISPONIBLE.
+   *
+   * Le système garde les pages récemment libérées en INACTIF plutôt que de les rendre : elles
+   * sont réutilisables immédiatement, et sur une machine qui travaille elles sont l'essentiel
+   * du disponible. Les exclure faisait annoncer 532 Mo là où 5,6 Go étaient réutilisables, et
+   * une garde qui crie à tort finit ignorée — avec elle, les vraies alertes.
+   */
+  return Math.round(
+    (lire("Pages free") + lire("Pages speculative") + lire("Pages inactive")) / 1e6);
+}
+
 export function etatMachine() {
   const vm = execFileSync("vm_stat", { encoding: "utf8" });
+  const taillePage = Number(/page size of (\d+) bytes/.exec(vm)?.[1] ?? 4096);
   const lire = (nom: string) => {
     const m = new RegExp(`${nom}:\\s+(\\d+)`).exec(vm);
-    return m ? Number(m[1]) * 4096 : 0;
+    return m ? Number(m[1]) * taillePage : 0;
   };
-  const libreMo = Math.round((lire("Pages free") + lire("Pages speculative")) / 1e6);
+  const libreMo = memoireDisponibleMo(vm);
   return {
     chargeParCoeur: Number((loadavg()[0]! / cpus().length).toFixed(2)),
     charge: Number(loadavg()[0]!.toFixed(2)),

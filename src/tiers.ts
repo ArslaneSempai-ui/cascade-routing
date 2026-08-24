@@ -20,6 +20,39 @@ export { TIERS, ENCODEURS, GENERATIFS, estGeneratif } from "./paliers.ts";
 
 /* ══════════════════ Chain A — extract ══════════════════ */
 
+/**
+ * LA QUESTION D'UN CHAMP, ET D'OU ELLE VIENT.
+ *
+ * `QUESTIONS` n'a jamais connu que NOS cinq champs. Un client qui lance `measure:yours` avec
+ * ses propres colonnes — `nom_complet`, `pays` — obtenait donc `undefined`, et les deux
+ * chemins echouaient differemment : l'encodeur plantait avec un message de bibliotheque qui
+ * parle d'autre chose, et le generatif demandait litteralement « Question: undefined » puis
+ * rendait du bruit **sans rien signaler**. Le second est le pire des deux.
+ *
+ * La question se resout donc en un seul endroit, et elle porte sa provenance :
+ *
+ *   fournie   le client l'a ecrite — c'est un CHOIX, le sien
+ *   mesuree   c'est un de nos cinq champs, et le taux publie a ete mesure sous cette question
+ *   deduite   fabriquee depuis le nom de colonne — un CHOIX que nous faisons pour lui, et
+ *             qui doit s'afficher pour qu'il puisse le corriger
+ *
+ * Une question deduite n'est pas une mesure. Le taux qu'elle produit n'est pas comparable a
+ * celui du README, et l'outil doit le dire la ou il l'affiche.
+ */
+export type Question = { texte: string; provenance: "fournie" | "mesuree" | "deduite" };
+
+export function questionPour(champ: string, fournies?: Record<string, string>): Question {
+  const f = fournies?.[champ];
+  if (typeof f === "string" && f.trim().length > 0) return { texte: f.trim(), provenance: "fournie" };
+  const nôtre = (QUESTIONS as Record<string, string>)[champ];
+  if (nôtre) return { texte: nôtre, provenance: "mesuree" };
+  /* Deduite du nom de colonne : les separateurs deviennent des espaces, rien d'autre. On ne
+     traduit pas et on ne devine pas le sens — inventer « date de naissance » a partir de
+     `date_naissance` marcherait ici et echouerait sur la colonne suivante. */
+  const lisible = champ.replace(/[_\-.]+/g, " ").trim();
+  return { texte: `What is the ${lisible}?`, provenance: "deduite" };
+}
+
 const QUESTIONS: Record<Field, string> = {
   name: "What is the name of the client?",
   birth: "What is the date of birth?",
@@ -411,6 +444,9 @@ export async function loadExtractors(): Promise<void> {
 
 export async function extract(
   tier: TierName, d: ClientFile, champ: Field, prompt: NomPrompt = "reference",
+  /* La question a poser. Absente, c'est la notre — celle sous laquelle le taux publie a ete
+     mesure. Presente, elle vient d'un client dont les champs ne sont pas les notres. */
+  question?: string,
 ): Promise<string> {
   if (tier === "rules") return RULES[champ](d.text);
   /*
@@ -422,9 +458,9 @@ export async function extract(
    * et discutable. Confondre les deux ferait croire l'human infaillible.
    */
   if (tier === "human") return d.truth[champ];
-  if (estGeneratif(tier)) return extraireGeneratif(tier, d.text, champ, prompt);
+  if (estGeneratif(tier)) return extraireGeneratif(tier, d.text, champ, prompt, question);
   const qa = tier === "small" ? qaSmall : qaLarge;
-  const r = await qa(QUESTIONS[champ], d.text);
+  const r = await qa(question ?? questionPour(champ).texte, d.text);
   return String(r?.answer ?? "").trim();
 }
 
@@ -473,9 +509,11 @@ const EXEMPLES: Record<Field, string> = {
 
 export type NomPrompt = "reference" | "A-sans-exemple" | "B-exemple-apparie" | "C-minimal" | "D-document-dabord";
 
-export const PROMPTS: Record<NomPrompt, (texte: string, champ: Field) => string> = {
+export const PROMPTS: Record<NomPrompt,
+  /* `question` absente = la nôtre, celle sous laquelle le taux publié a été mesuré. */
+  (texte: string, champ: Field, question?: string) => string> = {
   /* La référence : un exemple unique, dont la question est celle du champ `document`. */
-  reference: (texte, champ) =>
+  reference: (texte, champ, question) =>
     `Copy a single value out of a document, verbatim. Never rephrase, never reformat, ` +
     `never explain. If the value is absent, return an empty string.\n\n` +
     `Example.\n` +
@@ -484,42 +522,42 @@ export const PROMPTS: Record<NomPrompt, (texte: string, champ: Field) => string>
     `Answer: ${EXEMPLES.document}\n\n` +
     `Now the real one.\n` +
     `Document: ${texte}\n` +
-    `Question: ${QUESTIONS[champ]}\n` +
+    `Question: ${question ?? questionPour(champ).texte}\n` +
     `Answer:`,
 
   /* A : ce que l'exemple apporte, isolé en le retirant. */
-  "A-sans-exemple": (texte, champ) =>
+  "A-sans-exemple": (texte, champ, question) =>
     `Copy a single value out of a document, verbatim. Never rephrase, never reformat, ` +
     `never explain. If the value is absent, return an empty string.\n\n` +
     `Document: ${texte}\n` +
-    `Question: ${QUESTIONS[champ]}\n` +
+    `Question: ${question ?? questionPour(champ).texte}\n` +
     `Answer:`,
 
   /* B : chaque champ voit un exemple qui pose SA question. Même document, aucune information neuve. */
-  "B-exemple-apparie": (texte, champ) =>
+  "B-exemple-apparie": (texte, champ, question) =>
     `Copy a single value out of a document, verbatim. Never rephrase, never reformat, ` +
     `never explain. If the value is absent, return an empty string.\n\n` +
     `Example.\n` +
     `Document: ${EXEMPLE_DOC}\n` +
-    `Question: ${QUESTIONS[champ]}\n` +
+    `Question: ${question ?? questionPour(champ).texte}\n` +
     `Answer: ${EXEMPLES[champ]}\n\n` +
     `Now the real one.\n` +
     `Document: ${texte}\n` +
-    `Question: ${QUESTIONS[champ]}\n` +
+    `Question: ${question ?? questionPour(champ).texte}\n` +
     `Answer:`,
 
   /* C : une phrase d'instruction, rien d'autre. La longueur sert-elle à quelque chose ? */
-  "C-minimal": (texte, champ) =>
+  "C-minimal": (texte, champ, question) =>
     `Extract the requested value from the document exactly as written. Return an empty ` +
     `string if it is not there.\n\n` +
     `Document: ${texte}\n` +
-    `Question: ${QUESTIONS[champ]}\n` +
+    `Question: ${question ?? questionPour(champ).texte}\n` +
     `Answer:`,
 
   /* D : même contenu, contrainte après le document. La position d'une instruction compte. */
-  "D-document-dabord": (texte, champ) =>
+  "D-document-dabord": (texte, champ, question) =>
     `Document: ${texte}\n\n` +
-    `Question: ${QUESTIONS[champ]}\n\n` +
+    `Question: ${question ?? questionPour(champ).texte}\n\n` +
     `Answer with the value exactly as it appears in the document above. Do not ` +
     `rephrase, reformat or explain. If it is absent, answer with an empty string.\n\n` +
     `Answer:`,
@@ -527,8 +565,9 @@ export const PROMPTS: Record<NomPrompt, (texte: string, champ: Field) => string>
 
 async function extraireGeneratif(
   tier: TierName, texte: string, champ: Field, prompt: NomPrompt = "reference",
+  question?: string,
 ): Promise<string> {
-  const r = await ollama(tier, PROMPTS[prompt](texte, champ),
+  const r = await ollama(tier, PROMPTS[prompt](texte, champ, question),
     { type: "object", properties: { answer: { type: "string" } }, required: ["answer"] });
   return String(r.answer ?? "").trim();
 }

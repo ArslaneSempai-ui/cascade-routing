@@ -31,7 +31,7 @@ import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { loadavg } from "node:os";
 import { isMain } from "./cli.ts";
 import { ouvrirJournal, issue } from "./journal.ts";
-import { loadExtractors, loadClassifiers, loadGeneratifs, extract, correct, classerParmi, MODELES_LOCAUX } from "./tiers.ts";
+import { loadExtractors, loadClassifiers, loadGeneratifs, extract, correct, classerParmi, MODELES_LOCAUX, questionPour } from "./tiers.ts";
 import { ENCODEURS, GENERATIFS } from "./paliers.ts";
 import { rate, writeRate, distinguishable, CONFIANCE, ENOUGH } from "./interval.ts";
 import { table } from "./figures.ts";
@@ -266,6 +266,10 @@ function chargerRegles(chemin: string): Record<string, RegExp> {
 export async function mesurerVosCas(
   cas: Cas[], champs: string[], paliers: TierName[], regles?: Record<string, RegExp>,
   journaliser = false, sorties?: SortiesFournies,
+  /* Les questions posées aux modèles, une par champ. Absentes, elles se déduisent du nom de
+     colonne — et ce choix s'affiche, parce qu'un taux obtenu sous une question déduite n'est
+     pas comparable à celui du README. */
+  questions?: Record<string, string>,
 ): Promise<Record<string, Record<TierName, { bons: number; sur: number; ms: number }>>> {
   const releve: Record<string, Record<TierName, { bons: number; sur: number; ms: number }>> = {};
   const journal = journaliser ? ouvrirJournal("vos-cas", {
@@ -312,7 +316,8 @@ export async function mesurerVosCas(
         /* `extract` attend un ClientFile et un Field ; les cas du lecteur ont les mêmes deux
            propriétés utiles, et le champ n'est qu'une clé. Le typage local est plus étroit
            que la réalité, d'où la conversion — explicite plutôt que silencieuse. */
-        const got = await extract(palier, { id: c.id, text: c.text, truth: c.truth } as never, champ as never);
+        const got = await extract(palier, { id: c.id, text: c.text, truth: c.truth } as never,
+          champ as never, "reference", questionPour(champ, questions).texte);
         const ms = performance.now() - t0;
         durees.push(ms);
         journal?.ligne({
@@ -410,6 +415,27 @@ Nothing leaves your machine: the models are local and this path makes no network
   }
   const regles = arg("rules") ? chargerRegles(arg("rules")!) : undefined;
   const sorties = arg("sorties") ? chargerSorties(arg("sorties")!) : undefined;
+  /* Les questions du client, s'il en fournit. Un fichier illisible se refuse en le disant :
+     partir sur des questions déduites alors qu'il en a écrit serait pire que de s'arrêter. */
+  const questionsFournies = (() => {
+    const chemin = arg("questions");
+    if (!chemin) return undefined;
+    if (!existsSync(chemin)) { console.error(`no such file: ${chemin}`); process.exit(1); }
+    try {
+      const o = JSON.parse(readFileSync(chemin, "utf8")) as Record<string, unknown>;
+      const propre: Record<string, string> = {};
+      for (const [k, v] of Object.entries(o)) {
+        if (typeof v !== "string" || v.trim().length === 0) {
+          console.error(`--questions: « ${k} » n'a pas de question lisible.`); process.exit(1);
+        }
+        propre[k] = v.trim();
+      }
+      return propre;
+    } catch (e) {
+      console.error(`--questions: ${chemin} ne se lit pas — ${(e as Error).message}`);
+      process.exit(1);
+    }
+  })();
   const avecLlm = process.argv.includes("--llm");
   const paliers = [
     ...ENCODEURS.filter((t) => t !== "rules" && t !== "human"),
@@ -421,6 +447,34 @@ Nothing leaves your machine: the models are local and this path makes no network
     console.log(`\n⚠ ${cas.length} cases is below the point where a rate says anything. `
       + `The intervals below will be wider than the differences you are trying to see.`);
   }
+  /*
+   * LES QUESTIONS, RESOLUES ET AFFICHEES AVANT DE CHARGER QUOI QUE CE SOIT.
+   *
+   * `QUESTIONS` ne connaissait que nos cinq champs. Un client avec ses propres colonnes
+   * obtenait `undefined` : l'encodeur plantait sur un message de bibliotheque qui parle
+   * d'autre chose, et le generatif demandait « Question: undefined » puis rendait du bruit
+   * SANS RIEN SIGNALER. Le second est le pire des deux, et c'est celui qu'on ne voit pas.
+   *
+   * Une question deduite est un CHOIX que nous faisons a la place du client. Elle s'affiche
+   * donc avant la mesure, pour qu'il puisse la corriger — et le taux qu'elle produit n'est
+   * pas comparable au notre, ce qui se dit ici plutot que de se deviner.
+   */
+  const questions = Object.fromEntries(champs.map((c) => [c, questionPour(c, questionsFournies)]));
+  const deduites = champs.filter((c) => questions[c]!.provenance === "deduite");
+  console.log(`\nThe question each field is asked, and where it comes from:\n`);
+  for (const c of champs) {
+    const q = questions[c]!;
+    const marque = { fournie: "yours   ", mesuree: "measured", deduite: "derived " }[q.provenance];
+    console.log(`  ${marque}  ${c.padEnd(18)} ${q.texte}`);
+  }
+  if (deduites.length) {
+    console.log(`\n⚠ ${deduites.length} question(s) derived from your column names — a choice we`);
+    console.log(`  made for you, not a measurement. Rates obtained under a derived question are`);
+    console.log(`  NOT comparable to the ones in this repository's README, which were measured`);
+    console.log(`  under the questions above marked "measured".`);
+    console.log(`  Supply your own with --questions=file.json : { "column": "What is …?" }`);
+  }
+
   if (avecLlm) await loadGeneratifs();
 
   if (tache === "classify") {
@@ -504,7 +558,8 @@ Nothing leaves your machine: the models are local and this path makes no network
   }
 
   const releve = await mesurerVosCas(cas, champs, paliers, regles,
-    process.argv.includes("--journal"), sorties);
+    process.argv.includes("--journal"), sorties,
+    Object.fromEntries(Object.entries(questions).map(([k, v]) => [k, v.texte])));
 
   console.log("\nACCURACY PER FIELD, with the interval at "
     + `${(CONFIANCE.niveau * 100).toFixed(0)} %\n`);
