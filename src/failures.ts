@@ -212,10 +212,10 @@ export async function collect(
     try {
       const c = JSON.parse(readFileSync(GALERIE, "utf8")) as { entrees?: string; echecs?: Failure[] };
       if (c.entrees === cle && Array.isArray(c.echecs)) return c.echecs;
-      console.warn(`\n⚠ La galerie en cache ne correspond plus à ses entrées (${c.entrees ?? "sans clé"} ≠ ${cle}).`);
-      console.warn(`  Recalcul — les modèles vont être chargés.\n`);
+      console.warn(`\n⚠ The cached gallery no longer matches its inputs (${c.entrees ?? "no key"} ≠ ${cle}).`);
+      console.warn(`  Recomputing — the models are about to be loaded.\n`);
     } catch {
-      console.warn(`\n⚠ ${GALERIE} illisible : recalcul.\n`);
+      console.warn(`\n⚠ ${GALERIE} unreadable: recomputing.\n`);
     }
   }
   return await calculerGalerie(howMany, paliers, cle);
@@ -242,14 +242,14 @@ async function calculerGalerie(howMany: number, paliers: TierName[], cle: string
   try {
     const m = etatMachine();
     if (m.memoireLibreMo < MEMOIRE_LIBRE_MINIMALE_MO) {
-      console.warn(`\n⚠ ${m.memoireLibreMo} Mo libres, ${MEMOIRE_LIBRE_MINIMALE_MO} recommandés pour cette passe.`);
-      console.warn(`  ${howMany} cas × ${FIELDS.length} champs × ${paliers.filter((t) => t !== "human").length} paliers,`);
-      console.warn(`  avec deux modèles résidents. Si le processus meurt d'un signal 137, c'est ça.\n`);
+      console.warn(`\n⚠ ${m.memoireLibreMo} MB free, ${MEMOIRE_LIBRE_MINIMALE_MO} recommended for this pass.`);
+      console.warn(`  ${howMany} cases × ${FIELDS.length} fields × ${paliers.filter((t) => t !== "human").length} tiers,`);
+      console.warn(`  with two models resident. If the process dies on signal 137, this is why.\n`);
     }
     if (m.chargeParCoeur > 1) {
-      console.warn(`\n⚠ charge ${m.charge} sur ${m.coeurs} cœurs : cette passe a été mesurée entre`);
-      console.warn(`  41 s et 224 s selon la charge, pour une entrée identique. Les COMPTES ne`);
-      console.warn(`  bougent pas — ce sont des faits sur la sortie — mais la durée, si.\n`);
+      console.warn(`\n⚠ load ${m.charge} on ${m.coeurs} cores: this pass has been measured between`);
+      console.warn(`  41 s and 224 s depending on load, for identical input. The COUNTS do not`);
+      console.warn(`  move — they are facts about the output — but the duration does.\n`);
     }
   } catch {
     /* `vm_stat` n'existe pas ailleurs que sur macOS. Une garde qui ne peut pas mesurer se
