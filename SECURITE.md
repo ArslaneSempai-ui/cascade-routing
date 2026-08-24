@@ -38,9 +38,9 @@ que ça ne se lit dans aucun fichier.
 
 ## Les secrets dans l'historique
 
-**0 secrets non déclarés** sur 206 commits — relevé du 2026-08-24, sous `ad4f9c5`.
+**0 secrets non déclarés** sur 211 commits — relevé du 2026-08-24, sous `287c538`.
 
-Le balayage a relevé 4 trouvailles au total, dont 4 déclarées dans
+Le balayage a relevé 11 trouvailles au total, dont 11 déclarées dans
 `secrets-declares.json` : ce sont les leurres plantés dans nos propres cas de test, qui
 existent pour prouver que le détecteur détecte encore. Un chiffre issu d'une sélection porte
 le compte de ce qu'il écarte, et chaque écarté est nommé avec sa raison. Témoins retrouvés :
