@@ -386,16 +386,53 @@ export async function residents() {
  * Trouvé par une relecture croisée. La forme est celle de la garde mémoire « documentée et
  * importée par personne », en un cran plus vicieux : ici la valeur est lue, puis abandonnée.
  */
+/*
+ * ─── ET LE REFUS DE SÉCURITÉ ÉTAIT AVALÉ PAR CETTE MÊME FONCTION ───
+ *
+ * `exigerHoteLocal()` vivait À L'INTÉRIEUR du `try`, dont le `catch` rendait une carte vide.
+ * Or une carte vide est exactement ce que `digestsQuiDivergent` interprète — délibérément,
+ * et à raison — comme « aucun écart » : une machine sans Ollama ne doit pas faire crier la
+ * garde.
+ *
+ * Les deux décisions sont bonnes séparément. Ensemble elles font ceci : posez OLLAMA_HOST sur
+ * une machine distante, la garde de sécurité lève, son message est jeté, et la garde des
+ * empreintes annonce que tout correspond. Le refus le plus important du dépôt sortait par la
+ * porte de la moins importante des dégradations. Vérifié en le lançant, pas en le lisant.
+ *
+ * Et le `catch` nu confondait quatre situations qui n'ont rien à voir : Ollama éteint (une
+ * absence légitime), un hôte distant (un refus), un délai dépassé (on ne sait pas), et une
+ * faute de programmation dans l'analyse du JSON (un défaut, masqué pour toujours). La
+ * troisième et la quatrième se lisent « aucun modèle installé », et la sentinelle de dérive
+ * que le palier le plus cher promet de vendre repose là-dessus.
+ *
+ * Un `catch` sans discrimination ne rattrape pas une erreur : il la renomme.
+ */
 async function tailles() {
+    /* HORS DU `try` : un refus d'envoyer vers un hôte distant traverse, il ne se dégrade pas. */
+    exigerHoteLocal();
     try {
-        /* Même règle : aucun appel vers un hôte qui n'est pas cette machine. */
-        exigerHoteLocal();
         const r = await fetch(`${OLLAMA}/api/tags`, { signal: AbortSignal.timeout(10_000) });
+        if (!r.ok) {
+            throw new Error(`${OLLAMA}/api/tags a répondu ${r.status}. Ce n'est pas « aucun modèle installé » :\n`
+                + "  un service qui refuse de répondre ne dit rien des modèles, et le traiter comme un\n"
+                + "  silence ferait passer la garde des empreintes au vert sans avoir rien comparé.");
+        }
         const j = await r.json();
         return new Map((j.models ?? []).map((m) => [m.name, { octets: m.size, digest: (m.digest ?? "").replace(/^sha256:/, "").slice(0, 12) }]));
     }
-    catch {
-        return new Map();
+    catch (e) {
+        /*
+         * LA SEULE DÉGRADATION ADMISE : Ollama n'écoute pas sur cette machine. C'est le cas
+         * courant sur un clone frais, et il ne doit pas faire échouer la suite.
+         *
+         * Tout le reste — délai dépassé, réponse illisible, faute d'analyse — remonte. Un
+         * silence qui ne s'explique pas ne se convertit pas en « rien à signaler ».
+         */
+        const injoignable = e instanceof TypeError
+            || e?.cause?.code === "ECONNREFUSED";
+        if (injoignable)
+            return new Map();
+        throw e;
     }
 }
 /**

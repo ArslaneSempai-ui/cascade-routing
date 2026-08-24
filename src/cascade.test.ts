@@ -4285,3 +4285,74 @@ test("les deux caractères qui ne se voient pas déclenchent un doute", () => {
      n'importe quelle écriture, et le refuser serait une faute. */
   assert.equal(horsRepertoire("\u0412\u043B\u0430\u0434\u0438\u043C\u0438\u0440", "name"), false, "un nom n'a pas de répertoire imposé");
 });
+
+/*
+ * ─── UN SILENCE QU'ON N'EXPLIQUE PAS NE DEVIENT PAS « RIEN À SIGNALER » ───
+ *
+ * `tailles()` interroge `/api/tags` pour lire l'empreinte des modèles installés, et son
+ * résultat alimente la seule garde qui détecte qu'un `ollama pull` a changé les chiffres sous
+ * nos pieds. Elle enveloppait tout dans `try { … } catch { return new Map(); }`.
+ *
+ * Or une carte vide est ce que `digestsQuiDivergent` lit — délibérément, et à raison — comme
+ * « aucun écart » : une machine sans Ollama ne doit pas faire crier la garde. Les deux
+ * décisions sont bonnes séparément, et ensemble elles font passer au vert un contrôle qui n'a
+ * rien comparé.
+ *
+ * MESURÉ PLUTÔT QUE SUPPOSÉ, et la première formulation était trop large. J'ai d'abord écrit
+ * que le refus d'hôte distant était avalé : lancé, il ne l'était pas — la garde du site
+ * d'envoi suivant le rattrapait une étape plus loin, et l'« avant » se comportait exactement
+ * comme l'« après ». Le cas réellement découvert est celui-ci, et il n'est rattrapé nulle
+ * part : un Ollama qui répond 500 sur `/api/tags` mais sert `/api/generate` — un mandataire,
+ * une panne partielle — laissait la passe entière se dérouler et publier des chiffres
+ * génératifs pendant que la garde de dérive comparait le vide au vide.
+ *
+ * C'est la promesse du palier le plus cher qui reposait dessus.
+ */
+test("un /api/tags en panne fait refuser, il ne se lit pas « aucun modèle »", { timeout: 60_000 }, async () => {
+  /* Lié sur la boucle locale uniquement : rien de ce banc n'est joignable depuis le réseau. */
+  const stub = createServer((req, res) => {
+    if (req.url?.startsWith("/api/tags")) { res.writeHead(500); res.end("upstream error"); return; }
+    res.writeHead(200, { "content-type": "application/json" });
+    res.end(JSON.stringify({ response: '{"ok":"pong"}', done: true }));
+  });
+  await new Promise<void>((r) => stub.listen(0, "127.0.0.1", () => r()));
+  const port = (stub.address() as { port: number }).port;
+  try {
+    /*
+     * `spawn` ET NON `spawnSync` — et ce n'est pas un détail de style.
+     *
+     * Le serveur ci-dessus vit dans CE processus. `spawnSync` bloque la boucle d'événements
+     * jusqu'à la fin de l'enfant, donc le serveur ne répond à rien : la requête de l'enfant
+     * expire au bout de dix secondes et il refuse pour délai dépassé, pas pour un 500.
+     *
+     * Le contrôle passait quand même au rouge — donc il aurait pu être lu comme concluant.
+     * C'est la seconde assertion, celle qui exige que le message NOMME le code de réponse,
+     * qui a montré que le témoin éprouvait autre chose que ce qu'il annonçait.
+     */
+    const sortie = await new Promise<string>((res) => {
+      const enfant = spawn(process.execPath, ["-e",
+        `import(${JSON.stringify(fileURLToPath(new URL("./tiers.ts", import.meta.url)))})`
+        + `.then((t) => t.loadGeneratifs()).then(() => console.log("CONTINUE"),`
+        + ` (e) => console.log("REFUS " + String(e.message).split("\\n")[0]))`],
+        { env: { ...process.env, OLLAMA_HOST: `http://127.0.0.1:${port}` } });
+      let tout = "";
+      enfant.stdout.on("data", (d) => { tout += d; });
+      enfant.stderr.on("data", (d) => { tout += d; });
+      const minuteur = setTimeout(() => enfant.kill(), 40_000);
+      enfant.on("close", () => { clearTimeout(minuteur); res(tout); });
+    });
+
+    /* LE TÉMOIN POSITIF D'ABORD : sans lui, un « REFUS » obtenu pour une autre raison — un
+       chemin faux, une erreur d'import — se lirait comme une réussite du contrôle. */
+    assert.ok(/CONTINUE|REFUS/.test(sortie),
+      `ni CONTINUE ni REFUS dans la sortie : le sous-processus n'a pas atteint la garde.\n${sortie.slice(0, 400)}`);
+    assert.match(sortie, /REFUS/,
+      "un /api/tags en panne laisse la passe continuer : la garde des empreintes compare le vide au vide,\n"
+      + "  et la sentinelle de dérive vendue au palier le plus cher ne repose sur rien.");
+    assert.match(sortie, /a répondu 500/,
+      "le refus ne dit pas ce qui s'est passé : un message qui ne nomme pas le code de réponse\n"
+      + "  envoie chercher la panne du mauvais côté.");
+  } finally {
+    await new Promise<void>((r) => stub.close(() => r()));
+  }
+});
