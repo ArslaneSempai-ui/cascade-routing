@@ -15,13 +15,26 @@
  * ne transforme pas un chiffre tapé à la main en mesure. Le seul geste qui produit une
  * mesure est `npm run measure`.
  */
-import { readFileSync, writeFileSync, existsSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, statSync } from "node:fs";
 import { empreinteDuReleve } from "./measure.ts";
 import { fileURLToPath } from "node:url";
 
 const cible = process.argv[2] ?? fileURLToPath(new URL("../data/profiles.json", import.meta.url));
 if (!existsSync(cible)) {
   console.error(`  ${cible} n'existe pas. Rien à sceller.`);
+  process.exit(2);
+}
+/*
+ * EXISTER N'EST PAS ÊTRE LISIBLE.
+ *
+ * La garde ci-dessus demandait « le chemin est-il là ». Un dossier répond oui, puis
+ * `readFileSync` lève `EISDIR` et l'acheteur reçoit le vidage de pile de Node — dont la
+ * première ligne parle de `binding.readFileUtf8`. Trouvé en passant un dossier là où un
+ * fichier est attendu : le chemin traverse une garde qui ne pose pas la bonne question.
+ */
+if (!statSync(cible).isFile()) {
+  console.error(`  ${cible} is a directory, not a file. There is nothing to seal in it.`);
+  console.error(`  Point this at the record itself, for example data/profiles.json.`);
   process.exit(2);
 }
 

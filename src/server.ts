@@ -292,6 +292,30 @@ const serveur = createServer(async (req, res) => {
  * joignable par n'importe qui sur le même réseau.
  */
 if (isMain(import.meta)) {
+  /*
+   * UN PORT DÉJÀ PRIS EST LA PANNE LA PLUS BANALE QUI SOIT, et sans ce gestionnaire c'est
+   * la plus effrayante : `listen` émet un événement `error` que personne n'écoute, Node le
+   * relance, et l'acheteur reçoit `Unhandled 'error' event`, `errno: -48`, `syscall:
+   * 'listen'` et une pile de sept lignes. Il lit « l'outil n'est pas fini », alors que la
+   * cause tient en une phrase — et qu'il a très probablement lancé la commande deux fois.
+   *
+   * Le refus nomme le port ET donne la commande qui dit qui l'occupe : un refus sans issue
+   * se contourne en désactivant le refus.
+   */
+  serveur.on("error", (e: NodeJS.ErrnoException) => {
+    if (e.code === "EADDRINUSE") {
+      console.error(`Port ${PORT} is already in use, so this server did not start.`);
+      console.error(`Most likely it is already running — open http://localhost:${PORT}`);
+      console.error(`To see what holds it:  lsof -nP -iTCP:${PORT} -sTCP:LISTEN`);
+      process.exit(1);
+    }
+    if (e.code === "EACCES") {
+      console.error(`Port ${PORT} cannot be opened: permission denied.`);
+      console.error(`Ports below 1024 need privileges; pick a higher one.`);
+      process.exit(1);
+    }
+    throw e;   /* Ce qu'on ne sait pas nommer garde sa trace : elle est la seule information. */
+  });
   serveur.listen(PORT, "127.0.0.1", () => {
     console.log(`Where should the next dollar go → http://localhost:${PORT}`);
   });
