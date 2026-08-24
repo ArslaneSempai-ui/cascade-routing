@@ -2,7 +2,7 @@
   "quoi": "Se taire plutôt que livrer une valeur douteuse : ce que l'échange coûte et rapporte.",
   "pourquoi": "Escalader dépasse le plafond de latence sur quatre champs sur cinq, et la seule escalade admissible ne complète aucun dossier de plus. L'abstention ne coûte ni milliseconde ni euro.",
   "echangeMesure": "faux éliminés par juste sacrifié. Une valeur fausse entre au dossier sans bruit ; un blanc se voit. L'abstention ne rend pas le système plus juste, elle échange de l'erreur invisible contre du trou visible.",
-  "mesureLe": "2026-08-24T12:39:53.227Z",
+  "mesureLe": "2026-08-24T17:58:05.447Z",
   "journal": "tentatives/2026-08-24T12-32-20-859Z-dur.jsonl",
   "corpus": "hard-corpus",
   "documents": 30,
@@ -31,7 +31,8 @@
       "justesLivresEnMoins": 0,
       "coutTotal": 62.22,
       "dossiersSansErreurInvisible": 11,
-      "dossiersEntiers": 0
+      "dossiersEntiers": 0,
+      "dossiersARelire": 0
     },
     {
       "regle": "se taire si au moins un signal",
@@ -50,6 +51,7 @@
       "coutTotal": 69.27,
       "dossiersSansErreurInvisible": 17,
       "dossiersEntiers": 0,
+      "dossiersARelire": 30,
       "temoinHasard": {
         "abstentions": 103,
         "fauxElimines": 73.2,
@@ -74,6 +76,7 @@
       "coutTotal": 62.22,
       "dossiersSansErreurInvisible": 12,
       "dossiersEntiers": 0,
+      "dossiersARelire": 4,
       "temoinHasard": {
         "abstentions": 4,
         "fauxElimines": 2.9,
@@ -98,7 +101,8 @@
     "justesLivresEnMoins": 0,
     "coutTotal": 62.22,
     "dossiersSansErreurInvisible": 30,
-    "dossiersEntiers": 0
+    "dossiersEntiers": 0,
+    "dossiersARelire": 30
   },
   "prixDeclares": {
     "costWrongValue": 0.587,

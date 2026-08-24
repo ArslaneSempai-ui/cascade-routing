@@ -47,6 +47,7 @@ export type Bilan = {
   coutTotal: number;
   precisionLivree: number | null; precisionLivreeIntervalle: [number, number] | null;
   dossiersSansErreurInvisible: number; dossiersEntiers: number;
+  dossiersARelire: number;
 };
 
 /** Le bilan d'une règle d'abstention, quelle qu'elle soit. */
@@ -58,6 +59,21 @@ export function bilan(
 ): Bilan {
   let abstentions = 0, fauxElimines = 0, justesSacrifies = 0;
   let livrees = 0, justesLivrees = 0;
+  /*
+   * DANS QUELS DOSSIERS TOMBENT LES CHAMPS TUS.
+   *
+   * L'abstention se compte par CHAMP, la relecture se paie par DOSSIER OUVERT : un relecteur
+   * qui ouvre un dossier pour trois champs ne le paie pas trois fois. Sans cette information,
+   * le coût en heures ne peut être qu'encadré — au mieux ⌈abstentions ÷ champs⌉ dossiers, au
+   * pire un dossier par abstention — et rendre le milieu inventerait une répartition que
+   * personne n'a mesurée.
+   *
+   * Le banc connaissait le dossier de chaque champ depuis toujours ; il ne l'agrégeait pas.
+   * Une session qui convertissait ce relevé en équivalents temps plein a buté dessus et a
+   * rendu une borne plutôt qu'un chiffre — correctement. Ce compte transforme la borne en
+   * mesure.
+   */
+  const dossiersARelire = new Set<string>();
   const propre = new Map(documents.map((d) => [d, true]));
   const sansFaux = new Map(documents.map((d) => [d, true]));
 
@@ -66,6 +82,7 @@ export function bilan(
     const juste = x.t.outcome === "clean";
     if (seTaire(x.t)) {
       abstentions++;
+      dossiersARelire.add(x.cas);
       if (juste) justesSacrifies++; else fauxElimines++;
       propre.set(x.cas, false);          // un champ tu n'est pas un champ livré
       continue;                           // et il n'entre pas au dossier : rien d'invisible
@@ -99,6 +116,10 @@ export function bilan(
     coutTotal: Number(cout.toFixed(2)),
     dossiersSansErreurInvisible: [...sansFaux.values()].filter(Boolean).length,
     dossiersEntiers: [...propre.values()].filter(Boolean).length,
+    /* Le nombre de DOSSIERS qu'un relecteur devra ouvrir, qui n'est pas le nombre de champs
+       tus : plusieurs abstentions tombent souvent dans le même dossier. C'est ce compte qui
+       transforme un coût encadré en coût mesuré. */
+    dossiersARelire: dossiersARelire.size,
   };
 }
 
