@@ -25,7 +25,15 @@ export const TYPOLOGIES = [
     "fractionnement", "mouvement rapide", "lien sanctions",
     "contrepartie inhabituelle", "intensite especes",
 ];
-function draw(seed) {
+/**
+ * Exporté : un banc dont le témoin bouge entre deux exécutions n'est pas reproductible.
+ *
+ * Le témoin aléatoire du banc des signaux et le routeur au hasard de l'escalade tiraient sur
+ * `Math.random()`. Leurs chiffres changeaient à chaque passe, et un test qui comparait un signal
+ * à son témoin tombait une fois sur plusieurs — non parce qu'il était capricieux, mais parce
+ * que la mesure l'était.
+ */
+export function draw(seed) {
     let etat = seed >>> 0;
     return () => {
         etat = (etat * 1_664_525 + 1_013_904_223) >>> 0;

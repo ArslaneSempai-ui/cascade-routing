@@ -15,6 +15,24 @@ import { isMain } from "./cli.js";
 import { FIELDS } from "./corpus.js";
 import { pricePerThousandExtractions, accuracy, latency, ASSUMPTIONS } from "./assumptions.js";
 import { rate, distinguishable, pairedVerdict } from "./interval.js";
+/*
+ * LA TABLE FIGÉE EST POSÉE PAR L'APPELANT, ELLE N'EST PAS LUE ICI.
+ *
+ * Ce module tourne AUSSI dans le navigateur : il est compilé par `tsconfig.web.json` et
+ * embarqué dans la page. Or il importait `derivees.ts`, qui importe `node:fs` — et un
+ * `import "node:fs"` dans un navigateur ne dégrade rien, il TUE le module entier au
+ * chargement. La page publiée serait partie vide, avec pour seule trace deux lignes de
+ * console : « Access to script at 'node:fs' has been blocked ».
+ *
+ * Rien ne le voyait. `npm test` ne construit pas la page, `docs/` datait de quatre jours, et
+ * l'écran livré était donc l'ancien, qui marchait. Le défaut attendait la prochaine
+ * construction — c'est-à-dire la prochaine publication.
+ */
+let DECOMPOSITION_FIGEE = null;
+/** Posée une fois par un appelant Node ; le navigateur n'en a pas et n'en a pas besoin. */
+export function poserDecompositionFigee(t) {
+    DECOMPOSITION_FIGEE = t ?? null;
+}
 /**
  * La best affectation field par field sous contrainte de budget.
  *
@@ -63,19 +81,110 @@ export function pricePerThousandDocuments(p, h, tier) {
         return 0;
     return FIELDS.reduce((s, c) => s + pricePerThousandExtractions(tier, h, parChamp[c].latency), 0);
 }
-export function evaluer(p, h, routing) {
+/**
+ * L'exactitude d'un palier sur un champ, les deux erreurs pesées séparément.
+ *
+ * ─── Pourquoi la pondération entre ici et pas dans le coût ───
+ *
+ * On pourrait ajouter une pénalité d'erreur au prix et minimiser le total. Ce serait une
+ * **autre** forme d'objectif : elle échange continûment de l'argent contre de la justesse,
+ * alors que celle-ci traite le budget comme un mur et la justesse comme seul but. À poids
+ * égaux les deux ne coïncident pas par construction — elles coïncident sur ces données-ci,
+ * ce qui est un fait et non une garantie.
+ *
+ * Posée dans le terme d'exactitude, la neutralité devient un théorème. Chaque erreur compte
+ * pour sa part du **plus cher** des deux coûts : à `costWrongValue === costBlankField`, les
+ * deux valent 1, l'expression se réduit à `1 − tauxDErreur`, c'est-à-dire exactement
+ * l'exactitude d'avant. Introduire ces deux hypothèses ne peut donc rien déplacer tant que
+ * personne n'a choisi de les séparer.
+ *
+ * Un palier dont la décomposition est introuvable retombe sur son exactitude nue : on ne peut
+ * pas peser ce qu'on n'a pas décomposé, et supposer une répartition serait inventer le chiffre
+ * que cette fonction existe pour mesurer.
+ *
+ * **« Introuvable » et « sorties brutes absentes » ne sont plus la même chose.** La garde
+ * testait `profil.sorties` et sortait avant d'appeler la décomposition, donc le repli sur la
+ * table gelée ne l'atteignait pas : dans un clone, les deux coûts d'erreur ne déplaçaient plus
+ * rien, le balayage les jugeait sans effet et ne publiait pas leurs seuils. C'était la
+ * troisième lecture directe de `sorties` dans ce dépôt, et le correctif en a trouvé une par
+ * tour. On demande maintenant à la décomposition, qui sait d'où elle vient.
+ */
+export function justessePonderee(p, h, tier, champ) {
+    const profil = p.extraction[tier][champ];
+    if (tier === "human")
+        return accuracy(tier, profil.accuracy, h);
+    const pire = Math.max(h.costWrongValue, h.costBlankField);
+    if (pire <= 0)
+        return profil.accuracy;
+    const part = decomposition(p, tier, champ);
+    if (!part)
+        return profil.accuracy;
+    return 1 - part.faux * (h.costWrongValue / pire) - part.vide * (h.costBlankField / pire);
+}
+/**
+ * Les deux taux d'échec d'un palier sur un champ, comptés une seule fois.
+ *
+ * Sans ce cache, `justessePonderee` reparcourait mille caractères à **chaque** évaluation de
+ * routage : l'optimiseur en essaie 16 807, cinq champs chacun, ce qui faisait quatre-vingts
+ * millions d'opérations par appel et a fait dépasser dix minutes à un test qui en prenait
+ * deux secondes. Les comptes ne dépendent que du relevé, jamais des hypothèses — ils se
+ * calculent une fois et se relisent.
+ *
+ * La clé porte `measuredAt` : une re-mesure invalide le cache d'elle-même, sans que personne
+ * ait à s'en souvenir.
+ */
+const CACHE = new Map();
+/**
+ * Le repli sur les comptes gelés, quand le relevé n'a pas ses sorties brutes.
+ *
+ * Les relevés livrés à la racine en sont dépourvus depuis qu'on a sorti 1,4 Mo de sorties de
+ * git. Un clone rendait donc `null` partout, la décomposition des erreurs disparaissait, et les
+ * deux seuils qui les tarifent avec elle. Le figé porte la même donnée sous une forme cent fois
+ * plus petite : trente-cinq couples de comptes au lieu de trente-cinq mille chaînes.
+ */
+function fige(tier, champ) {
+    return DECOMPOSITION_FIGEE?.[`${tier}|${champ}`] ?? null;
+}
+/** Exporté pour que le gel puisse constituer la table depuis un relevé qui a ses sorties. */
+export function decompositionDe(p, tier, champ) {
+    return decomposition(p, tier, champ);
+}
+function decomposition(p, tier, champ) {
+    const cle = `${p.measuredAt}|${tier}|${champ}`;
+    const connu = CACHE.get(cle);
+    if (connu !== undefined)
+        return connu;
+    const profil = p.extraction[tier][champ];
+    let out = fige(tier, champ);
+    if (!out && profil.sorties && profil.reussites && profil.reussites.length === profil.sorties.length) {
+        let vide = 0, faux = 0;
+        for (let i = 0; i < profil.sorties.length; i++) {
+            if (profil.reussites[i] === "1")
+                continue;
+            if ((profil.sorties[i] ?? "").trim() === "")
+                vide++;
+            else
+                faux++;
+        }
+        const n = profil.sorties.length;
+        out = { vide: vide / n, faux: faux / n };
+    }
+    CACHE.set(cle, out);
+    return out;
+}
+export function evaluer(p, h, routing, champs = FIELDS) {
     let sommeJustesse = 0, cost = 0, seconds = 0;
-    for (const c of FIELDS) {
+    for (const c of champs) {
         const e = routing[c];
         const profil = p.extraction[e][c];
-        sommeJustesse += accuracy(e, profil.accuracy, h);
+        sommeJustesse += justessePonderee(p, h, e, c);
         cost += (h.volume / 1000) * pricePerThousandExtractions(e, h, profil.latency);
         seconds += (h.volume * latency(e, profil.latency, h)) / 1000;
     }
     const latencyPerItem = (seconds * 1000) / h.volume;
     return {
         routing,
-        accuracy: sommeJustesse / FIELDS.length,
+        accuracy: sommeJustesse / champs.length,
         cost, seconds,
         budgetShare: h.budget === 0 ? Infinity : cost / h.budget,
         latencyPerItem,
@@ -173,10 +282,12 @@ function indiscernables(p, a, b) {
     }
     return true;
 }
-export function optimiseExtraction(p, h) {
-    let best = null;
-    const evaluate = (routing) => evaluer(p, h, routing);
-    const paliers = paliersMesures(p);
+export function optimiseExtraction(p, h, champs = FIELDS, 
+/* Injectables pour mesurer le mur du solveur sur des jeux plus grands que ceux du dépôt.
+   Par défaut, exactement les paliers réellement mesurés — le comportement publié. */
+paliersDemandes) {
+    const evaluate = (routing) => evaluer(p, h, routing, champs);
+    const paliers = paliersDemandes ?? paliersMesures(p);
     /*
      * Deux passes, et non une, parce que « indiscernable » n'est pas transitif.
      *
@@ -188,32 +299,57 @@ export function optimiseExtraction(p, h) {
      * Passe 1 : la meilleure justesse atteignable dans le budget.
      * Passe 2 : parmi tout ce que l'échantillon ne distingue pas d'elle, la moins chère.
      */
-    const tenables = [];
-    const walk = (i, current) => {
-        if (i === FIELDS.length) {
-            const s = evaluate(current);
-            if (s.cost > h.budget)
-                return; // hors budget : la solution n'existe pas
-            if (s.latencyPerItem > h.latencyBudgetMs)
-                return; // trop lente : elle n'existe pas non plus
-            tenables.push(s);
-            if (!best || s.accuracy > best.accuracy
-                || (s.accuracy === best.accuracy && s.cost < best.cost))
-                best = s;
-            return;
-        }
-        for (const e of paliers)
-            walk(i + 1, { ...current, [FIELDS[i]]: e });
+    /*
+     * Deux énumérations, et non une énumération plus un tableau.
+     *
+     * La version précédente poussait chaque solution admissible dans `tenables` pour la
+     * refiltrer ensuite. Le commentaire ci-dessus disait déjà « deux passes » — il décrivait la
+     * logique en deux temps, pas l'implémentation, qui matérialisait tout. Un commentaire qui
+     * rassure sur une propriété que le code n'a pas.
+     *
+     * Le coût n'était pas le temps : sept paliers et sept champs font 823 543 affectations en
+     * un quart de seconde. C'était la mémoire, et l'outil ne ralentissait pas — il **plantait**,
+     * tas épuisé, à sept paliers et huit champs. Ici rien n'est retenu entre les deux passes que
+     * le sommet lui-même : mémoire constante, deux fois le temps, et le mur recule d'un ordre.
+     *
+     * Le routage est muté en place plutôt que recopié à chaque nœud : la copie allouait un objet
+     * par arête, ce qui n'est pas la fuite mais la nourrit.
+     */
+    const courant = {};
+    const enumerer = (visite) => {
+        const walk = (i) => {
+            if (i === champs.length) {
+                const s = evaluate({ ...courant });
+                if (s.cost > h.budget)
+                    return; // hors budget : elle n'existe pas
+                if (s.latencyPerItem > h.latencyBudgetMs)
+                    return; // trop lente : pas davantage
+                visite(s);
+                return;
+            }
+            for (const e of paliers) {
+                courant[champs[i]] = e;
+                walk(i + 1);
+            }
+        };
+        walk(0);
     };
-    walk(0, {});
+    /* Passe 1 : la meilleure justesse atteignable dans les deux budgets. */
+    let best = null;
+    enumerer((s) => {
+        if (!best || s.accuracy > best.accuracy
+            || (s.accuracy === best.accuracy && s.cost < best.cost))
+            best = s;
+    });
     if (!best)
         return null;
     const sommet = best;
+    /* Passe 2 : parmi tout ce que l'échantillon ne distingue pas d'elle, la moins chère. */
     let retenue = sommet;
-    for (const s of tenables) {
+    enumerer((s) => {
         if (s.cost < retenue.cost && indiscernables(p, s.routing, sommet.routing))
             retenue = s;
-    }
+    });
     return retenue;
 }
 /** Chain B: one tier for everything, so as many possibilities as measured tiers. */

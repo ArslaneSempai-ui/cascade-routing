@@ -65,6 +65,7 @@ import { FORME } from "./signal.ts";
 import { readProfiles } from "./measure.ts";
 import { ASSUMPTIONS, pricePerThousandExtractions } from "./assumptions.ts";
 import { optimiseExtraction, paliersMesures } from "./optimise.ts";
+import "./figer.ts";  /* pose la table figée : voir figer.ts */
 import { FIELDS, draw } from "./corpus.ts";
 
 import type { Tentative } from "./journal.ts";

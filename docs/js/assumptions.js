@@ -35,6 +35,14 @@ export const ASSUMPTIONS = {
     volume: 100_000,
     budget: 4_000,
     latencyBudgetMs: 2_000,
+    /*
+     * À égalité, et c'est le point : la valeur en usage reproduit exactement le comportement
+     * d'avant, donc introduire ces deux entrées ne déplace rien. Le chiffre lui-même est le
+     * coût d'une relecture — le seul des deux qu'on sache estimer — et l'autre lui est égalé
+     * plutôt que deviné.
+     */
+    costWrongValue: 0.587,
+    costBlankField: 0.587,
 };
 /**
  * Where each assumption came from, in the shared vocabulary.
@@ -56,6 +64,44 @@ export const STATUSES = {
     volume: "assumed",
     budget: "assumed",
     latencyBudgetMs: "assumed",
+    costWrongValue: "assumed",
+    costBlankField: "assumed",
+};
+/**
+ * L'unité de chaque hypothèse, parce qu'un nombre nu se fait attribuer la mauvaise.
+ *
+ * `landing.json` publiait ces valeurs sans leur unité. La page qui les consomme a fait la
+ * seule chose qu'un rendu puisse faire dans ce cas : elle a deviné, et elle a mis un signe
+ * dollar partout — « humanSeconds $45.00 », « workingDaysPerYear $220.00 ». Un analyste
+ * coûtant quarante-cinq dollars la seconde est un chiffre inventé, arrivé par un chemin que
+ * personne ne surveillait, à partir de données exactes.
+ *
+ * C'est le même défaut que le repli d'affichage de `sensitivity.ts` : une donnée qui ne porte
+ * pas sa propre nature force son lecteur à la reconstituer, et une reconstitution est une
+ * supposition. Déduire l'unité du nom de la clé marche jusqu'au jour où une clé est renommée,
+ * et ce jour-là rien ne tombe — l'affichage se contente de mentir.
+ *
+ * Écrit ici plutôt qu'ailleurs pour la même raison que `BOUNDS` et `STATUSES` : à côté de la
+ * définition, dans un `Record` complet, donc une hypothèse ajoutée demain ne compilera pas
+ * tant que son unité n'aura pas été écrite.
+ *
+ * Les unités sont composées et non des jetons — « usd/1000 extractions » et non « usd ». Le
+ * dénominateur est la moitié qui a déjà fait publier un chiffre faux d'un facteur cinq.
+ */
+export const UNITS = {
+    humanAccuracy: "correct fields/field",
+    humanSeconds: "seconds/item",
+    analystAnnualCost: "usd/year",
+    productiveHoursPerDay: "hours/day",
+    workingDaysPerYear: "days/year",
+    pricePerThousandSmall: "usd/1000 extractions",
+    pricePerThousandLarge: "usd/1000 extractions",
+    machineHourlyCost: "usd/hour",
+    volume: "documents/period",
+    budget: "usd/period",
+    latencyBudgetMs: "ms/document",
+    costWrongValue: "usd/wrong value",
+    costBlankField: "usd/blank field",
 };
 /** Sanity bounds: a screen that accepts 100 % human accuracy is lying to its reader. */
 export const BOUNDS = {
@@ -70,6 +116,8 @@ export const BOUNDS = {
     volume: [1_000, 10_000_000],
     budget: [0, 10_000_000],
     latencyBudgetMs: [10, 600_000],
+    costWrongValue: [0, 10_000],
+    costBlankField: [0, 10_000],
 };
 /**
  * Ce que mille **extractions de champ** coûtent à ce palier — jamais mille documents.

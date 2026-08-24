@@ -27,6 +27,7 @@ import { FORME } from "./signal.ts";
 import { readProfiles } from "./measure.ts";
 import { ASSUMPTIONS } from "./assumptions.ts";
 import { optimiseExtraction } from "./optimise.ts";
+import "./figer.ts";  /* pose la table figée : voir figer.ts */
 import { FIELDS, draw } from "./corpus.ts";
 import { rate, ENOUGH } from "./interval.ts";
 

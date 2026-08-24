@@ -20,7 +20,25 @@ import { rate, distinguishable, pairedVerdict } from "./interval.ts";
 import type { TierName } from "./paliers.ts";
 import type { Field } from "./corpus.ts";
 import type { Assumptions } from "./assumptions.ts";
-import { lireDerivees } from "./derivees.ts";
+/*
+ * LA TABLE FIGÉE EST POSÉE PAR L'APPELANT, ELLE N'EST PAS LUE ICI.
+ *
+ * Ce module tourne AUSSI dans le navigateur : il est compilé par `tsconfig.web.json` et
+ * embarqué dans la page. Or il importait `derivees.ts`, qui importe `node:fs` — et un
+ * `import "node:fs"` dans un navigateur ne dégrade rien, il TUE le module entier au
+ * chargement. La page publiée serait partie vide, avec pour seule trace deux lignes de
+ * console : « Access to script at 'node:fs' has been blocked ».
+ *
+ * Rien ne le voyait. `npm test` ne construit pas la page, `docs/` datait de quatre jours, et
+ * l'écran livré était donc l'ancien, qui marchait. Le défaut attendait la prochaine
+ * construction — c'est-à-dire la prochaine publication.
+ */
+let DECOMPOSITION_FIGEE: Record<string, { vide: number; faux: number }> | null = null;
+
+/** Posée une fois par un appelant Node ; le navigateur n'en a pas et n'en a pas besoin. */
+export function poserDecompositionFigee(t: Record<string, { vide: number; faux: number }> | null | undefined): void {
+  DECOMPOSITION_FIGEE = t ?? null;
+}
 
 import type { Profiles } from "./measure.ts";
 
@@ -153,8 +171,7 @@ const CACHE = new Map<string, { vide: number; faux: number } | null>();
  * plus petite : trente-cinq couples de comptes au lieu de trente-cinq mille chaînes.
  */
 function fige(tier: TierName, champ: Field): { vide: number; faux: number } | null {
-  const t = lireDerivees()?.blocs?.decomposition as Record<string, { vide: number; faux: number }> | undefined;
-  return t?.[`${tier}|${champ}`] ?? null;
+  return DECOMPOSITION_FIGEE?.[`${tier}|${champ}`] ?? null;
 }
 
 /** Exporté pour que le gel puisse constituer la table depuis un relevé qui a ses sorties. */

@@ -33,6 +33,7 @@
 import { FIELDS } from "./corpus.ts";
 import { rate, distinguishable } from "./interval.ts";
 import { paliersMesures } from "./optimise.ts";
+import "./figer.ts";  /* pose la table figée : voir figer.ts */
 import { latency, pricePerThousandExtractions } from "./assumptions.ts";
 
 import type { Profiles } from "./measure.ts";

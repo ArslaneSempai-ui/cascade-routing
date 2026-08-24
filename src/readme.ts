@@ -11,6 +11,7 @@ import { join } from "node:path";
 import { INVENTORY } from "./inventory.ts";
 import { markdown } from "./provenance.ts";
 import { optimiseExtraction, optimiseClassification, budgetShadowPrice, latenceRepresentative, paliersMesures } from "./optimise.ts";
+import "./figer.ts";  /* pose la table figée : voir figer.ts */
 import { ASSUMPTIONS, pricePerThousandExtractions, accuracy } from "./assumptions.ts";
 import { collect, shape } from "./failures.ts";
 import { FIELDS, type Field } from "./corpus.ts";

@@ -13,6 +13,7 @@ import { FIELDS } from "./corpus.ts";
 import { TIERS, type TierName } from "./paliers.ts";
 import { readProfiles } from "./measure.ts";
 import { evaluer, optimiseExtraction, budgetShadowPrice, type Routing, latenceRepresentative } from "./optimise.ts";
+import "./figer.ts";  /* pose la table figée : voir figer.ts */
 import { ASSUMPTIONS, BOUNDS, pricePerThousandExtractions, accuracy, type Assumptions } from "./assumptions.ts";
 import { isMain } from "./cli.ts";
 import { fileURLToPath } from "node:url";

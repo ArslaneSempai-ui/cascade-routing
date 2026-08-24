@@ -1240,11 +1240,65 @@ export function affectation({ lignes, colonnes, fmt = String, motOptimum, aria }
   const large = (L - G - D) / colonnes.length;
   const cellW = large - ECART;
 
+  /*
+   * LES EN-TÊTES SE TOUCHAIENT DÈS QU'IL Y AVAIT ASSEZ DE COLONNES.
+   *
+   * Chaque titre était posé centré, à taille fixe, sans que rien ne regarde s'il tenait. Avec
+   * quatre paliers c'était vrai ; avec sept, « SMALL MODEL » et « LARGE MODEL » se
+   * chevauchaient de trois pixels — mesuré dans le navigateur, pas déduit d'une capture. Deux
+   * mots collés se lisent comme un seul, et c'était sur l'écran de démonstration du produit.
+   *
+   * La largeur d'un texte SVG ne se connaît qu'une fois rendu, or la figure est construite en
+   * chaîne avant d'exister. On l'ESTIME donc, et on estime LARGE — se replier une colonne trop
+   * tôt ne coûte qu'une ligne de plus, se replier trop tard remet le chevauchement.
+   *
+   * Trois recours, dans cet ordre : tenir sur une ligne ; couper à l'espace en deux lignes ;
+   * et seulement si ça ne suffit pas, réduire la taille, avec un plancher — un titre illisible
+   * ne vaut pas mieux qu'un titre chevauché.
+   */
+  const TETE = 11.5;            // doit suivre `.graphe .affect-tete` dans registre.css
+  const PLANCHER = 9;
+  /* Majuscules, plus 0,05em d'interlettrage : ~0,60em par caractère, arrondi vers le haut. */
+  const larg = (mot, taille) => mot.length * 0.60 * taille;
+  const dispo = cellW - 2;
+
   let svg = "";
   colonnes.forEach((c, j) => {
     const x = G + j * large + cellW / 2;
-    svg += `<text class="affect-tete" x="${arr(x)}" y="${T - 26}" text-anchor="middle">${ech(c.nom)}</text>`;
-    if (c.note) svg += `<text class="grad" x="${arr(x)}" y="${T - 10}" text-anchor="middle">${ech(c.note)}</text>`;
+    const nom = String(c.nom ?? "");
+    let lignesTitre = [nom], taille = TETE;
+
+    if (larg(nom, TETE) > dispo) {
+      /* Couper au dernier espace qui équilibre le mieux les deux moitiés. */
+      const espaces = [...nom.matchAll(/ /g)].map((m) => m.index);
+      if (espaces.length) {
+        const coupe = espaces.reduce((meilleur, i) =>
+          Math.abs(i - nom.length / 2) < Math.abs(meilleur - nom.length / 2) ? i : meilleur, espaces[0]);
+        lignesTitre = [nom.slice(0, coupe), nom.slice(coupe + 1)];
+      }
+      const pire = Math.max(...lignesTitre.map((t) => larg(t, TETE)));
+      if (pire > dispo) taille = Math.max(PLANCHER, TETE * (dispo / pire));
+    }
+
+    /* Deux lignes montent d'un cran : la seconde viendrait sinon sur la ligne du prix. */
+    const y0 = T - 26 - (lignesTitre.length > 1 ? 11 : 0);
+    lignesTitre.forEach((t, k) => {
+      const style = taille === TETE ? "" : ` style="font-size:${arr(taille)}px"`;
+      svg += `<text class="affect-tete" x="${arr(x)}" y="${arr(y0 + k * 11)}" text-anchor="middle"${style}>${ech(t)}</text>`;
+    });
+    /* La note — un prix, le plus souvent — se rétrécit aussi. Elle n'a pas d'espace où couper
+       proprement (« $587.12 / 1,000 » n'a pas de moitié), donc le seul recours est la taille.
+       Sans ça, corriger le titre laissait la ligne du dessous se toucher : le défaut se
+       déplaçait d'un cran au lieu d'être réglé. */
+    if (c.note) {
+      const NOTE = 12;                 // doit suivre `.graphe .grad` dans registre.css
+      const nb = String(c.note);
+      /* Chiffres et ponctuation, minuscules : ~0,52em par caractère. */
+      const besoin = nb.length * 0.52 * NOTE;
+      const tn = besoin > dispo ? Math.max(8, NOTE * (dispo / besoin)) : NOTE;
+      const style = tn === NOTE ? "" : ` style="font-size:${arr(tn)}px"`;
+      svg += `<text class="grad" x="${arr(x)}" y="${T - 10}" text-anchor="middle"${style}>${ech(nb)}</text>`;
+    }
   });
 
   lignes.forEach((l, i) => {
@@ -1677,4 +1731,132 @@ export function brancher(racine = document) {
     // Au clavier : les cibles ne sont pas focusables, mais les figures le sont, et la
     // lecture au survol n'est jamais la seule source — le tableau est juste dessous.
   }
+}
+
+/*
+ * Une liste dont chaque rang se déplie.
+ *
+ * Écrite parce que le même accordéon vivait deux fois dans la même page, à six lignes
+ * près identiques — et que le deuxième exemplaire avait déjà divergé du premier : l'un
+ * refermait le rang ouvert quand on le recliquait, l'autre le laissait ouvert.
+ *
+ * Trois choses la distinguent d'un écouteur posé sur chaque tête, et chacune vient d'un
+ * dégât déjà payé ailleurs dans ce fichier :
+ *
+ * — Le bloc est réécrit entièrement à chaque rendu. Un écouteur posé sur une tête part
+ *   avec elle, et la liste devient muette au premier redessin sans que rien ne le
+ *   signale. L'écoute vit donc sur la racine, qui survit ; le câblage ARIA, lui, se
+ *   refait à chaque appel, parce que les têtes neuves n'ont ni identifiant ni renvoi.
+ *
+ * — Le foyer disparaît avec la tête qui le portait. C'est le défaut que `saisir` a payé :
+ *   une flèche pressée deux fois de suite ne trouvait plus personne. On note le rang
+ *   focalisé sur la racine, qui survit au rendu, et on le rend après.
+ *
+ * — `aria-expanded` se lit sur la classe et jamais l'inverse. Le rendu écrit la classe ;
+ *   un attribut tenu à part se désynchronise au premier redessin, et un lecteur d'écran
+ *   annonce « replié » sur un rang déplié sans que l'œil voie quoi que ce soit.
+ *
+ * contrat-offert: pliable tete corps
+ *
+ * Ces trois classes sont interrogées ici et posées par qui emploie la primitive, pas par
+ * la couche. Un dépôt qui ne s'en sert pas encore les porte donc en style sans les poser
+ * en HTML, ce qui est l'état normal d'un contrat offert et non un sélecteur mort. La
+ * marque le déclare au gardien des sélecteurs, qui vérifie de son côté qu'elles existent
+ * bien dans `registre.css` — une classe déclarée et non stylée reste une faute.
+ */
+let compteurRepli = 0;
+
+export function replier(racine, { exclusif = true } = {}) {
+  if (!racine) return;
+  const tetes = () => [...racine.querySelectorAll(".pliable > .tete")];
+  const cle = racine.dataset.repliCle ?? (racine.dataset.repliCle = `repli${++compteurRepli}`);
+
+  /* Le câblage, refait à chaque appel : après un rendu, les têtes sont neuves. */
+  tetes().forEach((tete, i) => {
+    const item = tete.parentElement;
+    const corps = item.querySelector(":scope > .corps");
+    if (!corps) return;
+    /* Une tête qui n'est pas un bouton n'est ni focalisable ni activable : le navigateur
+     * ne fournit gratuitement que ce qui est déclaré bouton. On le déclare. */
+    if (tete.tagName !== "BUTTON") {
+      tete.setAttribute("role", "button");
+      if (!tete.hasAttribute("tabindex")) tete.setAttribute("tabindex", "0");
+    }
+    if (!tete.id) tete.id = `${cle}-t${i}`;
+    if (!corps.id) corps.id = `${cle}-c${i}`;
+    tete.setAttribute("aria-controls", corps.id);
+    tete.setAttribute("aria-expanded", item.classList.contains("ouvert") ? "true" : "false");
+    corps.setAttribute("role", "region");
+    corps.setAttribute("aria-labelledby", tete.id);
+  });
+
+  /* Le foyer rendu après le rendu — mais seulement s'il était dans la liste. Le restituer
+   * sans condition, c'est voler le foyer à qui tapait ailleurs pendant le redessin. */
+  const rang = Number(racine.dataset.repliFoyer ?? -1);
+  if (racine.dataset.repliActif === "1" && rang >= 0) tetes()[rang]?.focus({ preventScroll: true });
+
+  if (racine.dataset.repliBranche) return;
+  racine.dataset.repliBranche = "1";
+
+  const basculer = (tete) => {
+    const item = tete.parentElement;
+    const ouvert = item.classList.contains("ouvert");
+    if (exclusif) {
+      for (const t of tetes()) {
+        t.setAttribute("aria-expanded", "false");
+        t.parentElement.classList.remove("ouvert");
+      }
+    }
+    /* Refermer sur un second appui. Sans ça une liste exclusive garde un rang ouvert pour
+     * toujours, et on ne peut plus revenir à la vue d'ensemble. */
+    if (!ouvert) {
+      item.classList.add("ouvert");
+      tete.setAttribute("aria-expanded", "true");
+    } else if (!exclusif) {
+      item.classList.remove("ouvert");
+      tete.setAttribute("aria-expanded", "false");
+    }
+  };
+
+  const teteDe = (cible) => (cible && cible.closest ? cible.closest(".pliable > .tete") : null);
+
+  racine.addEventListener("click", (e) => {
+    const tete = teteDe(e.target);
+    if (tete) basculer(tete);
+  });
+
+  /* `focusin` et `focusout` remontent ; `focus` et `blur` non. Sur une racine dont le
+   * contenu est remplacé, seuls les premiers voient les têtes neuves. */
+  racine.addEventListener("focusin", (e) => {
+    const tete = teteDe(e.target);
+    if (!tete) return;
+    racine.dataset.repliFoyer = String(tetes().indexOf(tete));
+    racine.dataset.repliActif = "1";
+  });
+  racine.addEventListener("focusout", (e) => {
+    /* Un nœud retiré du document émet `focusout` comme s'il avait été quitté. Effacer le
+     * drapeau là-dessus, c'était perdre le foyer à chaque rendu. */
+    if (e.target.isConnected) delete racine.dataset.repliActif;
+  });
+
+  racine.addEventListener("keydown", (e) => {
+    const tete = teteDe(e.target);
+    if (!tete) return;
+    if ((e.key === "Enter" || e.key === " ") && tete.tagName !== "BUTTON") {
+      e.preventDefault();
+      basculer(tete);
+      return;
+    }
+    const liste = tetes();
+    const i = liste.indexOf(tete);
+    const vers = { ArrowDown: i + 1, ArrowUp: i - 1, Home: 0, End: liste.length - 1 };
+    if (!(e.key in vers)) return;
+    /* La navigation par flèches ne boucle pas : arrivé au bout, la flèche ne fait rien, et
+     * la tabulation sort de la liste comme partout ailleurs. Une liste qui boucle piège
+     * qui ne voit pas où il en est. */
+    const j = Math.min(liste.length - 1, Math.max(0, vers[e.key]));
+    if (j === i) return;
+    e.preventDefault();
+    liste[j].focus();
+  });
 }

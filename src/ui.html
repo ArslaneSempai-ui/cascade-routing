@@ -54,7 +54,12 @@ const api = async (chemin, corps) => {
 /* Le moteur ne fabrique pas de phrases : il rend des structures, l'écran les formule. */
 const T = {
   h1: "Where should the next dollar go?",
-  lede: "Four tiers — rules, a small model, a large one, a human — measured on held-out data. Route each field to a tier and read what your routing costs.",
+  /* LE NOMBRE VIENT DE LA FIGURE, PAS DE LA PROSE. Il a dit « Four tiers » pendant que le
+     tableau juste dessous en montrait sept : l'échelle générative locale est optionnelle, donc
+     un clone sans Ollama en a quatre et cette machine en a sept. Une phrase qui compte à la
+     main se dément toute seule le jour où la mesure grandit. */
+  lede: (n) => `${n} tiers, from a regular expression to a human — measured on held-out data. `
+    + `Route each field to a tier and read what your routing costs.`,
 
   releve: "Your routing, priced",
   justesse: "mean accuracy over the five fields",
@@ -69,16 +74,23 @@ const T = {
   titreRoutage: "One field, one tier",
   routageQuoi: "Every cell is a measured pair: how often that tier gets that field right. The bar is the accuracy, the outline is what the optimiser would take. Take a cell to move the field.",
   figRoutageTitre: (n) => `Accuracy of each tier on each field, measured on ${n} held-out records`,
-  figRoutageAria: "A grid of five fields by four tiers. Each cell carries the measured accuracy of that tier on that field, as a bar and a number. The cell taken for each field is filled; the one the optimiser would take carries a dashed outline.",
+  /* L'ÉTIQUETTE D'ACCESSIBILITÉ COMPTAIT AUSSI À LA MAIN — et personne ne la relit, puisque
+     personne ne la voit. Elle annonçait quatre paliers devant une figure qui en montre sept :
+     un lecteur d'écran recevait un chiffre faux, en silence, plus longtemps que les voyants. */
+  figRoutageAria: (nc, np) => `A grid of ${nc} fields by ${np} tiers. Each cell carries the `
+    + `measured accuracy of that tier on that field, as a bar and a number. The cell taken for `
+    + `each field is filled; the one the optimiser would take carries a dashed outline.`,
   motOptimum: "what the optimiser would take",
   paliers: { rules: "Rules", small: "Small model", large: "Large model", human: "Human" },
   champs: { name: "name", birth: "date of birth", document: "document no.", country: "country", address: "address" },
   prixNote: (p) => (p === 0 ? "free" : `$${p.toFixed(2)} / 1,000`),
 
   titreReflexe: "What one tier for everything costs",
-  reflexeQuoi: "The ordinary move is to pick one tier and send everything through it. All four of those routings are here, and every one of them is beaten by mixing.",
+  reflexeQuoi: (n) => `The ordinary move is to pick one tier and send everything through it. `
+    + `All ${n} of those routings are here, and every one of them is beaten by mixing.`,
   figReflexeTitre: "Accuracy if every field goes to the same tier",
-  figReflexeAria: "Four bars, one per tier, of the mean accuracy when every field is routed to that tier; the cost of each is noted underneath.",
+  figReflexeAria: (n) => `${n} bars, one per tier, of the mean accuracy when every field is `
+    + `routed to that tier; the cost of each is noted underneath.`,
   coutSous: (d) => `${d} a year`,
   reflexeSuite: (meilleurUniforme, jUniforme, dUniforme, jOpt, dOpt) =>
     `The best single tier is <b>${meilleurUniforme}</b> at ${jUniforme} for ${dUniforme}. Mixing reaches <b>${jOpt}</b> for <b>${dOpt}</b> — more accurate and cheaper, because three of the five fields are carried by regexes that cost nothing.`,
@@ -91,7 +103,7 @@ const T = {
   pricePerThousandLarge: "Large model, $ / 1,000", volume: "Records a year", budget: "Budget ($/yr)",
   defaut: "Reset the assumptions",
   prochain: (d, f) => `The next real improvement needs a budget of <b>${d}</b> — ${f} what this routing spends — and it buys one field.`,
-  prochainRien: "No further improvement is reachable at any budget with these four tiers.",
+  prochainRien: (n) => `No further improvement is reachable at any budget with these ${n} tiers.`,
 
   provenance: "The accuracy and latency of each tier are <b>measured</b> on held-out records, once, and frozen. The human tier, the prices, the volume and the budget are <b>assumed</b> — none of them is observable here. The README says which is which, one by one.",
 };
@@ -157,7 +169,7 @@ function blocRoutage() {
     })),
     fmt: pcCourt,
     motOptimum: L.motOptimum,
-    aria: L.figRoutageAria,
+    aria: L.figRoutageAria(etat.champs.length, etat.paliers.length),
   });
 
   $("#routage").innerHTML = `<section class="feuillet"><div class="corps">
@@ -188,11 +200,11 @@ function blocReflexe() {
     })),
     fmt: pc,
     max: 1,
-    aria: L.figReflexeAria,
+    aria: L.figReflexeAria(etat.uniformes.length),
   });
 
   $("#reflexe").innerHTML = `<div class="feuillet">
-    <div class="quoi">${esc(L.reflexeQuoi)}</div>
+    <div class="quoi">${esc(L.reflexeQuoi(etat.uniformes.length))}</div>
     <div class="titre-fig">${esc(L.figReflexeTitre)}</div>${fig}
     ${o ? `<div class="suite">${L.reflexeSuite(
       esc(L.paliers[meilleur.palier] ?? meilleur.palier), pc(meilleur.accuracy), dollars(meilleur.cost),
@@ -214,7 +226,7 @@ function blocHypotheses() {
   const g = etat.prochainGain;
   const phrase = g && g.step
     ? L.prochain(dollars(g.step.budgetNeeded), `${Math.round(g.step.budgetNeeded / Math.max(1, etat.optimum?.cost ?? 1))}×`)
-    : L.prochainRien;
+    : L.prochainRien(etat.paliers.length);
 
   $("#hypotheses").innerHTML = `<div class="feuillet">
     <div class="quoi">${esc(L.hypQuoi)}</div>
@@ -232,7 +244,7 @@ function blocHypotheses() {
 function dessiner() {
   const L = t();
   $("#h1").textContent = L.h1;
-  $("#lede").textContent = L.lede;
+  $("#lede").textContent = L.lede(etat.paliers.length);
   $("#provenanceLegende").innerHTML = L.provenance;
   blocReleve(); blocVerdict(); blocRoutage(); blocReflexe(); blocHypotheses();
 }

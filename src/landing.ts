@@ -27,6 +27,7 @@ import { FIELDS } from "./corpus.ts";
 import { readProfiles } from "./measure.ts";
 import { ASSUMPTIONS, UNITS, pricePerThousandExtractions, latency } from "./assumptions.ts";
 import { optimiseExtraction, evaluer, paliersMesures, pricePerThousandDocuments, justessePonderee, decompositionDe } from "./optimise.ts";
+import "./figer.ts";  /* pose la table figée : voir figer.ts */
 import { rate, CONFIANCE, distinguishable, pairedVerdict } from "./interval.ts";
 import { versLeBas } from "./sensitivity.ts";
 import { journaux, lireJournal, issue } from "./journal.ts";

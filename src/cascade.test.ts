@@ -3274,3 +3274,126 @@ test("l'inclinaison se lit sur les coins, et l'ordre de lecture survit à une pa
     "l'ordre de lecture ne suit plus la page. Aucune mesure de fidélité ne l'attrapera : elle "
     + "compte des mots présents, jamais leur place.");
 });
+
+/* ────────────────────────────────────────────────────────────────────────────
+   LE PAQUET WEB
+
+   `optimise.ts` est compilé pour le navigateur et embarqué dans la page publiée.
+   Un seul `import "node:fs"` dans son graphe ne dégrade rien : il TUE le module
+   au chargement, et la page part vide. Rien ne le voyait — la suite ne construit
+   pas la page, et `docs/` livré datait de quatre jours.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+test("aucun module Node ne traverse le paquet compilé pour le navigateur", () => {
+  const racine = fileURLToPath(new URL("..", import.meta.url));
+  const sortie = mkdtempSync(join(tmpdir(), "web-"));
+  try {
+    /* On compile POUR DE VRAI avec la configuration web du dépôt, plutôt que de relire les
+       imports à la main : c'est le graphe que tsc résout qui atterrit dans la page, et un
+       motif écrit ici affirmerait un graphe au lieu de le mesurer. */
+    execFileSync("npx", ["tsc", "-p", "tsconfig.web.json", "--outDir", sortie], {
+      cwd: racine, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"],
+    });
+    const emis = readdirSync(sortie).filter((n) => n.endsWith(".js"));
+    assert.ok(emis.length >= 4,
+      `${emis.length} fichier(s) émis : la compilation n'a rien produit, ce test ne vérifie rien.`);
+
+    /*
+     * ON SUIT LE GRAPHE D'EXÉCUTION DEPUIS L'ENTRÉE DE LA PAGE, pas la liste des fichiers émis.
+     * `tsc` émet un `.js` pour tout module du programme, y compris ceux atteints par un simple
+     * `import type` — dont l'import disparaît à la compilation. Accuser ces fichiers-là
+     * signalerait des modules que la page ne charge jamais, et une garde qui accuse à tort se
+     * fait retirer, emportant les vrais défauts avec elle.
+     *
+     * Les entrées sont celles que le shim de pages.ts importe réellement.
+     */
+    const ENTREES = ["corpus.js", "paliers.js", "optimise.js", "assumptions.js"];
+    for (const e of ENTREES) {
+      assert.ok(emis.includes(e), `${e} n'est pas émis : le shim de la page importerait un module absent.`);
+    }
+    const atteints = new Set<string>();
+    const suivre = (f: string) => {
+      if (atteints.has(f) || !emis.includes(f)) return;
+      atteints.add(f);
+      const src = readFileSync(join(sortie, f), "utf8");
+      for (const m of src.matchAll(/(?:^|\n)\s*(?:import|export)[^;\n]*?from\s+"\.\/([\w.-]+\.js)"/g)) {
+        suivre(m[1]!);
+      }
+    };
+    for (const e of ENTREES) suivre(e);
+    assert.ok(atteints.size >= 4,
+      `${atteints.size} module(s) atteint(s) depuis l'entrée : le suivi des imports a échoué.`);
+
+    const fautifs: string[] = [];
+    for (const f of [...atteints].sort()) {
+      const src = readFileSync(join(sortie, f), "utf8");
+      const m = src.match(/from\s+"(node:[a-z_/]+)"/g);
+      if (m) fautifs.push(`${f} → ${[...new Set(m)].join(", ")}`);
+    }
+    assert.deepEqual(fautifs, [],
+      `le paquet du navigateur importe des modules Node :\n  ${fautifs.join("\n  ")}\n`
+      + `  → un « import \"node:fs\" » ne dégrade pas la page, il la tue au chargement.\n`
+      + `    Sortez la lecture de fichier du graphe web : voir src/figer.ts.`);
+  } finally {
+    rmSync(sortie, { recursive: true, force: true });
+  }
+});
+
+test("tout appelant Node de l'optimiseur pose la table figée", () => {
+  /*
+   * `poserDecompositionFigee` remplace une lecture de fichier par une injection : le gain est
+   * que le navigateur survit, le risque est qu'un appelant Node oublie de poser la table et
+   * perde la décomposition des erreurs EN SILENCE. Ce test transforme l'oubli en échec.
+   */
+  const dossier = fileURLToPath(new URL(".", import.meta.url));
+  const appelants = readdirSync(dossier)
+    .filter((n) => n.endsWith(".ts") && !n.endsWith(".test.ts")
+      && !["optimise.ts", "figer.ts", "derivees.ts"].includes(n))
+    .map((n) => ({ n, src: readFileSync(join(dossier, n), "utf8") }))
+    /* Un import de TYPE ne fait rien tourner : seuls les appelants de valeur comptent. */
+    .filter(({ src }) => /^import \{[^}]*\} from "\.\/optimise\.ts";$/m.test(src));
+
+  assert.ok(appelants.length >= 5,
+    `${appelants.length} appelant(s) trouvé(s) : la détection a échoué, le test ne vérifie rien.`);
+  const sansTable = appelants.filter(({ src }) => !src.includes('"./figer.ts"')).map((x) => x.n);
+  assert.deepEqual(sansTable, [],
+    `module(s) appelant l'optimiseur sans poser la table figée : ${sansTable.join(", ")}\n`
+    + `  → ajoutez \`import "./figer.ts";\`. Sans elle, la décomposition des erreurs et les deux\n`
+    + `    seuils qui la tarifent disparaissent sans un mot.`);
+});
+
+test("aucun texte de l'écran ne compte les paliers à la main", () => {
+  /*
+   * Le chapeau a annoncé « Four tiers » pendant que le tableau juste dessous en montrait sept.
+   * L'échelle générative locale est OPTIONNELLE : un clone sans Ollama en a quatre, cette
+   * machine en a sept, et une phrase qui compte à la main se dément toute seule dès que la
+   * mesure grandit. Le nombre vient maintenant de la figure ; ce test empêche qu'il y retourne.
+   *
+   * Les champs, eux, ne sont pas concernés : ils sont fixés par 31 CFR 1020.220 et ne bougent
+   * pas avec la machine. Un contrôle qui les interdirait aussi crierait à tort.
+   */
+  const brut = readFileSync(fileURLToPath(new URL("./ui.html", import.meta.url)), "utf8");
+  /* Les commentaires sont retirés : celui qui explique ce test cite la formulation fautive,
+     et une règle qui s'attrape elle-même dans sa propre explication crie à tort. */
+  const src = brut.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/(^|[^:])\/\/[^\n]*/g, "$1 ");
+  /* « one tier » n'est pas un compte, c'est « un seul » — « pick one tier and send everything
+     through it ». L'exclure est la différence entre une règle qu'on lit et une qu'on désactive. */
+  const MOTS = "(two|three|four|five|six|seven|eight|nine|ten|deux|trois|quatre|cinq|sept|huit|neuf|dix|\\d+)";
+  /* LE MOT COMPTÉ N'EST PAS TOUJOURS « PALIER ». La première version n'acceptait que
+     « tiers », et laissait passer « All four of those routings » et « Four bars, one per
+     tier » — deux phrases également fausses, dont une lue seulement par un lecteur d'écran.
+     Un motif de recherche est une affirmation : celui-là affirmait que le mensonge porterait
+     toujours le même nom. */
+  const COMPTES = "(tiers?|paliers?|bars?|barres?|routings?|routages?|colonnes?|columns?)";
+  const fautifs = [...src.matchAll(new RegExp(`"[^"\\n]*\\b${MOTS}\\s+(?:of\\s+those\\s+)?${COMPTES}\\b[^"\\n]*"`, "gi"))]
+    .map((m) => m[0].slice(0, 70));
+
+  assert.deepEqual(fautifs, [],
+    `l'écran écrit un nombre de paliers en dur :\n  ${fautifs.join("\n  ")}\n`
+    + `  → il doit venir de la figure, pas de la prose : \`L.lede(etat.paliers.length)\`.`);
+
+  /* CONTRE-ÉPREUVE — le motif doit encore attraper la formulation exacte qui a menti. */
+  const ancien = '  lede: "Four tiers — rules, a small model, a large one, a human — measured",';
+  assert.ok(new RegExp(`"[^"\\n]*\\b${MOTS}\\s+(?:of\\s+those\\s+)?${COMPTES}\\b[^"\\n]*"`, "i").test(ancien),
+    "le motif ne reconnaît plus « Four tiers » : il ne peut plus détecter ce qu'il prétend.");
+});

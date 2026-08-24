@@ -18,6 +18,7 @@ import { isMain } from "./cli.ts";
 import { readProfiles } from "./measure.ts";
 import { ASSUMPTIONS } from "./assumptions.ts";
 import { optimiseExtraction, paliersMesures } from "./optimise.ts";
+import "./figer.ts";  /* pose la table figée : voir figer.ts */
 import { FIELDS } from "./corpus.ts";
 
 import type { Profiles } from "./measure.ts";

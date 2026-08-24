@@ -100,7 +100,68 @@ export const MODELES_LOCAUX = {
     "gen-4b": { tag: "qwen3:4b", digest: "359d7dd4bcda" },
     "gen-8b": { tag: "qwen3:8b", digest: "500a1f067a9f" },
 };
-const OLLAMA = process.env.OLLAMA_HOST ?? "http://localhost:11434";
+/**
+ * Le seul hôte qu'une mesure contacte — et la seule façon dont vos dossiers pourraient sortir.
+ *
+ * Tout le reste du chemin d'une mesure est local : le corpus est engendré en mémoire, les
+ * encodeurs tournent dans le processus, rien n'est téléversé. Il reste exactement un appel
+ * réseau, celui-ci, et il vise par défaut la boucle locale.
+ *
+ * Mais `OLLAMA_HOST` est une variable d'environnement. Pointée sur une machine distante — un
+ * serveur d'équipe, un Ollama hébergé — chaque document part chez ce tiers, et la phrase
+ * « rien ne quitte votre machine » devient fausse sans qu'une ligne de code ait changé. C'est
+ * la seule configuration où ça arrive, et rien ne la signalait.
+ *
+ * `estLocal` existe donc pour être vérifiable : par un test, et par la mesure elle-même, qui
+ * refuse de partir vers un hôte distant sans un consentement écrit dans la commande.
+ */
+export const OLLAMA = process.env.OLLAMA_HOST ?? "http://localhost:11434";
+/**
+ * Les modèles déjà sollicités DANS CE PROCESSUS.
+ *
+ * Sert à savoir si l'attente qui commence inclut un chargement. Volontairement par processus
+ * et non persisté : Ollama évince les modèles inactifs, donc un état gardé sur disque
+ * affirmerait « déjà chargé » pour un modèle qui ne l'est plus, et poserait le délai serré
+ * pile sur l'attente longue. Se tromper dans ce sens coûte une passe entière.
+ */
+const modelesDejaSollicites = new Map();
+/**
+ * Combien de temps demander à Ollama de garder un modèle en mémoire.
+ *
+ * Sans ce réglage, Ollama évince après cinq minutes d'inactivité — et une passe qui parcourt
+ * six paliers y passe plus que ça, donc elle recharge sans arrêt et paie une minute à chaque
+ * retour. C'est un CHOIX : trente minutes couvrent les passes de ce dépôt, mais un modèle
+ * gardé occupe la mémoire graphique de qui utilise la machine à côté. La bonne valeur dépend
+ * de ce qu'on fait d'autre pendant, et rien ici ne le mesure.
+ */
+export const GARDER_EN_MEMOIRE = "30m";
+/** Ce que borne chaque attente. Exportés pour qu'un contrôle puisse les confronter au relevé. */
+export const DELAI_DE_GENERATION_MS = 30_000;
+export const DELAI_DE_CHARGEMENT_MS = 180_000;
+/** Ce qu'un premier appel a réellement coûté ici, le 23/08/2026, modèles évincés avant chaque essai. */
+export const CHARGEMENTS_MESURES_MS = {
+    "qwen3:0.6b": 3_700, "qwen3:4b": 54_800, "qwen3:8b": 68_000,
+};
+/**
+ * Un hôte est local quand il désigne cette machine, et rien d'autre.
+ *
+ * La première version testait `/^127\./`, ce qui accepte `127.0.0.1.evil.example` : un nom de
+ * domaine qui *commence* par une adresse de boucle et continue chez quelqu'un d'autre. Le
+ * préfixe est la mauvaise question — il faut que la totalité du nom soit une adresse locale,
+ * d'où les ancres des deux côtés. Attrapé par le test qui accompagne cette fonction, à sa
+ * première exécution.
+ */
+export function estLocal(url) {
+    try {
+        const h = new URL(url).hostname.replace(/^\[|\]$/g, "").toLowerCase();
+        if (h === "localhost" || h === "::1")
+            return true;
+        return /^127(\.\d{1,3}){3}$/.test(h);
+    }
+    catch {
+        return false;
+    }
+}
 /**
  * Un appel au serveur local, sous schéma.
  *
@@ -126,7 +187,53 @@ async function ollama(tier, prompt, schema) {
      * Trente secondes est large : le palier le plus lent mesuré ici répond en 1,5 seconde, donc
      * le délai ne se déclenche que sur une vraie anomalie, jamais sur une lenteur normale.
      */
-    const DELAI_MS = 30_000;
+    /*
+     * DEUX DÉLAIS, PARCE QU'IL Y A DEUX ATTENTES, ET UNE SEULE ÉTAIT BORNÉE.
+     *
+     * Le délai unique valait trente secondes, et la prose ci-dessus le justifiait ainsi : « le
+     * palier le plus lent mesuré ici répond en 1,5 seconde, donc le délai ne se déclenche que
+     * sur une vraie anomalie ». Le raisonnement est juste et il porte SUR LE MAUVAIS OBJET : il
+     * compare le délai au temps de GÉNÉRATION d'un modèle déjà en mémoire, alors que le délai
+     * borne aussi le CHARGEMENT — trois à cinq gigaoctets à monter en mémoire graphique.
+     *
+     * Mesuré le 23 août 2026 sur cette machine, modèles évincés avant chaque essai :
+     *
+     *     qwen3:0.6b   premier appel  3,7 s
+     *     qwen3:4b     premier appel 54,8 s      appel suivant 2,5 s
+     *     qwen3:8b     premier appel 68,0 s
+     *
+     * Deux paliers sur trois dépassaient donc le délai AU PREMIER APPEL, systématiquement, et
+     * Ollama évince les modèles inactifs au bout de quelques minutes — une passe longue
+     * recharge en cours de route. C'est ce qui a tué `npm run dur` après neuf minutes de
+     * travail, en annonçant « le serveur est bloqué » alors qu'il chargeait normalement.
+     *
+     * LE DÉLAI DE GÉNÉRATION RESTE À TRENTE SECONDES, et c'est là que le raisonnement d'origine
+     * devient vrai : 2,5 s mesuré, donc douze fois la marge. LE DÉLAI DE CHARGEMENT EST UN
+     * CHOIX, PAS UNE MESURE : 68 s constaté ici, posé à cent quatre-vingts. Une machine plus
+     * lente, un disque plus lent ou une mémoire plus disputée allongent le chargement, et rien
+     * dans ce dépôt ne mesure de combien. Le nommer « choisi » plutôt que le présenter comme
+     * une borne mesurée est la seule façon honnête de l'écrire.
+     */
+    /*
+     * « DÉJÀ SOLLICITÉ » N'EST PAS « ENCORE CHARGÉ », ET LA DIFFÉRENCE A TUÉ UNE SECONDE PASSE.
+     *
+     * Le registre en mémoire savait qu'on avait demandé ce modèle, donc il posait le délai
+     * serré. Mais OLLAMA ÉVINCE LES MODÈLES INACTIFS au bout de cinq minutes, et une passe
+     * mesure plusieurs minutes par palier : quand elle revient au précédent, il est parti. Le
+     * message le disait — « ou le modèle a été évincé » — et je n'en avais pas tiré la
+     * conséquence, ce qui est la définition d'un diagnostic écrit sans être lu.
+     *
+     * Deux réponses, et la première est la vraie. `keep_alive` demande à Ollama de le garder :
+     * vérifié, un appel avec `30m` fait passer l'échéance de trois à vingt-neuf minutes. Et par
+     * sécurité, si le dernier appel à ce modèle remonte à plus longtemps que le délai
+     * d'éviction par défaut, on repasse au délai de chargement — parce qu'une garde qui suppose
+     * que l'autre a marché n'est plus une garde.
+     */
+    const EVICTION_PAR_DEFAUT_MS = 5 * 60_000;
+    const vuA = modelesDejaSollicites.get(m.tag);
+    const premierAppel = vuA === undefined || Date.now() - vuA > EVICTION_PAR_DEFAUT_MS;
+    modelesDejaSollicites.set(m.tag, Date.now());
+    const DELAI_MS = premierAppel ? DELAI_DE_CHARGEMENT_MS : DELAI_DE_GENERATION_MS;
     let r;
     try {
         r = await fetch(`${OLLAMA}/api/generate`, {
@@ -135,14 +242,22 @@ async function ollama(tier, prompt, schema) {
             signal: AbortSignal.timeout(DELAI_MS),
             body: JSON.stringify({
                 model: m.tag, prompt, stream: false, think: false, format: schema,
+                keep_alive: GARDER_EN_MEMOIRE,
                 options: { temperature: 0, num_predict: 200 },
             }),
         });
     }
     catch (e) {
         if (e instanceof Error && e.name === "TimeoutError") {
-            throw new Error(`${m.tag} n'a pas répondu en ${DELAI_MS / 1000} s. Le serveur est bloqué ou le modèle `
-                + `ne se charge pas : vérifier \`ollama ps\`. Les paliers déjà mesurés gardent leurs chiffres.`);
+            throw new Error(premierAppel
+                ? `${m.tag} n'a pas fini de CHARGER en ${DELAI_MS / 1000} s. C'est son premier appel de `
+                    + `cette passe, donc le poids monte en mémoire : compter environ une minute pour un `
+                    + `modèle de cinq gigaoctets, plus sur une machine chargée. Au-delà de trois minutes, `
+                    + `le serveur est en cause : vérifier \`ollama ps\`. Les paliers déjà mesurés gardent `
+                    + `leurs chiffres.`
+                : `${m.tag} n'a pas répondu en ${DELAI_MS / 1000} s alors qu'il était déjà chargé — `
+                    + `douze fois le temps de génération mesuré. Le serveur est bloqué ou le modèle a été `
+                    + `évincé : vérifier \`ollama ps\`. Les paliers déjà mesurés gardent leurs chiffres.`);
         }
         throw new Error(`Ollama injoignable sur ${OLLAMA}. L'échelle générative est optionnelle : ` +
             `\`npm run measure\` sans \`--llm\` mesure les encodeurs et n'a besoin de rien. ` +
@@ -160,17 +275,121 @@ async function ollama(tier, prompt, schema) {
     }
 }
 /** Le serveur répond-il, et les trois modèles sont-ils là ? */
+/** Ce qu'Ollama garde effectivement en mémoire, à cet instant. */
+export async function residents() {
+    const r = await fetch(`${OLLAMA}/api/ps`, { signal: AbortSignal.timeout(10_000) });
+    const j = await r.json();
+    return (j.models ?? []).map((m) => ({ nom: m.name, octets: m.size }));
+}
+/** La taille de chaque modèle sur disque, pour savoir lequel charger en premier. */
+/*
+ * LE DIGEST ÉTAIT LU, PUIS JETÉ À LA LIGNE OÙ IL AURAIT SERVI.
+ *
+ * `MODELES_LOCAUX` déclare le digest de chacun des trois modèles génératifs, et il ne
+ * servait qu'à l'affichage d'un tableau. `/api/tags` le renvoie ; cette fonction ne gardait
+ * que le nom et la taille. Conséquence : `ollama pull qwen3:4b` change tous les échecs
+ * génératifs, ne fait bouger aucune source, donc ne fait bouger aucune clé de cache et ne
+ * déclenche aucune garde. Pas besoin d'éditer quoi que ce soit — c'est un geste de routine.
+ *
+ * Et la clé du cache ne pouvait pas l'attraper, contrairement à ce qu'on pourrait croire :
+ * elle hache le TEXTE des modules, donc le digest DÉCLARÉ. Un modèle réinstallé ne modifie
+ * aucune déclaration. La seule parade possible est de comparer le déclaré à l'installé —
+ * exactement ce que fait le scellé du relevé, appliqué au modèle plutôt qu'au fichier.
+ *
+ * Trouvé par une relecture croisée. La forme est celle de la garde mémoire « documentée et
+ * importée par personne », en un cran plus vicieux : ici la valeur est lue, puis abandonnée.
+ */
+async function tailles() {
+    try {
+        const r = await fetch(`${OLLAMA}/api/tags`, { signal: AbortSignal.timeout(10_000) });
+        const j = await r.json();
+        return new Map((j.models ?? []).map((m) => [m.name, { octets: m.size, digest: (m.digest ?? "").replace(/^sha256:/, "").slice(0, 12) }]));
+    }
+    catch {
+        return new Map();
+    }
+}
+/**
+ * Le modèle installé est-il celui qu'on a déclaré mesurer ?
+ *
+ * Rend la liste des écarts. Vide si tout correspond, ou si Ollama n'a rien dit — on ne
+ * prétend pas qu'un silence est une correspondance, et l'appelant décide quoi en faire.
+ */
+export function digestsQuiDivergent(installes) {
+    const ecarts = [];
+    for (const [tier, m] of Object.entries(MODELES_LOCAUX)) {
+        const vu = installes.get(m.tag);
+        if (!vu || !vu.digest)
+            continue; /* absent : ce n'est pas un écart, c'est une absence */
+        if (vu.digest !== m.digest) {
+            ecarts.push({ tier, tag: m.tag, declare: m.digest, installe: vu.digest });
+        }
+    }
+    return ecarts;
+}
+/**
+ * Charger du plus gros au plus petit, et vérifier la résidence au lieu de la supposer.
+ *
+ * L'ordre de chargement décide de la survie en mémoire, et l'éviction est **silencieuse** :
+ * `ollama ps` rend une ligne de moins, sans erreur. Un modèle qu'on croit résident se recharge
+ * depuis le disque à l'appel suivant, et la durée mesurée est alors celle d'un chargement, pas
+ * celle d'une inférence — sans que rien ne le signale.
+ *
+ * Mesuré sur cette machine, dix-sept gigaoctets, trois essais par sens :
+ *
+ *   du plus gros au plus petit   3 résidents, 3, puis 2   (jusqu'à 10,1 Go)
+ *   du plus petit au plus gros   1 résident, 1, 1         (seul le 8b survit)
+ *
+ * Le sens décroissant n'est donc pas une garantie — un essai sur trois a perdu un modèle — et
+ * c'est précisément pourquoi la résidence est **vérifiée** ici plutôt que déduite de l'ordre.
+ * La fonction rend ce qu'elle a constaté ; l'appelant décide si ça lui suffit.
+ */
 export async function loadGeneratifs() {
-    for (const tier of Object.keys(MODELES_LOCAUX)) {
+    const t = await tailles();
+    const tiers = Object.keys(MODELES_LOCAUX);
+    const ordre = [...tiers].sort((a, b) => (t.get(MODELES_LOCAUX[b].tag)?.octets ?? 0) - (t.get(MODELES_LOCAUX[a].tag)?.octets ?? 0));
+    /* ON REFUSE, ON NE PRÉVIENT PAS — même règle que le scellé du relevé. Un modèle réinstallé
+       rend toutes les mesures génératives fausses sans qu'aucun fichier ne change ; un
+       avertissement serait lu une fois puis enjambé, et les chiffres partiraient quand même. */
+    const ecarts = digestsQuiDivergent(t);
+    if (ecarts.length) {
+        throw new Error(`${ecarts.length} modèle(s) installé(s) ne sont pas ceux qui ont été mesurés :\n`
+            + ecarts.map((e) => `  ${e.tag} — déclaré ${e.declare}, installé ${e.installe}`).join("\n")
+            + `\n  Un « ollama pull » change tous les résultats génératifs sans modifier un seul\n`
+            + `  fichier de ce dépôt. Remesurez, ou mettez MODELES_LOCAUX à jour en sachant que\n`
+            + `  les chiffres publiés ne viennent plus de ces modèles-là.`);
+    }
+    for (const tier of ordre) {
         await ollama(tier, "ping", { type: "object", properties: { ok: { type: "string" } }, required: ["ok"] });
     }
+    const vus = await residents();
+    return {
+        demandes: ordre.map((x) => MODELES_LOCAUX[x].tag),
+        residents: vus.map((v) => v.nom),
+        totalOctets: vus.reduce((a, v) => a + v.octets, 0),
+    };
+}
+/**
+ * Réchauffer un palier juste avant de le mesurer.
+ *
+ * Le premier appel d'un palier était systématiquement un rechargement — 1 066 ms contre 213 de
+ * médiane pour `gen-0.6b`, 2 346 contre 679, 3 102 contre 1 057 — et un seul par palier, ce qui
+ * laissait la médiane intacte sur cent vingt appels. Intact n'est pas propre : un appel sur
+ * cent vingt mesurait autre chose que ce que la colonne annonce.
+ */
+export async function rechauffer(tier) {
+    if (!estGeneratif(tier))
+        return true;
+    await ollama(tier, "ping", { type: "object", properties: { ok: { type: "string" } }, required: ["ok"] });
+    const vus = await residents();
+    return vus.some((v) => v.nom === MODELES_LOCAUX[tier].tag);
 }
 let qaSmall = null, qaLarge = null;
 export async function loadExtractors() {
     qaSmall ??= await pipeline("question-answering", "Xenova/distilbert-base-cased-distilled-squad", { revision: REVISIONS.small });
     qaLarge ??= await pipeline("question-answering", "onnx-community/roberta-base-squad2-ONNX", { revision: REVISIONS.large });
 }
-export async function extract(tier, d, champ) {
+export async function extract(tier, d, champ, prompt = "reference") {
     if (tier === "rules")
         return RULES[champ](d.text);
     /*
@@ -184,7 +403,7 @@ export async function extract(tier, d, champ) {
     if (tier === "human")
         return d.truth[champ];
     if (estGeneratif(tier))
-        return extraireGeneratif(tier, d.text, champ);
+        return extraireGeneratif(tier, d.text, champ, prompt);
     const qa = tier === "small" ? qaSmall : qaLarge;
     const r = await qa(QUESTIONS[champ], d.text);
     return String(r?.answer ?? "").trim();
@@ -202,17 +421,76 @@ export async function extract(tier, d, champ) {
  * même faute que d'écrire les expressions régulières contre ses propres gabarits, qui a
  * déjà coûté un corpus entier à ce dépôt.
  */
-async function extraireGeneratif(tier, texte, champ) {
-    const r = await ollama(tier, `Copy a single value out of a document, verbatim. Never rephrase, never reformat, ` +
+/**
+ * Les cinq formulations mises à l'épreuve, écrites avant qu'aucune ne tourne.
+ *
+ * La question que ce dépôt ne s'était jamais posée : si reformuler un prompt déplace
+ * l'exactitude autant que changer de palier, alors comparer des modèles revient à comparer
+ * des prompts, et tout le routage optimise le mauvais axe.
+ *
+ * Les quatre alternatives ont été écrites par quelqu'un qui n'est pas l'auteur de la
+ * référence — même principe que l'audit croisé. Aucune n'est volontairement mauvaise : ce
+ * sont trois styles courants plus une correction d'un défaut réel. Elles sont figées ici
+ * **avant** la première exécution, parce que connaître un résultat permet d'ajouter une
+ * variante de plus et que personne ne le fait consciemment.
+ *
+ * Réserve à porter avec le chiffre : leur auteur avait lu la référence, donc ce sont des
+ * voisines. La dispersion mesurée est une **borne basse** de la vraie sensibilité au prompt.
+ */
+/** Les paliers dont la formulation se règle : ceux qui ont un prompt. */
+export const GENERATIFS_PUBLICS = ["gen-0.6b", "gen-4b", "gen-8b"];
+export const EXEMPLE_DOC = "Anna Petrova — dob 3 May 1990 — doc no ES-1234-A — Spain — lives 5 Calle Mayor, Madrid";
+const EXEMPLES = {
+    name: "Anna Petrova",
+    birth: "3 May 1990",
+    document: "ES-1234-A",
+    country: "Spain",
+    address: "5 Calle Mayor, Madrid",
+};
+export const PROMPTS = {
+    /* La référence : un exemple unique, dont la question est celle du champ `document`. */
+    reference: (texte, champ) => `Copy a single value out of a document, verbatim. Never rephrase, never reformat, ` +
         `never explain. If the value is absent, return an empty string.\n\n` +
         `Example.\n` +
-        `Document: Anna Petrova — dob 3 May 1990 — doc no ES-1234-A — Spain — lives 5 Calle Mayor, Madrid\n` +
-        `Question: What is the identity document number?\n` +
-        `Answer: ES-1234-A\n\n` +
+        `Document: ${EXEMPLE_DOC}\n` +
+        `Question: ${QUESTIONS.document}\n` +
+        `Answer: ${EXEMPLES.document}\n\n` +
         `Now the real one.\n` +
         `Document: ${texte}\n` +
         `Question: ${QUESTIONS[champ]}\n` +
-        `Answer:`, { type: "object", properties: { answer: { type: "string" } }, required: ["answer"] });
+        `Answer:`,
+    /* A : ce que l'exemple apporte, isolé en le retirant. */
+    "A-sans-exemple": (texte, champ) => `Copy a single value out of a document, verbatim. Never rephrase, never reformat, ` +
+        `never explain. If the value is absent, return an empty string.\n\n` +
+        `Document: ${texte}\n` +
+        `Question: ${QUESTIONS[champ]}\n` +
+        `Answer:`,
+    /* B : chaque champ voit un exemple qui pose SA question. Même document, aucune information neuve. */
+    "B-exemple-apparie": (texte, champ) => `Copy a single value out of a document, verbatim. Never rephrase, never reformat, ` +
+        `never explain. If the value is absent, return an empty string.\n\n` +
+        `Example.\n` +
+        `Document: ${EXEMPLE_DOC}\n` +
+        `Question: ${QUESTIONS[champ]}\n` +
+        `Answer: ${EXEMPLES[champ]}\n\n` +
+        `Now the real one.\n` +
+        `Document: ${texte}\n` +
+        `Question: ${QUESTIONS[champ]}\n` +
+        `Answer:`,
+    /* C : une phrase d'instruction, rien d'autre. La longueur sert-elle à quelque chose ? */
+    "C-minimal": (texte, champ) => `Extract the requested value from the document exactly as written. Return an empty ` +
+        `string if it is not there.\n\n` +
+        `Document: ${texte}\n` +
+        `Question: ${QUESTIONS[champ]}\n` +
+        `Answer:`,
+    /* D : même contenu, contrainte après le document. La position d'une instruction compte. */
+    "D-document-dabord": (texte, champ) => `Document: ${texte}\n\n` +
+        `Question: ${QUESTIONS[champ]}\n\n` +
+        `Answer with the value exactly as it appears in the document above. Do not ` +
+        `rephrase, reformat or explain. If it is absent, answer with an empty string.\n\n` +
+        `Answer:`,
+};
+async function extraireGeneratif(tier, texte, champ, prompt = "reference") {
+    const r = await ollama(tier, PROMPTS[prompt](texte, champ), { type: "object", properties: { answer: { type: "string" } }, required: ["answer"] });
     return String(r.answer ?? "").trim();
 }
 /**
@@ -222,6 +500,21 @@ async function extraireGeneratif(tier, texte, champ) {
  * model returning "26 ulica Nowy Świat, Lisbon" rather than the same without the comma
  * has found the right answer, and counting that as a failure would measure formatting.
  */
+/**
+ * La normalisation que `correct` applique aux deux côtés.
+ *
+ * Exportée parce que le journal des tentatives en a besoin pour distinguer un blanc d'une
+ * valeur fausse : « rien » doit vouloir dire la même chose ici et là, sinon deux fichiers du
+ * même dépôt comptent les blancs différemment.
+ */
+export function normaliserReponse(x) {
+    return x
+        .toLowerCase()
+        .replace(/\s*([\/\-.,;:])\s*/g, "$1") // spaces the tokeniser added around separators
+        .replace(/[.,;:]+$/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+}
 export function correct(got, expected) {
     /*
      * Formatting is not an error, and counting it as one measures the wrong thing.
@@ -234,13 +527,7 @@ export function correct(got, expected) {
      * So separators are normalised on both sides. What is NOT normalised is content: a
      * missing word, a wrong span or an empty answer stays wrong, which is the whole point.
      */
-    const n = (x) => x
-        .toLowerCase()
-        .replace(/\s*([\/\-.,;:])\s*/g, "$1") // spaces the tokeniser added around separators
-        .replace(/[.,;:]+$/g, "")
-        .replace(/\s+/g, " ")
-        .trim();
-    return n(got) === n(expected) && n(got).length > 0;
+    return normaliserReponse(got) === normaliserReponse(expected) && normaliserReponse(got).length > 0;
 }
 /* ══════════════════ Chain B — classify ══════════════════ */
 /** What each typology looks like, for a comparison by meaning. */
