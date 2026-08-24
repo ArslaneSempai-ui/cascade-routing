@@ -625,6 +625,54 @@ test("les gestes du pilote de capture mènent à l'optimum courant", () => {
   }
 });
 
+/**
+ * La coupure ne se rouvre pas en silence.
+ *
+ * Trois modules produisent la réponse d'un client — la politique d'abstention exportable,
+ * l'exposition en euros, le taux par dossier — et ils ne sont pas dans ce dépôt. Ce n'est pas
+ * un rangement : c'est ce qui se vend. Le banc prouve la méthode sur notre corpus ; il ne
+ * calcule pas la réponse de quelqu'un d'autre.
+ *
+ * L'HISTORIQUE COMPTE AUTANT QUE LA DERNIÈRE VERSION. Un fichier retiré du dernier commit
+ * reste lisible dans `git log` pour toujours, et un dépôt public n'oublie rien. La garde
+ * regarde donc l'historique entier de cette branche, pas l'arbre de travail : c'est la seule
+ * lecture qui corresponde à ce qu'un lecteur peut réellement obtenir.
+ *
+ * Elle porte son propre témoin. Un `git log` qui échoue rend zéro ligne, exactement comme un
+ * `git log` qui ne trouve rien : sans une recherche dont on connaît la réponse, ce test
+ * passerait au vert dans un dossier qui n'est même pas un dépôt.
+ */
+test("aucun module licencié n'est atteignable dans l'historique de cette branche", () => {
+  const racine = fileURLToPath(new URL("..", import.meta.url));
+  const git = (args: string[]) =>
+    spawnSync("git", args, { cwd: racine, encoding: "utf8", timeout: 20_000 });
+
+  const dedans = git(["rev-parse", "--is-inside-work-tree"]);
+  if (dedans.status !== 0 || dedans.stdout.trim() !== "true") return;   // archive, pas un dépôt
+
+  /* LE TÉMOIN : un chemin dont on SAIT qu'il est dans l'historique. S'il ne sort pas, la
+     commande ne lit rien et son silence sur les autres ne veut rien dire. */
+  const temoin = git(["log", "--oneline", "--", "src/measure.ts"]);
+  const lignesTemoin = temoin.stdout.trim().split("\n").filter(Boolean).length;
+  assert.ok(temoin.status === 0 && lignesTemoin > 0,
+    `le témoin n'a rien trouvé pour src/measure.ts (${lignesTemoin} ligne(s), code ${temoin.status}) :\n`
+    + "  la lecture de l'historique a échoué, donc ce contrôle ne vérifie rien.");
+
+  const LICENCIES = ["src/politique.ts", "src/exposition.ts", "src/document.ts",
+    "politique.json", "politique.mjs"];
+  const revenus: string[] = [];
+  for (const chemin of LICENCIES) {
+    const r = git(["log", "--oneline", "--", chemin]);
+    const n = r.stdout.trim().split("\n").filter(Boolean).length;
+    if (n > 0) revenus.push(`${chemin} (${n} commit(s))`);
+  }
+  assert.deepEqual(revenus, [],
+    `des modules licenciés sont atteignables dans l'historique de cette branche :\n`
+    + revenus.map((r) => `  - ${r}`).join("\n") + "\n"
+    + "  → ils vivent dans le dépôt licencié. Un fichier retiré du dernier commit reste\n"
+    + "    lisible dans « git log », et un dépôt public n'oublie rien.");
+});
+
 test("chaque rétractation nomme un test qui existe vraiment", () => {
   /*
    * Le journal des rétractations est un instrument anti-péremption, et il est lui-même
