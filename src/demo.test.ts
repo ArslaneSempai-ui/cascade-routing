@@ -21,6 +21,7 @@
  */
 
 import { test } from "node:test";
+import { FIELDS } from "./corpus.ts";
 import assert from "node:assert/strict";
 import { readFileSync, existsSync } from "node:fs";
 import { execFileSync } from "node:child_process";
@@ -134,7 +135,7 @@ test("une requête qui ne change rien le DIT, au lieu de rendre un succès", () 
   assert.match(src, /this request changes nothing/,
     "le refus d'un champ ou d'un palier inconnu a disparu : une requête sans effet rendrait à nouveau 200.");
   assert.match(src, /accepted: \$\{FIELDS\.join/,
-    "le refus ne nomme plus ce qui est accepté : sur cinq champs, « valeur inconnue » n'aide personne.");
+    `le refus ne nomme plus ce qui est accepté : sur ${FIELDS.length} champs, « valeur inconnue » n'aide personne.`);
   assert.match(src, /the body must be a JSON object/,
     "un corps `null` ou un tableau ne serait plus refusé avec un message lisible.");
   /* Et le message ne doit pas être une erreur d'exécution recopiée : « Cannot read properties

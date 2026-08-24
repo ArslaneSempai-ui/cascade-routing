@@ -63,7 +63,19 @@ test("LA PREMIÈRE RÉPONSE NE DEMANDE AUCUNE INSTALLATION", () => {
   const suivis = spawnSync("git", ["ls-files"], { cwd: racine, encoding: "utf8" });
   if (suivis.status === 0) {
     const liste = suivis.stdout.split("\n");
-    for (const f of ["src/premiere-reponse.mjs", "exposition.json", "document.json"]) {
+    /*
+     * LA LISTE SE DÉRIVE DE CE QUE LE MODULE LIT, ELLE NE SE RÉCITE PAS.
+     *
+     * Elle était écrite à la main : le jour où la première réponse lirait un troisième
+     * relevé, il ne serait pas dans la liste, ce cas continuerait de passer, et il passerait
+     * en regardant moins. C'est le défaut que ce cas existe pour empêcher, logé dans le cas.
+     * Trouvé par le catalogue de pièges, sur du code écrit le même jour.
+     */
+    const src = readFileSync(join(racine, "src/premiere-reponse.mjs"), "utf8");
+    const lus = [...src.matchAll(/lire\("([^"]+)"\)/g)].map((m) => m[1]!);
+    assert.ok(lus.length >= 2,
+      `${lus.length} relevé(s) lu(s) par la première réponse : la dérivation ne marche plus, et ce cas ne vérifie rien.`);
+    for (const f of ["src/premiere-reponse.mjs", ...lus]) {
       assert.ok(liste.includes(f),
         `${f} n'est pas versionné : un clone frais n'aurait rien à lire, et la promesse serait fausse.`);
     }
