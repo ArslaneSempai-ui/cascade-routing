@@ -34,6 +34,32 @@ Each field is assigned to the cheapest tier that is not measurably worse than th
 available one. Where two tiers cannot be told apart on this sample, the cheaper is taken
 — a difference inside the confidence interval is not a difference to pay for.
 
+**The free tier is fitted to this corpus, and here is what that costs.** The rules for
+`birth`, `document` and `country` enumerate exactly what the generator emits: the
+country rule lists eight countries and the corpus produces those same eight, and the
+document rule matches the single identifier format the generator uses. Their published
+rate is therefore not a measurement of a capability — it is the two lists having been
+written by the same hand.
+
+Measured against a distribution we did not write — 300 records from the OFAC SDN list,
+every expected answer verified to appear verbatim in the source text:
+
+| Field | This corpus, rules | OFAC, rules | OFAC, `large` |
+|---|---|---|---|
+| `birth` | 100.0 % | **6.9 %** | 96.7 % |
+| `document` | 79.7 % | **0.0 %** | 35.3 % |
+| `country` | 100.0 % | **1.9 %** | 85.3 % |
+
+They do not answer wrongly — they do not answer at all: 0, 15 and 24 values returned out
+of 198 to 290 cases. The tool is not what fails here; the free tier is. On a real
+distribution those three fields fall back to a paid tier, which the published
+$191 figure does
+not include: $60 to $480 per period at the
+declared volume, depending on the tier.
+
+This is disclosed rather than corrected, because widening either the rule or the corpus
+moves the headline figure, and that is a decision rather than maintenance.
+
 The interval is **Wilson**, not Wald. The distinction matters at the extremes, which is
 where per-record rates live: Wald leaves [0, 1] near 0 % or 100 % and narrows wrongly on
 a small sample — an interval that is too tight makes a difference look real when it is

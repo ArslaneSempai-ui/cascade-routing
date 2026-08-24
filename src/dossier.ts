@@ -155,6 +155,50 @@ export function dossier(p: Profiles, h: Assumptions): string {
    * que Wald rate, et elles sont figées dans `interval.test.ts` : elles ne peuvent plus
    * bouger en silence.
    */
+  /*
+   * CE QUE LE 100 % DES RÈGLES GRATUITES MESURE RÉELLEMENT.
+   *
+   * `RULES.country` énumère huit pays. `corpus.ts` en engendre huit. Les deux listes étaient
+   * identiques mot pour mot, et `RULES.document` cherche le seul format que le générateur
+   * produit. Le taux publié pour ces champs n'est donc pas la mesure d'une capacité : c'est
+   * le fait que la règle et le corpus ont été écrits par la même main.
+   *
+   * Mesuré le 25 août 2026 sur la liste SDN de l'OFAC — 300 cas d'une distribution que nous
+   * n'avons pas écrite, chaque bonne réponse vérifiée présente mot pour mot dans le texte.
+   * L'outil n'est pas en cause : l'encodeur `large` fait 96,7 % et 85,3 % sur ces mêmes
+   * données. C'est la partie GRATUITE qui est ajustée à nous-mêmes.
+   *
+   * Ça se dit ici plutôt que de se corriger en silence : élargir la règle ou le corpus
+   * déplacerait le chiffre qu'on vend, et ce n'est pas une décision d'entretien.
+   */
+  w(`**The free tier is fitted to this corpus, and here is what that costs.** The rules for`);
+  w(`\`birth\`, \`document\` and \`country\` enumerate exactly what the generator emits: the`);
+  w(`country rule lists eight countries and the corpus produces those same eight, and the`);
+  w(`document rule matches the single identifier format the generator uses. Their published`);
+  w(`rate is therefore not a measurement of a capability — it is the two lists having been`);
+  w(`written by the same hand.`);
+  w(``);
+  w(`Measured against a distribution we did not write — 300 records from the OFAC SDN list,`);
+  w(`every expected answer verified to appear verbatim in the source text:`);
+  w(``);
+  w(table(["Field", "This corpus, rules", "OFAC, rules", "OFAC, \`large\`"], [
+    ["`birth`", "100.0 %", "**6.9 %**", "96.7 %"],
+    ["`document`", "79.7 %", "**0.0 %**", "35.3 %"],
+    ["`country`", "100.0 %", "**1.9 %**", "85.3 %"],
+  ]));
+  w(``);
+  w(`They do not answer wrongly — they do not answer at all: 0, 15 and 24 values returned out`);
+  w(`of 198 to 290 cases. The tool is not what fails here; the free tier is. On a real`);
+  w(`distribution those three fields fall back to a paid tier, which the published`);
+  w(`${symboleDe(UNITS.budget)}191 figure does`);
+  /* La devise vient de la table, jamais du clavier — la garde de ce dépôt refuse l'inverse,
+     et elle vient de m'attraper sur cette phrase même. */
+  w(`not include: ${symboleDe(UNITS.budget)}60 to ${symboleDe(UNITS.budget)}480 per period at the`);
+  w(`declared volume, depending on the tier.`);
+  w(``);
+  w(`This is disclosed rather than corrected, because widening either the rule or the corpus`);
+  w(`moves the headline figure, and that is a decision rather than maintenance.`);
+  w(``);
   w(`The interval is **Wilson**, not Wald. The distinction matters at the extremes, which is`);
   w(`where per-record rates live: Wald leaves [0, 1] near 0 % or 100 % and narrows wrongly on`);
   w(`a small sample — an interval that is too tight makes a difference look real when it is`);

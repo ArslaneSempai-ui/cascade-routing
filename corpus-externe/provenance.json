@@ -1,0 +1,36 @@
+{
+  "_lisez_moi": [
+    "UN CORPUS QUE NOUS N AVONS PAS ECRIT.",
+    "",
+    "Source : la liste SDN de l OFAC, liste de sanctions officielle des Etats-Unis, celle",
+    "contre laquelle les equipes AML criblent reellement. Publique, officielle, gratuite,",
+    "et sa publication est sa raison d etre : il n y a pas de question de vie privee.",
+    "",
+    "CE QU IL SERT A. Chaque autre chiffre de ce depot est mesure sur un corpus ecrit par",
+    "notre propre generateur, donc sur les cas que NOUS avons imagines. Celui-ci a une",
+    "distribution que nous n avons pas choisie.",
+    "",
+    "CE QU IL NE CONTIENT PAS, et pourquoi : seuls les champs dont la bonne reponse apparait",
+    "MOT POUR MOT dans le texte source. Le nom est au format OFAC (NOM, Prenom) et l adresse",
+    "vient d un fichier separe, absente du texte 260 fois sur 300 : les mesurer aurait note",
+    "faux une extraction correcte."
+  ],
+  "source": "https://sanctionslistservice.ofac.treas.gov/api/PublicationPreview/exports/SDN.CSV",
+  "recupereLe": "2026-08-25",
+  "examinees": 19314,
+  "retenues": 5085,
+  "publiees": 300,
+  "ecartees": {
+    "entites non physiques": 11800,
+    "verite ambigue (plusieurs dates ou documents)": 937,
+    "moins de trois champs": 1470,
+    "sans remarques": 22
+  },
+  "champs": [
+    "birth",
+    "document",
+    "country"
+  ],
+  "verificationALaMain": "8 cas sur 8 relus : chaque valeur attendue presente mot pour mot dans le texte",
+  "premiereVersionFausse": "Le premier analyseur ne cherchait que Passport et National ID sur douze types presents, et ratait un passeport contenant une espace. Faux sur 3 cas sur 6, vu en relisant a la main."
+}

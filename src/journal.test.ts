@@ -1531,3 +1531,89 @@ test("aucun shell n'est invoqué, et aucune commande n'est construite en chaîne
     + "  → `execFileSync(cmd, [args])` ne passe par aucun shell : « ; rm -rf / » y est un\n"
     + "    argument, pas une commande.");
 });
+
+/*
+ * ─── UNE RÈGLE GRATUITE NE PEUT PAS PARTAGER SON VOCABULAIRE AVEC LE GÉNÉRATEUR ───
+ *
+ * `RULES.country` cherchait huit pays. `corpus.ts` en engendre huit. **Les deux listes étaient
+ * identiques, mot pour mot.** Et `RULES.document` cherchait `\b[A-Z]{2}-\d{4}-[A-Z]\b`, qui est
+ * le seul format que le générateur produit — un format sur 200 dossiers.
+ *
+ * Le « 100 % » que VALIDATION.md publie pour ces champs n'est donc pas la mesure d'une
+ * capacité : c'est une tautologie. On demande à l'outil de trouver ce qu'on lui a dit de
+ * chercher, dans un texte fabriqué pour le contenir.
+ *
+ * MESURÉ, le 25 août 2026, sur la liste SDN de l'OFAC — 300 cas d'une distribution que nous
+ * n'avons pas écrite, chaque bonne réponse vérifiée présente mot pour mot dans le texte :
+ *
+ *     champ       notre corpus     OFAC
+ *     birth          100,0 %        6,9 %
+ *     document        79,7 %        0,0 %
+ *     country        100,0 %        1,9 %
+ *
+ * Et elles ne se trompent pas : elles ne RÉPONDENT PAS. 0, 15 et 24 réponses rendues sur 198
+ * à 290 cas. L'outil n'est pas en cause — l'encodeur `large` fait 96,7 % et 85,3 % sur les
+ * mêmes données. C'est la partie GRATUITE qui est ajustée à nous-mêmes, et c'est elle qui
+ * porte trois champs sur cinq dans le routage publié à 191 $.
+ *
+ * Ce cas ne corrige pas les règles : il rend le recouvrement IMPOSSIBLE À RÉINTRODUIRE EN
+ * SILENCE. Une règle a le droit d'être imparfaite ; elle n'a pas le droit de tirer son score
+ * du fait qu'elle et le corpus ont été écrits par la même main.
+ */
+test("les règles gratuites ne recopient pas le vocabulaire du générateur", async () => {
+  const dossier = fileURLToPath(new URL(".", import.meta.url));
+  const tiers = readFileSync(join(dossier, "tiers.ts"), "utf8");
+  const corpus = readFileSync(join(dossier, "corpus.ts"), "utf8");
+
+  /* Les deux listes de pays, lues dans leur source respective. */
+  const liste = (src: string, apres: RegExp) => {
+    const m = apres.exec(src);
+    if (!m) return null;
+    const bloc = src.slice(m.index, src.indexOf("]", m.index));
+    return (bloc.match(/"([A-Z][a-zA-Z ]+)"/g) ?? []).map((x) => x.slice(1, -1)).sort();
+  };
+  const auxRegles = liste(tiers, /const (?:country|pays) = \[/);
+  const auGenerateur = liste(corpus, /const COUNTRIES = \[/);
+
+  /* LE DÉNOMINATEUR : si l'une des deux lectures échoue, ce cas ne compare rien et le dirait
+     en passant. On refuse plutôt. */
+  assert.ok(auxRegles && auxRegles.length >= 3,
+    "la liste de pays des règles n'a pas été lue : ce cas ne compare rien.");
+  assert.ok(auGenerateur && auGenerateur.length >= 3,
+    "la liste de pays du générateur n'a pas été lue : ce cas ne compare rien.");
+
+  const communs = auxRegles!.filter((p) => auGenerateur!.includes(p));
+  const recouvrement = communs.length / auxRegles!.length;
+
+  /*
+   * ON NE CHANGE PAS LE CHIFFRE EN SILENCE, ON OBLIGE LE DOCUMENT À LE DIRE.
+   *
+   * Élargir la règle, ou élargir le corpus, déplacerait le taux publié — 94,4 % pour 191 $ —
+   * qui est ce qu'on vend. Ce n'est pas une décision d'entretien, et une session ne la prend
+   * pas seule.
+   *
+   * Ce qui se décide seul, en revanche : un lecteur ne doit pas pouvoir lire « 100 % » comme
+   * une capacité alors que c'est un ajustement. Tant que le recouvrement est total,
+   * VALIDATION.md doit porter la phrase qui le dit, avec le chiffre externe à côté. Le jour
+   * où quelqu'un tranche, il retire la phrase ET le recouvrement, et ce cas le vérifie.
+   */
+  if (recouvrement === 1) {
+    const doc = readFileSync(fileURLToPath(new URL("../VALIDATION.md", import.meta.url)), "utf8");
+    assert.match(doc, /fitted to this corpus|ajust/i,
+      `la règle gratuite et le générateur partagent ${communs.length} pays sur ${auxRegles!.length}, `
+      + "et VALIDATION.md ne le dit pas.\n"
+      + "  → le lecteur y voit « 100 % », qui n'est pas la mesure d'une capacité mais le fait\n"
+      + "    que les deux listes ont été écrites par la même main. Mesuré sur une distribution\n"
+      + "    externe — OFAC, 300 cas — la même règle rend 1,9 %.\n"
+      + "  → la phrase doit être dans le document tant que le recouvrement est total.");
+    return;
+  }
+  assert.ok(recouvrement < 1,
+    `la règle gratuite et le générateur partagent ${communs.length} pays sur ${auxRegles!.length} `
+    + `(${(100 * recouvrement).toFixed(0)} % de recouvrement).\n`
+    + "  → le taux publié pour ce champ ne mesure pas une capacité, il mesure que les deux\n"
+    + "    listes ont été écrites par la même main. Mesuré sur une distribution externe (OFAC,\n"
+    + "    300 cas) : 1,9 % au lieu de 100 %.\n"
+    + "  → soit la règle cesse d'énumérer, soit le corpus cesse de se limiter à cette liste,\n"
+    + "    soit VALIDATION.md dit que ce chiffre est un ajustement et non une mesure.");
+});
