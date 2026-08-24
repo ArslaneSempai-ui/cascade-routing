@@ -398,6 +398,48 @@ export function ecrireMs(ms: number, declaree: boolean): string {
  * retour à la ligne coupe la ligne en deux. Aucun des trois n'était refusé, et aucun ne
  * ressemble à une attaque — ce sont des noms qu'on écrit sans y penser.
  */
+/**
+ * TOUT CE QUI COMMENCE PAR `--` EST UNE INTENTION, ET UNE INTENTION IGNORÉE EST UN RÉSULTAT
+ * QUI RÉPOND À UNE AUTRE QUESTION.
+ *
+ * Mesuré : `--task=xyz` sortait 0 et rendait un rapport d'extraction sans jamais prononcer le
+ * mot « task ». Le client qui écrit `--classifiy` obtient donc un rapport qui a l'air normal
+ * et qui mesure autre chose que ce qu'il a demandé. Même forme que `--sample=abc` ignoré en
+ * silence, mais celle-ci attrape toutes les fautes de frappe d'un coup, y compris celles
+ * qu'on n'a pas prévues.
+ */
+export const DRAPEAUX_CONNUS: readonly string[] = [
+  "cases", "rules", "sorties", "questions", "task", "sample",
+  "llm", "journal", "show-questions", "yes-run-it",
+];
+
+export const TACHES: readonly string[] = ["extract", "classify"];
+
+export function drapeauxInconnus(argv: readonly string[]): string[] {
+  return argv
+    .filter((a) => a.startsWith("--"))
+    .map((a) => a.slice(2).split("=")[0]!)
+    .filter((nom) => !DRAPEAUX_CONNUS.includes(nom));
+}
+
+export function exigerDrapeauxConnus(argv: readonly string[]): void {
+  const inconnus = drapeauxInconnus(argv);
+  if (inconnus.length === 0) return;
+  throw new Error(`unknown option(s): ${inconnus.map((d) => "--" + d).join(", ")}\n`
+    + `  Accepted: ${DRAPEAUX_CONNUS.map((d) => "--" + d).join(", ")}\n`
+    + `  Left as it was, a mistyped option is dropped without a word and the run answers a\n`
+    + `  different question than the one you asked.`);
+}
+
+export function lireTache(brut: string | undefined): string {
+  if (brut === undefined) return "extract";
+  if (!TACHES.includes(brut)) {
+    throw new Error(`--task=${brut} is not a task. Accepted: ${TACHES.join(", ")}.\n`
+      + `  This used to fall through to "extract" in silence.`);
+  }
+  return brut;
+}
+
 export function nomDeChaine(brut: unknown, chemin: string): string {
   if (brut === undefined || brut === null) return "your chain";
   if (typeof brut !== "string") {
@@ -756,6 +798,7 @@ export async function classerVosCas(
 
 async function principal(): Promise<void> {
   const arg = (nom: string) => process.argv.find((a) => a.startsWith(`--${nom}=`))?.split("=").slice(1).join("=");
+  exigerDrapeauxConnus(process.argv.slice(2));
   const fichier = arg("cases");
   if (!fichier) {
     console.log(`
@@ -793,7 +836,7 @@ Nothing leaves your machine: the models are local and this path makes no network
   }
   if (!existsSync(fichier)) { console.error(`no such file: ${fichier}`); process.exit(1); }
 
-  const tache = arg("task") ?? "extract";
+  const tache = lireTache(arg("task"));
   /*
    * `Number(x)` S'EXÉCUTE AVANT QU'ON DEMANDE SI x EST UN NOMBRE.
    *

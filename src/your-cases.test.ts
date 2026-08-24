@@ -750,3 +750,72 @@ test("l'avertissement sur les identifiants non appariés est en anglais, comme s
   }
   assert.match(src, /covers the matched cases only/, "témoin : la phrase existe bien.");
 });
+
+
+test("une option mal orthographiée est refusée, pas laissée tomber", async () => {
+  const { drapeauxInconnus, exigerDrapeauxConnus, DRAPEAUX_CONNUS } = await import("./your-cases.ts");
+
+  assert.deepEqual(drapeauxInconnus(["--cases=a.csv", "--llm"]), [],
+    "témoin positif : les options réelles passent.");
+  assert.deepEqual(drapeauxInconnus(["--cases=a.csv", "--sampl=100"]), ["sampl"]);
+  assert.deepEqual(drapeauxInconnus(["--Cases=a.csv"]), ["Cases"], "la casse compte aussi.");
+
+  assert.throws(() => exigerDrapeauxConnus(["--classifiy"]), (e: Error) => {
+    assert.match(e.message, /unknown option\(s\): --classifiy/);
+    assert.match(e.message, /answers a\n  different question than the one you asked/,
+      "un refus dit ce qu'on perdait à se taire.");
+    return true;
+  });
+
+  /* La liste doit être la vraie : une option lue par le code et absente d'ici serait
+     refusée alors qu'elle marche. */
+  const src = readFileSync(fileURLToPath(new URL("./your-cases.ts", import.meta.url)), "utf8");
+  const lues = new Set<string>();
+  for (const m of src.matchAll(/arg\("([a-z-]+)"\)/g)) lues.add(m[1]!);
+  for (const m of src.matchAll(/includes\("--([a-z-]+)"\)/g)) lues.add(m[1]!);
+  for (const nom of lues) {
+    assert.ok(DRAPEAUX_CONNUS.includes(nom),
+      `le code lit --${nom} et la liste des options connues ne le contient pas : ce refus\n`
+      + "  bloquerait une option qui marche.");
+  }
+});
+
+test("--task=xyz ne retombe plus sur extract en silence", async () => {
+  const { lireTache } = await import("./your-cases.ts");
+  assert.equal(lireTache(undefined), "extract", "sans le drapeau, la tâche par défaut.");
+  assert.equal(lireTache("classify"), "classify", "témoin positif.");
+  assert.throws(() => lireTache("xyz"), /is not a task. Accepted: extract, classify/,
+    "mesuré : --task=xyz sortait 0 et rendait un rapport d'extraction sans jamais prononcer\n"
+    + "  le mot « task ». Le client qui écrit --classifiy mesure autre chose que ce qu'il\n"
+    + "  a demandé, et rien ne le lui dit.");
+});
+
+
+test("le programme lui-même refuse l'option inconnue et la tâche inconnue", async () => {
+  /*
+   * Quatrième fois aujourd'hui : les cas au-dessus éprouvent `lireTache` et
+   * `exigerDrapeauxConnus`, et remettre les anciens appels dans `principal()` les laissait
+   * tous les deux verts. Un témoin se plante là où la vérité est produite, jamais là où on
+   * la lit — ici, la ligne de commande.
+   */
+  const dossier = mkdtempSync(join(tmpdir(), "drapeaux-"));
+  try {
+    const fichier = join(dossier, "cases.csv");
+    writeFileSync(fichier, "text,total\nune facture de 12 EUR,12\n");
+    const bin = fileURLToPath(new URL("./your-cases.ts", import.meta.url));
+    const lancer = (...flags: string[]) =>
+      spawnSync(process.execPath, [bin, "--cases=" + fichier, ...flags], { encoding: "utf8" });
+
+    const t = lancer("--task=xyz");
+    assert.notEqual(t.status, 0, "un refus qui rend 0 est un refus que rien n'entend.");
+    assert.match((t.stdout ?? "") + (t.stderr ?? ""), /is not a task/);
+
+    const d = lancer("--sampl=100");
+    assert.notEqual(d.status, 0);
+    assert.match((d.stdout ?? "") + (d.stderr ?? ""), /unknown option\(s\): --sampl/);
+
+    const e = lancer("--sample=abc");
+    assert.notEqual(e.status, 0);
+    assert.match((e.stdout ?? "") + (e.stderr ?? ""), /not a whole number of cases/);
+  } finally { rmSync(dossier, { recursive: true, force: true }); }
+});
