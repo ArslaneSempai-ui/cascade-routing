@@ -64,8 +64,39 @@ export function departager(bits: Record<NomPrompt, Record<Field, string>>, noms:
     ecartExtractions: reussites(vainqueur) - reussites(second), decidable };
 }
 
+/**
+ * UNE CHAÎNE VIDE N'EST PAS UN NOMBRE, ET `??` NE LA RATTRAPE PAS.
+ *
+ * `--cases=` rend la chaîne vide. Elle n'est pas nullish, donc le défaut ne se déclenche
+ * pas ; et `Number("")` vaut **0**, pas NaN. La passe tournait donc sur zéro dossier,
+ * affichait « 0 cas sur chaque moitié », et **écrivait son fichier de sortie** — daté,
+ * complet, ressemblant à une mesure. `--cases=abc` donnait NaN, et `generateRecords` rend
+ * zéro dossier pour NaN comme pour 0 comme pour -5.
+ *
+ * Le refus est ici, AVANT toute mesure, pour que rien ne soit écrit. `reportable: false`
+ * arrivait trop tard : le champ existe, mais l'artefact aussi, et on lit rarement les deux.
+ * **Un artefact qui n'établit rien ne doit pas exister.**
+ *
+ * (Écrite deux fois, ici et dans l'autre commande qui prend `--cases=`. Sa vraie place est
+ *  la couche partagée ; l'y mettre propage à six dépôts, ce qui est une décision de
+ *  propagation et pas la mienne. Signalé plutôt que tranché tout seul.)
+ */
+function casDemandes(defaut: number): number {
+  const brut = process.argv.find((a) => a.startsWith("--cases="))?.split("=")[1];
+  if (brut === undefined || brut.trim() === "") return defaut;
+  const n = Number(brut);
+  if (!Number.isFinite(n) || !Number.isInteger(n) || n <= 0) {
+    process.stderr.write(
+      `\n  --cases=${brut} n'est pas un nombre de dossiers.\n`
+      + `  Il en faut un entier strictement positif. Une mesure sur zéro dossier n'est pas\n`
+      + `  une mesure, et elle laisserait derrière elle un fichier qui en a l'air.\n\n`);
+    process.exit(1);
+  }
+  return n;
+}
+
 if (isMain(import.meta)) {
-  const cas = Number(process.argv.find((a) => a.startsWith("--cases="))?.split("=")[1] ?? 120);
+  const cas = casDemandes(120);
   /* Sur `dev`. Le mettre en dur plutôt qu'en option : un réglage sur `heldout` ne doit pas
      être à une faute de frappe près. */
   const dossiers = generateRecords(cas, "dev");
