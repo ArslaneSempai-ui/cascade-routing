@@ -164,3 +164,47 @@ test("un « < » dans le bloc de signature est refusé d'emblée", () => {
   assert.equal(r.valide, false);
   assert.match(r.motif, /"<"/);
 });
+
+/*
+ * ─── LE SEUL ENDROIT QUE LA SIGNATURE NE PEUT PAS COUVRIR ───
+ *
+ * Le corps signé est le document PRIVÉ de son bloc de signature — ce qui précède et ce qui
+ * suit. C'est ce qui ferme d'un coup toute la famille du « j'ajoute quelque chose après ».
+ *
+ * Mais ça laisse le bloc lui-même comme une région d'octets que rien ne signe, par
+ * construction. Trouvé par une session pair à la quinzième tentative de contrefaçon, après
+ * quatorze refusées : ce n'est pas une contrefaçon, rien ne s'affiche, et un `<` est déjà
+ * refusé ailleurs — donc les octets sont inertes.
+ *
+ * ILS RESTENT DES OCTETS NON SIGNÉS DANS UN DOCUMENT QUI SE PRÉSENTE COMME VÉRIFIÉ, et ils
+ * cessent d'être inertes le jour où quelque chose lit un champ de `sig` autre que les trois
+ * attendus : une version future de ce vérificateur, un outil qui indexe des rapports, un
+ * lecteur qui ouvre le JSON. Un canal inerte reste un canal.
+ */
+test("un champ inconnu dans le bloc de signature fait refuser", () => {
+  const { html, pem } = rapportSigne(EXEMPLE);
+  /* LE TÉMOIN POSITIF D'ABORD : sans lui, un « refusé » obtenu pour une autre raison — une
+     signature cassée par la manipulation — se lirait comme une réussite du contrôle. */
+  assert.equal(verifier(html, pem).valide, true,
+    "le rapport de départ doit être valide, sinon ce cas ne prouve rien.");
+
+  const DEBUT = '<script type="application/json" id="signature">';
+  const i = html.lastIndexOf(DEBUT) + DEBUT.length;
+  const j = html.indexOf("</script>", i);
+  const sig = JSON.parse(html.slice(i, j));
+
+  /* Le champ passager, exactement comme il a été trouvé : à l'INTÉRIEUR du bloc. */
+  const avecPassager = { ...sig, note: "des octets que rien ne signe" };
+  const forge = html.slice(0, i) + JSON.stringify(avecPassager) + html.slice(j);
+  const r = verifier(forge, pem);
+  assert.equal(r.valide, false, "un champ inconnu dans le bloc de signature est accepté : "
+    + "le document porte des octets non signés et se dit vérifié.");
+  assert.match(r.motif, /note/, "le refus ne nomme pas le champ en trop : un lecteur ne peut pas le retirer.");
+
+  /* ET LE CHEMIN SAIN : réécrire le bloc avec ses trois champs seuls doit rester valide.
+     Sans ce second sens, un vérificateur qui refuse TOUT passerait ce cas. */
+  const remis = html.slice(0, i)
+    + JSON.stringify({ alg: sig.alg, cle: sig.cle, valeur: sig.valeur }) + html.slice(j);
+  assert.equal(verifier(remis, pem).valide, true,
+    "un bloc réécrit avec ses trois champs attendus est refusé : la garde refuse trop.");
+});

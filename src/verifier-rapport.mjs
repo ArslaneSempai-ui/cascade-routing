@@ -117,6 +117,34 @@ export function verifier(contenu, clePubliquePem) {
   catch { return { valide: false, motif: "the signature block is not readable JSON." }; }
   if (sig.alg !== "Ed25519") return { valide: false, motif: `unexpected algorithm "${sig.alg}" — only Ed25519 is recognised.` };
 
+  /*
+   * ─── THE SIGNATURE BLOCK IS THE ONE PLACE THE SIGNATURE CANNOT COVER ───
+   *
+   * The signed body is the whole document minus this block, which is what closes the entire
+   * "append something after the signature" family. But it leaves this block itself as a
+   * region of bytes that no signature covers, by construction — and until now anything could
+   * be added inside it.
+   *
+   * Found by a peer session on the fifteenth forgery attempt, after fourteen were refused. It
+   * is not a forgery: nothing displays, and `<` is already rejected a few lines above, so the
+   * bytes are inert. But they are UNSIGNED BYTES INSIDE A DOCUMENT PRESENTED AS VERIFIED, and
+   * they stop being inert the day anything reads a field of `sig` other than the three
+   * expected ones — a future version of this verifier, a tool that indexes reports, a reader
+   * who opens the JSON.
+   *
+   * An inert channel is still a channel. Three keys are expected; a fourth is refused, and
+   * named, so that adding one is a deliberate act rather than something that slips through.
+   */
+  const ATTENDUES = ["alg", "cle", "valeur"];
+  const inconnues = Object.keys(sig).filter((k) => !ATTENDUES.includes(k));
+  if (inconnues.length > 0) {
+    return { valide: false, motif:
+      `the signature block carries ${inconnues.length} field(s) nothing signs: ${inconnues.join(", ")}.\n`
+      + `  Only ${ATTENDUES.join(", ")} are expected. The signed body is the whole document\n`
+      + "  EXCEPT this block, so anything added here travels unsigned inside a document that\n"
+      + "  presents itself as verified." };
+  }
+
   const attendue = empreinteDeCle(clePubliquePem);
   if (sig.cle !== attendue) {
     return { valide: false, motif:
