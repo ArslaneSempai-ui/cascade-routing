@@ -13,7 +13,7 @@
  * milieu. Concaténation avec `+`, et les commentaires citent le code sans le baliser.
  */
 
-import { readFileSync, writeFileSync, mkdirSync, cpSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync, cpSync, readdirSync, rmSync, existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { isMain } from "./cli.ts";
 import { readProfiles } from "./measure.ts";
@@ -137,7 +137,58 @@ export function construire(): void {
   cpSync(root + "src/graphes.js", docs + "/graphes.js");
   cpSync(root + "src/registre.css", docs + "/registre.css");
   writeFileSync(docs + "/.nojekyll", "");
-  console.log("docs/ built");
+  /*
+   * ─── NE PUBLIER QUE CE QUE LA PAGE CHARGE ───
+   *
+   * `tsconfig.web.json` nomme six fichiers ; le compilateur en émettait DIX. Un `import type`
+   * est effacé du JavaScript produit, mais le fichier visé entre quand même dans le programme
+   * et se fait émettre. Quatre modules arrivaient donc dans `docs/js` sans qu'aucune ligne
+   * exécutable ne les demande.
+   *
+   * Mesuré le 25 août 2026 : 102 Ko sur 162 jamais demandés par le navigateur. Et ce n'était
+   * pas que du poids — `tiers.js` portait `http://localhost:11434`, trois routes d'API et un
+   * chemin `node_modules`, servis publiquement et lisibles par un `curl`. Une revue de
+   * sécurité côté acheteur qui trouve ça sur une page de vente s'arrête là, et elle a raison
+   * de s'arrêter : elle ne peut pas savoir que ce code n'est jamais atteint.
+   *
+   * LA FERMETURE SE FAIT SUR LE JAVASCRIPT ÉMIS, PAS SUR LE TYPESCRIPT. C'est le point : les
+   * imports de type n'existent plus dans le JS, donc le graphe qu'on y lit est celui que le
+   * navigateur suivra. La même fermeture faite sur les sources se trompait de quatre modules
+   * sur dix — et elle suivait en plus des chaînes d'import écrites dans des commentaires,
+   * d'où le retrait des commentaires avant lecture.
+   *
+   * Le contrôle d'écran mesure la même chose autrement, en relevant ce que le navigateur a
+   * réellement demandé. Deux méthodes indépendantes qui tombent d'accord valent mieux qu'une
+   * seule à qui l'on fait confiance.
+   */
+  const sansCommentaires = (t: string) => t
+    .replace(/\/\*[\s\S]*?\*\//g, " ").replace(/(^|[^:\\])\/\/[^\n]*/g, "$1 ");
+  const atteints = new Set<string>();
+  const suivre = (fichier: string, texte: string) => {
+    for (const m of sansCommentaires(texte).matchAll(/from\s*["'][^"']*?([a-zA-Z0-9_-]+\.js)["']/g)) {
+      const nom = m[1]!;
+      if (atteints.has(nom)) continue;
+      const chemin = `${docs}/js/${nom}`;
+      if (!existsSync(chemin)) continue;
+      atteints.add(nom);
+      suivre(nom, readFileSync(chemin, "utf8"));
+    }
+  };
+  suivre("index.html", html);
+  const emis = readdirSync(docs + "/js").filter((n) => n.endsWith(".js"));
+  /* Une fermeture qui ne trouve presque rien est cassée, et son silence ressemble à « tout
+     est inutile ». On refuse plutôt que de vider `docs/js`. */
+  if (atteints.size < 2) {
+    throw new Error(
+      `module closure reached ${atteints.size} of ${emis.length} emitted modules.\n\n`
+      + "  It follows the `from \"...\"` of index.html, then of each module it reaches. If the\n"
+      + "  page changed how it imports, fix the reading — do not let it conclude that almost\n"
+      + "  everything is unused, because it would delete the page.");
+  }
+  const inutiles = emis.filter((n) => !atteints.has(n));
+  for (const n of inutiles) rmSync(`${docs}/js/${n}`);
+  console.log(`docs/ built — ${atteints.size} module(s) published`
+    + (inutiles.length ? `, ${inutiles.length} dropped: ${inutiles.join(", ")}` : ""));
 }
 
 if (isMain(import.meta)) construire();

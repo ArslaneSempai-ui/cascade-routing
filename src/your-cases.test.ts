@@ -197,8 +197,32 @@ test("« déclaré » n'entre pas dans le vocabulaire de provenance, copié dans
   const ici = readFileSync(fileURLToPath(new URL("./provenance.ts", import.meta.url)), "utf8");
   const porteurs: string[] = [];
   const divergents: string[] = [];
+  /*
+   * DEUX REGISTRES DE « QUELS DOSSIERS COMPTENT », ET UN SEUL ÉTAIT LU.
+   *
+   * `identite/depots.json` dit lesquels reçoivent la couche partagée et lesquels en sont
+   * exclus, avec la raison de chaque exclusion. Cette boucle-ci balayait `~/Documents` sans
+   * le savoir — donc elle comparait `cascade-sauvegarde-2026-08-24`, une COPIE prise avant
+   * la séparation des dépôts, gardée exprès figée.
+   *
+   * Le résultat est un rouge parfaitement exact et parfaitement inutile : la sauvegarde a
+   * divergé, oui, c'est ce qu'on lui demande. Et il pousse dans la mauvaise direction — la
+   * seule façon de le faire taire serait de modifier la sauvegarde, ce qui lui retire sa
+   * seule utilité.
+   *
+   * Un registre qui existe et que la moitié du code ignore est pire que pas de registre :
+   * il donne l'impression que la question est tranchée.
+   */
+  const exclus = (() => {
+    const p = `${voisins}identite/depots.json`;
+    if (!existsSync(p)) return new Set<string>();       // clone isolé : rien à exclure
+    const d = JSON.parse(readFileSync(p, "utf8")) as { exclus?: Record<string, unknown> };
+    return new Set(Object.keys(d.exclus ?? {}));
+  })();
+
   for (const d of readdirSync(voisins, { withFileTypes: true })) {
     if (!d.isDirectory() || d.name.startsWith(".")) continue;
+    if (exclus.has(d.name)) continue;
     for (const sous of ["", "src/"]) {
       const chemin = `${voisins}${d.name}/${sous}provenance.ts`;
       if (!existsSync(chemin)) continue;

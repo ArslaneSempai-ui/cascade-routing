@@ -148,30 +148,8 @@ test("les couches partagées sont bien celles d'identite", (t) => {
    * des exceptions doit être lue par TOUT ce qui touche aux fichiers partagés, pas seulement
    * par le contrôle qui les compare.
    */
-  /*
-   * `provenance.ts` EST EXCLU, ET LA RAISON EST INSTRUCTIVE.
-   *
-   * Il porte sa propre garde d'identité, qui le compare dans DOUZE dépôts — pas seulement
-   * entre celui-ci et identite. Y poser la marque l'a fait diverger des dix autres, et la
-   * propagation demandait d'écrire dans cinq dépôts qui portaient du travail non commité au
-   * même moment.
-   *
-   * Le marqueur y ira quand la session qui possède ces dépôts fera sa passe de propagation.
-   * En attendant, une exception déclarée avec sa date vaut mieux qu'un fichier écrasé sous
-   * les doigts de quelqu'un d'autre — et mieux qu'une garde affaiblie pour tenir.
-   */
-  const SANS_MARQUE_ENCORE: Record<string, string> = {
-    "provenance.ts": "sous garde d'identité à douze dépôts — marque à poser lors de la prochaine propagation (2026-08-25)",
-  };
   const sansMarque = communs.filter((f) =>
-    !(f in DETACHES) && !(f in SANS_MARQUE_ENCORE)
-    && !readFileSync(source + f, "utf8").startsWith("/* PARTAGÉ"));
-  /* Et l'exception meurt d'elle-même : le jour où la marque est posée, elle devient inutile
-     et ce contrôle-ci le dit, au lieu de la laisser couvrir un fichier pour rien. */
-  const exemptionsMortes = Object.keys(SANS_MARQUE_ENCORE).filter((f) =>
-    communs.includes(f) && readFileSync(source + f, "utf8").startsWith("/* PARTAGÉ"));
-  assert.deepEqual(exemptionsMortes, [],
-    `${exemptionsMortes.join(", ")} porte(nt) la marque : retirez-les de SANS_MARQUE_ENCORE.`);
+    !(f in DETACHES) && !readFileSync(source + f, "utf8").startsWith("/* PARTAGÉ"));
   assert.deepEqual(sansMarque, [],
     `${sansMarque.length} fichier(s) partagé(s) ne disent pas qu'ils le sont : ${sansMarque.join(", ")}.\n`
     + "  → une session qui les ouvre corrigera la copie, et ne l'apprendra qu'au commit refusé.\n"

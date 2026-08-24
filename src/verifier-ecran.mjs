@@ -210,6 +210,20 @@ const AUDIT = '<' + 'script>\n'
   + '    try { b.click(); } catch (e) { leves.push(String(e && e.message)); }\n'
   + '    if (leves.length > combien) soucis.push("clic qui leve : " + nomB + " — " + leves[leves.length - 1]);\n'
   + '  }\n'
+  /*
+   * LES MODULES RÉELLEMENT DEMANDÉS PAR LE NAVIGATEUR.
+   *
+   * Le navigateur resout le vrai graphe d'imports ; une analyse statique ne le fait pas. La
+   * mienne s'est trompee de quatre modules sur dix — elle suivait des chaines d'import
+   * ecrites dans des commentaires. Ici on ne deduit rien : on releve ce qui a ete demande.
+   */
+  + '  var charges = [];\n'
+  + '  var res = performance.getEntriesByType ? performance.getEntriesByType("resource") : [];\n'
+  + '  for (var q = 0; q < res.length; q++) {\n'
+  + '    var u = String(res[q].name);\n'
+  + '    if (/\\.m?js(\\?|$)/.test(u)) charges.push(u.split("/").slice(-2).join("/"));\n'
+  + '  }\n'
+  + '  document.documentElement.setAttribute("data-modules-charges", charges.join(" "));\n'
   + '  document.documentElement.setAttribute("data-boutons", String(boutons.length));\n'
   + '  document.documentElement.setAttribute("data-figures-vues", String(figures.length));\n'
   + '  document.documentElement.setAttribute("data-figures-auditees", String(auditees));\n'
@@ -264,12 +278,42 @@ export function modulesEnRetard(racineDepot) {
    * était au mauvais endroit — mais un témoin qui ne se déclenche pas là où on l'attendait
    * dit quelque chose de la garde, pas seulement de lui.
    */
+  /*
+   * LA LISTE DES SOURCES DE LA PAGE SE DÉRIVE, ELLE NE S'ÉCRIT PAS.
+   *
+   * Elle a d'abord été écrite à la main — `["src/pages.ts", "src/ui.html", "docs/graphes.js"]`
+   * — et le catalogue de pièges l'a désignée UNE HEURE plus tard comme couverture récitée.
+   * Elle avait raison deux fois : rien ne confrontait cette liste au disque, ET elle était
+   * déjà fausse. `pages.ts` copie `src/graphes.js` et `src/registre.css` ; j'avais inscrit
+   * `docs/graphes.js`, qui est la SORTIE et non la source, et oublié la feuille de style
+   * entièrement. Une source périmée n'aurait donc rien déclenché sur deux des trois.
+   *
+   * Le mode de panne est asymétrique, et c'est ce qui rend ce genre de liste cher : un
+   * fichier renommé fait tomber la lecture, bruyamment. Un fichier AJOUTÉ ne fait rien — la
+   * liste cesse simplement de couvrir, et le vert reste vert.
+   *
+   * On lit donc `pages.ts` et on en extrait ce qu'il lit et ce qu'il copie. Si l'extraction
+   * rend moins de deux chemins, elle ne marche plus et on le dit : une dérivation muette
+   * vaut la liste écrite à la main qu'elle remplace.
+   */
   const page = join(racineDepot, "docs", "index.html");
-  if (existsSync(page)) {
+  const constructeur = join(racineDepot, "src", "pages.ts");
+  if (existsSync(page) && existsSync(constructeur)) {
+    const src = readFileSync(constructeur, "utf8");
+    const sources = new Set(["src/pages.ts"]);
+    for (const m of src.matchAll(/(?:readFileSync|cpSync)\(\s*root \+ "([^"]+)"/g)) sources.add(m[1]);
+    if (sources.size < 2) {
+      throw new Error(
+        `dérivation des sources de la page cassée : ${sources.size} chemin(s) extrait(s) de `
+        + "src/pages.ts.\n\n"
+        + "  Elle cherche `readFileSync(root + \"…\")` et `cpSync(root + \"…\")`. Si ce fichier a\n"
+        + "  changé de façon de lire, corrigez l'extraction — ne la laissez pas rendre une liste\n"
+        + "  courte, qui passerait au vert en ne regardant presque rien.");
+    }
     const t = statSync(page).mtimeMs;
-    for (const src of ["src/pages.ts", "src/ui.html", "docs/graphes.js"]) {
-      const chemin = join(racineDepot, src);
-      if (existsSync(chemin) && t + 1000 < statSync(chemin).mtimeMs) enRetard.push(`index.html (${src})`);
+    for (const rel of sources) {
+      const chemin = join(racineDepot, rel);
+      if (existsSync(chemin) && t + 1000 < statSync(chemin).mtimeMs) enRetard.push(`index.html (${rel})`);
     }
   }
   return enRetard;
@@ -451,6 +495,44 @@ try {
     soucis.push(`${figures} figure(s) rendues mais ${auditees} inspectée(s) : `
       + `${figures - auditees} figure(s) sans SVG sous .graphe échappent au contrôle de forme`);
   }
+  /*
+   * ─── PUBLIER CE QUE LA PAGE NE CHARGE PAS ───
+   *
+   * Mesuré dans `cascade` le 25 août 2026 : 102 Ko sur 162 publiés n'étaient jamais demandés
+   * par le navigateur. Quatre modules compilés parce que le `tsconfig` du web les balaie, et
+   * copiés parce que la construction copie ce que le compilateur a produit.
+   *
+   * Ce n'est pas seulement du poids mort. L'un d'eux portait `http://localhost:11434`, trois
+   * routes d'API et un chemin `node_modules` — servis publiquement, lisibles par un simple
+   * `curl`. On ne vend pas à une banque une page dont la revue de sécurité trouve du code qui
+   * appelle la boucle locale du visiteur : ce n'est pas exploitable, et c'est exactement le
+   * genre de chose qui termine une conversation avant qu'on ait montré un chiffre.
+   *
+   * LA LISTE EST MESURÉE, PAS DÉDUITE. Mon analyse statique des imports s'était trompée de
+   * quatre modules sur dix : elle suivait des chaînes écrites dans des commentaires. Le
+   * navigateur, lui, résout le vrai graphe — alors on lui demande.
+   */
+  const declares = (() => {
+    const d = join(racine, "docs", "js");
+    return existsSync(d) ? readdirSync(d).filter((n) => n.endsWith(".js")) : [];
+  })();
+  const attribut = dom.match(/data-modules-charges="([^"]*)"/)?.[1];
+  if (declares.length > 0) {
+    if (attribut === undefined) {
+      soucis.push("le relevé des modules chargés est absent : on ne peut pas dire ce que la page publie pour rien");
+    } else {
+      const charges = new Set(attribut.split(" ").filter(Boolean).map((u) => u.split("/").pop()));
+      const jamais = declares.filter((n) => !charges.has(n));
+      if (charges.size === 0) {
+        soucis.push("aucun module relevé alors que la page en publie " + declares.length
+          + " : le relevé n'a pas fonctionné, et son zéro ne vaut rien");
+      } else if (jamais.length > 0) {
+        soucis.push(`${jamais.length} module(s) publié(s) que la page ne charge jamais : ${jamais.join(", ")}`
+          + " — poids mort servi publiquement, et lisible par un curl");
+      }
+    }
+  }
+
   /* Une section vide est le symptôme visible d'un rendu interrompu. */
   for (const [, id, contenu] of dom.matchAll(/id="([a-zA-Z]+)"[^>]*>([\s\S]{0,4})<\/div>/g)) {
     if (contenu.trim() === "" && ["verdict", "leviers", "reglages"].includes(id)) {
