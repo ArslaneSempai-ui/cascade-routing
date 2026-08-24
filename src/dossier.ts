@@ -123,6 +123,49 @@ export function dossier(p: Profiles, h: Assumptions): string {
   w(`(${pc(s.budgetShare)} consumed), at **${s.latencyPerItem.toFixed(0)} ms** per document`);
   w(`against a ceiling of ${h.latencyBudgetMs} ms (${pc(s.latencyShare)} consumed).`);
 
+  /*
+   * LE CHIFFRE QUE LE RELECTEUR SIGNE DOIT ETRE DANS L'UNITE QU'IL CLASSE.
+   *
+   * Ce paragraphe annoncait la moyenne de cinq taux par champ, dans le document qu'une
+   * personne signe de son nom. Or elle ne classe pas des champs : elle classe des dossiers,
+   * et un dossier n'est complet que si les cinq champs sont justes ENSEMBLE — 76,7 %, pas
+   * 94,4 %. Omettre ce chiffre-la ne se lit pas comme une omission : ca se lit comme si la
+   * question ne se posait pas.
+   *
+   * Et c'est le plus defendable des deux : une vraie proportion, donc un intervalle de
+   * Wilson legitime, la ou la moyenne de cinq taux mesures sur cinq echantillons n'en porte
+   * aucun. Le dire ici sert le relecteur, pas nous.
+   */
+  const parDossier = (() => {
+    const chemin = fileURLToPath(new URL("../document.json", import.meta.url));
+    if (!existsSync(chemin)) return null;
+    return JSON.parse(readFileSync(chemin, "utf8")) as {
+      publie: { complets: number; n: number }; vise: { complets: number; n: number; cost: number };
+      identiques: boolean; apparie: { gains: number; regressions: number; discordant: number };
+    };
+  })();
+  w(``);
+  if (parDossier) {
+    const t = rate(parDossier.publie.complets, parDossier.publie.n);
+    w(`**Per record, which is the unit that gets filed: ${writeRate(t)}.** A record counts as`);
+    w(`complete only when all ${FIELDS.length} fields are right together —`);
+    w(`${parDossier.publie.complets} of ${parDossier.publie.n}. This is a true proportion and`);
+    w(`carries an interval; the ${pc(s.accuracy)} above is a mean of ${FIELDS.length} rates measured on`);
+    w(`different samples and carries none, which is why this file does not give it one.`);
+    if (!parDossier.identiques) {
+      w(``);
+      w(`A routing that optimises for complete records rather than the mean per field delivers`);
+      w(`${parDossier.vise.complets} of ${parDossier.vise.n} for ${euro(parDossier.vise.cost)}, worse on no record in this`);
+      w(`sample. On ${parDossier.apparie.discordant} discordant pairs the sample cannot separate the two rates, so`);
+      w(`what it establishes is the cost and not the accuracy. It is not the recommendation above,`);
+      w(`and the difference is stated here rather than left for a reader to find.`);
+    }
+  } else {
+    w(`**Per record: not computed here.** The delivered profile does not carry per-case`);
+    w(`outcomes for every chosen cell, and a per-record rate over four fields instead of`);
+    w(`${FIELDS.length} would be wrong in the one direction that flatters this report. Run \`npm run document\`.`);
+  }
+
   /* ── 2. Les choix qui ne sont pas mesurables ── */
   w(``);
   w(`## 2. Where the sample cannot decide`);

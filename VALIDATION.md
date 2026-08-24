@@ -46,6 +46,18 @@ Overall: **94.4 %** for **$191** against a budget of $4,000
 (4.8 % consumed), at **968 ms** per document
 against a ceiling of 2000 ms (48.4 % consumed).
 
+**Per record, which is the unit that gets filed: 76.7 % [68–83], n=120.** A record counts as
+complete only when all 5 fields are right together —
+92 of 120. This is a true proportion and
+carries an interval; the 94.4 % above is a mean of 5 rates measured on
+different samples and carries none, which is why this file does not give it one.
+
+A routing that optimises for complete records rather than the mean per field delivers
+95 of 120 for $54, worse on no record in this
+sample. On 3 discordant pairs the sample cannot separate the two rates, so
+what it establishes is the cost and not the accuracy. It is not the recommendation above,
+and the difference is stated here rather than left for a reader to find.
+
 ## 2. Where the sample cannot decide
 
 These pairs are **not distinguishable on this sample**. The routing picked one of them,

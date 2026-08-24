@@ -27,7 +27,7 @@ import { optimiseExtraction, optimiseClassification, budgetShadowPrice, latenceR
 import { exposition, optimiseExposition, ouLaRecommandationBascule, decompositionsIncoherentes } from "./exposition.ts";
 import { documentsComplets, comparer as comparerDocuments } from "./document.ts";
 import { ASSUMPTIONS, UNITS, BOUNDS, pricePerThousandExtractions, accuracy } from "./assumptions.ts";
-import { wilson, rate, distinguishable, precision, ENOUGH as ENOUGH_CAS } from "./interval.ts";
+import { wilson, rate, writeRate, distinguishable, precision, ENOUGH as ENOUGH_CAS } from "./interval.ts";
 import { PLAUSIBLE, bands, ETIQUETTE, advise } from "./sensitivity.ts";
 import { litLeTexte } from "./mesurer-ocr.ts";
 import { inclinaison, texte as texteDesBlocs, lire, ceQuiManque } from "./ocr.ts";
@@ -3807,4 +3807,36 @@ test("la frontière d'abstention applique son plancher au bon dénominateur", ()
      une mesure. */
   assert.match(bloc!, new RegExp(`${ASSUMPTIONS.humanSeconds} seconds each`),
     "le bloc convertit des relectures en heures sans dire à quel temps par relecture.");
+});
+
+test("le dossier qu'un relecteur signe porte l'exactitude dans l'unité qu'il classe", () => {
+  /*
+   * VALIDATION.md annonçait la moyenne de cinq taux par champ, dans le document qu'une
+   * personne signe de son nom. Elle ne classe pas des champs : elle classe des dossiers.
+   *
+   * Une omission dans un fichier de validation ne se lit pas comme une omission — elle se
+   * lit comme si la question ne se posait pas. Ce cas la transforme en échec.
+   */
+  const racine = fileURLToPath(new URL("..", import.meta.url));
+  const chemin = join(racine, "document.json");
+  if (!existsSync(chemin)) return;   // mesure absente : le dossier a le droit de le dire
+
+  const d = JSON.parse(readFileSync(chemin, "utf8")) as
+    { publie: { complets: number; n: number } };
+  const dossier = readFileSync(join(racine, "VALIDATION.md"), "utf8");
+
+  /* LE CHIFFRE, PAS UNE PHRASE QUI EN PARLE. Une mention sans le nombre laisserait le
+     lecteur avec la moyenne par champ pour seul chiffre signé. */
+  const attendu = writeRate(rate(d.publie.complets, d.publie.n));
+  assert.ok(dossier.includes(attendu),
+    `VALIDATION.md ne porte pas le taux par dossier (${attendu}).\n`
+    + `  → un relecteur signerait une exactitude qui n'est pas dans l'unité qu'il classe.`);
+  assert.ok(dossier.includes(`${d.publie.complets} of ${d.publie.n}`),
+    `VALIDATION.md ne porte pas le compte brut ${d.publie.complets} of ${d.publie.n} : le taux\n`
+    + `  seul ne dit pas sur combien de dossiers il porte.`);
+
+  /* ET LA RAISON POUR LAQUELLE L'UN PORTE UN INTERVALLE ET L'AUTRE NON. Sans elle, deux
+     chiffres voisins dont un seul est encadré ressemblent à une négligence. */
+  assert.match(dossier, /true proportion/,
+    "VALIDATION.md publie les deux chiffres sans dire lequel peut porter un intervalle, ni pourquoi.");
 });
