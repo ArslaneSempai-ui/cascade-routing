@@ -21,7 +21,9 @@ function rapportSigne(donnees: object, opts: { fausseCle?: boolean } = {}) {
     + `<script type="application/json" id="rapport">${charge}</script>\n`;
   const valeur = signer(null, Buffer.from(corps, "utf8"), opts.fausseCle ? autre.privateKey : privateKey).toString("base64");
   const sig = JSON.stringify({ alg: "Ed25519", cle: empreinteDeCle(pem), valeur });
-  return { html: `${corps}<script type="application/json" id="signature">${sig}</script>\n`, pem, corps };
+  /* AUCUN OCTET APRÈS LE BLOC : le corps signé est le document privé de ce bloc, ce qui
+     précède ET ce qui suit. Un saut de ligne final ferait échouer un rapport authentique. */
+  return { html: `${corps}<script type="application/json" id="signature">${sig}</script>`, pem, corps };
 }
 
 const EXEMPLE = { emisLe: "2026-08-24", client: "Banque Témoin", corpus: { empreinte: "ab12cd34", dossiers: 240 }, outil: { commit: "abc1234" } };
@@ -62,6 +64,28 @@ test("ALTÉRER LE TEXTE LISIBLE casse aussi la signature", () => {
   const r = verifier(altere, pem);
   assert.equal(r.valide, false);
   assert.match(r.motif, /modifié après émission/);
+});
+
+test("AJOUTER QUOI QUE CE SOIT APRÈS LA SIGNATURE CASSE LA VÉRIFICATION", () => {
+  /*
+   * Le second défaut de cette famille, trouvé par une session de contrôle. La signature avait
+   * un début et pas de fin : le corps signé était « tout ce qui précède le bloc », donc tout
+   * ce qui SUIT était libre. Un `<style>` ajouté à la fin réécrit un chiffre du tableau
+   * d'origine — `::after` et `visibility` — sans toucher un octet signé. Mesure publiée
+   * 76,7 %, écran 96,7 %, et le vérificateur imprimait « aucun octet n'a bougé » avec une
+   * sortie identique au caractère près à celle du rapport authentique.
+   */
+  const { html, pem } = rapportSigne(EXEMPLE);
+  assert.equal(verifier(html, pem).valide, true, "le rapport de départ doit être valide, sinon ce cas ne prouve rien.");
+  for (const [quoi, ajout] of [
+    ["une feuille de style qui réécrit un chiffre",
+      '<style>p{visibility:hidden}p::after{visibility:visible;content:"records: 999"}</style>'],
+    ["un saut de ligne", "\n"],
+    ["un commentaire", "<!-- rien de méchant -->"],
+  ] as [string, string][]) {
+    const r = verifier(html + ajout, pem);
+    assert.equal(r.valide, false, `${quoi} ajouté après la signature n'a pas cassé la vérification.`);
+  }
 });
 
 test("un rapport signé par une autre clé est refusé, et le motif nomme les deux empreintes", () => {

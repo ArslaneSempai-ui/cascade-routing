@@ -35,7 +35,7 @@
  */
 import { createVerify, createPublicKey, verify as verifierBrut } from "node:crypto";
 import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { createHash } from "node:crypto";
 
 const DEBUT_DONNEES = '<script type="application/json" id="rapport">';
@@ -93,12 +93,29 @@ export function verifier(contenu, clePubliquePem) {
    * couvert par rien : remplacer un chiffre dans la colonne visible laissait la vérification
    * au vert. Le lecteur voyait un faux chiffre et l'outil confirmait l'authenticité.
    *
-   * Le corps signé est tout ce qui précède le bloc de signature. On coupe au DERNIER, pour
-   * qu'un bloc ajouté après coup ne puisse pas déplacer la césure.
+   * Le corps signé est le document PRIVÉ de son bloc de signature — ce qui précède ET ce qui
+   * suit. On coupe au DERNIER bloc, pour qu'un bloc ajouté après coup ne déplace pas la
+   * césure. Ne signer que ce qui précède laissait un `<style>` ajouté à la fin réécrire les
+   * chiffres affichés sans casser la signature.
    */
-  const coupe = contenu.lastIndexOf(DEBUT_SIGNATURE);
-  const corps = contenu.slice(0, coupe);
-  if (corps.length === 0) return { valide: false, motif: "le document signé est vide." };
+  /*
+   * LA SIGNATURE A UN DÉBUT ET UNE FIN.
+   *
+   * La version précédente signait « tout ce qui précède le bloc de signature ». Ce qui SUIT
+   * n'était donc couvert par rien — et il suffit d'ajouter un `<style>` après pour réécrire
+   * un chiffre du tableau d'origine avec `::after` et `visibility`, sans toucher un seul
+   * octet signé. Une session de contrôle l'a fait : mesure publiée 76,7 %, écran 96,7 %, et
+   * le vérificateur imprimait « aucun octet n'a bougé » — sortie identique au caractère près
+   * à celle du rapport authentique.
+   *
+   * Le contenu signé est donc le document PRIVÉ DE SON SEUL BLOC DE SIGNATURE : ce qui
+   * précède, plus ce qui suit. Un octet ajouté n'importe où tombe dans l'un des deux.
+   */
+  const debut = contenu.lastIndexOf(DEBUT_SIGNATURE);
+  const finBloc = contenu.indexOf(FIN, debut + DEBUT_SIGNATURE.length);
+  if (finBloc === -1) return { valide: false, motif: "le bloc de signature n'est pas refermé." };
+  const corps = contenu.slice(0, debut) + contenu.slice(finBloc + FIN.length);
+  if (corps.trim().length === 0) return { valide: false, motif: "le document signé est vide." };
 
   let ok;
   try {
@@ -149,4 +166,21 @@ function principal() {
     + `des rétractations.`);
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) principal();
+/**
+ * Ce module est-il le point d'entrée ?
+ *
+ * `import.meta.url === \`file://${process.argv[1]}\`` compare une URL à un chemin. Ils
+ * coïncident tant que le chemin ne contient ni espace ni accent ; dès qu'il en contient, l'URL
+ * porte `%20` et la comparaison échoue. Le programme se termine alors SANS RIEN FAIRE, code 0.
+ *
+ * Trouvé le 24 août 2026 par une session de contrôle : le dépôt rangé dans un dossier nommé
+ * « Mes Rapports 2026 », le vérificateur de rapport rend 0 et n'imprime rien — donc tout
+ * `… && echo VÉRIFIÉ` imprime VÉRIFIÉ. Un outil de sécurité muet est pire qu'un outil absent.
+ */
+function estLancéDirectement() {
+  const argv1 = process.argv[1];
+  if (!argv1) return false;
+  return import.meta.url === pathToFileURL(argv1).href;
+}
+
+if (estLancéDirectement()) principal();

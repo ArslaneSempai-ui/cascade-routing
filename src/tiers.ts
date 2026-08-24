@@ -212,6 +212,37 @@ export function estLocal(url: string): boolean {
 }
 
 /**
+ * LA GARDE EST ICI PARCE QUE C'EST ICI QUE LA FRONTIÈRE SE TRAVERSE.
+ *
+ * Elle vivait dans `measure.ts`, au point d'entrée : refus de démarrer si `OLLAMA_HOST` ne
+ * vise pas cette machine, sauf `--remote-ollama` écrit dans la commande. Correcte, et posée
+ * au mauvais endroit — parce qu'il y a d'AUTRES points d'entrée.
+ *
+ * Une session de contrôle l'a montré le 24 août 2026 : `npm run measure:yours -- --llm` passe
+ * par `your-cases.ts`, qui n'appelle pas cette garde. Un `OLLAMA_HOST` hérité d'un `.env`
+ * envoyait alors CHAQUE DOSSIER DU CLIENT — noms, dates de naissance, adresses, numéros de
+ * pièce d'identité — chez un tiers, sans un mot. Et c'est exactement la commande dont le
+ * README dit « nothing leaves your machine ».
+ *
+ * Recopier la garde dans `your-cases.ts` aurait fermé ce chemin-là et laissé le suivant
+ * ouvert. Une frontière se pose là où on la traverse, pas à chaque porte d'entrée : ici,
+ * juste avant l'envoi, sur le seul chemin par lequel un document peut partir.
+ *
+ * La promesse du README redevient donc VRAIE, au lieu d'être affaiblie pour coller au défaut.
+ */
+export function exigerHoteLocal(url: string = OLLAMA): void {
+  if (estLocal(url)) return;
+  if (process.argv.includes("--remote-ollama")) return;
+  throw new Error(
+    `refus d'envoyer un document à « ${url} », qui n'est pas cette machine.\n\n`
+    + "  Ce que vous mesurez peut contenir des données personnelles : noms, dates de\n"
+    + "  naissance, adresses, numéros de pièce d'identité. Elles partiraient chez un tiers.\n\n"
+    + "  Si c'est voulu, écrivez-le dans la commande : --remote-ollama\n"
+    + "  Sinon, retirez OLLAMA_HOST de votre environnement — il vient peut-être d'un .env\n"
+    + "  que vous n'avez pas relu.");
+}
+
+/**
  * Un appel au serveur local, sous schéma.
  *
  * La sortie structurée n'est pas un raffinement ici, c'est la seule chose qui fonctionne.
@@ -282,6 +313,8 @@ async function ollama(tier: TierName, prompt: string, schema: unknown): Promise<
   const premierAppel = vuA === undefined || Date.now() - vuA > EVICTION_PAR_DEFAUT_MS;
   modelesDejaSollicites.set(m.tag, Date.now());
   const DELAI_MS = premierAppel ? DELAI_DE_CHARGEMENT_MS : DELAI_DE_GENERATION_MS;
+  /* Rien ne part avant ça. Voir `exigerHoteLocal` : la garde est au passage, pas à l'entrée. */
+  exigerHoteLocal();
   let r: Response;
   try {
     r = await fetch(`${OLLAMA}/api/generate`, {
@@ -320,6 +353,9 @@ async function ollama(tier: TierName, prompt: string, schema: unknown): Promise<
 /** Le serveur répond-il, et les trois modèles sont-ils là ? */
 /** Ce qu'Ollama garde effectivement en mémoire, à cet instant. */
 export async function residents(): Promise<{ nom: string; octets: number }[]> {
+  /* Gardé comme les autres : même une demande de métadonnées révèle à un tiers qu'on
+     tourne, et une règle au cas par cas se re-dérive à chaque ajout. */
+  exigerHoteLocal();
   const r = await fetch(`${OLLAMA}/api/ps`, { signal: AbortSignal.timeout(10_000) });
   const j = await r.json() as { models?: { name: string; size: number }[] };
   return (j.models ?? []).map((m) => ({ nom: m.name, octets: m.size }));
@@ -345,6 +381,8 @@ export async function residents(): Promise<{ nom: string; octets: number }[]> {
  */
 async function tailles(): Promise<Map<string, { octets: number; digest: string }>> {
   try {
+    /* Même règle : aucun appel vers un hôte qui n'est pas cette machine. */
+    exigerHoteLocal();
     const r = await fetch(`${OLLAMA}/api/tags`, { signal: AbortSignal.timeout(10_000) });
     const j = await r.json() as { models?: { name: string; size: number; digest?: string }[] };
     return new Map((j.models ?? []).map((m) =>

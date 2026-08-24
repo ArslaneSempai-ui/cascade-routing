@@ -32,6 +32,7 @@
  * n'attrape plus l'AGPL, l'outil refuse de rendre un zéro. Voir `temoins()`.
  */
 import { readdirSync, readFileSync, writeFileSync, statSync, existsSync } from "node:fs";
+import { pathToFileURL } from "node:url";
 import { join } from "node:path";
 
 /** Copyleft fort : contamine l'œuvre qui l'incorpore. Bloque une livraison propriétaire. */
@@ -279,4 +280,21 @@ function principal() {
   console.log(`${paquets.length} paquets · ${bloquantes} bloquante(s) · ${paquets.filter((p) => p.classe === "à tenir").length} à tenir · LICENCES.md + sbom.json écrits.`);
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) principal();
+/**
+ * Ce module est-il le point d'entrée ?
+ *
+ * `import.meta.url === \`file://${process.argv[1]}\`` compare une URL à un chemin. Ils
+ * coïncident tant que le chemin ne contient ni espace ni accent ; dès qu'il en contient, l'URL
+ * porte `%20` et la comparaison échoue. Le programme se termine alors SANS RIEN FAIRE, code 0.
+ *
+ * Trouvé le 24 août 2026 par une session de contrôle : le dépôt rangé dans un dossier nommé
+ * « Mes Rapports 2026 », le vérificateur de rapport rend 0 et n'imprime rien — donc tout
+ * `… && echo VÉRIFIÉ` imprime VÉRIFIÉ. Un outil de sécurité muet est pire qu'un outil absent.
+ */
+function estLancéDirectement(): boolean {
+  const argv1 = process.argv[1];
+  if (!argv1) return false;
+  return import.meta.url === pathToFileURL(argv1).href;
+}
+
+if (estLancéDirectement()) principal();

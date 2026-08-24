@@ -36,7 +36,7 @@ import { writeFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { loadavg, cpus } from "node:os";
 import { isMain } from "./cli.ts";
-import { PROMPTS, OLLAMA, MODELES_LOCAUX, correct, normaliserReponse } from "./tiers.ts";
+import { PROMPTS, OLLAMA, MODELES_LOCAUX, correct, normaliserReponse, exigerHoteLocal } from "./tiers.ts";
 import { FIELDS, generateRecords } from "./corpus.ts";
 
 import type { Field } from "./corpus.ts";
@@ -136,6 +136,8 @@ async function appeler(tag: string, invite: string, avecSchema: boolean) {
     options: { temperature: 0, num_predict: PLAFOND_JETONS },
   };
   if (avecSchema) corps.format = SCHEMA;
+  /* Ce site envoie un prompt. La garde est au passage, jamais au point d'entrée. */
+  exigerHoteLocal();
   const r = await fetch(`${OLLAMA}/api/generate`, {
     method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(corps),
   });

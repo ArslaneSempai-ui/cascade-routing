@@ -26,7 +26,7 @@
  * ne sont pas les siens, et la sortie le dit avant de dire autre chose.
  */
 import { readFileSync, existsSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { join } from "node:path";
 
 const RACINE = fileURLToPath(new URL("..", import.meta.url));
@@ -116,4 +116,21 @@ function principal() {
   }
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) principal();
+/**
+ * Ce module est-il le point d'entrée ?
+ *
+ * `import.meta.url === \`file://${process.argv[1]}\`` compare une URL à un chemin. Ils
+ * coïncident tant que le chemin ne contient ni espace ni accent ; dès qu'il en contient, l'URL
+ * porte `%20` et la comparaison échoue. Le programme se termine alors SANS RIEN FAIRE, code 0.
+ *
+ * Trouvé le 24 août 2026 par une session de contrôle : le dépôt rangé dans un dossier nommé
+ * « Mes Rapports 2026 », le vérificateur de rapport rend 0 et n'imprime rien — donc tout
+ * `… && echo VÉRIFIÉ` imprime VÉRIFIÉ. Un outil de sécurité muet est pire qu'un outil absent.
+ */
+function estLancéDirectement() {
+  const argv1 = process.argv[1];
+  if (!argv1) return false;
+  return import.meta.url === pathToFileURL(argv1).href;
+}
+
+if (estLancéDirectement()) principal();
