@@ -128,6 +128,59 @@ Corollaire de la même famille : une boucle qui indexe à l'envers ne se signale
 Quand un script écrit N fichiers depuis N sources, vérifier **un** couple à la main coûte
 trois secondes et attrape l'inversion entière.
 
+## « Fourni » et « mesuré » sont deux questions, et c'est la seconde qu'on publie
+
+Un drapeau répond à *une chose a-t-elle été donnée ?* et décide une phrase qui répond à *une
+chose a-t-elle été mesurée ?*. Les deux coïncident presque toujours, ce qui est exactement le
+problème : le cas où elles divergent est celui où la phrase ment.
+
+Mesuré dans `your-cases.ts` : `avecRegles: Boolean(regles)` décide ce que le client lit. Avec
+`--rules=["supplier","total"]`, `Object.entries` d'un **tableau** rend les clés `"0"` et `"1"`
+— aucune colonne ne porte ces noms, **aucune ligne `rules` n'apparaît dans le tableau
+d'exactitude**. La phrase honnête « no `--rules` was given, so none was measured » est alors
+**supprimée**, puisqu'un fichier a bien été donné, et le rapport écrit à la place : *« That
+your regexes generalise beyond these cases. »*
+
+**Le client fournit un fichier, rien n'est mesuré, et le rapport lui affirme le contraire.**
+
+C'est le cousin du négatif sans dénominateur : là un compte manquait, ici une question voisine
+est substituée à la bonne. Dans les deux cas la phrase publiée a la forme d'un relevé et
+l'appui d'une conviction.
+
+**Remède :** la valeur qui décide une phrase se lit dans le relevé — seul endroit qui sache ce
+qui a tourné — jamais dans les arguments d'entrée.
+
+    avecRegles: Object.values(releve).some((r) => "rules" in r)
+
+## Une garde ne couvre que l'unité qu'elle compte
+
+Un plafond d'appels au modèle ne voit rien de ce qui ne passe pas par un appel au modèle.
+Mesuré : le motif `(a+)+$` sur **un seul cas de 61 caractères** a tourné **162 179 ms** en
+silence, puis a été rapporté comme un palier ordinaire. Le plafond venait d'être posé, il était
+juste, et il comptait des appels.
+
+**Un budget exprimé dans une unité laisse passer tout ce qui coûte dans une autre.** Le compte
+d'appels borne le réseau ; il ne borne ni le temps processeur, ni la mémoire, ni ce qu'un motif
+fourni par le client peut faire d'un seul document.
+
+**Remède :** nommer l'unité que la garde borne, dans son message comme dans son commentaire.
+Une garde qui dit « au-delà de 10 000 **appels** » se fait relire par quelqu'un qui remarquera
+qu'aucune ne dit « au-delà de N **secondes** ».
+
+## Le remède aussi se mesure
+
+Corollaire du précédent, payé le même jour. La parade au motif catastrophique allait s'écrire
+« il faudrait un worker avec une échéance » — plausible, et invérifiée. **V8 aurait très bien
+pu ne pas interrompre une expression régulière en cours**, auquel cas la parade était
+décorative et personne ne l'aurait su avant un client.
+
+Mesuré : `worker.terminate()` sur ce motif rend en **2,0 s** au lieu de 162 s. La parade tient,
+et maintenant on le sait.
+
+**Un correctif proposé sans mesure est une hypothèse sur le comportement d'un moteur qu'on n'a
+pas écrit.** Il en faut une avant de l'écrire dans un rapport, et surtout avant de l'écrire dans
+un contrat.
+
 ## Le fait et son implication ne se vérifient pas au même endroit
 
 Formulé par la session qui l'a payé : *« le fait et son implication ne se vérifient pas au
