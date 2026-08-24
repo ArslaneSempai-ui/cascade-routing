@@ -28,7 +28,7 @@ const PORT = Number(process.env.PORT ?? 4670);
  * rien, et le tort viendrait de nous.
  */
 const profilsLus = readProfiles();
-if (!profilsLus) throw new Error("aucun profil mesuré — lancer `npm run measure` d'abord");
+if (!profilsLus) throw new Error("no measured profile — run `npm run measure` d'abord");
 const profils = profilsLus;
 
 /* L'état vit en mémoire : rien de ce qu'un visiteur bouge n'est écrit sur le disque. */

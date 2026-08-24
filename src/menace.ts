@@ -414,19 +414,19 @@ function balayerLHistorique(racine: string): ReleveHistorique {
   const compte = spawnSync("git", ["rev-list", "--all", "--count"], { cwd: racine, encoding: "utf8" });
   const commits = Number(compte.stdout.trim());
   if (!Number.isInteger(commits) || commits <= 0) {
-    throw new Error(`git rev-list a rendu « ${compte.stdout.trim()} » : l'historique n'a pas été lu, et son zéro ne vaudrait rien.`);
+    throw new Error(`git rev-list returned "${compte.stdout.trim()}": the history was not read, and its zero would be worthless.`);
   }
 
   const patch = spawnSync("git", ["log", "-p", "--all", "--no-color"],
     { cwd: racine, encoding: "utf8", maxBuffer: 1024 * 1024 * 1024 });
-  if (patch.error) throw new Error(`git log a échoué : ${patch.error.message}. La sortie est tronquée, rien n'est publié.`);
-  if (patch.status !== 0) throw new Error(`git log a rendu le code ${patch.status} : rien n'est publié.`);
+  if (patch.error) throw new Error(`git log failed: ${patch.error.message}. The output is truncated; nothing is published.`);
+  if (patch.status !== 0) throw new Error(`git log returned code ${patch.status}: nothing is published.`);
   const PLANCHER = commits * 200;
   if (patch.stdout.length < PLANCHER) {
     throw new Error(
-      `git log a rendu ${patch.stdout.length} octets pour ${commits} commits (plancher ${PLANCHER}).\n`
-      + "  C'est trop court pour être l'historique : la sortie a été tronquée ou coupée, et\n"
-      + "  un balayage qui n'a rien lu ne trouve rien non plus.");
+      `git log returned ${patch.stdout.length} bytes for ${commits} commits (floor ${PLANCHER}).\n`
+      + "  That is too short to be the history: the output was truncated or cut, and a sweep\n"
+      + "  that read nothing finds nothing either.");
   }
 
   const temoins = ATTENDUS.filter((a) => secretsDans(TEMOINS).includes(a)).length;

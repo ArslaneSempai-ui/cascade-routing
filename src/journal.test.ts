@@ -915,8 +915,22 @@ test("aucune sortie française sur les commandes déjà rendues à l'acheteur", 
     "intake.ts", "licences.ts", "menace.ts", "egress.ts", "entree.ts", "measure.ts"];
   const FRANCAIS = /\b(votre|vos|aucune?|n'est|n'a|qui|pour|dans|à la|ne se|données|refus|une|des|cette|celle|chaque|est |sont |avec |sans |déjà)\b/i;
 
-  const sorties = (src: string) =>
-    [...src.matchAll(/console\.(?:log|error|warn)\(\s*[`"]([^`"]{15,400})/g)].map((m) => m[1]!);
+  /*
+   * CE QUE CETTE EXTRACTION NE VOYAIT PAS, ET QUI COMPTAIT LE PLUS.
+   *
+   * Elle ne lisait que `console.*` ouvert par un guillemet double ou un gabarit. Donc ni les
+   * `throw new Error`, ni les chaînes à apostrophes simples. `measure.ts` portait six refus
+   * en français invisibles à cette garde, dont les quatre qui comptent le plus : relevé sans
+   * empreinte, empreinte qui ne correspond plus, arbre sale, hôte distant. Un refus est
+   * exactement ce qu'un lecteur voit au pire moment.
+   *
+   * Trouvé par la session qui traduisait, pas par la garde : mon compte de 151 sous-estimait
+   * le travail, et le plafond n'aurait pas bougé pour un fichier qui n'a que des `throw`.
+   */
+  const sorties = (src: string) => [
+    ...[...src.matchAll(/console\.(?:log|error|warn)\(\s*[`"']([^`"']{15,400})/g)].map((m) => m[1]!),
+    ...[...src.matchAll(/throw new Error\(\s*[`"']([^`"']{15,400})/g)].map((m) => m[1]!),
+  ];
 
   const fautifs: string[] = [];
   let examinees = 0;
@@ -945,7 +959,17 @@ test("aucune sortie française sur les commandes déjà rendues à l'acheteur", 
   const toutes = readdirSync(dossier).filter((n) => /\.(ts|mjs)$/.test(n) && !n.endsWith(".test.ts"));
   const restantes = toutes.filter((n) => !RENDUES.includes(n))
     .filter((n) => sorties(readFileSync(join(dossier, n), "utf8")).some((t) => FRANCAIS.test(t.replace(/\\n/g, " "))));
-  assert.ok(restantes.length <= 22,
+  /*
+   * UN COMPTE DONT LA DÉFINITION CHANGE N'EST PAS LE MÊME COMPTE.
+   *
+   * Ce plafond était à 25 avec une extraction qui ne lisait que `console.*` en guillemets
+   * doubles. Trois commandes ont été traduites, il est descendu à 22 — puis l'extraction a
+   * été élargie aux `throw` et aux apostrophes simples, et il est remonté à 25. Ce n'est pas
+   * une régression : ce sont trois fichiers qui parlaient déjà français et qu'on ne voyait
+   * pas. Comparer les deux chiffres n'aurait aucun sens, et le prochain élargissement fera
+   * pareil.
+   */
+  assert.ok(restantes.length <= 25,
     `${restantes.length} commande(s) parlent encore français : ${restantes.slice(0, 6).join(", ")}…\n`
     + "  → le compte ne doit que baisser. S'il monte, une commande neuve est arrivée en français.");
 });
