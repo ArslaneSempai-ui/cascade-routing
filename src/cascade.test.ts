@@ -25,6 +25,7 @@ import { SEUIL_DE_L_INDUSTRIE, OBSERVATIONS_MINIMALES } from "./psi.ts";
 import { readProfiles, empreinteDuReleve, RELEVE_DE_REFERENCE, type Profile, type ProvenanceDuPalier, type Provenance } from "./measure.ts";
 import { optimiseExtraction, optimiseClassification, budgetShadowPrice, latenceRepresentative, paliersMesures, evaluer, pricePerThousandDocuments } from "./optimise.ts";
 import { exposition, optimiseExposition, ouLaRecommandationBascule, decompositionsIncoherentes } from "./exposition.ts";
+import { documentsComplets, comparer as comparerDocuments } from "./document.ts";
 import { ASSUMPTIONS, UNITS, BOUNDS, pricePerThousandExtractions, accuracy } from "./assumptions.ts";
 import { wilson, rate, distinguishable, precision } from "./interval.ts";
 import { PLAUSIBLE, bands, ETIQUETTE, advise } from "./sensitivity.ts";
@@ -3641,4 +3642,65 @@ test("le seuil de bascule est un encadrement, et il encadre vraiment", () => {
     `à ${bas}, le routage optimal devrait encore être celui qu'on publie — la borne basse ment.`);
   assert.equal(memeQue(haut), false,
     `à ${haut}, le routage optimal devrait avoir changé — la borne haute ment.`);
+});
+
+/* ────────────────────────────────────────────────────────────────────────────
+   LE DOSSIER, PAS LE CHAMP
+
+   Le titre annonce la moyenne de cinq taux par champ. Un responsable
+   conformité classe des dossiers, et un dossier n'est complet que si les cinq
+   champs sont justes ENSEMBLE.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+test("le taux par dossier se recalcule depuis les réussites, et retombe sur la mesure publiée", () => {
+  const p = readProfiles();
+  if (!p) return;
+  const routage = optimiseExtraction(p, ASSUMPTIONS)?.routing;
+  assert.ok(routage, "aucun routage à évaluer.");
+
+  const d = documentsComplets(p, routage!);
+  assert.deepEqual(d.manquent, [],
+    `case(s) sans réussites cas par cas : ${d.manquent.join(", ")} — un taux par dossier calculé\n`
+    + `  sur moins de cinq champs serait faux dans la seule direction qui nous avantage.`);
+
+  /* LE CHIFFRE DOIT RETOMBER SUR CELUI QUE landing.json PUBLIE. Deux chemins de calcul qui
+     divergent ne sont pas une approximation : ce sont deux objets différents. */
+  const publie = JSON.parse(readFileSync(
+    join(fileURLToPath(new URL("..", import.meta.url)), "landing.json"), "utf8")) as
+    { cleanPerDocument: { clean: number; n: number } | null };
+  if (publie.cleanPerDocument) {
+    assert.equal(d.complets, publie.cleanPerDocument.clean,
+      `recalculé ${d.complets} dossiers complets, landing.json en publie ${publie.cleanPerDocument.clean}.`);
+    assert.equal(d.n, publie.cleanPerDocument.n, "les deux chemins ne portent pas sur le même effectif.");
+  }
+
+  /* L'EFFECTIF EST CELUI DU PRÉFIXE COMMUN, jamais le plus grand. Les encodeurs sont mesurés
+     sur mille cas et les génératifs sur cent vingt : prendre le maximum comparerait des
+     documents qui n'ont pas été mesurés partout. */
+  const longueurs = FIELDS.map((c) => p.extraction[routage![c]][c].reussites!.length);
+  assert.equal(d.n, Math.min(...longueurs),
+    `l'effectif retenu (${d.n}) n'est pas le minimum des cases choisies (${Math.min(...longueurs)}).`);
+});
+
+test("viser le dossier ne dégrade jamais le dossier, et le dit quand ça ne se distingue pas", () => {
+  const p = readProfiles();
+  if (!p) return;
+  const r = comparerDocuments(p, ASSUMPTIONS);
+  assert.ok(r, "aucune comparaison rendue.");
+
+  /* Un optimiseur du dossier qui sortirait MOINS de dossiers complets que celui du champ
+     serait cassé : il cherche exactement cette quantité, sous les mêmes contraintes. */
+  assert.ok(r!.vise.complets >= r!.publie.complets,
+    `le routage qui vise le dossier en sort ${r!.vise.complets} contre ${r!.publie.complets} `
+    + `pour celui du champ : l'optimiseur ne trouve pas ce qu'il cherche.`);
+
+  /* ET LE VERDICT NE SE LIT PAS DANS L'ÉCART DES TOTAUX. Trois paires discordantes ne
+     tranchent pas, quel que soit l'écart apparent — c'est le test apparié qui décide, et il
+     doit le dire au lieu de laisser deux totaux voisins suggérer une victoire. */
+  assert.equal(typeof r!.apparie.discordant, "number");
+  if (r!.apparie.discordant < 6) {
+    assert.equal(r!.apparie.decidable, false,
+      `${r!.apparie.discordant} paire(s) discordante(s) rendent un verdict décidable : le test\n`
+      + `  apparié conclurait sur trop peu de cas, ce qui est exactement ce qu'il existe pour refuser.`);
+  }
 });

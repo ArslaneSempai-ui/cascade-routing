@@ -1,0 +1,63 @@
+{
+  "quoi": "Le taux par DOSSIER — les cinq champs justes ensemble — contre la moyenne par champ.",
+  "commentLire": "Le taux par dossier est une vraie proportion et porte un intervalle de Wilson ; la moyenne de cinq taux par champ n'en porte pas et ce dépôt refuse d'en inventer un. Un routage mixte n'est jugeable que sur le préfixe commun des cases choisies.",
+  "publie": {
+    "routing": {
+      "name": "large",
+      "birth": "rules",
+      "document": "rules",
+      "country": "rules",
+      "address": "gen-4b"
+    },
+    "manquent": [],
+    "n": 120,
+    "complets": 92,
+    "taux": {
+      "successes": 92,
+      "n": 120,
+      "rate": 0.7666666666666667,
+      "low": 0.6834438839010675,
+      "high": 0.8333453048691035,
+      "precision": 7.495071048401803,
+      "reportable": true
+    },
+    "cost": 190.6581124999987
+  },
+  "vise": {
+    "routing": {
+      "name": "gen-4b",
+      "birth": "rules",
+      "document": "rules",
+      "country": "rules",
+      "address": "gen-4b"
+    },
+    "manquent": [],
+    "n": 120,
+    "complets": 95,
+    "taux": {
+      "successes": 95,
+      "n": 120,
+      "rate": 0.7916666666666666,
+      "low": 0.7105215895553653,
+      "high": 0.8547165856620093,
+      "precision": 7.2097498053322,
+      "reportable": true
+    },
+    "cost": 54.31189443333229
+  },
+  "identiques": false,
+  "apparie": {
+    "n": 120,
+    "gains": 3,
+    "regressions": 0,
+    "discordant": 3,
+    "p": 0.25,
+    "decidable": false,
+    "note": "the set cannot distinguish these versions by rate — judge the broken cases instead"
+  },
+  "calculeLe": "2026-08-24T11:13:54.199Z",
+  "code": {
+    "commit": "4b4f2b4",
+    "sale": true
+  }
+}

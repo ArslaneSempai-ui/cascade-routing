@@ -699,6 +699,7 @@ const commandes = (() => {
     ["captures", "re-record the images on this page"],
     ["ocr", "read the same documents as images and measure what the reading stage costs (macOS: Vision, no API)"],
     ["exposition", "what the routing costs when it is wrong, and the price ratio at which the recommendation changes"],
+    ["document", "the rate per FILE — all five fields right together — against the mean per field"],
   ];
   const classees = new Set(ordre.map(([n]) => n));
   const oubliees = Object.keys(pkg.scripts).filter((n) => !classees.has(n) && n !== "typage");
@@ -1042,6 +1043,54 @@ const expositionBloc = (() => {
     + `you know what a misfiled record costs.`;
 })();
 
+/**
+ * LE DOSSIER, PAS LE CHAMP.
+ *
+ * Le titre annonce la moyenne de cinq taux par champ. Un responsable conformite ne classe
+ * pas des champs : il classe des dossiers, et un dossier n'est complet que si les cinq
+ * champs sont justes ENSEMBLE.
+ *
+ * Et le taux par dossier est une VRAIE PROPORTION — complet ou pas — donc il porte
+ * legitimement un intervalle de Wilson, ce que la moyenne de cinq taux mesures sur cinq
+ * echantillons differents ne peut pas porter. Le chiffre par dossier est plus defendable
+ * que le titre.
+ */
+const documentBloc = (() => {
+  const chemin = fileURLToPath(new URL("../document.json", import.meta.url));
+  if (!existsSync(chemin)) {
+    throw new Error("document.json est absent — ce bloc publie une mesure. Lancez : npm run document");
+  }
+  const d = JSON.parse(readFileSync(chemin, "utf8")) as {
+    publie: { routing: Record<string, string>; complets: number; n: number; cost: number };
+    vise: { routing: Record<string, string>; complets: number; n: number; cost: number };
+    identiques: boolean;
+    apparie: { n: number; gains: number; regressions: number; discordant: number; decidable: boolean; note?: string };
+  };
+  const tx = (x: { complets: number; n: number }) => writeRate(rate(x.complets, x.n));
+  const lignes = [
+    ["what the published routing delivers", `\`${FIELDS.map((c) => d.publie.routing[c]).join(", ")}\``,
+      tx(d.publie), `$${Math.round(d.publie.cost).toLocaleString("en-GB")}`],
+    ["what aiming at the file delivers", `\`${FIELDS.map((c) => d.vise.routing[c]).join(", ")}\``,
+      tx(d.vise), `$${Math.round(d.vise.cost).toLocaleString("en-GB")}`],
+  ];
+
+  const moinsCher = d.publie.cost > 0 ? d.publie.cost / Math.max(d.vise.cost, 1e-9) : 1;
+  return `**Your unit is the file, and the headline is not.** ${pc(best!.accuracy)} is the `
+    + `mean of ${FIELDS.length} per-field rates. A file is only complete when all `
+    + `${FIELDS.length} fields are right **together**, and that is what gets filed.\n\n`
+    + table(["", "Routing", "Complete files", "Cost"], lignes)
+    + `\n\n*Unlike the headline, this one is a true proportion — a file is complete or it is `
+    + `not — so it carries a Wilson interval. The mean of five rates measured on five `
+    + `different samples cannot, and this report refuses to invent one.*`
+    + (d.identiques
+        ? `\n\nAiming at the file changes nothing here: both objectives pick the same routing.`
+        : `\n\n**Aiming at the file changes the routing, and it is never worse on any file in `
+          + `the sample** — ${d.apparie.gains} gained, ${d.apparie.regressions} lost, for `
+          + `**${moinsCher.toFixed(1)}x less**. But ${d.apparie.discordant} discordant pairs `
+          + `cannot separate two rates: what the sample establishes is the cost, not the `
+          + `accuracy. ${d.apparie.note ?? ""}`);
+})();
+
 const tests = (() => {
   const dossier = fileURLToPath(new URL(".", import.meta.url));
   const fichiers = readdirSync(dossier).filter((n: string) => n.endsWith(".test.ts"));
@@ -1052,6 +1101,6 @@ const tests = (() => {
 })();
 
 emit(fileURLToPath(new URL("../README.md", import.meta.url)),
-  { chapeau, chaines, finding, obligation, ouCaTourne, lecture, exposition: expositionBloc, extraction, classification, routing, shadow, gallery, baselines, provenance, coutDeReproduction, embauche,
+  { chapeau, chaines, finding, obligation, ouCaTourne, lecture, exposition: expositionBloc, document: documentBloc, extraction, classification, routing, shadow, gallery, baselines, provenance, coutDeReproduction, embauche,
     echelles, latence, egalites, fuite, deuxfaits, retractations, public: publicJeu, commandes,
     tests });

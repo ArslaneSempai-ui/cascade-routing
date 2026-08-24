@@ -60,6 +60,7 @@ what that pass actually cost is stated below, read from the relevé rather than 
 | `npm run captures` | re-record the images on this page |
 | `npm run ocr` | read the same documents as images and measure what the reading stage costs (macOS: Vision, no API) |
 | `npm run exposition` | what the routing costs when it is wrong, and the price ratio at which the recommendation changes |
+| `npm run document` | the rate per FILE — all five fields right together — against the mean per field |
 <!-- /figures:commandes -->
 
 ```bash
@@ -67,7 +68,7 @@ npm test           # types, README figures, landing.json, and the suite
 ```
 
 <!-- figures:tests -->
-**167 tests** across 9 files, counted from the sources rather than typed here.
+**169 tests** across 9 files, counted from the sources rather than typed here.
 <!-- /figures:tests -->
 
 Everything runs locally. No API key, nothing leaves the machine, and anyone who clones this
@@ -356,6 +357,19 @@ No budget buys better: the ceiling is in the tiers available.
 
 **And the number that matters most is not the one being optimised.** At equal prices, the same volume costs $191 to process and $16,358 in expected cost of being wrong — **86x more**. The optimiser argues about the small variable. Both prices are yours to set: they are assumptions, marked as such, and only you know what a misfiled record costs.
 <!-- /figures:exposition -->
+
+<!-- figures:document -->
+**Your unit is the file, and the headline is not.** 94.4 % is the mean of 5 per-field rates. A file is only complete when all 5 fields are right **together**, and that is what gets filed.
+
+|  | Routing | Complete files | Cost |
+|---|---|---|---|
+| what the published routing delivers | `large, rules, rules, rules, gen-4b` | 76.7 % [68–83], n=120 | $191 |
+| what aiming at the file delivers | `gen-4b, rules, rules, rules, gen-4b` | 79.2 % [71–85], n=120 | $54 |
+
+*Unlike the headline, this one is a true proportion — a file is complete or it is not — so it carries a Wilson interval. The mean of five rates measured on five different samples cannot, and this report refuses to invent one.*
+
+**Aiming at the file changes the routing, and it is never worse on any file in the sample** — 3 gained, 0 lost, for **3.5x less**. But 3 discordant pairs cannot separate two rates: what the sample establishes is the cost, not the accuracy. the set cannot distinguish these versions by rate — judge the broken cases instead
+<!-- /figures:document -->
 
 That last sentence is the one worth carrying into a budget meeting. The instinct in the
 room is "we need a bigger model" or "we need more budget". The measurement says the money
