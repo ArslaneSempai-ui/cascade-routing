@@ -1461,7 +1461,11 @@ test("chaque seuil publié porte son unité, dénominateur compris", () => {
  * rien : quelqu'un qui retire `format` en croyant simplifier multiplie le coût réel par huit
  * sans qu'aucun chiffre du dépôt ne bouge, puisqu'il faudrait remesurer pour le voir.
  */
-test("l'appel génératif impose une sortie structurée, sinon le prix publié est faux d'un facteur huit", () => {
+/* Le titre disait « faux d'un facteur huit ». Le facteur vient de deux latences mesurées qui
+   vivent dans le message ci-dessous ; le répéter dans le titre en faisait une troisième
+   écriture du même nombre, que rien ne recalcule. Le titre nomme ce que le cas garde, le
+   message porte les chiffres. */
+test("l'appel génératif impose une sortie structurée, sans quoi le prix publié est faux", () => {
   const src = readFileSync(fileURLToPath(new URL("./tiers.ts", import.meta.url)), "utf8");
   const i = src.indexOf("/api/generate");
   assert.notEqual(i, -1, "l'appel de génération est introuvable.");

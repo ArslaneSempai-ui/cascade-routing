@@ -12,7 +12,7 @@
  */
 
 import { test } from "node:test";
-import { mkdtempSync, writeFileSync, rmSync, readFileSync } from "node:fs";
+import { mkdtempSync, writeFileSync, rmSync, readFileSync, readdirSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import assert from "node:assert/strict";
@@ -180,13 +180,43 @@ test("une durée déclarée porte sa marque, et une durée absente ne devient pa
     + "  zéro milliseconde est faux dans la seule direction qui avantage le client.");
 });
 
-test("« déclaré » n'entre pas dans le vocabulaire de provenance, qui est copié dans cinq dépôts", async () => {
+test("« déclaré » n'entre pas dans le vocabulaire de provenance, copié dans tout le portfolio", async () => {
   const { ORDER } = await import("./provenance.ts");
   const { PROVENANCE_DES_DECLARES } = await import("./your-cases.ts");
 
+  /*
+   * LE TITRE DISAIT « CINQ DÉPÔTS », ET LE MESSAGE AUSSI. IL Y EN A ONZE.
+   *
+   * Un compte dans un titre de cas dérive exactement comme un compte dans une prose, et pour
+   * la même raison : rien ne le recalcule. Celui-ci était faux depuis assez longtemps pour que
+   * personne ne sache depuis quand — le fichier a été semé dans six dépôts de plus sans que la
+   * phrase bouge. On le compte donc, et le compte sert à quelque chose : il vérifie que les
+   * copies sont encore identiques, ce que la phrase se contentait d'affirmer.
+   */
+  const voisins = fileURLToPath(new URL("../../", import.meta.url));
+  const ici = readFileSync(fileURLToPath(new URL("./provenance.ts", import.meta.url)), "utf8");
+  const porteurs: string[] = [];
+  const divergents: string[] = [];
+  for (const d of readdirSync(voisins, { withFileTypes: true })) {
+    if (!d.isDirectory() || d.name.startsWith(".")) continue;
+    for (const sous of ["", "src/"]) {
+      const chemin = `${voisins}${d.name}/${sous}provenance.ts`;
+      if (!existsSync(chemin)) continue;
+      porteurs.push(`${d.name}/${sous}provenance.ts`);
+      if (readFileSync(chemin, "utf8") !== ici) divergents.push(d.name);
+    }
+  }
+
+  if (porteurs.length > 1) {          // un clone isolé n'a pas de voisins à comparer
+    assert.deepEqual(divergents, [],
+      `le vocabulaire de provenance a divergé dans : ${divergents.join(", ")}.\n`
+      + `  → il est copié à l'identique dans ${porteurs.length} fichiers ; une divergence veut dire\n`
+      + `    qu'un rang de plus chez l'un n'est pas un rang chez les autres.`);
+  }
+
   assert.deepEqual([...ORDER], ["retrieved", "measured", "assumed", "chosen"],
-    "le vocabulaire a changé. Il est copié à l'identique dans cinq dépôts : en ajouter un rang\n"
-    + "  ici les fait diverger, et un rang de plus chez nous n'est pas un rang chez eux.");
+    `le vocabulaire a changé. Il est copié à l'identique dans ${porteurs.length} fichier(s) du\n`
+    + "  portfolio : en ajouter un rang ici les fait diverger.");
   assert.ok(ORDER.includes(PROVENANCE_DES_DECLARES.provenance),
     "un chiffre déclaré par le client doit se ranger dans le vocabulaire existant.");
   assert.equal(PROVENANCE_DES_DECLARES.provenance, "assumed");

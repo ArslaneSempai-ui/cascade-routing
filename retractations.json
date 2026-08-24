@@ -257,7 +257,7 @@
       "actually": "Three things weaken it. The durations were twenty calls reported as means with no spread, which is exactly the defect retracted earlier the same evening on the length sweep, on a machine where one call varies by a factor of five. The mean unconstrained length is 200.0 tokens, which is precisely the `num_predict` cap — so every call was clipped and the real length is not measured, only bounded below by a cap I chose; raise the cap and the ratio rises with it. And it was measured on one tier of three.",
       "caughtBy": "The coordinating session noticing that a figure larger than anything else found that night had been written in parentheses, and asking whether it was measured or deduced.",
       "cost": "A caveat in landing.json quoting a price ratio. Replaced by what the data carries: the token counts, which are counted rather than timed, and the fact that without the constraint the JSON parser fails on prose so the field returns empty — not a price/accuracy trade but the difference between a parseable answer and none.",
-      "heldBy": "l'appel génératif impose une sortie structurée, sinon le prix publié est faux d'un facteur huit",
+      "heldBy": "l'appel génératif impose une sortie structurée, sans quoi le prix publié est faux",
       "caughtBeforeAnyoneSawIt": false
     },
     {
