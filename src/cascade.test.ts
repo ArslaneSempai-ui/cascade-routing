@@ -3307,9 +3307,24 @@ test("aucun module Node ne traverse le paquet compilé pour le navigateur", () =
      *
      * Les entrées sont celles que le shim de pages.ts importe réellement.
      */
-    const ENTREES = ["corpus.js", "paliers.js", "optimise.js", "assumptions.js"];
+    /*
+     * LES ENTRÉES SE LISENT DANS LE SHIM, ELLES NE S'ÉCRIVENT PAS ICI.
+     *
+     * Première version : une liste de quatre noms tapée à la main. C'est le défaut qu'on
+     * catalogue depuis cette nuit sous un autre nom — une liste dont le rôle est de COUVRIR,
+     * qu'aucun témoin ne confronte à ce qu'elle prétend couvrir. Le jour où le shim importe un
+     * cinquième module, la liste ne le suit pas : le test continue de passer en regardant
+     * moins de choses, et c'est exactement la forme de vert vide qu'il existe pour empêcher.
+     *
+     * Elles viennent donc de `pages.ts`, qui est la seule source de ce que la page charge.
+     */
+    const shim = readFileSync(fileURLToPath(new URL("./pages.ts", import.meta.url)), "utf8");
+    const ENTREES = [...new Set([...shim.matchAll(/from\s+"\.\/js\/([\w.-]+\.js)"/g)].map((m) => m[1]!))];
+    assert.ok(ENTREES.length >= 3,
+      `${ENTREES.length} entrée(s) lue(s) dans le shim de pages.ts : la lecture a échoué, et ce `
+      + `test regarderait un graphe vide en restant vert.`);
     for (const e of ENTREES) {
-      assert.ok(emis.includes(e), `${e} n'est pas émis : le shim de la page importerait un module absent.`);
+      assert.ok(emis.includes(e), `${e} n'est pas émis : le shim de la page importe un module absent.`);
     }
     const atteints = new Set<string>();
     const suivre = (f: string) => {
