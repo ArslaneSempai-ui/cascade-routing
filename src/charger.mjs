@@ -20,6 +20,7 @@
  */
 
 import { availableParallelism, loadavg } from "node:os";
+import { pathToFileURL } from "node:url";
 import { fork } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
@@ -33,26 +34,46 @@ import { fileURLToPath } from "node:url";
  *
  * Un fils n'a pas d'arguments à valider ; il n'a qu'à occuper un cœur.
  */
-if (process.env.CHARGER_FILS) {
-  for (;;) { /* saturer un cœur */ }
+/*
+ * AGIR À L'IMPORT EST UN EFFET DE BORD QUE PERSONNE N'A DEMANDÉ.
+ *
+ * Ce fichier lançait sa commande au niveau du module : l'importer l'exécutait, et il va
+ * jusqu'à `process.exit` — donc importer ce module TUE le processus qui l'importe. Un test
+ * qui voudrait éprouver une de ses fonctions n'a aucun moyen de le charger.
+ *
+ * `pathToFileURL`, jamais `"file://" + argv[1]` : la concaténation échoue sur un chemin
+ * contenant un espace ou un accent, et son échec est silencieux — le fichier ne fait alors
+ * rien du tout et sort en 0, ce qui se lit comme un succès.
+ */
+function estLancéDirectement() {
+  const argv1 = process.argv[1];
+  if (!argv1) return false;
+  return import.meta.url === pathToFileURL(argv1).href;
 }
 
-const boucles = Number(process.argv[2] ?? 0);
-const secondes = Number(process.argv[3] ?? 0);
+if (estLancéDirectement()) {
+  if (process.env.CHARGER_FILS) {
+    for (;;) { /* saturer un cœur */ }
+  }
 
-if (!Number.isInteger(boucles) || boucles < 1) {
-  console.error("usage : node src/charger.mjs <boucles> [secondes]");
-  console.error(`  cette machine a ${availableParallelism()} cœurs disponibles`);
-  process.exit(1);
+  const boucles = Number(process.argv[2] ?? 0);
+  const secondes = Number(process.argv[3] ?? 0);
+
+  if (!Number.isInteger(boucles) || boucles < 1) {
+    console.error("usage : node src/charger.mjs <boucles> [secondes]");
+    console.error(`  cette machine a ${availableParallelism()} cœurs disponibles`);
+    process.exit(1);
+  }
+
+  const fils = Array.from({ length: boucles }, () =>
+    fork(fileURLToPath(new URL(import.meta.url)), { env: { ...process.env, CHARGER_FILS: "1" }, stdio: "ignore" }));
+
+  const arreter = () => { for (const f of fils) f.kill("SIGKILL"); process.exit(0); };
+  process.on("SIGINT", arreter);
+  process.on("SIGTERM", arreter);
+  if (secondes > 0) setTimeout(arreter, secondes * 1000);
+
+  console.log(`${boucles} boucle(s) sur ${availableParallelism()} cœurs — charge avant : ${loadavg()[0].toFixed(2)}`);
+  setInterval(() => console.log(`  charge : ${loadavg()[0].toFixed(2)}`), 30_000).unref?.();
+
 }
-
-const fils = Array.from({ length: boucles }, () =>
-  fork(fileURLToPath(new URL(import.meta.url)), { env: { ...process.env, CHARGER_FILS: "1" }, stdio: "ignore" }));
-
-const arreter = () => { for (const f of fils) f.kill("SIGKILL"); process.exit(0); };
-process.on("SIGINT", arreter);
-process.on("SIGTERM", arreter);
-if (secondes > 0) setTimeout(arreter, secondes * 1000);
-
-console.log(`${boucles} boucle(s) sur ${availableParallelism()} cœurs — charge avant : ${loadavg()[0].toFixed(2)}`);
-setInterval(() => console.log(`  charge : ${loadavg()[0].toFixed(2)}`), 30_000).unref?.();
