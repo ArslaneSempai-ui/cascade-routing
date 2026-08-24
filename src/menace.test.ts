@@ -1,6 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, existsSync, mkdtempSync, mkdirSync, copyFileSync, writeFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import { temoins, controles, secretsDans, racineServie, adresseDEcoute, bornePosee, document, type Controle } from "./menace.ts";
@@ -81,4 +83,50 @@ test("un secret planté dans une source suivie est trouvé", () => {
   // Le témoin qui rend le zéro publiable : sans lui, « aucun secret » et « rien lu » se disent pareil.
   assert.deepEqual(secretsDans("const cle = \"AKIAIOSFODNN7EXAMPLE\";"), ["clé AWS"]);
   assert.deepEqual(secretsDans("const seuil = 0.85;"), []);
+});
+
+test("LE DÉNOMINATEUR NE RÉTRÉCIT PAS QUAND UN FICHIER MANQUE", () => {
+  /*
+   * Trouvé par une session de contrôle. Quand `src/server.ts` manquait, la branche serveur ne
+   * déclarait qu'UN de ses trois contrôles en « hors de portée » : les deux autres
+   * disparaissaient, et le document publiait « 3 tenus sur 4 » alors qu'il y en a six. Le
+   * document qui existe pour refuser les chiffres sans dénominateur en publiait un.
+   */
+  const complet = controles(racine).length;
+  const tmp = mkdtempSync(join(tmpdir(), "cascade-menace-"));
+  try {
+    mkdirSync(join(tmp, "src"));
+    for (const f of ["src/ui.html", ".gitignore", "package-lock.json"]) {
+      copyFileSync(join(racine, f), join(tmp, f));
+    }
+    /* src/server.ts n'est PAS copié : c'est tout l'objet du cas. */
+    const partiel = controles(tmp);
+    assert.equal(partiel.length, complet,
+      `${partiel.length} contrôles sans src/server.ts contre ${complet} avec : le tableau en perd en route,\n`
+      + "  et le document publierait un total qui n'est pas le nombre de contrôles.");
+    const horsPortee = partiel.filter((c) => c.verdict === "hors de portée").map((c) => c.nom);
+    assert.deepEqual(horsPortee.sort(), ["Adresse d'écoute", "Corps de requête borné", "Racine servie"],
+      "les trois contrôles du serveur doivent tous se déclarer, pas seulement le premier.");
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+test("le constat ne dit pas la même chose selon qu'il tient ou non", () => {
+  /* Quand ce contrôle échouait, sa phrase affirmait exactement ce qui était faux : « data/ est
+     ignoré par git », sous un verdict « non tenu ». Il fallait lire la colonne verdict pour
+     savoir si la colonne constat mentait. */
+  const tmp = mkdtempSync(join(tmpdir(), "cascade-constat-"));
+  try {
+    mkdirSync(join(tmp, "src"));
+    writeFileSync(join(tmp, ".gitignore"), "node_modules/\n");   // data/ absent, volontairement
+    const c = controles(tmp).find((x) => x.nom === "Données du client non versionnées");
+    assert.ok(c);
+    assert.equal(c!.verdict, "non tenu");
+    assert.match(c!.constat, /partiraient dans le dépôt public|n'est pas ignoré/);
+    assert.doesNotMatch(c!.constat, /qui est ignoré par git\./,
+      "le constat affirme ce que le verdict dément.");
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
 });

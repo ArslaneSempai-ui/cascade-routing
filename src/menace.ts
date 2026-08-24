@@ -191,9 +191,25 @@ export function controles(racine: string): Controle[] {
   const ajout = (nom: string, tenu: boolean | null, constat: string, denominateur: string) =>
     out.push({ nom, verdict: tenu === null ? "hors de portée" : tenu ? "tenu" : "non tenu", constat, denominateur });
 
+  /*
+   * LE DÉNOMINATEUR NE RÉTRÉCIT PAS EN SILENCE.
+   *
+   * Quand `src/server.ts` manquait, cette branche ne déclarait QU'UN de ses trois contrôles
+   * en « hors de portée » : les deux autres disparaissaient du tableau, et le document
+   * publiait « 3 contrôles tenus sur 4 » alors qu'il y en a six. C'est la faute contre
+   * laquelle ce document est écrit, commise par lui — un chiffre issu d'une sélection doit
+   * porter le compte de ce qu'il écarte, et celui-ci écartait sans compter.
+   *
+   * Les trois contrôles existent toujours, dans les deux cas. Trouvé par une session de
+   * contrôle le 24 août 2026.
+   */
+  const CONTROLES_SERVEUR = ["Adresse d'écoute", "Racine servie", "Corps de requête borné"] as const;
   const serveur = lire("src/server.ts");
-  if (serveur === null) ajout("Adresse d'écoute", null, "src/server.ts est absent.", "0 fichier lu");
-  else {
+  if (serveur === null) {
+    for (const nom of CONTROLES_SERVEUR) {
+      ajout(nom, null, "src/server.ts est absent : ce contrôle n'a rien pu regarder.", "0 fichier lu");
+    }
+  } else {
     const a = adresseDEcoute(serveur);
     ajout("Adresse d'écoute", a === "boucle locale",
       `Le serveur écoute sur ${a}. Une écoute sur toutes les interfaces le rend joignable depuis le réseau local, donc depuis un wifi partagé.`,
@@ -225,8 +241,16 @@ export function controles(racine: string): Controle[] {
   }
 
   const ignore = lire(".gitignore");
-  ajout("Données du client non versionnées", ignore !== null && /^data\/?$/m.test(ignore),
-    "Les mesures faites sur les données d'un client vivent dans data/, qui est ignoré par git. Ce qui n'est pas versionné ne part pas dans un dépôt public.",
+  const dataIgnore = ignore !== null && /^data\/?$/m.test(ignore);
+  /* LE CONSTAT DISAIT LA MÊME CHOSE DANS LES DEUX CAS. Quand il échouait, la phrase
+     affirmait exactement ce qui était faux — un tableau où l'on doit lire la colonne
+     « verdict » pour savoir si la colonne « constat » ment. */
+  ajout("Données du client non versionnées", dataIgnore,
+    dataIgnore
+      ? "Les mesures faites sur les données d'un client vivent dans data/, qui est ignoré par git. Ce qui n'est pas versionné ne part pas dans un dépôt public."
+      : ignore === null
+        ? "Aucun .gitignore : rien n'empêche les mesures faites sur les données d'un client de partir au premier commit."
+        : "data/ n'est pas ignoré par git : les mesures faites sur les données d'un client partiraient dans le dépôt public au premier commit.",
     ".gitignore");
 
   const verrou = lire("package-lock.json");
