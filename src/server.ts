@@ -225,8 +225,65 @@ function origineEtrangere(req: IncomingMessage): string | null {
   }
 }
 
+/*
+ * UN PLAFOND PAR ADRESSE, QUI REND 429 ET DIT QUOI FAIRE.
+ *
+ * Techniquement, on n'en a pas besoin : le serveur écoute sur la boucle locale, aucune route
+ * n'appelle un service facturé, et une requête coûte 1,5 ms depuis que l'état est mémorisé.
+ * Il est là parce que **tout questionnaire de sécurité bancaire pose la question**, et que
+ * « nous n'en avons pas besoin, nous écoutons sur la boucle locale » est une réponse vraie
+ * qui coûte la vente. Le plafond est bon marché et il se démontre.
+ *
+ * Le plafond est GÉNÉREUX à dessein. L'écran ne sonde pas : il émet une requête par geste de
+ * l'utilisateur. Quatre par seconde en continu sont hors d'atteinte d'un humain et triviales
+ * pour un script — c'est exactement la ligne qu'on veut. Une limite qui refuse l'usage normal
+ * se fait retirer, et elle emporte la protection avec elle.
+ *
+ * CE QU'IL NE FAIT PAS, et il faut le dire : sur la boucle locale, tous les clients partagent
+ * `127.0.0.1`. Un script abusif épuise donc le même compteur que la personne assise devant
+ * l'écran. C'est inhérent à une clé d'adresse sur une machine unique, pas un oubli.
+ */
+export const PLAFOND_REQUETES = 240;          /* par adresse et par fenêtre */
+export const FENETRE_MS = 60_000;
+
+const vues = new Map<string, number[]>();
+
+/** Rend le nombre de requêtes restantes, ou `null` si l'adresse a dépassé son plafond. */
+export function compter(adresse: string, maintenant = Date.now()): number | null {
+  const debut = maintenant - FENETRE_MS;
+  const recentes = (vues.get(adresse) ?? []).filter((t) => t > debut);
+  /*
+   * La carte est purgée à chaque passage : sans ça, une adresse par requête ferait grossir
+   * la mémoire sans borne — on aurait remplacé un épuisement par un autre, plus discret.
+   */
+  for (const [cle, temps] of vues) if (temps.every((t) => t <= debut)) vues.delete(cle);
+  if (recentes.length >= PLAFOND_REQUETES) { vues.set(adresse, recentes); return null; }
+  recentes.push(maintenant);
+  vues.set(adresse, recentes);
+  return PLAFOND_REQUETES - recentes.length;
+}
+
+/** Pour les cas : remet les compteurs à zéro. */
+export function oublierLesRequetes(): void { vues.clear(); }
+
 const serveur = createServer(async (req, res) => {
   const url = new URL(req.url ?? "/", `http://localhost:${PORT}`);
+  const adresse = req.socket.remoteAddress ?? "inconnue";
+  const restantes = compter(adresse);
+  if (restantes === null) {
+    res.writeHead(429, {
+      "content-type": "application/json; charset=utf-8",
+      "retry-after": String(Math.ceil(FENETRE_MS / 1000)),
+      "cache-control": "no-store",
+    });
+    res.end(JSON.stringify({
+      erreur: `rate limit reached: more than ${PLAFOND_REQUETES} requests in ${FENETRE_MS / 1000} s `
+        + `from ${adresse}. This screen sends one request per action, so this is a script, `
+        + `not a person. Wait ${Math.ceil(FENETRE_MS / 1000)} s and it clears by itself.`,
+    }));
+    return;
+  }
+  res.setHeader("x-ratelimit-remaining", String(restantes));
   try {
     if (req.method === "POST") {
       const etrangere = origineEtrangere(req);
