@@ -294,3 +294,49 @@ test("un en-tête qui nomme deux fois la même colonne est refusé, pas deviné"
      nom, comme le lecteur les lira. */
   assert.throws(() => lireCsv("text,name, name\nbonjour Anna,Anna,Bea\n"), /same column twice/);
 });
+
+/* ─── depuis que les noms décident, et non le nombre de colonnes ─── */
+
+test("les colonnes se lisent par leur nom, dans n'importe quel ordre", () => {
+  const l = lireCsv('birth,name,text\n1980-03-03,Jean Dupont,"Jean Dupont ne le 1980-03-03"\n');
+  assert.deepEqual(l.champs.sort(), ["birth", "name"]);
+  assert.equal(l.cas[0]!.text, "Jean Dupont ne le 1980-03-03");
+  assert.equal(l.cas[0]!.truth.name, "Jean Dupont");
+  /* La lecture est restituée pour que le client la vérifie d'un coup d'œil. */
+  assert.equal(l.lecture.noms[l.lecture.colTexte], "text");
+});
+
+test("une colonne « id » est reconnue par son nom, et n'est pas un champ", () => {
+  const l = lireCsv('id,text,birth\nA-1,"ne le 1980-03-03",1980-03-03\n');
+  assert.deepEqual(l.champs, ["birth"]);
+  assert.equal(l.cas[0]!.id, "A-1");
+  assert.equal(l.lecture.noms[l.lecture.colId], "id");
+});
+
+test("trois colonnes sans « text » sont refusées, deux colonnes sans « text » ne le sont pas", () => {
+  /* Trois colonnes offrent deux lectures — la première peut être un identifiant ou le
+     texte — et deviner était le défaut : le document du client devenait une étiquette. */
+  assert.throws(() => lireCsv("texte,nom,naissance\na,b,c\n"), /none of them is "text"/);
+  /* Deux colonnes n'en offrent qu'une : c'est la forme des jeux publics, elle est gardée. */
+  const l = lireCsv("sentence,label\nbonjour,salutation\n");
+  assert.equal(l.cas[0]!.text, "bonjour");
+  assert.deepEqual(l.champs, ["label"]);
+});
+
+test("une ligne malformée est écartée et comptée, jamais incluse", () => {
+  const l = lireCsv('text,name,birth\n"a",Jean,1980-03-03\nseulement du texte\n"b",Marie,1867-11-07,en trop\n');
+  /* Trop de cellules : aucune lecture raisonnable, écartée et nommée par sa ligne. */
+  assert.deepEqual(l.ecartees.map((e) => e.ligne), [4]);
+  assert.deepEqual(l.ecartees.map((e) => e.champs), [4]);
+  /* Trop peu : gardée — c'est le choix du dépôt, et un cas de ce fichier l'exige — mais
+     COMPTÉE, parce que sa réponse vide comptera comme une erreur de l'outil. */
+  assert.deepEqual(l.courtes.map((c) => c.ligne), [3]);
+  assert.equal(l.cas.length, 2, "la ligne courte reste un cas, la ligne longue non");
+
+  /* Le contre-témoin : un fichier sain n'écarte rien. Sans lui, un lecteur qui
+     écarterait tout passerait le cas ci-dessus. */
+  const sain = lireCsv('text,name\n"a",Jean\n"b",Marie\n');
+  assert.equal(sain.cas.length, 2);
+  assert.deepEqual(sain.ecartees, []);
+  assert.deepEqual(sain.courtes, []);
+});

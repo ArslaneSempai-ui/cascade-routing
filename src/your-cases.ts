@@ -65,7 +65,18 @@ export type Cas = { id: string; text: string; truth: Record<string, string> };
  * C'est correct, et c'est même la raison d'être des guillemets. Ce qui manquait, c'est que
  * PERSONNE NE VÉRIFIAIT que l'automate en était ressorti à la fin.
  */
-export function lireCsv(texte: string): { champs: string[]; cas: Cas[] } {
+/** Ce qu'une lecture rend, y compris ce qu'elle a écarté et comment elle a lu. */
+export type Lecture = {
+  champs: string[];
+  cas: Cas[];
+  /** Lignes portant PLUS de cellules que l'en-tête : aucune lecture raisonnable, écartées. */
+  ecartees: { ligne: number; champs: number }[];
+  /** Lignes plus COURTES : gardées, cellules manquantes vides — mais comptées et annoncées. */
+  courtes: { ligne: number; champs: number }[];
+  lecture: { colTexte: number; colId: number; noms: string[] };
+};
+
+export function lireCsv(texte: string): Lecture {
   const lignes: string[][] = [];
   let ligne: string[] = [], cellule = "", guillemets = false;
   /* Où la guillemet encore ouverte a été ouverte. Sans elle, le refus dirait « quelque part
@@ -132,20 +143,93 @@ export function lireCsv(texte: string): { champs: string[]; cas: Cas[] } {
   }
 
   /*
-   * Deux colonnes veut dire « texte, réponse » — pas d'identifiant.
+   * ─── LES NOMS DÉCIDENT, PAS LE NOMBRE DE COLONNES ───
    *
-   * C'est la forme de tous les jeux publics de classification, et exiger une colonne d'ids
-   * que personne ne fournit reviendrait à demander au lecteur de préparer ses données pour
-   * l'outil plutôt que l'inverse.
+   * La règle était : deux colonnes veut dire « texte, réponse », trois ou plus veut dire
+   * « la première est un identifiant ». Elle est documentée dans l'aide, et elle devine
+   * quand même — **elle fait un pari sur les données du client, à sa place.**
+   *
+   * Mesuré le 24 août 2026 sur un export à trois colonnes sans identifiant, la forme la
+   * plus naturelle qu'un système produit : `text,name,birth` était lu comme
+   * identifiant = `text`, texte d'entrée = `name`, champ mesuré = `birth`. **Le document
+   * du client devenait une étiquette et le nom d'une personne devenait le document.**
+   * Sortie 0, aucun avertissement, et un taux publié sur cette lecture.
+   *
+   * Trois cas hostiles sur dix-neuf venaient de cette seule règle : colonne en trop,
+   * colonnes dans le désordre, export sans identifiant.
+   *
+   * Maintenant : s'il y a un en-tête, on lit les NOMS. `text` nomme le texte d'entrée,
+   * `id` nomme l'identifiant s'il existe, tout le reste est un champ à mesurer. Deux
+   * colonnes sans `text` gardent la lecture positionnelle — il n'y a qu'une lecture
+   * possible et c'est la forme des jeux publics. Trois colonnes ou plus sans `text` sont
+   * REFUSÉES : il y a deux lectures et deviner est exactement le défaut.
    */
-  const sansId = entete.length === 2;
-  const champs = (sansId ? entete.slice(1) : entete.slice(2)).map((x) => x.trim());
-  const cas = lignes.map((l, i) => ({
-    id: sansId ? String(i + 1) : (l[0] ?? String(i + 1)).trim(),
-    text: (sansId ? l[0] : l[1]) ?? "",
-    truth: Object.fromEntries(champs.map((c, j) => [c, (l[(sansId ? 1 : 2) + j] ?? "").trim()])),
-  }));
-  return { champs, cas };
+  const noms = entete.map((x) => x.trim().replace(/^\uFEFF/, ""));
+  const iTexte = noms.findIndex((n) => n.toLowerCase() === "text");
+  const iId = noms.findIndex((n) => n.toLowerCase() === "id");
+
+  let colTexte: number, colId: number, colChamps: number[];
+  if (iTexte >= 0) {
+    colTexte = iTexte;
+    colId = iId;
+    colChamps = noms.map((_, i) => i).filter((i) => i !== iTexte && i !== iId);
+  } else if (noms.length === 2) {
+    colTexte = 0; colId = -1; colChamps = [1];
+  } else {
+    throw new Error(
+      `Your header names ${noms.map((n) => `"${n}"`).join(", ")} — none of them is "text".\n\n`
+      + `  With ${noms.length} columns there are two readings: the first column could be an\n`
+      + `  identifier, or it could be the input text. This tool used to guess by counting\n`
+      + `  columns, which meant reading your document column as a label without saying so.\n\n`
+      + `  Name the column holding the input text "text". Name an identifier column "id"\n`
+      + `  if you have one. Every other column is read as a field to measure.`);
+  }
+
+  const champs = colChamps.map((i) => noms[i]!);
+
+  /*
+   * UNE LIGNE MALFORMÉE EST NOMMÉE ET ÉCARTÉE, PAS INCLUSE.
+   *
+   * Elle était incluse : une ligne à un seul champ entrait comme un cas dont la réponse
+   * attendue est vide — donc comptée comme une erreur de l'outil. **L'export cassé du
+   * client dégradait le taux qu'on lui montre**, et il n'aurait jamais su pourquoi.
+   *
+   * Le compte des lignes écartées voyage avec le taux : un chiffre issu d'une sélection
+   * porte le compte de ce qu'il écarte, ou il ne se publie pas.
+   */
+  const ecartees: { ligne: number; champs: number }[] = [];
+  const courtes: { ligne: number; champs: number }[] = [];
+  const cas: { id: string; text: string; truth: Record<string, string> }[] = [];
+  lignes.forEach((l, i) => {
+    /*
+     * TROP DE CELLULES : ÉCARTÉ. PAS ASSEZ : GARDÉ, MAIS COMPTÉ.
+     *
+     * Les deux ne se valent pas et ce dépôt a déjà tranché pour l'un des deux. Une ligne
+     * plus COURTE que l'en-tête est une cellule finale vide — cas ordinaire d'un export,
+     * et un cas de ce fichier l'exige : « une cellule manquante devient une chaîne vide ».
+     * On garde donc ce choix.
+     *
+     * Mais il a un prix, et il était invisible : la réponse attendue vide compte comme une
+     * erreur de l'outil, donc **l'export incomplet du client dégrade le taux qu'on lui
+     * montre**. Le compte de ces lignes voyage maintenant à côté du taux. Le choix reste
+     * celui du dépôt ; ce qui change, c'est que le client peut le voir.
+     *
+     * Une ligne plus LONGUE, elle, n'a aucune lecture raisonnable : des cellules qui ne
+     * correspondent à aucune colonne. Écartée, nommée par son numéro de ligne.
+     */
+    if (l.length > noms.length) {
+      ecartees.push({ ligne: i + 2, champs: l.length });
+      return;
+    }
+    if (l.length < noms.length) courtes.push({ ligne: i + 2, champs: l.length });
+    cas.push({
+      id: colId >= 0 ? (l[colId] ?? String(i + 1)).trim() : String(i + 1),
+      text: l[colTexte] ?? "",
+      truth: Object.fromEntries(colChamps.map((c) => [noms[c]!, (l[c] ?? "").trim()])),
+    });
+  });
+
+  return { champs, cas, ecartees, courtes, lecture: { colTexte, colId, noms } };
 }
 
 /** Des règles fournies par le lecteur, en expressions régulières nommées par champ. */
@@ -403,7 +487,25 @@ export async function mesurerVosCas(
     for (const palier of paliers) {
       let bons = 0;
       const durees: number[] = [];
+      /*
+       * L'AVANCEMENT SE COMPTE, IL NE SE PRÉDIT PAS.
+       *
+       * Mesuré le 24 août 2026 : cent mille lignes sont lues, annoncées, puis douze
+       * minutes passent sans une ligne de sortie — et il en reste des heures. Rien ne
+       * meurt et rien ne ment ; l'acheteur voit un terminal figé et l'arrête.
+       *
+       * Ce qui s'affiche est le compte fait sur le compte total, connu dès la première
+       * ligne. **Pas une durée restante :** une durée devinée qui se trompe d'un facteur
+       * deux fait plus de mal que pas de durée du tout, et ce dépôt refuse partout
+       * ailleurs de publier un chiffre qu'il n'a pas mesuré.
+       */
+      const pas = cas.length >= 1000 ? Math.ceil(cas.length / 20) : 0;
+      let faits = 0;
       for (const c of cas) {
+        if (pas > 0 && faits > 0 && faits % pas === 0) {
+          process.stderr.write(`  ${champ} · ${palier} · ${faits}/${cas.length}\n`);
+        }
+        faits++;
         const t0 = performance.now();
         /* `extract` attend un ClientFile et un Field ; les cas du lecteur ont les mêmes deux
            propriétés utiles, et le champ n'est qu'une clé. Le typage local est plus étroit
@@ -496,7 +598,7 @@ Nothing leaves your machine: the models are local and this path makes no network
 
   const tache = arg("task") ?? "extract";
   const echantillon = Number(arg("sample") ?? 0);
-  let { champs, cas } = lireCsv(readFileSync(fichier, "utf8"));
+  let { champs, cas, ecartees, courtes, lecture } = lireCsv(readFileSync(fichier, "utf8"));
   if (echantillon > 0 && echantillon < cas.length) {
     /* Tirage déterministe : deux exécutions doivent porter sur les mêmes cas, sinon la
        comparaison entre paliers mesure aussi le hasard du tirage. */
@@ -539,6 +641,40 @@ Nothing leaves your machine: the models are local and this path makes no network
   ];
 
   console.log(`\n${cas.length} cases, ${champs.length} field(s): ${champs.join(", ")}`);
+
+  /*
+   * DIRE COMMENT ON A LU, AVANT DE DIRE CE QU'ON A MESURÉ.
+   *
+   * Un décalage de colonnes qui transforme le nom d'une personne en document se voit
+   * en une ligne dès qu'on l'annonce, et pas du tout si on ne l'annonce pas. Restituer
+   * la lecture ne remplace pas de lire les noms — c'est ce qui permet au client de
+   * constater en une seconde que la lecture est la sienne.
+   */
+  console.log(`  read as: column "${lecture.noms[lecture.colTexte]}" is the input text`
+    + (lecture.colId >= 0 ? `, "${lecture.noms[lecture.colId]}" is the identifier` : ", no identifier column")
+    + `, the rest are fields to measure.`);
+
+  /*
+   * Un chiffre issu d'une sélection porte le compte de ce qu'il écarte, ou il ne se
+   * publie pas. Ces lignes étaient INCLUSES, avec une réponse attendue vide comptée
+   * comme une erreur de l'outil : l'export cassé du client dégradait le taux qu'on lui
+   * montrait, et il n'aurait jamais su pourquoi.
+   */
+  if (courtes.length > 0) {
+    console.log(`  ${courtes.length} row(s) have fewer cells than the ${lecture.noms.length} `
+      + `columns named in the header — line ${courtes.slice(0, 5).map((c) => c.ligne).join(", ")}`
+      + `${courtes.length > 5 ? `, and ${courtes.length - 5} more` : ""}.`);
+    console.log(`  Their missing answers are read as empty, which counts as a miss against `
+      + `every tier. Your rates carry that.`);
+  }
+  if (ecartees.length > 0) {
+    const apercu = ecartees.slice(0, 5)
+      .map((e) => `line ${e.ligne} has ${e.champs}`).join(", ");
+    console.log(`  ${ecartees.length} row(s) set aside: the header names `
+      + `${lecture.noms.length} columns and these do not match — ${apercu}`
+      + `${ecartees.length > 5 ? `, and ${ecartees.length - 5} more` : ""}.`);
+    console.log(`  They are NOT counted in the rates below, in either direction.`);
+  }
   /*
    * ZÉRO CAS N'EST PAS UN INTERVALLE LARGE, C'EST L'ABSENCE DE MESURE.
    *
