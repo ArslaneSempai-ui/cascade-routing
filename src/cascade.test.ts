@@ -4202,3 +4202,56 @@ test("le contrôle de sortie réseau distingue la boucle locale, et son plancher
     "une passe trop courte conclut sur les hôtes vus — mais ce qu'elle n'a pas vu, elle ne\n"
     + "  l'a pas vu non plus. C'était le sens que le plancher ne gardait pas.");
 });
+
+test("tout ce qui peut ouvrir une connexion est déclaré, et le compte n'est pas une phrase", () => {
+  /*
+   * LA RÉTRACTATION QUI CORRIGEAIT LA PROMESSE EN CONTENAIT UNE AUTRE.
+   *
+   * Le 20 août, « nothing leaves the machine » a été rétracté parce que `OLLAMA_HOST` pouvait
+   * viser un serveur d'équipe. La correction affirmait, comme un inventaire : *« A
+   * measurement's path contains exactly one outbound call — the generative host. »*
+   *
+   * Il y en a au moins trois. `npm run benchmark` télécharge un jeu public au `curl`, et la
+   * bibliothèque de modèles tire 1,26 Go au premier lancement — le README le dit lui-même,
+   * deux cents lignes plus haut.
+   *
+   * **Un inventaire écrit en prose est une affirmation ; celui-ci se recompte à chaque
+   * exécution.** C'est la seule forme qui ne dérive pas quand quelqu'un ajoute un appel.
+   */
+  const dossier = fileURLToPath(new URL(".", import.meta.url));
+
+  /** Chaque site capable d'ouvrir une connexion, et pourquoi il existe. */
+  const DECLARES: Record<string, string> = {
+    "tiers.ts": "l'hôte génératif — le seul appel d'une mesure ordinaire, et il est local par "
+      + "défaut ; `estLocal` refuse un hôte distant sans consentement écrit dans la commande",
+    "contrainte.ts": "le même hôte génératif, pour mesurer ce que coûte la contrainte de sortie",
+    "benchmark.ts": "le téléchargement d'un jeu public étiqueté, une fois — c'est une entrée "
+      + "qui descend, jamais une donnée du client qui monte",
+  };
+
+  const APPEL = /\bfetch\s*\(|execFileSync\(\s*["']curl["']|spawn\(\s*["']curl["']|https?\.request\s*\(|new WebSocket\s*\(/;
+  const trouves = new Map<string, number>();
+  for (const f of readdirSync(dossier)) {
+    if (!/\.(ts|mjs)$/.test(f) || /\.test\./.test(f)) continue;
+    const src = readFileSync(join(dossier, f), "utf8")
+      .replace(/\/\*[\s\S]*?\*\//g, " ").replace(/(^|[^:\\])\/\/[^\n]*/g, "$1 ");
+    const n = (src.match(new RegExp(APPEL.source, "g")) ?? []).length;
+    if (n > 0) trouves.set(f, n);
+  }
+
+  assert.ok(trouves.size >= 2,
+    `${trouves.size} fichier(s) capables d'ouvrir une connexion trouvés : la lecture a échoué, `
+    + `et ce cas rendrait un zéro qui n'a rien regardé.`);
+
+  const nonDeclares = [...trouves.keys()].filter((f) => !(f in DECLARES));
+  assert.deepEqual(nonDeclares, [],
+    `fichier(s) capables d'ouvrir une connexion et non déclarés : ${nonDeclares.join(", ")}.\n`
+    + `  → chacun doit porter sa raison ici, sinon la promesse « nothing leaves the machine »\n`
+    + `    repose sur un inventaire que personne ne refait.`);
+
+  /* ET UNE DÉCLARATION QUI NE CORRESPOND PLUS À RIEN EST UNE DÉCLARATION QUI CACHE :
+     tant qu'elle est là, un fichier réapparu sous ce nom passerait sans être vu. */
+  const mortes = Object.keys(DECLARES).filter((f) => !trouves.has(f));
+  assert.deepEqual(mortes, [],
+    `déclaration(s) sans appel correspondant : ${mortes.join(", ")} — à retirer.`);
+});

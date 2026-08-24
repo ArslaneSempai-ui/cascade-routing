@@ -1245,7 +1245,7 @@
     ]
   },
   "retractions": {
-    "total": 29,
+    "total": 30,
     "caughtBeforeAnyoneSawIt": 11,
     "entries": [
       {
@@ -1391,6 +1391,11 @@
       {
         "date": "2026-08-24",
         "headline": "Led with the mean of five field rates and called it the finding, in a document whose buyer files whole records.",
+        "caughtBeforeAnyoneSawIt": false
+      },
+      {
+        "date": "2026-08-24",
+        "headline": "The retraction that fixed the network promise carried an overclaim of its own: \"exactly one outbound call\".",
         "caughtBeforeAnyoneSawIt": false
       }
     ]

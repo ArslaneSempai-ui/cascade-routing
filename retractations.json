@@ -302,6 +302,17 @@
       "heldBy": "le taux par dossier se recalcule depuis les réussites, et retombe sur la mesure publiée",
       "notHeld": null,
       "caughtBeforeAnyoneSawIt": false
+    },
+    {
+      "date": "2026-08-24",
+      "headline": "The retraction that fixed the network promise carried an overclaim of its own: \"exactly one outbound call\".",
+      "claimed": "On 2026-08-20, correcting \"nothing leaves the machine\", I wrote as an inventory that a measurement's path contains exactly one outbound call — the generative host — and that OLLAMA_HOST was the condition nobody had written down. The sentence reads as a count that was taken.",
+      "actually": "There are at least three. `npm run benchmark` downloads a public labelled dataset with curl, and it is a measurement. The model library pulls 1.26 GB of weights on a first run — the README says so two hundred lines above. Neither sends anything of the client's, so the promise survives; the COUNT did not, and it was the count that made the correction sound complete.",
+      "caughtBy": "Sweeping every command a buyer can run, to find which ones actually work. `benchmark` was read rather than run, and its curl contradicted a sentence written four days earlier.",
+      "cost": "Nothing published outside this repository. But it is the second time the same promise has been stated more broadly than it is true, and the first correction is what made the second one hard to see: a retraction reads as settled.",
+      "heldBy": "tout ce qui peut ouvrir une connexion est déclaré, et le compte n'est pas une phrase",
+      "notHeld": null,
+      "caughtBeforeAnyoneSawIt": false
     }
   ]
 }

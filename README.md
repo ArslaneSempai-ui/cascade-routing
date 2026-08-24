@@ -52,7 +52,7 @@ what that pass actually cost is stated below, read from the relevé rather than 
 | `npm run sonde` | the generative probe, regenerated from the frozen profile — it was hand-typed and eleven of its figures had gone stale |
 | `npm run start` | the screen, on localhost:4670 |
 | `npm run measure:yours` | your own cases, from a CSV — nothing leaves your machine |
-| `npm run benchmark` | the same measurement on a public labelled dataset |
+| `npm run benchmark` | the same measurement on a public labelled dataset — the one command that downloads: the dataset comes down, nothing of yours goes up |
 | `npm run intake` | turn a filled-in questionnaire into the assumptions a run uses |
 | `npm run egress` | watch the network while a measurement runs, and record what it sees |
 | `npm run fuite` | what the prompt owes to the half it was tuned against (needs Ollama) |
@@ -69,7 +69,7 @@ npm test           # types, README figures, landing.json, and the suite
 ```
 
 <!-- figures:tests -->
-**180 tests** across 9 files, counted from the sources rather than typed here.
+**181 tests** across 9 files, counted from the sources rather than typed here.
 <!-- /figures:tests -->
 
 Everything runs locally. No API key, nothing leaves the machine, and anyone who clones this
@@ -533,8 +533,9 @@ anything. A validator can audit a history; they cannot audit a promise.
 | 2026-08-22 | Nearly: that no admissible routing matches an incumbent field by field, so the cost threshold does not exist. The function said so in words designed to be quoted in a letter. | `latency()` already returns milliseconds and the code multiplied by a thousand, so every routing exceeded a 2,000 ms ceiling by three orders of magnitude and was rejected before its accuracy was examined. The failure looked exactly like a substantive result rather than a broken comparison, because the message it produced was about the clause and not about the units. | Naming by hand a routing that should have satisfied the clause, and finding the function disagreed. Checking the prediction rather than the output. |
 | 2026-08-22 | That at 4,000 permitted tokens all three tiers stop of their own accord, so the unconstrained length is observed rather than clipped. Written into a commit message and a source comment as the reason for choosing that cap. | Over twenty calls per pass, `gen-4b` hits the 4,000 cap on five of them, in both passes. Its median of 2,480 is real; its maximum is my cap again, so the unconstrained length is still bounded below rather than observed. The pilot was a single call that happened to stop at 3,508. | The bench itself, on its first real run, reporting `plafondAtteint 5/20` — a field added precisely because the previous version of this figure had been bounded by a cap without saying so. |
 | 2026-08-24 | That the finding is 94.4 % for $191, and that no available budget buys a better routing. Both were true of the objective the solver optimises — the mean per field — and the headline gave a reader no reason to suspect there was another objective. | The unit that gets filed is the record. On the published routing, 92 of 120 records come out with all five fields right: 76.7 % [68-83], not 94.4 %. And a routing that aims at the record delivers 95 of 120 for $54 rather than $191, worse on no record in the sample. 'No available budget buys a better routing' is still true about the budget and false about the reader's conclusion, which is the shape of overclaim this file exists to record. | Building the per-record measurement asked for in the plan, and finding that the headline and the middle of the same document now told different stories. |
+| 2026-08-24 | On 2026-08-20, correcting "nothing leaves the machine", I wrote as an inventory that a measurement's path contains exactly one outbound call — the generative host — and that OLLAMA_HOST was the condition nobody had written down. The sentence reads as a count that was taken. | There are at least three. `npm run benchmark` downloads a public labelled dataset with curl, and it is a measurement. The model library pulls 1.26 GB of weights on a first run — the README says so two hundred lines above. Neither sends anything of the client's, so the promise survives; the COUNT did not, and it was the count that made the correction sound complete. | Sweeping every command a buyer can run, to find which ones actually work. `benchmark` was read rather than run, and its curl contradicted a sentence written four days earlier. |
 
-21 of these 29 are now held by a named test, so the same mistake fails the build rather than reaching a reader.
+22 of these 30 are now held by a named test, so the same mistake fails the build rather than reaching a reader.
 <!-- /figures:retractations -->
 
 Each line names what caught it, because that is the part worth copying. Two were caught by a
