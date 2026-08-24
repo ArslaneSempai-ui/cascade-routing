@@ -51,6 +51,8 @@ what that pass actually cost is stated below, read from the relevé rather than 
 | `npm run fuite` | what the prompt owes to the half it was tuned against (needs Ollama) |
 | `npm run pages` | build docs/ and verify the published screen — required before publishing: docs/ carries a compiled copy of the code and goes stale silently |
 | `npm run captures` | re-record the images on this page |
+
+⚠ 1 command(s) exist in package.json and are not classified above: `ocr`.
 <!-- /figures:commandes -->
 
 ```bash
@@ -58,7 +60,7 @@ npm test           # types, README figures, landing.json, and the suite
 ```
 
 <!-- figures:tests -->
-**155 tests** across 9 files, counted from the sources rather than typed here.
+**158 tests** across 9 files, counted from the sources rather than typed here.
 <!-- /figures:tests -->
 
 Everything runs locally. No API key, nothing leaves the machine, and anyone who clones this
@@ -115,6 +117,24 @@ on another they never saw. Measured honestly, they collapse.
 
 **This reverses the table.** `gen-4b` running locally costs $1.31 at 92.7 % — cheaper AND more accurate than calling `large` at a provider for $8.00 at 78.8 %. If you are asking whether you need a paid API, that is the measured answer on this corpus.
 <!-- /figures:ouCaTourne -->
+
+### Reading the document, not the transcript
+
+<!-- figures:lecture -->
+**Your documents are scans; every other table here starts from text.** This one does not. The same 120 documents were rendered to images, read back with Apple's Vision OCR, and put through the same extractors. Nothing else changed, so the difference is the reading stage and nothing else.
+
+Transcription fidelity: **99.4 % [99–100], n=2977** of words recovered.
+
+| Tier | From text | From the image | Gap | Beyond noise |
+|---|---|---|---|---|
+| `rules` | 56.7 % [53–61], n=600 | 56.7 % [53–61], n=600 | 0.0 pts | no |
+| `small` | 70.8 % [67–74], n=600 | 60.3 % [56–64], n=600 | -10.5 pts | yes |
+| `large` | 80.5 % [77–83], n=600 | 79.5 % [76–83], n=600 | -1.0 pts | no |
+
+**1 of 3 tiers loses more than noise.** `small` gives up 10.5 points when the same document arrives as an image instead of as text.
+
+**What this does not measure.** The images are rendered, not photographed — clean, square, no glare or fold — and the documents average 2.0 lines (at most 6). A photographed full page brings problems these do not: columns, reading order, skew. **The gaps above are a floor, not a production cost.** 1 tier was excluded — `human` — because it returns the right answer from scrambled text: it never reads the document, so degrading it cannot move it. Its gap would be 0.0 points by construction, which measures the instrument rather than the scan. The OCR step runs on the machine, through the operating system: no API, no per-page fee.
+<!-- /figures:lecture -->
 
 <!-- figures:obligation -->
 **Why these fields.** 31 CFR 1020.220(a)(2)(i)(A) — Before opening an account a bank must obtain, at a minimum, the customer's name, date of birth for an individual, address, and identification number.

@@ -867,6 +867,78 @@ const finding = (() => {
  *
  * Le compte se lit maintenant dans les fichiers de test, comme tout le reste de cette page.
  */
+/**
+ * L'ETAGE DE LECTURE — ce que coute le passage par une image.
+ *
+ * Tout le reste de ce depot mesure l'extraction DEPUIS UN TEXTE. Un client, lui, recoit des
+ * scans. La question qu'il pose n'est donc pas « quel palier lit le mieux un texte » mais
+ * « que reste-t-il de votre exactitude quand le texte vient d'une image ». Personne n'y
+ * repondait, et c'etait le trou le plus visible entre ce qui est mesure et ce qui est vendu.
+ *
+ * La mesure est appariee : memes documents, memes paliers, une fois en texte et une fois en
+ * image de ce texte. L'ecart est le cout de l'etage, et rien d'autre.
+ *
+ * Le bloc publie aussi ce qu'il n'a PAS mesure — images rendues et non photographiees,
+ * documents courts, paliers ecartes — parce qu'un plancher publie sans son qualificatif se lit
+ * comme un cout observe.
+ */
+const lecture = (() => {
+  const chemin = fileURLToPath(new URL("../ocr.json", import.meta.url));
+  if (!existsSync(chemin)) {
+    throw new Error("ocr.json est absent — ce bloc publie une mesure. Lancez : npm run ocr");
+  }
+  const r = JSON.parse(readFileSync(chemin, "utf8"));
+
+  const fid = rate(Math.round(r.fideliteDeLaTranscription.taux * r.fideliteDeLaTranscription.n),
+    r.fideliteDeLaTranscription.n);
+  const lignes = r.paliers.map((x: { palier: string; surTexte: { taux: number; n: number };
+      surImage: { taux: number; n: number }; ecartEnPoints: number; separable: boolean }) => [
+    `\`${x.palier}\``,
+    writeRate(rate(Math.round(x.surTexte.taux * x.surTexte.n), x.surTexte.n)),
+    writeRate(rate(Math.round(x.surImage.taux * x.surImage.n), x.surImage.n)),
+    `${Math.abs(x.ecartEnPoints) < 0.05 ? "" : x.ecartEnPoints > 0 ? "-" : "+"}`
+      + `${Math.abs(x.ecartEnPoints).toFixed(1)} pts`,
+    x.separable ? "yes" : "no",
+  ]);
+
+  /* LE VERDICT SE CALCULE. Si aucun ecart ne sort du bruit, la phrase le dit — au lieu de
+     laisser un tableau d'ecarts suggerer un cout que la mesure ne porte pas. */
+  const separables = r.paliers.filter((x: { separable: boolean }) => x.separable);
+  const verdictLecture = separables.length === 0
+    ? `**At this scale, no tier loses a measurable amount.** Every gap in the table overlaps its `
+      + `own interval: the reading stage costs nothing this measurement can distinguish from `
+      + `noise. That is a statement about ${r.documents} documents of this kind, not a promise `
+      + `about your scans.`
+    : `**${separables.length} of ${r.paliers.length} tiers ${separables.length === 1 ? "loses" : "lose"} `
+      + `more than noise.** `
+      + separables.map((x: { palier: string; ecartEnPoints: number }) =>
+          `\`${x.palier}\` gives up ${Math.abs(x.ecartEnPoints).toFixed(1)} points`).join(", ")
+      + ` when the same document arrives as an image instead of as text.`;
+
+  return `**Your documents are scans; every other table here starts from text.** This one does `
+    + `not. The same ${r.documents} documents were rendered to images, read back with Apple's `
+    + `Vision OCR, and put through the same extractors. Nothing else changed, so the difference `
+    + `is the reading stage and nothing else.\n\n`
+    + `Transcription fidelity: **${writeRate(fid)}** of words recovered.\n\n`
+    + table(["Tier", "From text", "From the image", "Gap", "Beyond noise"], lignes)
+    + `\n\n${verdictLecture}\n\n`
+    + `**What this does not measure.** The images are rendered, not photographed — clean, `
+    + `square, no glare or fold — and the documents average `
+    + `${r.lignesParDocument.moyenne.toFixed(1)} lines (at most ${r.lignesParDocument.maximum}). `
+    + `A photographed full page brings problems these do not: columns, reading order, skew. `
+    + `**The gaps above are a floor, not a production cost.**`
+    + (r.paliersEcartes.length
+        ? ` ${r.paliersEcartes.length} tier${r.paliersEcartes.length === 1 ? " was" : "s were"} excluded — `
+          + r.paliersEcartes.map((t: string) => `\`${t}\``).join(", ")
+          + ` — because ${r.paliersEcartes.length === 1 ? "it returns" : "they return"} the right `
+          + `answer from scrambled text: ${r.paliersEcartes.length === 1 ? "it never reads" : "they never read"} `
+          + `the document, so degrading it cannot move ${r.paliersEcartes.length === 1 ? "it" : "them"}. `
+          + `${r.paliersEcartes.length === 1 ? "Its" : "Their"} gap would be 0.0 points by construction, `
+          + `which measures the instrument rather than the scan.`
+        : ``)
+    + ` The OCR step runs on the machine, through the operating system: no API, no per-page fee.`;
+})();
+
 const tests = (() => {
   const dossier = fileURLToPath(new URL(".", import.meta.url));
   const fichiers = readdirSync(dossier).filter((n: string) => n.endsWith(".test.ts"));
@@ -877,6 +949,6 @@ const tests = (() => {
 })();
 
 emit(fileURLToPath(new URL("../README.md", import.meta.url)),
-  { finding, obligation, ouCaTourne, extraction, classification, routing, shadow, gallery, baselines, provenance, coutDeReproduction, embauche,
+  { finding, obligation, ouCaTourne, lecture, extraction, classification, routing, shadow, gallery, baselines, provenance, coutDeReproduction, embauche,
     echelles, latence, egalites, fuite, deuxfaits, retractations, public: publicJeu, commandes,
     tests });

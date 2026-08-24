@@ -27,6 +27,8 @@ import { optimiseExtraction, optimiseClassification, budgetShadowPrice, latenceR
 import { ASSUMPTIONS, UNITS, BOUNDS, pricePerThousandExtractions, accuracy } from "./assumptions.ts";
 import { wilson, rate, distinguishable, precision } from "./interval.ts";
 import { PLAUSIBLE, bands, ETIQUETTE, advise } from "./sensitivity.ts";
+import { litLeTexte } from "./mesurer-ocr.ts";
+import { inclinaison, texte as texteDesBlocs } from "./ocr.ts";
 
 /* ── the split, which is the whole reason the measurement means anything ── */
 
@@ -3183,4 +3185,92 @@ test("le coût selon l'endroit où le palier tourne sort du même relevé, et le
       ? "le local est moins cher ET plus juste, et le README ne le dit plus."
       : "le README affirme encore le renversement alors que la mesure ne le porte plus : le "
         + "local n'est plus à la fois moins cher et plus exact que l'encodeur hébergé.");
+});
+
+/* ────────────────────────────────────────────────────────────────────────────
+   L'ÉTAGE DE LECTURE
+
+   Le dépôt mesure l'extraction depuis un TEXTE. Un client reçoit des scans. Ce
+   qui suit garde l'instrument qui répond à sa question — et l'instrument a un
+   défaut de naissance : un palier qui ne lit pas le document ne peut pas
+   baisser quand le document se dégrade, et publierait un coût de 0,0 point.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+test("un palier qui ne lit pas le document est écarté, et il est détecté par son comportement", async () => {
+  const temoins = generateRecords(2, "heldout");
+
+  /* TÉMOIN POSITIF — la garde doit se déclencher. `human` renvoie la vérité terrain sans
+     regarder le texte : brouillé ou non, il a juste. Il ne peut donc rien mesurer d'une
+     dégradation, et son coût serait nul QUEL QUE SOIT l'état du scan. */
+  assert.equal(await litLeTexte("human", temoins), false,
+    "`human` renvoie la vérité terrain sans lire le document — la garde ne le voit plus, et un "
+    + "coût de 0,0 point serait publié comme une mesure alors que l'instrument est aveugle.");
+
+  /* TÉMOIN NÉGATIF — la garde ne doit PAS se déclencher. `rules` lit vraiment le texte : sur un
+     texte brouillé il se trompe. Une garde qui écarterait tout le monde serait un refus constant,
+     pas une détection. */
+  assert.equal(await litLeTexte("rules", temoins), true,
+    "`rules` extrait par motifs dans le texte : brouillé, il doit se tromper. S'il passe pour "
+    + "aveugle, la garde écarte des paliers valides et la mesure ne portera plus sur rien.");
+});
+
+test("le coût de l'étage de lecture est publié avec ce qu'il ne couvre pas", () => {
+  const chemin = fileURLToPath(new URL("../ocr.json", import.meta.url));
+  if (!existsSync(chemin)) return;  // la mesure demande macOS et Chrome : absente, rien à vérifier
+  const r = JSON.parse(readFileSync(chemin, "utf8"));
+
+  /* LE PLANCHER SE DIT. Les images sont rendues, pas photographiées : l'écart mesuré est un
+     minorant. Publier un minorant sans le nommer, c'est publier une mesure qu'on n'a pas faite. */
+  assert.match(r.plancher, /rendues|plancher/i,
+    "le rapport ne dit plus que les images sont rendues et non photographiées. Le chiffre "
+    + "devient un coût mesuré alors qu'il est un plancher.");
+
+  /* CE QU'ON ÉCARTE SE COMPTE. Un chiffre issu d'une sélection porte le compte de ce qu'il
+     laisse dehors, sinon il se lit comme une couverture complète. */
+  assert.ok(Array.isArray(r.paliersEcartes), "les paliers écartés ne sont plus nommés.");
+  if (r.paliersEcartes.length > 0) {
+    assert.ok(typeof r.pourquoiEcartes === "string" && r.pourquoiEcartes.length > 40,
+      `${r.paliersEcartes.length} palier(s) écarté(s) sans que le rapport dise pourquoi.`);
+  }
+
+  /* AUCUN TAUX SOUS LE PLANCHER D'OBSERVATIONS. La règle du dépôt vaut aussi ici. */
+  for (const p of r.paliers) {
+    assert.ok(p.surTexte.n >= OBSERVATIONS_MINIMALES && p.surImage.n >= OBSERVATIONS_MINIMALES,
+      `\`${p.palier}\` publie un écart sur ${Math.min(p.surTexte.n, p.surImage.n)} observations, `
+      + `sous le plancher de ${OBSERVATIONS_MINIMALES} que ce dépôt s'impose partout ailleurs.`);
+    /* UN ÉCART DONT LES INTERVALLES SE RECOUVRENT N'EST PAS UN COÛT. */
+    if (!p.separable) {
+      assert.ok(Math.abs(p.ecartEnPoints) < 100,
+        `\`${p.palier}\` : écart non séparable du bruit, il ne doit pas être lu comme un coût.`);
+    }
+  }
+});
+
+test("l'inclinaison se lit sur les coins, et l'ordre de lecture survit à une page penchée", () => {
+  /* CE TEST GARDE UNE ERREUR DÉJÀ PAYÉE : estimer l'angle par régression sur le point de départ
+     des lignes a rendu −38,7° pour 7° réels. La variable explicative ne varie pas — toutes les
+     lignes commencent à la même marge — donc la pente mesurait le bruit, pas l'inclinaison. */
+  const a = 7 * Math.PI / 180;
+  const penchee = Array.from({ length: 12 }, (_, i) => {
+    const tly = 0.08 + i * 0.07;
+    return { texte: `ligne ${i}`, confiance: 0.99,
+      tlx: 0.1, tly, trx: 0.1 + 0.5 * Math.cos(a), try: tly + 0.5 * Math.sin(a) };
+  });
+  assert.ok(Math.abs(inclinaison(penchee) - a) < 0.01,
+    `l'inclinaison rend ${(inclinaison(penchee) * 180 / Math.PI).toFixed(1)}° pour 7° construits. `
+    + `Si elle repasse par le début des lignes, elle rendra un angle absurde sans échouer bruyamment.`);
+
+  /* Une page droite ne doit pas se voir attribuer une inclinaison. */
+  const droite = penchee.map((b) => ({ ...b, try: b.tly }));
+  assert.ok(Math.abs(inclinaison(droite)) < 1e-9, "une page droite se voit attribuer une inclinaison.");
+
+  /* L'ORDRE DE LECTURE, QUE LA FIDÉLITÉ NE PEUT PAS VOIR. La fidélité compte des mots PRÉSENTS :
+     un texte rendu à l'envers la laisse à 100 %. Sur une page penchée, la fin d'une ligne descend
+     plus bas que le début de la suivante — trier sur la seule ordonnée intercale les lignes. */
+  const melange = [penchee[7]!, penchee[0]!, penchee[11]!, penchee[3]!, ...penchee.slice(8, 11), penchee[1]!];
+  const attendu = [...melange].map((b) => b.texte)
+    .sort((x, y) => Number(x.split(" ")[1]) - Number(y.split(" ")[1])).join("\n");
+  assert.equal(texteDesBlocs(melange), attendu,
+    "l'ordre de lecture ne suit plus la page. Aucune mesure de fidélité ne l'attrapera : elle "
+    + "compte des mots présents, jamais leur place.");
 });

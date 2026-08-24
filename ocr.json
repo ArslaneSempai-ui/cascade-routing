@@ -1,0 +1,81 @@
+{
+  "quoi": "Coût de l'étage de lecture : les mêmes documents, une fois en texte et une fois en image.",
+  "plancher": "Les images sont RENDUES, pas photographiées : page nette, droite, sans reflet ni pliure, et les documents du corpus sont courts (voir lignesParDocument). Une photographie de page pleine pose des problèmes que celle-ci ne pose pas — colonnes, ordre de lecture, inclinaison. L'écart mesuré ici est donc un PLANCHER, pas un coût observé en production.",
+  "lignesParDocument": {
+    "moyenne": 1.9583333333333333,
+    "maximum": 6
+  },
+  "documents": 120,
+  "paliersEcartes": [
+    "human"
+  ],
+  "pourquoiEcartes": "Ces paliers rendent la bonne valeur depuis un texte brouillé : ils ne lisent pas le document. Dégrader l'image ne peut pas les faire baisser, donc leur coût serait 0,0 point quel que soit l'état du scan. Ce n'est pas une mesure, c'est un instrument aveugle.",
+  "fideliteDeLaTranscription": {
+    "taux": 0.9936177359758146,
+    "bas": 0.990052854656552,
+    "haut": 0.995910304204355,
+    "n": 2977
+  },
+  "paliers": [
+    {
+      "palier": "rules",
+      "surTexte": {
+        "taux": 0.5666666666666667,
+        "bas": 0.5267154842814286,
+        "haut": 0.60576959127481,
+        "n": 600
+      },
+      "surImage": {
+        "taux": 0.5666666666666667,
+        "bas": 0.5267154842814286,
+        "haut": 0.60576959127481,
+        "n": 600
+      },
+      "ecartEnPoints": 0,
+      "separable": false
+    },
+    {
+      "palier": "small",
+      "surTexte": {
+        "taux": 0.7083333333333334,
+        "bas": 0.6707296388921605,
+        "haut": 0.7432862222210851,
+        "n": 600
+      },
+      "surImage": {
+        "taux": 0.6033333333333334,
+        "bas": 0.5636505034341235,
+        "haut": 0.6417013636780464,
+        "n": 600
+      },
+      "ecartEnPoints": 10.499999999999998,
+      "separable": true
+    },
+    {
+      "palier": "large",
+      "surTexte": {
+        "taux": 0.805,
+        "bas": 0.7713984417486244,
+        "haut": 0.8347207789211673,
+        "n": 600
+      },
+      "surImage": {
+        "taux": 0.795,
+        "bas": 0.7608686431564348,
+        "haut": 0.8253778161799211,
+        "n": 600
+      },
+      "ecartEnPoints": 1.0000000000000009,
+      "separable": false
+    }
+  ],
+  "mesureLe": "2026-08-24T00:40:45.040Z",
+  "code": {
+    "commit": "3ea3e3b",
+    "sale": true
+  },
+  "journalDeLaPasse": {
+    "fichier": "2026-08-24T00-34-00-679Z-ocr.jsonl",
+    "tentatives": 3600
+  }
+}

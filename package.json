@@ -38,7 +38,8 @@
     "sceller": "node src/sceller.ts",
     "diff": "node src/diff.ts",
     "entree": "node src/entree.ts",
-    "sonde": "node src/sonde.ts"
+    "sonde": "node src/sonde.ts",
+    "ocr": "node src/mesurer-ocr.ts"
   },
   "dependencies": {
     "@huggingface/transformers": "^3.0.0"
