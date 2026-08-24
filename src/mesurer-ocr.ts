@@ -81,8 +81,8 @@ export async function mesurer(combien = 120, paliers: TierName[] = [...ENCODEURS
   const manque = ceQuiManque();
   if (manque) throw new Error(manque);
   if (!existsSync(CHROME)) {
-    throw new Error(`Chrome est introuvable, et il sert ici à RENDRE les documents en images. `
-      + `Sans lui il n'y a pas d'images à lire, et cette mesure n'a pas d'objet.`);
+    throw new Error(`Chrome is not there, and it is what RENDERS the documents as images here. `
+      + `Without it there are no images to read, and this measurement has no object.`);
   }
 
   /* LE RELEVÉ NOMME LE CODE QUI L'A PRODUIT. Sans ça, un chiffre publié six semaines plus tard
@@ -101,11 +101,11 @@ export async function mesurer(combien = 120, paliers: TierName[] = [...ENCODEURS
     /* UN REFUS A BESOIN D'UNE ISSUE, sinon on commente la garde. L'issue existe, elle est
        explicite, et elle est désagréable à lire — c'est ce qui la garde exceptionnelle : le
        relevé produit portera « sale: true », et tout ce qui le relit le dira. */
-    throw new Error("Arbre modifié : le relevé nommerait un commit qui n'est pas celui qui a "
-      + "tourné, et personne ne pourrait refaire ce chiffre.\n"
-      + "  → Committez, puis mesurez. C'est l'ordre normal.\n"
-      + "  → Pour amorcer malgré tout : --arbre-modifie. Le relevé portera « sale: true » et "
-      + "tout ce qui le relira dira que son code n'est pas retrouvable.");
+    throw new Error("Modified tree: the record would name a commit that is not the one that "
+      + "ran, and nobody could reproduce this figure.\n"
+      + "  → Commit, then measure. That is the normal order.\n"
+      + "  → To start anyway: --arbre-modifie. The record will carry \u201csale: true\u201d and "
+      + "anything that reads it will say its code cannot be found again.");
   }
   if (version?.sale) {
     process.stderr.write("\n  ARBRE MODIFIÉ — ce relevé ne sera pas refaisable à l'identique.\n\n");
@@ -122,8 +122,8 @@ export async function mesurer(combien = 120, paliers: TierName[] = [...ENCODEURS
   const lisants: TierName[] = [], aveugles: TierName[] = [];
   for (const t of paliers) (await litLeTexte(t, temoins) ? lisants : aveugles).push(t);
   if (lisants.length === 0) {
-    throw new Error(`Aucun des ${paliers.length} paliers demandés ne lit le texte qu'on lui donne. `
-      + `Il n'y a rien à dégrader, donc rien à mesurer.`);
+    throw new Error(`None of the ${paliers.length} tiers asked for reads the text it is given. `
+      + `There is nothing to degrade, so nothing to measure.`);
   }
   paliers = lisants;
 
@@ -216,26 +216,26 @@ if (isMain(import.meta)) {
   const combien = Number(process.argv.find((a) => a.startsWith("--cases="))?.split("=")[1] ?? 120);
   try {
     const r = await mesurer(combien);
-    console.log(`\n  Fidélité de la transcription : `
+    console.log(`\n  Transcription fidelity: `
       + `${writeRate(rate(Math.round(r.fideliteDeLaTranscription.taux * r.fideliteDeLaTranscription.n), r.fideliteDeLaTranscription.n))}`);
-    console.log(`  Sur ${r.documents} documents rendus en images, de `
-      + `${r.lignesParDocument.moyenne.toFixed(1)} ligne(s) en moyenne (au plus ${r.lignesParDocument.maximum}).`);
+    console.log(`  Over ${r.documents} documents rendered as images, of `
+      + `${r.lignesParDocument.moyenne.toFixed(1)} line(s) on average (at most ${r.lignesParDocument.maximum}).`);
     if (r.paliersEcartes.length) {
-      console.log(`  ${r.paliersEcartes.length} palier(s) écarté(s) — ${r.paliersEcartes.join(", ")} `
-        + `— ne lisent pas le texte : leur coût serait nul par construction.`);
+      console.log(`  ${r.paliersEcartes.length} tier(s) set aside — ${r.paliersEcartes.join(", ")} `
+        + `— do not read the text: their cost would be zero by construction.`);
     }
     console.log("");
-    console.log("  palier     depuis le texte        depuis l'image         écart");
+    console.log("  tier       from the text          from the image         gap");
     for (const p of r.paliers) {
       const T = rate(Math.round(p.surTexte.taux * p.surTexte.n), p.surTexte.n);
       const I = rate(Math.round(p.surImage.taux * p.surImage.n), p.surImage.n);
       console.log(`  ${p.palier.padEnd(10)} ${writeRate(T).padEnd(22)} ${writeRate(I).padEnd(22)} `
         + `${Math.abs(p.ecartEnPoints) < 0.05 ? "" : p.ecartEnPoints > 0 ? "-" : "+"}`
         + `${Math.abs(p.ecartEnPoints).toFixed(1)} pts`
-        + `${p.separable ? "" : "  (indiscernable du bruit)"}`);
+        + `${p.separable ? "" : "  (indistinguishable from noise)"}`);
     }
     writeFileSync(SORTIE, JSON.stringify(r, null, 2) + "\n");
-    console.log(`\n  Écrit dans ${SORTIE.split("/").pop()}\n`);
+    console.log(`\n  Written to ${SORTIE.split("/").pop()}\n`);
   } catch (e) {
     process.stderr.write(`\n${e instanceof Error ? e.message : String(e)}\n\n`);
     process.exit(1);
