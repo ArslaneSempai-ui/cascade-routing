@@ -128,6 +128,45 @@ Corollaire de la même famille : une boucle qui indexe à l'envers ne se signale
 Quand un script écrit N fichiers depuis N sources, vérifier **un** couple à la main coûte
 trois secondes et attrape l'inversion entière.
 
+## Un témoin écrit dans la forme de la garde n'éprouve que la garde
+
+Formulé par la session qui l'a payé : *« un témoin posé dans la même forme que la garde prouve
+que la garde lit cette forme, pas que la forme est là où se trouve la vérité. »*
+
+C'est plus profond que le négatif sans dénominateur, dont c'est la cause. Le contre-témoin
+existait, il était sincère, il tirait — et il tirait sur le modèle mental de celui qui avait
+écrit la garde, pas sur le fichier réel.
+
+Mesuré : une garde d'audit lisait `packages[].scripts.postinstall` dans le verrou npm. **npm
+n'y écrit jamais les scripts d'une dépendance** — il pose un booléen `hasInstallScript`. Le
+champ était donc toujours absent, la collection toujours vide, et le zéro publié ne disait
+rien. Le contre-témoin plantait un `postinstall` **dans `scripts`**, exactement là où la garde
+regardait : il prouvait que la garde lisait `scripts`, pas que `scripts` était l'endroit où npm
+écrit.
+
+**La faille est structurelle, pas individuelle** : elle atteint tout témoin écrit par la main
+qui a écrit la garde, parce que les deux partagent la même croyance sur la forme des données.
+Une autre main l'attrape en une lecture — c'est ce qui s'est passé ici, dans les deux sens, le
+même jour.
+
+**Remède :** le témoin se plante dans le **producteur**, pas dans le lecteur. Ici : installer
+un vrai paquet qui déclare un `postinstall`, et regarder ce que npm écrit — plutôt que d'écrire
+soi-même ce qu'on croit qu'il écrit. Quand c'est impossible, lire deux sources et **traiter leur
+désaccord comme une trouvaille** au lieu de choisir la plus commode.
+
+## Un seuil sur un total ne voit pas une partie cassée
+
+Instance de « une garde ne couvre que l'unité qu'elle compte », et elle vaut d'être nommée à
+part parce que la garde existait *pour* attraper ce cas.
+
+`poidsEnCache()` vérifie que le poids **total** du cache dépasse 50 Mo. Un `model.onnx` tronqué
+à 57 Mo — au lieu de 496 — le franchit tout seul, donc la fonction rend « cache présent » sur
+un cache cassé. Le processus sort ensuite en SIGABRT à 0,2 s sur `mutex lock failed`, message
+qui ne désigne rien, et on met ça sur le compte de la charge.
+
+**Un agrégat qui passe ne dit rien de ses parties.** Le seuil aurait dû porter sur le fichier
+qui décide, avec sa taille attendue, pas sur la somme de ce qui traîne dans le dossier.
+
 ## « Fourni » et « mesuré » sont deux questions, et c'est la seconde qu'on publie
 
 Un drapeau répond à *une chose a-t-elle été donnée ?* et décide une phrase qui répond à *une
