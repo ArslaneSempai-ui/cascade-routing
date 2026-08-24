@@ -3521,3 +3521,43 @@ test("le lecteur d'image distingue ses pannes, et une page sans texte n'en est p
     rmSync(dossier, { recursive: true, force: true });
   }
 });
+
+test("aucun chiffre de l'étage de lecture ne peut voyager sans son qualificatif", () => {
+  /*
+   * Une session pair a relevé le vrai défaut de la première version : la réserve — « images
+   * rendues, pas photographiées » — vivait dans une clé SŒUR du tableau des paliers. Un
+   * gabarit qui prend `tiers` et boucle dessus la laisse derrière, et l'écart s'affiche alors
+   * comme un coût observé.
+   *
+   * **Ce qui doit rester ensemble doit l'être structurellement, pas conventionnellement.**
+   * Une clé voisine est une liste de couverture écrite à la main déguisée en objet.
+   */
+  const chemin = join(fileURLToPath(new URL("..", import.meta.url)), "landing.json");
+  const bloc = (JSON.parse(readFileSync(chemin, "utf8")) as {
+    readingStage: null | { tiers: Record<string, unknown>[]; [k: string]: unknown };
+  }).readingStage;
+  if (bloc === null) return;   // pas de relevé sur cette machine : rien à tenir
+
+  assert.ok(Array.isArray(bloc.tiers) && bloc.tiers.length >= 2,
+    `${(bloc.tiers as unknown[])?.length} palier(s) dans le bloc : la lecture a échoué et ce cas `
+    + `ne vérifie plus rien.`);
+
+  for (const t of bloc.tiers) {
+    /* LE NOM PORTE LE QUALIFICATIF. `gapPoints` tout court se lirait comme un coût observé. */
+    assert.ok(!("gapPoints" in t),
+      `le palier \`${t.tier}\` publie \`gapPoints\` : un écart nu se lit comme un coût observé, `
+      + `alors qu'il est un plancher. Le nom doit le porter.`);
+    assert.equal(typeof t.gapPointsFloor, "number",
+      `le palier \`${t.tier}\` ne publie plus d'écart nommé plancher.`);
+    assert.equal(typeof t.beyondNoise, "boolean",
+      `le palier \`${t.tier}\` publie un écart sans dire s'il sort du bruit : un écart dont les `
+      + `intervalles se recouvrent n'est pas un coût, et l'afficher invente une dépense.`);
+    assert.ok(typeof t.floorBecause === "string" && t.floorBecause.length > 20,
+      `le palier \`${t.tier}\` n'emporte pas la raison du plancher. Une clé sœur se perd au `
+      + `premier gabarit qui ne prend que \`tiers\`.`);
+  }
+
+  /* Et la fidélité, qui porte la même condition, la porte dans son nom. */
+  assert.ok("wordFidelityOnRenderedImages" in bloc && !("wordFidelity" in bloc),
+    "la fidélité est publiée sans dire qu'elle porte sur des images rendues et non photographiées.");
+});

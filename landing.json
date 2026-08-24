@@ -1410,11 +1410,12 @@
       "moyenne": 1.9583333333333333,
       "maximum": 6
     },
-    "wordFidelity": {
+    "wordFidelityOnRenderedImages": {
       "rate": 0.9936177359758146,
       "low": 0.990052854656552,
       "high": 0.995910304204355,
-      "n": 2977
+      "n": 2977,
+      "onRenderedNotPhotographed": true
     },
     "tiers": [
       {
@@ -1427,8 +1428,9 @@
           "rate": 0.5666666666666667,
           "n": 600
         },
-        "gapPoints": 0,
-        "beyondNoise": false
+        "gapPointsFloor": 0,
+        "beyondNoise": false,
+        "floorBecause": "images rendues et non photographiées, documents courts"
       },
       {
         "tier": "small",
@@ -1440,8 +1442,9 @@
           "rate": 0.6033333333333334,
           "n": 600
         },
-        "gapPoints": 10.499999999999998,
-        "beyondNoise": true
+        "gapPointsFloor": 10.499999999999998,
+        "beyondNoise": true,
+        "floorBecause": "images rendues et non photographiées, documents courts"
       },
       {
         "tier": "large",
@@ -1453,8 +1456,9 @@
           "rate": 0.795,
           "n": 600
         },
-        "gapPoints": 1.0000000000000009,
-        "beyondNoise": false
+        "gapPointsFloor": 1.0000000000000009,
+        "beyondNoise": false,
+        "floorBecause": "images rendues et non photographiées, documents courts"
       }
     ],
     "excludedTiers": [

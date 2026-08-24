@@ -1056,18 +1056,35 @@ export function construire(p: Profiles): unknown {
         measuredAt: r.mesureLe,
         documents: r.documents,
         linesPerDocument: r.lignesParDocument,
-        wordFidelity: {
+        /*
+         * LE QUALIFICATIF EST DANS LE NOM, ET LA RÉSERVE DANS LE MÊME OBJET.
+         *
+         * Première version : `gapPoints` et un `caveat` en clé sœur. Une session pair l'a
+         * relevé et elle a raison — un gabarit qui prend `tiers` et boucle dessus laisse la
+         * réserve derrière, et l'écart s'affiche alors comme un coût observé. **Ce qui doit
+         * rester ensemble doit l'être structurellement, pas conventionnellement**, sinon
+         * c'est une liste de couverture écrite à la main déguisée en objet.
+         *
+         * Donc : le nom porte le qualificatif — un chiffre voyage seul — et chaque palier
+         * emporte sa propre raison. La répétition est le prix de l'inséparabilité.
+         */
+        wordFidelityOnRenderedImages: {
           rate: r.fideliteDeLaTranscription.taux,
           low: r.fideliteDeLaTranscription.bas,
           high: r.fideliteDeLaTranscription.haut,
           n: r.fideliteDeLaTranscription.n,
+          onRenderedNotPhotographed: true,
         },
         tiers: r.paliers.map((x) => ({
           tier: x.palier,
           fromText: { rate: x.surTexte.taux, n: x.surTexte.n },
           fromImage: { rate: x.surImage.taux, n: x.surImage.n },
-          gapPoints: x.ecartEnPoints,
+          /* PLANCHER, pas coût observé : le nom le dit, donc le chiffre ne peut plus voyager
+             sans. Voir `beyondNoise` avant de l'afficher — un écart dont les intervalles se
+             recouvrent n'est pas un coût, c'est du bruit. */
+          gapPointsFloor: x.ecartEnPoints,
           beyondNoise: x.separable,
+          floorBecause: "images rendues et non photographiées, documents courts",
         })),
         excludedTiers: r.paliersEcartes,
         caveat: "Les images sont rendues, pas photographiées, et les documents sont courts. "
