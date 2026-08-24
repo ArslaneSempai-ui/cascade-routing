@@ -1,0 +1,90 @@
+# Pièges payés ici
+
+Ce qui est **mécanisable** vit dans les tests et dans `scripts/pieges.mjs` du skill
+`equipe` : une règle qui peut se déclencher toute seule ne se met pas dans un document.
+Ce fichier porte le reste — ce qui demande un jugement, et que plusieurs sessions
+travaillant sur ce dépôt perdraient sinon en même temps.
+
+Chaque entrée dit **ce qui s'est passé**, pas ce qu'il faudrait faire en général.
+
+---
+
+## Entre sessions : toujours des chemins absolus
+
+`scratchpad/correctifs/` ne désigne rien depuis une autre session — chacune a le sien, sous
+un identifiant différent. Un chemin relatif échangé entre sessions est un chemin qui ne
+mène nulle part, et le destinataire perd le temps de le chercher avant de le demander.
+
+Vaut aussi pour `./`, `../`, et tout ce qui dépend d'un dossier courant : le dossier courant
+d'une session n'est pas celui d'une autre, et il ne survit même pas d'un appel au suivant.
+
+## Un harnais qui enchaîne des commandes mesure son propre bruit
+
+Une passe sur les 37 commandes npm a produit trois traces de pile. En rejouant chaque cas
+dans un arbre remis à neuf, **deux n'ont pas survécu** : `figures` ne cassait qu'après un
+autre `figures`, qui avait réécrit le fichier qu'il lit. Dix fichiers avaient bougé pendant
+la passe et rien dans la sortie ne le disait.
+
+**Remède :** `git checkout -- .` puis `git clean -fdq` sur les dossiers que les commandes
+écrivent, **avant chaque lancement**. Si c'est trop coûteux pour la passe entière, le faire
+au moins pour **rejouer** chaque constat avant de le publier. Un constat qui n'a pas été
+reproduit isolément n'est pas un constat.
+
+Cette règle-là est mécanisée : `harnais-sans-remise-a-neuf` dans `scripts/pieges.mjs`.
+
+## Une liste de noms tapée à la main n'est pas la liste des commandes
+
+`npm run figer -- --nimportequoi` sortait 1 sans rien dire, et ça a été rapporté comme un
+échec muet du dépôt. **`figer` n'est pas un script de `package.json`** : il avait été tapé
+à la main dans une liste de vérification. Le code 1 venait de npm, et `--silent` cachait son
+`Missing script: "figer"`.
+
+**Remède :** toute liste de commandes se **dérive** de `package.json`. Si une liste doit
+exister à la main, un test la confronte à sa source. Et ne pas lancer un audit avec
+`--silent` : ce qu'on fait taire est exactement ce qui explique le code de sortie.
+
+## Un test qui cherche un NOM vérifie une forme, pas une propriété
+
+Le cas qui exige `refuserDrapeauxInconnus` dans chaque commande cherchait d'abord la chaîne
+dans le fichier. **La ligne d'`import` suffisait à le satisfaire** : en retirant l'appel de
+`mur.ts`, le cas restait vert.
+
+**Remède :** chercher l'**appel**, en excluant les lignes d'import — et le prouver en
+cassant **une seule** garde puis en la remettant. Un témoin qui ne peut pas échouer est une
+décoration.
+
+## Un témoin qui compare à un compteur non vide passe dans les deux sens
+
+Le même fichier vérifiait qu'un `--` seul ne déclenche rien avec
+`assert.deepEqual(sorties, [2])` — alors qu'un `2` s'y trouvait déjà depuis le cas
+précédent. Il passait que `--` ait tiré ou non.
+
+**Remède :** remettre le compteur à zéro avant chaque assertion, ou repartir d'un état neuf.
+
+## Changer `cli.ts` invalide la galerie versionnée
+
+`failures-reference.json` est clé sur la **fermeture des sources** de `failures.ts`, qui
+importe `cli.ts`. Toute modification de `cli.ts` change donc la clé, et le cas « la galerie
+versionnée porte encore la clé que le code produit » passe au rouge.
+
+Ce n'est pas un défaut : c'est la garde qui fait son travail. Mais la régénération **charge
+les encodeurs**, donc elle se planifie — voir la règle suivante.
+
+## Deux passes qui chargent des modèles ne peuvent pas coexister
+
+Une charge à 17,2 et un `libc++abi: mutex lock failed` pendant que deux sessions
+rechargeaient les encodeurs en même temps. Aucune des deux mesures ne valait rien, et
+l'abandon natif ressemble à un défaut du code.
+
+**Remède :** **annoncer avant** de lancer une passe qui charge des modèles, et attendre que
+la précédente ait rendu la main. Vérifier plutôt qu'annoncer : `sysctl -n vm.loadavg` et
+`ps -A -o %cpu=,command= | grep node`.
+
+## `pgrep -f "a\|b"` ne trouve jamais rien
+
+`pgrep` attend une expression **étendue**, où `\|` est un `|` littéral. Le motif ne peut
+alors rien trouver, et son zéro se lit « rien ne tourne ». Conséquence payée : une passe de
+calcul crue morte, relancée par-dessus, deux passes à 330 % de CPU chacune.
+
+**Remède :** `pgrep -f 'a|b'`, et prouver le relevé pendant que la chose cherchée tourne —
+trois secondes suffisent à démasquer un motif muet.
