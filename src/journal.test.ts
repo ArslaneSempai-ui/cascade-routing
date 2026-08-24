@@ -945,7 +945,7 @@ test("aucune sortie française sur les commandes déjà rendues à l'acheteur", 
   const dossier = fileURLToPath(new URL(".", import.meta.url));
   /** Les commandes dont la sortie a été rendue à l'acheteur, et qui ne doivent plus régresser. */
   const RENDUES = ["premiere-reponse.mjs", "verifier-rapport.mjs", "your-cases.ts", "server.ts",
-    "intake.ts", "licences.ts", "menace.ts", "egress.ts", "entree.ts", "measure.ts"];
+    "intake.ts", "licences.ts", "menace.ts", "egress.ts", "entree.ts", "measure.ts", "signal.ts"];
   /*
    * UNE LISTE DE MOTS ATTRAPE LA PROSE, PAS LES ÉTIQUETTES.
    *
@@ -1019,7 +1019,7 @@ test("aucune sortie française sur les commandes déjà rendues à l'acheteur", 
    * pas. Comparer les deux chiffres n'aurait aucun sens, et le prochain élargissement fera
    * pareil.
    */
-  assert.ok(restantes.length <= 23,
+  assert.ok(restantes.length <= 22,
     `${restantes.length} commande(s) parlent encore français : ${restantes.slice(0, 6).join(", ")}…\n`
     + "  → le compte ne doit que baisser. S'il monte, une commande neuve est arrivée en français.");
 });

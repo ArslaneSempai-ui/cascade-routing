@@ -277,9 +277,9 @@ if (isMain(import.meta)) {
   if (!f) {
     /* UN REFUS A BESOIN D'UNE ISSUE, et `data/` n'étant pas versionné, un clone frais tombe
        toujours ici. Nommer le journal et la commande coûte trois lignes. */
-    console.error(`\n  Ce calcul rejoue les tentatives du corpus dur, et elles ne sont pas là.`);
-    console.error(`  \`data/\` n'est pas versionné : un clone frais n'en a jamais, c'est normal.`);
-    console.error(`\n  Le journal du corpus dur manque  →  npm run dur\n`);
+    console.error(`\n  This calculation replays the hard-corpus attempts, and they are not here.`);
+    console.error(`  \`data/\` is not versioned: a fresh clone never has any, which is normal.`);
+    console.error(`\n  The hard-corpus journal is missing  →  npm run dur\n`);
     process.exit(1);
   }
   const { tentatives } = lireJournal(f);
@@ -431,9 +431,9 @@ if (isMain(import.meta)) {
   const exposantUneConfiance = GENERATIFS_PUBLICS.filter(() => demandeUneConfiance).length;
 
   const cible = toutes.filter((t) => t.faux).length;
-  console.log(`\nDénominateur : ${DENOMINATEUR} — ${toutes.length} valeurs.`);
-  console.log(`Cible : tout ce qui n'est pas \`clean\` — ${cible} valeurs, soit ${(100 * cible / toutes.length).toFixed(1)} %.`);
-  console.log(`C'est aussi la précision qu'atteint un signal tiré au hasard.\n`);
+  console.log(`\nDenominator: ${DENOMINATEUR} — ${toutes.length} values.`);
+  console.log(`Target: everything that is not \`clean\` — ${cible} values, that is ${(100 * cible / toutes.length).toFixed(1)} %.`);
+  console.log(`That is also the precision a signal drawn at random reaches.\n`);
   /* À l'écran comme dans le fichier : le taux ne sort jamais sans sa borne et son n, et il
      ne sort pas du tout sous le seuil de rapportabilité. Un « 100,0 % » sur trois
      déclenchements se lit exactement comme un « 100,0 % » sur mille. */
@@ -441,21 +441,21 @@ if (isMain(import.meta)) {
     : !t.rapportable ? `— (n=${t.n}, trop peu)`.padStart(21)
     : `${(t.taux * 100).toFixed(1)} % [${(t.bas * 100).toFixed(0)}–${(t.haut * 100).toFixed(0)}] n=${t.n}`.padStart(21);
   for (const v of verdicts) {
-    console.log(`  ${v.nom.padEnd(24)} tire ${String(v.declenche).padStart(3)}`
-      + `  précision ${ecrire(v.precision)}`
-      + `  rappel ${ecrire(v.rappel)}`
-      + `  fausses alertes ${String(v.faussesAlertes).padStart(3)}`
+    console.log(`  ${v.nom.padEnd(24)} fires ${String(v.declenche).padStart(3)}`
+      + `  precision ${ecrire(v.precision)}`
+      + `  recall ${ecrire(v.rappel)}`
+      + `  false alarms ${String(v.faussesAlertes).padStart(3)}`
       + `  appels +${v.coutEnAppels}`
       + `  ${v.bat ? "bat le hasard" : "ne bat pas"}`);
   }
-  console.log(`\n  banc valide (l'oracle sépare parfaitement) : ${bancValide ? "OUI" : "NON — rien au-dessus ne vaut"}`);
-  console.log(`  paliers exposant une confiance : ${exposantUneConfiance} sur ${GENERATIFS_PUBLICS.length} examinés\n`);
-  console.log("  ce que l'escalade rapporterait :");
+  console.log(`\n  bench valid (the oracle separates perfectly): ${bancValide ? "YES" : "NO — nothing above is worth anything"}`);
+  console.log(`  tiers exposing a confidence: ${exposantUneConfiance} of ${GENERATIFS_PUBLICS.length} examined\n`);
+  console.log("  what escalation would return:");
   for (const e of escalade) {
-    console.log(`    ${e.bas} → ${e.haut}   ${e.bas} rate ${e.basFaux}, dont ${e.haut} sauve ${e.escaladeUtile}`
-      + ` (${(100 * (e.partUtileParmiLesEchecs ?? 0)).toFixed(0)} %) — ${e.escaladeInutile} escalades pour rien`);
-    console.log(`      guidée par signal : ${e.guideeParSignal.escalades} escalades, ${e.guideeParSignal.gagnes} gains`
-      + `  |  hasard à dépense égale : ${e.temoinHasardMemeDepense.gagnesMoyen}  → ${e.batLeHasard ? "BAT" : "ne bat pas"}`);
+    console.log(`    ${e.bas} → ${e.haut}   ${e.bas} misses ${e.basFaux}, of which ${e.haut} saves ${e.escaladeUtile}`
+      + ` (${(100 * (e.partUtileParmiLesEchecs ?? 0)).toFixed(0)} %) — ${e.escaladeInutile} escalations for nothing`);
+    console.log(`      signal-guided: ${e.guideeParSignal.escalades} escalations, ${e.guideeParSignal.gagnes} gains`
+      + `  |  chance at equal spend: ${e.temoinHasardMemeDepense.gagnesMoyen}  → ${e.batLeHasard ? "BEATS" : "does not beat"}`);
   }
 
   writeFileSync(SORTIE, JSON.stringify({
@@ -493,5 +493,5 @@ if (isMain(import.meta)) {
       + "non validable sur les données disponibles même s'il fonctionne — ce qui n'est pas une "
       + "raison de le déclarer bon, ni mauvais.",
   }, null, 2) + "\n");
-  console.log(`\nÉcrit dans ${SORTIE.split("/").pop()}\n`);
+  console.log(`\nWritten to ${SORTIE.split("/").pop()}\n`);
 }
