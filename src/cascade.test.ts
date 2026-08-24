@@ -1,4 +1,5 @@
 import { test } from "node:test";
+import { INTERVALLE_EGRESS } from "./egress.ts";
 import { porteDesInvisibles, melangeDEcritures, horsRepertoire } from "./signal.ts";
 import { poidsEnCache } from "./tiers.ts";
 import { fileURLToPath } from "node:url";
@@ -4075,6 +4076,9 @@ test("un relevé publié porte les paramètres sous lesquels le code le prendrai
        jour où l'un des deux bouge, et le client partirait sur un réglage périmé. */
     analystAnnualCost: ASSUMPTIONS.analystAnnualCost,
     humanSeconds: ASSUMPTIONS.humanSeconds,
+    /* L'intervalle d'échantillonnage du contrôle de sortie réseau : c'est un RÉGLAGE, pas un
+       compte, et un relevé pris à 250 ms ne dit pas la même chose qu'un relevé pris à 2 s. */
+    intervalleMs: INTERVALLE_EGRESS,
   };
   /*
    * Ce qui est un COMPTE de la passe, pas un réglage du code — donc rien à confronter.
@@ -4091,7 +4095,10 @@ test("un relevé publié porte les paramètres sous lesquels le code le prendrai
        commits ont été balayés, combien de secrets sont sortis, combien de témoins ont
        traversé. Qualifiés par leur fichier, comme le reste. */
     "menace-historique.json:commits", "menace-historique.json:trouves",
-    "menace-historique.json:temoins", "menace-historique.json:declares"]);
+    "menace-historique.json:temoins", "menace-historique.json:declares",
+    /* Le relevé de sortie réseau : `releves` est le nombre d'échantillons de SA passe et
+       `codeSortie` celui de la commande observée — deux comptes, pas des réglages. */
+    "egress.json:releves", "egress.json:codeSortie"]);
   /* Le gabarit porte AUSSI les hypothèses éditables : elles se confrontent au code comme les
      autres, mais sous leur propre nom. */
   for (const k of ["volume", "budget", "latencyBudgetMs", "pricePerThousandSmall",
@@ -4153,7 +4160,7 @@ test("le contrôle de sortie réseau distingue la boucle locale, et son plancher
   assert.equal(avecOllama.concluant, true);
   assert.equal(avecOllama.sorties.length, 0,
     "une connexion locale est comptée comme une sortie : le verdict devient inatteignable.");
-  assert.match(avecOllama.verdict, /aucune sortie/,
+  assert.match(avecOllama.verdict, /no outbound traffic/,
     "avec un modèle local, l'outil ne conclut plus qu'aucune donnée n'est sortie.");
 
   /* Une vraie sortie doit être vue. */

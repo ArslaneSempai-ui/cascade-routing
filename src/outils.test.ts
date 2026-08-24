@@ -117,7 +117,7 @@ test("chaque fichier de data/ a la forme que le générateur suppose", () => {
     "data/profiles.json": ["measuredAt", "extraction", "classification"],
     "retractations.json": ["entries"],
     "data/fuite.json": ["palier", "champs"],
-    "data/egress.json": ["mesureLe", "connexions", "verdict"],
+    "egress.json": ["mesureLe", "connexions", "verdict"],
     "benchmarks/banking77.json": ["jeu", "source", "cas", "references", "paliers"],
   };
   /*

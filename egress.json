@@ -1,0 +1,14 @@
+{
+  "mesureLe": "2026-08-24T19:55:56.409Z",
+  "commande": "node src/your-cases.ts --cases=<file>",
+  "code": {
+    "commit": "9399e0e"
+  },
+  "releves": 21,
+  "intervalleMs": 250,
+  "codeSortie": 0,
+  "connexions": [],
+  "bouclesLocales": [],
+  "verdict": "no connection observed for the whole pass",
+  "limite": "Sampling sees the connections open at the instants it looks; it does not rule out a short send between two samples. What it establishes is a floor, not a proof — and the floor is what a buyer can check for themselves by re-running it."
+}

@@ -33,7 +33,26 @@ import { dirname } from "node:path";
 import { isMain } from "./cli.ts";
 import { fileURLToPath } from "node:url";
 
-const FICHIER = fileURLToPath(new URL("../data/egress.json", import.meta.url));
+/*
+ * LE RELEVÉ VA À LA RACINE, PAS DANS `data/`.
+ *
+ * Il écrivait dans `data/egress.json`, et `data/` est ignoré par git — délibérément : il
+ * porte les mesures faites sur les données d'un client. Ce relevé-ci n'en contient aucune :
+ * il enregistre les hôtes contactés pendant une passe et un verdict. Mais il ne voyageait
+ * pas.
+ *
+ * Conséquence : le README promet « nothing leaves your machine » et un acheteur qui clone ne
+ * trouve AUCUNE preuve — la commande qui l'établit existe, son résultat n'est nulle part.
+ * Tous les autres relevés du dépôt sont publiés ; celui qui porte l'argument de vente le
+ * plus fort était le seul à rester sur la machine de l'auteur.
+ *
+ * C'est « un chiffre dérivé de quelque chose que git ne transporte pas », que ce dépôt a
+ * déjà payé sept fois.
+ */
+/** L'intervalle d'échantillonnage par défaut, en millisecondes. */
+export const INTERVALLE_EGRESS = 250;
+
+const FICHIER = fileURLToPath(new URL("../egress.json", import.meta.url));
 
 export type Connexion = { hote: string; port: string; etat: string; vu: number };
 
@@ -96,9 +115,9 @@ export function verdictEgress(o: { releves: number; connexions: { hote: string; 
     concluant: true, locales, sorties,
     verdict: sorties.length === 0
       ? (locales.length === 0
-        ? "aucune connexion observée pendant toute la passe"
-        : `aucune sortie observée ; ${locales.length} connexion(s) vers cette machine seulement`)
-      : `${sorties.length} hôte(s) hors de cette machine contacté(s)`,
+        ? "no connection observed for the whole pass"
+        : `no outbound traffic observed; ${locales.length} connection(s) to this machine only`)
+      : `${sorties.length} host(s) outside this machine were contacted`,
   };
 }
 
@@ -166,7 +185,20 @@ export function lsofRepond(): boolean {
 }
 
 if (isMain(import.meta)) {
-  const args = process.argv.slice(2).filter((a) => !a.startsWith("--"));
+  /*
+   * LES ARGUMENTS DE LA COMMANDE SURVEILLÉE NE SE JETTENT PAS.
+   *
+   * Ce filtre écartait tout ce qui commence par `--`, y compris les arguments DESTINÉS à la
+   * commande observée. Conséquence mesurée : `egress src/your-cases.ts --cases=fichier.csv`
+   * lançait `node src/your-cases.ts` tout court, qui affiche son usage et s'arrête — zéro
+   * relevé, verdict non concluant. La seule commande que ce contrôle ne pouvait pas observer
+   * était le CHEMIN CLIENT, c'est-à-dire exactement celle dont il établit la promesse.
+   *
+   * Ce qui suit le nom du script lui appartient. Ce qui le précède est pour nous.
+   */
+  const tous = process.argv.slice(2);
+  const iScript = tous.findIndex((a) => !a.startsWith("--"));
+  const args = iScript === -1 ? [] : tous.slice(iScript);
   /*
    * PAS DE COMMANDE PAR DÉFAUT, ET SURTOUT PAS CELLE-LÀ.
    *
@@ -184,7 +216,9 @@ if (isMain(import.meta)) {
     process.exit(1);
   }
   const commande = args;
-  const intervalle = Number(process.argv.find((a) => a.startsWith("--every="))?.split("=")[1] ?? 250);
+  /* L'intervalle par défaut est nommé et exporté : un relevé publié porte sa valeur, et une
+     garde le confronte au code. Un chiffre de réglage recopié à deux endroits dérive. */
+  const intervalle = Number(process.argv.find((a) => a.startsWith("--every="))?.split("=")[1] ?? INTERVALLE_EGRESS);
 
   if (!lsofRepond()) {
     console.error("\n`lsof` is not available: this check can observe nothing, so it does not");
@@ -198,7 +232,34 @@ if (isMain(import.meta)) {
   console.log(`Sampled every ${intervalle} ms. Two results are publishable: no`);
   console.log(`connection, or connections to the model hub only.\n`);
 
-  const enfant = spawn("node", commande, { stdio: ["ignore", "ignore", "ignore"] });
+  /*
+ * CE QUI EST ENREGISTRÉ NE DOIT PAS PORTER MA MACHINE.
+ *
+ * Le relevé notait la commande telle quelle, arguments compris — donc un chemin absolu vers
+ * un corpus d'épreuve, contenant le nom d'utilisateur système. Dans un fichier destiné à un
+ * dépôt public. « Ce que la page révèle sans le dire : chemins de fichiers, noms
+ * d'utilisateur système » est une règle de ce projet, et son propre relevé de confidentialité
+ * la violait.
+ *
+ * Le nom du script suffit à dire ce qui a été observé ; le chemin d'un fichier d'entrée
+ * n'apprend rien à un lecteur et le renseigne sur nous.
+ */
+/** Le commit sous lequel ce relevé a été pris, ou son absence dite. */
+function commitCourant(): string {
+  try {
+    return execFileSync("git", ["rev-parse", "--short", "HEAD"], { encoding: "utf8" }).trim();
+  } catch { return "hors dépôt"; }
+}
+
+function commandePubliable(c: readonly string[]): string {
+  return "node " + c.map((a) => {
+    const m = /^(--[a-z-]+=)(.*)$/.exec(a);
+    if (m) return `${m[1]}<file>`;
+    return a.includes("/") && !a.startsWith("src/") ? "<file>" : a;
+  }).join(" ");
+}
+
+const enfant = spawn("node", commande, { stdio: ["ignore", "ignore", "ignore"] });
   const vues = new Map<string, Connexion>();
   let releves = 0;
 
@@ -240,9 +301,12 @@ if (isMain(import.meta)) {
     console.log(`At least ${ASSEZ} are needed: watch a real measurement, not an instant command.\n`);
     process.exitCode = 1;
     writeFileSync(FICHIER, JSON.stringify({
-      mesureLe: new Date().toISOString(), commande: `node ${commande.join(" ")}`,
+      mesureLe: new Date().toISOString(), commande: commandePubliable(commande),
+    /* LE COMMIT, COMME TOUT RELEVÉ DE CE DÉPÔT. Sans lui, un lecteur ne peut pas extraire le
+       code qui a produit ce verdict — et c'est la seule raison d'enregistrer un commit. */
+    code: { commit: commitCourant() },
       releves, intervalleMs: intervalle, codeSortie: code, connexions: [],
-      verdict: `non concluant : ${releves} relevés, il en faut ${ASSEZ}`,
+      verdict: `inconclusive: ${releves} samples, ${ASSEZ} are needed`,
     }, null, 2));
     process.exit(1);
   }
@@ -253,18 +317,23 @@ if (isMain(import.meta)) {
 
   const releve = {
     mesureLe: new Date().toISOString(),
-    commande: `node ${commande.join(" ")}`,
+    commande: commandePubliable(commande),
+    /* LE COMMIT, COMME TOUT RELEVÉ DE CE DÉPÔT. Sans lui, un lecteur ne peut pas extraire le
+       code qui a produit ce verdict — et c'est la seule raison d'enregistrer un commit. La
+       garde du dépôt l'a exigé dès que ce relevé est devenu versionné, ce qui est le bon
+       moment pour l'exiger. */
+    code: { commit: commitCourant() },
     releves, intervalleMs: intervalle, codeSortie: code,
     connexions: sorties,
     bouclesLocales: locales,
     verdict: sorties.length === 0
       ? (locales.length === 0
-        ? "aucune connexion observée pendant toute la passe"
-        : `aucune sortie observée ; ${locales.length} connexion(s) vers cette machine seulement`)
-      : `${sorties.length} hôte(s) hors de cette machine contacté(s)`,
-    limite: "Un échantillonnage voit les connexions ouvertes aux instants où il regarde ; il "
-      + "n'exclut pas un envoi bref entre deux relevés. Une preuve complète demanderait une "
-      + "capture au niveau du noyau, avec les privilèges correspondants.",
+        ? "no connection observed for the whole pass"
+        : `no outbound traffic observed; ${locales.length} connection(s) to this machine only`)
+      : `${sorties.length} host(s) outside this machine were contacted`,
+    limite: "Sampling sees the connections open at the instants it looks; it does not rule "
+      + "out a short send between two samples. What it establishes is a floor, not a proof — "
+      + "and the floor is what a buyer can check for themselves by re-running it.",
   };
   mkdirSync(dirname(FICHIER), { recursive: true });
   writeFileSync(FICHIER, JSON.stringify(releve, null, 2));
@@ -284,5 +353,5 @@ if (isMain(import.meta)) {
     console.log("\nIf these are model hubs, the sentence to publish becomes: \u201cnone of your");
     console.log("data leaves; the only traffic is the one-time download of public weights\u201d.\n");
   }
-  console.log(`Record written to data/egress.json.\n`);
+  console.log(`Record written to egress.json.\n`);
 }

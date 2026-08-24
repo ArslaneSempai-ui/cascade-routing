@@ -1054,3 +1054,31 @@ test("l'intégration continue clone l'historique entier, sinon quatre cas tomben
     + "  chez elle et nulle part ailleurs, et personne ne saura pourquoi.");
 });
 function t2skip(): void { throw new Error(".github/workflows/verifier.yml est absent : la passe d'intégration continue a disparu."); }
+
+test("le relevé qui porte la promesse la plus vendable voyage avec le dépôt", () => {
+  /*
+   * « Nothing leaves your machine » est l'argument le plus fort du README, et `npm run egress`
+   * est la commande qui l'établit. Elle écrivait son relevé dans `data/`, que git ignore
+   * délibérément parce qu'il porte les mesures faites sur les données d'un client. Ce
+   * relevé-ci n'en contient aucune — des hôtes contactés et un verdict — mais il ne voyageait
+   * pas. Un acheteur qui clone lisait la promesse et ne trouvait aucune preuve.
+   *
+   * « Un chiffre dérivé de quelque chose que git ne transporte pas » : ce dépôt l'a déjà payé
+   * sept fois, et la huitième portait son meilleur argument.
+   */
+  const src = readFileSync(new URL("./egress.ts", import.meta.url), "utf8");
+  const cible = /new URL\("\.\.\/([^"]+)", import\.meta\.url\)/.exec(
+    src.slice(src.indexOf("const FICHIER")))?.[1];
+  assert.ok(cible, "egress.ts ne dit plus où il écrit : ce cas ne vérifie rien.");
+  assert.ok(!cible!.startsWith("data/"),
+    `egress écrit dans « ${cible} », que git ignore. Le verdict qui porte la promesse la plus\n`
+    + "  vendable du dépôt resterait sur la machine de l'auteur, et un acheteur qui clone\n"
+    + "  lirait la promesse sans trouver la preuve.");
+
+  /* ET IL DOIT ÊTRE IGNORÉ NULLE PART. Un fichier écrit à la racine mais couvert par une
+     règle de .gitignore ne voyagerait pas davantage. */
+  const ignore = readFileSync(new URL("../.gitignore", import.meta.url), "utf8");
+  const motifs = ignore.split("\n").map((l) => l.trim()).filter((l) => l && !l.startsWith("#"));
+  const couvert = motifs.filter((m) => m === cible || m === `/${cible}` || (m.endsWith("/") && cible!.startsWith(m)));
+  assert.deepEqual(couvert, [], `« ${cible} » est couvert par .gitignore : ${couvert.join(", ")}.`);
+});
