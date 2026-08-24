@@ -69,13 +69,13 @@
       "separable": false
     }
   ],
-  "mesureLe": "2026-08-24T00:40:45.040Z",
+  "mesureLe": "2026-08-24T00:49:18.420Z",
   "code": {
-    "commit": "3ea3e3b",
-    "sale": true
+    "commit": "cfdaa84",
+    "sale": false
   },
   "journalDeLaPasse": {
-    "fichier": "2026-08-24T00-34-00-679Z-ocr.jsonl",
+    "fichier": "2026-08-24T00-42-42-312Z-ocr.jsonl",
     "tentatives": 3600
   }
 }
