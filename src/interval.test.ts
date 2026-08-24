@@ -13,7 +13,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { wilson, rate, distinguishable, precision , pairedVerdict } from "./interval.ts";
+import { wilson, rate, distinguishable, precision , pairedVerdict, cellulesDeTaux, writeRate, ENOUGH } from "./interval.ts";
 
 test("un compte de succès hors de [0, n] est refusé, pas absorbé", () => {
   for (const [s, n] of [[2, 1], [-1, 10], [NaN, 10], [21, 20]] as const) {
@@ -141,4 +141,31 @@ test("les petits échantillons n'ont pas bougé", () => {
   assert.equal(pairedVerdict(3, 7).p!.toFixed(6), "0.343750");
   assert.equal(pairedVerdict(530, 470).p!.toFixed(6), "0.062023");
   assert.equal(pairedVerdict(0, 0).decidable, false, "aucun cas n'a changé de verdict");
+});
+
+/*
+ * LA CONDITION DE PUBLICATION NE VIT QU'À UN ENDROIT.
+ *
+ * Le rapport écrit au client fabriquait ses cellules à la main et ne regardait jamais
+ * `reportable`. La console refusait « 100 % » sur un dossier ; le fichier l'écrivait. Le
+ * fichier est celui qu'on classe et qu'on transfère.
+ */
+test("un taux sous le seuil ne se cite pas, dans un tableau comme dans la console", () => {
+  for (const [s, n] of [[1, 1], [3, 3], [15, 19]] as const) {
+    const c = cellulesDeTaux(rate(s, n));
+    assert.ok(!/%/.test(c.taux),
+      `n=${n} : « ${c.taux} » cite un pourcentage que la console refuse de citer.`);
+    assert.match(c.intervalle, new RegExp(`n < ${ENOUGH}`), "et la cellule dit pourquoi.");
+    assert.match(writeRate(rate(s, n)), /too few to quote/, "témoin : la console refuse bien.");
+  }
+});
+
+test("au seuil, les deux chemins citent le même chiffre", () => {
+  const r = rate(16, ENOUGH);
+  const c = cellulesDeTaux(r);
+  assert.equal(c.taux, "80.0 %", "témoin positif : le vert doit être atteignable.");
+  assert.equal(c.intervalle, "[58–92]");
+  assert.ok(writeRate(r).startsWith("80.0 % [58–92]"),
+    "un tableau et une console qui divergent d'un point rendraient deux documents\n"
+    + "  incomparables issus de la même mesure.");
 });

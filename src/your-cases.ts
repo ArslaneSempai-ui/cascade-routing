@@ -33,7 +33,7 @@ import { isMain } from "./cli.ts";
 import { ouvrirJournal, issue } from "./journal.ts";
 import { loadExtractors, loadClassifiers, loadGeneratifs, extract, correct, classerParmi, MODELES_LOCAUX, questionPour } from "./tiers.ts";
 import { ENCODEURS, GENERATIFS } from "./paliers.ts";
-import { rate, writeRate, distinguishable, CONFIANCE, ENOUGH } from "./interval.ts";
+import { rate, writeRate, cellulesDeTaux, distinguishable, CONFIANCE, ENOUGH } from "./interval.ts";
 import { table } from "./figures.ts";
 
 import type { TierName } from "./paliers.ts";
@@ -121,6 +121,24 @@ export const MONTRES = 12;
 
 /** Au-delà de ce nombre d'appels au modèle, on demande une confirmation explicite. */
 export const PLAFOND_APPELS = 10_000;
+
+/**
+ * `--sample`, lu comme une entrée et non comme une conversion.
+ *
+ * Rendre `undefined` veut dire « le drapeau n'a pas été donné ». Toute autre forme illisible
+ * s'arrête ici : un drapeau ignoré en silence est un résultat qui répond à une autre question
+ * que celle qu'on a posée.
+ */
+export function lireEchantillon(brut: string | undefined): number | undefined {
+  if (brut === undefined) return undefined;
+  const n = Number(brut);
+  if (brut.trim() === "" || !Number.isFinite(n) || !Number.isInteger(n) || n < 1) {
+    throw new Error(`--sample=${brut} is not a whole number of cases (1 or more).\n`
+      + `  Left as it was, this flag would have been ignored without a word and the whole\n`
+      + `  corpus measured — a figure answering a different question than the one you asked.`);
+  }
+  return n;
+}
 
 export function questionSure(champ: string, fournies?: Record<string, string>): string {
   const q = questionPour(champ, fournies);
@@ -430,9 +448,79 @@ export function correspondance(cas: Cas[], champs: string[], s: SortiesFournies)
   return { manquants, inconnus, total, champsSansAucuneValeur: champs.filter((c) => !s.issues[c]) };
 }
 
-function chargerRegles(chemin: string): Record<string, RegExp> {
-  const brut = JSON.parse(readFileSync(chemin, "utf8")) as Record<string, string>;
-  return Object.fromEntries(Object.entries(brut).map(([champ, motif]) => [champ, new RegExp(motif)]));
+/*
+ * `--rules` EST UNE ENTRÉE CLIENT, ET C'ÉTAIT LA SEULE QUI NE SE FAISAIT PAS TRAITER
+ * COMME TELLE.
+ *
+ * `--questions` refuse un fichier illisible, refuse une valeur qui n'est pas une chaîne, et
+ * nomme la clé fautive. Ici, `JSON.parse` puis `Object.entries` puis `new RegExp` acceptaient
+ * tout, et chaque forme d'erreur avait sa façon de passer inaperçue :
+ *
+ *   `["a","b"]`      → Object.entries d'un tableau rend { "0": /a/, "1": /b/ } : des règles
+ *                      pour des colonnes nommées « 0 » et « 1 », qui n'existent pas. Aucune
+ *                      règle ne s'applique, AUCUNE ligne `rules` n'apparaît, et le rapport
+ *                      écrit quand même « That your regexes generalise beyond these cases ».
+ *                      Mesuré : le client passe un fichier, rien n'est mesuré, et le rapport
+ *                      affirme le contraire de ce qui s'est passé.
+ *   `{"champ": 42}`  → new RegExp(42) rend /42/. On invente une règle que le client n'a pas
+ *                      écrite, et on lui rend son exactitude.
+ *   un nom de colonne mal orthographié → même silence que le tableau.
+ *
+ * Le fichier est donc validé, et surtout : on vérifie que les règles portent sur des colonnes
+ * QUI EXISTENT. Une règle qui ne s'applique à rien n'est pas une règle, c'est un trou.
+ */
+export function chargerRegles(chemin: string, champs: readonly string[]): Record<string, RegExp> {
+  let brut: unknown;
+  try {
+    brut = JSON.parse(readFileSync(chemin, "utf8"));
+  } catch (e) {
+    throw new Error(`${chemin}: not readable as JSON — ${(e as Error).message}\n`
+      + `  Expected { "your column": "a regular expression" }.`);
+  }
+  if (brut === null || typeof brut !== "object" || Array.isArray(brut)) {
+    const quoi = brut === null ? "null" : Array.isArray(brut) ? "an array" : typeof brut;
+    throw new Error(`${chemin}: expected an object { "your column": "a regular expression" }, `
+      + `got ${quoi}.\n`
+      + `  An array would be read as rules for columns named "0", "1", … — none of which\n`
+      + `  exist, so nothing would be measured and the report would not say so.`);
+  }
+
+  const connus = new Set(champs);
+  /* Sans prototype : une clé `__proto__` venue du fichier client écrirait sur le
+     prototype de cet objet au lieu d'y ajouter une entrée. */
+  const regles: Record<string, RegExp> = Object.create(null);
+  const inconnus: string[] = [];
+  for (const [champ, motif] of Object.entries(brut as Record<string, unknown>)) {
+    if (typeof motif !== "string") {
+      throw new Error(`${chemin}: the rule for "${champ}" is ${typeof motif}, not a string.\n`
+        + `  A number would become the pattern /${String(motif)}/ — a rule you did not write.`);
+    }
+    try {
+      regles[champ] = new RegExp(motif);
+    } catch (e) {
+      throw new Error(`${chemin}: the rule for "${champ}" is not a valid regular expression.\n`
+        + `  ${(e as Error).message}`);
+    }
+    if (!connus.has(champ)) inconnus.push(champ);
+  }
+
+  const total = Object.keys(regles).length;
+  if (total === 0) {
+    throw new Error(`${chemin} is empty. Give at least one rule, or drop --rules: without it\n`
+      + `  the report says plainly that no free tier was measured.`);
+  }
+  if (inconnus.length === total) {
+    throw new Error(`${chemin}: none of its ${total} rule(s) name a column of your CSV.\n`
+      + `  Rules for: ${apercu(inconnus, MONTRES)}\n`
+      + `  Your columns: ${apercu([...champs], MONTRES)}\n`
+      + `  Nothing would be measured, and a report that measured nothing must not read like`
+      + ` one that did.`);
+  }
+  if (inconnus.length > 0) {
+    console.log(`\n⚠ ${inconnus.length} of ${total} rule(s) name a column your CSV does not have `
+      + `and were not measured:\n  ${apercu(inconnus, MONTRES)}`);
+  }
+  return regles;
 }
 
 /**
@@ -503,7 +591,7 @@ export function rapportPourLeClient(o: {
   const pied = [``, ``, `## What this does not establish`, ``,
     `- That these rates hold on documents other than the ${o.cas} you supplied.`,
     `- ${o.avecRegles ? "That your regexes generalise beyond these cases."
-      : "What a free tier would carry: no `--rules` was given, so none was measured."}`,
+      : "What a free tier would carry: no rule of yours was measured — see `--rules`."}`,
     `- That the tiers here are the ones you should run: they are the ones this repository has.`,
   ];
   return entete.join("\n")
@@ -674,9 +762,45 @@ Nothing leaves your machine: the models are local and this path makes no network
   if (!existsSync(fichier)) { console.error(`no such file: ${fichier}`); process.exit(1); }
 
   const tache = arg("task") ?? "extract";
-  const echantillon = Number(arg("sample") ?? 0);
+  /*
+   * `Number(x)` S'EXÉCUTE AVANT QU'ON DEMANDE SI x EST UN NOMBRE.
+   *
+   * `Number(arg("sample") ?? 0)` : `--sample=abc` rend NaN, `NaN > 0` est faux, et le
+   * drapeau est **ignoré en silence** — le client croit avoir mesuré cent dossiers et en a
+   * mesuré dix mille. `--sample=` rend 0, `--sample=-5` est ignoré, `--sample=3.7` tronque
+   * à trois sans le dire. Toutes les orthographes de « pas une valeur » atterrissent à la
+   * même extrémité, et c'est toujours la moins prudente.
+   */
+  const echantillonBrut = arg("sample");
+  const echantillon = lireEchantillon(echantillonBrut);
   let { champs, cas, ecartees, courtes, lecture } = lireCsv(readFileSync(fichier, "utf8"));
-  if (echantillon > 0 && echantillon < cas.length) {
+
+  /*
+   * UN CORPUS VIDE NE PRODUIT PAS UN DOCUMENT QUI RESSEMBLE À UN AUDIT.
+   *
+   * `text,total\n` — une ligne d'en-tête et rien dessous — se lisait sans une plainte et
+   * rendait un rapport de vingt-trois lignes intitulé « Your cases, measured », qui écrit
+   * « 0 case(s), 1 field(s), measured on this machine. Nothing left it. » Chaque phrase est
+   * vraie et l'ensemble est un artefact livrable qui n'a rien mesuré. Un fichier tronqué à
+   * l'export, une mauvaise feuille, une ligne de trop dans un filtre : c'est un accident
+   * ordinaire, et il ne doit pas rendre un document qu'on transfère.
+   */
+  if (cas.length === 0) {
+    throw new Error(`${fichier} has a header line and no cases under it.\n`
+      + `  Columns read: ${apercu(champs, MONTRES)}\n`
+      + (ecartees.length > 0
+        ? `  ${ecartees.length} row(s) were set aside as malformed — that may be where they went.\n`
+        : ``)
+      + `  Nothing was measured, so nothing was written: a report over zero cases reads like\n`
+      + `  one that measured something.`);
+  }
+  /* Demander plus de cas qu'il n'y en a n'est pas une erreur, mais le silence en est une :
+     le client doit savoir que son échantillon est le corpus entier. */
+  if (echantillon !== undefined && echantillon >= cas.length) {
+    console.log(`\n  --sample=${echantillon} is at least the ${cas.length} case(s) you `
+      + `supplied: all of them are measured.`);
+  }
+  if (echantillon !== undefined && echantillon < cas.length) {
     /* Tirage déterministe : deux exécutions doivent porter sur les mêmes cas, sinon la
        comparaison entre paliers mesure aussi le hasard du tirage. */
     let e = 20260819;
@@ -688,7 +812,7 @@ Nothing leaves your machine: the models are local and this path makes no network
     }
     cas = melange.slice(0, echantillon);
   }
-  const regles = arg("rules") ? chargerRegles(arg("rules")!) : undefined;
+  const regles = arg("rules") ? chargerRegles(arg("rules")!, champs) : undefined;
   const sorties = arg("sorties") ? chargerSorties(arg("sorties")!) : undefined;
   /* Les questions du client, s'il en fournit. Un fichier illisible se refuse en le disant :
      partir sur des questions déduites alors qu'il en a écrit serait pire que de s'arrêter. */
@@ -698,7 +822,7 @@ Nothing leaves your machine: the models are local and this path makes no network
     if (!existsSync(chemin)) { console.error(`no such file: ${chemin}`); process.exit(1); }
     try {
       const o = JSON.parse(readFileSync(chemin, "utf8")) as Record<string, unknown>;
-      const propre: Record<string, string> = {};
+      const propre: Record<string, string> = Object.create(null);
       for (const [k, v] of Object.entries(o)) {
         if (typeof v !== "string" || v.trim().length === 0) {
           console.error(`--questions: "${k}" has no readable question.`); process.exit(1);
@@ -979,20 +1103,29 @@ Nothing leaves your machine: the models are local and this path makes no network
         + `${(tete.ms / Math.max(retenu.ms, 0.01)).toFixed(0)}× faster. Take the cheaper one.\n`);
   }
 
+  /* « Un fichier a-t-il été donné ? » et « une règle a-t-elle été mesurée ? » ne sont pas la
+     même question, et c'est la seconde que le rapport prétend répondre. */
+  const reglesMesurees = Object.values(releve).some((r) => "rules" in r);
+
   const sortie = fichier.replace(/\.csv$/i, "") + "-measured.md";
   writeFileSync(sortie, rapportPourLeClient({
     cas: cas.length, champs, date: new Date().toISOString().slice(0, 10),
-    questions, avecRegles: Boolean(regles),
+    questions, avecRegles: reglesMesurees,
     lignes: champs.flatMap((champ) => Object.entries(releve[champ]!).map(([palier, r]) => {
       const q = rate(r.bons, r.sur);
-      return [cellule(champ), palier, (q.rate * 100).toFixed(1) + " %",
-        `[${(q.low * 100).toFixed(0)}–${(q.high * 100).toFixed(0)}]`, q.n,
+      /* Le fichier passe par le MÊME formateur que la console : c'est lui qui porte le
+         refus de citer un taux sous ENOUGH observations. Le fichier est ce qui est classé
+         et transféré ; il ne peut pas être le chemin le moins prudent des deux. */
+      const c = cellulesDeTaux(q);
+      return [cellule(champ), palier, c.taux, c.intervalle, q.n,
         ecrireMs(r.ms, palier === sorties?.nom)];
     })),
   }));
   console.log(`Written to ${sortie}\n`);
-  if (!regles) {
-    console.log("No --rules given, so no free tier was measured. On my own corpus free regexes");
+  if (!reglesMesurees) {
+    console.log(regles
+      ? "Your --rules file was read, but no rule was measured on any field. The report says so."
+      : "No --rules given, so no free tier was measured. On my own corpus free regexes");
     console.log("carried three fields of five — a routing without them overstates what you pay.\n");
   }
   if (avecLlm) {

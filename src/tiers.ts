@@ -183,19 +183,146 @@ export const OLLAMA = process.env.OLLAMA_HOST ?? "http://localhost:11434";
  * change sa disposition, cette fonction rend `false` et le cas se déclare ignoré : c'est la
  * bonne dégradation, elle ne fabrique pas un vert.
  */
-export function poidsEnCache(racine?: string): boolean {
-  const base = racine ?? fileURLToPath(new URL("../node_modules/@huggingface/transformers/.cache", import.meta.url));
-  if (!existsSync(base)) return false;
-  /* Un dossier de modèle vide compte pour absent : un téléchargement coupé en laisse. */
-  const pese = (d: string): number => {
-    let n = 0;
-    for (const e of readdirSync(d, { withFileTypes: true })) {
-      const p = join(d, e.name);
-      n += e.isDirectory() ? pese(p) : statSync(p).size;
+export function racineDesPoids(racine?: string): string {
+  return racine
+    ?? fileURLToPath(new URL("../node_modules/@huggingface/transformers/.cache", import.meta.url));
+}
+
+/**
+ * LE POIDS EXACT DE CHAQUE MODÈLE ÉPINGLÉ.
+ *
+ * Un total ne dit pas si un fichier est entier. L'ancien contrôle additionnait tout le cache
+ * et demandait « plus de 50 Mo ? » : un `model.onnx` **tronqué à 57 Mo** lui suffisait, et il
+ * répondait oui. Le cas s'exécutait, onnxruntime ouvrait un protobuf coupé, et le PROCESSUS
+ * s'abattait — `libc++abi … mutex lock failed: Invalid argument`, code 134, sans nommer le
+ * fichier. Le bon ordre de grandeur était écrit trois lignes plus haut, dans le commentaire du
+ * garde appelant : « un téléchargement de 740 Mo ». Deux fichiers, deux chiffres, personne ne
+ * les avait lus ensemble.
+ *
+ * PROVENANCE DE CES OCTETS : relevés le 25 août 2026 sur **quatre caches indépendants**
+ * (`casc-clean`, `casc-head`, `casc-ref`, `casc-mut`), qui donnent les quatre mêmes tailles au
+ * bit près. Ce sont les tailles servies pour les révisions épinglées ci-dessus ; changer une
+ * révision oblige à relever la sienne, et c'est voulu — un poids non relevé n'a rien à
+ * vérifier.
+ */
+export const POIDS_MODELES = {
+  small: { depot: "Xenova/distilbert-base-cased-distilled-squad", revision: REVISIONS.small,
+    octets: 260_905_268 },
+  large: { depot: "onnx-community/roberta-base-squad2-ONNX", revision: REVISIONS.large,
+    octets: 496_550_525 },
+  embSmall: { depot: "Xenova/all-MiniLM-L6-v2", revision: REVISIONS.embSmall,
+    octets: 90_387_606 },
+  embLarge: { depot: "Xenova/multilingual-e5-small", revision: REVISIONS.embLarge,
+    octets: 470_268_533 },
+} as const;
+
+export type CleModele = keyof typeof POIDS_MODELES;
+
+/** Les modèles que `loadExtractors` ouvre, et ceux que `loadClassifiers` ouvre. */
+export const MODELES_EXTRACTION: readonly CleModele[] = ["small", "large"];
+export const MODELES_CLASSEMENT: readonly CleModele[] = ["embSmall", "embLarge"];
+
+export type EtatModele = { cle: CleModele; chemin: string; taille: number; attendu: number };
+
+/**
+ * Les modèles PRÉSENTS mais dont le fichier n'a pas la taille servie.
+ *
+ * Absent et tronqué ne sont pas la même chose et n'appellent pas la même réponse : un modèle
+ * absent est un premier lancement, qui doit télécharger ; un modèle tronqué est un
+ * téléchargement interrompu, qui ne guérira jamais tout seul et qui abat le processus.
+ */
+export function modelesTronques(cles: readonly CleModele[], racine?: string): EtatModele[] {
+  const base = racineDesPoids(racine);
+  const abimes: EtatModele[] = [];
+  for (const cle of cles) {
+    const m = POIDS_MODELES[cle];
+    for (const chemin of [
+      join(base, m.depot, m.revision, "onnx", "model.onnx"),
+      join(base, m.depot, "onnx", "model.onnx"),
+    ]) {
+      if (!existsSync(chemin)) continue;
+      const taille = statSync(chemin).size;
+      if (taille !== m.octets) abimes.push({ cle, chemin, taille, attendu: m.octets });
     }
-    return n;
-  };
-  try { return pese(base) > 50_000_000; } catch { return false; }
+  }
+  return abimes;
+}
+
+/** Les modèles dont aucun fichier n'est là — un premier lancement, pas une panne. */
+export function modelesAbsents(cles: readonly CleModele[], racine?: string): CleModele[] {
+  const base = racineDesPoids(racine);
+  return cles.filter((cle) => {
+    const m = POIDS_MODELES[cle];
+    return !existsSync(join(base, m.depot, m.revision, "onnx", "model.onnx"))
+      && !existsSync(join(base, m.depot, "onnx", "model.onnx"));
+  });
+}
+
+const enMo = (n: number): string => (n / 1_000_000).toFixed(1) + " MB";
+
+/**
+ * REFUSER AVANT `pipeline(...)`, PARCE QU'APRÈS IL N'Y A PLUS DE JS POUR PARLER.
+ *
+ * Un abort natif ne désigne rien : ni le fichier, ni la taille, ni la commande. Le client qui
+ * a coupé son premier téléchargement le revoit à chaque exécution suivante et n'a aucun moyen
+ * de savoir quoi faire. Le refus, lui, se résout sans nous.
+ */
+export function exigerModelesEntiers(cles: readonly CleModele[], racine?: string): void {
+  const abimes = modelesTronques(cles, racine);
+  if (abimes.length === 0) return;
+  const lignes = abimes.map((a) =>
+    `  ${a.chemin}\n    is ${enMo(a.taille)}, should be ${enMo(a.attendu)} `
+    + `(${a.taille.toLocaleString("en-GB")} of ${a.attendu.toLocaleString("en-GB")} bytes)`);
+  throw new Error(
+    `${abimes.length} model file(s) in the cache are incomplete — an interrupted download.\n\n`
+    + lignes.join("\n") + `\n\n`
+    + `  Loading one of these aborts the process natively, which is why this stops here.\n`
+    + `  Delete the directory above and run the same command again; it downloads what is missing.\n`);
+}
+
+/**
+ * POURQUOI LES POIDS NE SONT PAS UTILISABLES — parce que « pas là » et « là mais coupé »
+ * n'appellent pas la même action.
+ *
+ * Mesuré le 25 août 2026 avec un `model.onnx` tronqué à 57 905 102 octets : le garde
+ * répondait « les poids sont là », le cas s'exécutait, le sous-processus s'abattait, et le
+ * cas se déclarait ignoré avec **« sous-processus tué par le délai »** — en 242 ms. Le
+ * message accusait une lenteur là où il y avait un fichier coupé, et le contrôle le plus
+ * important du dépôt passait pour un ignoré ordinaire.
+ */
+export function diagnosticDesPoids(
+  cles: readonly CleModele[] = MODELES_EXTRACTION, racine?: string,
+): string | undefined {
+  const abimes = modelesTronques(cles, racine);
+  if (abimes.length > 0) {
+    const a = abimes[0]!;
+    return `${abimes.length} model file(s) in the cache are incomplete — an interrupted `
+      + `download, not a slow machine.\n  ${a.chemin}\n    is ${enMo(a.taille)}, should be `
+      + `${enMo(a.attendu)}.\n  Delete that directory and run a command that loads the models.`;
+  }
+  const absents = modelesAbsents(cles, racine);
+  if (absents.length > 0) {
+    return `${absents.length} model(s) are not in the cache. Running this would download `
+      + `them\n  and prove nothing meanwhile. Run a command that loads the models first, `
+      + `then this suite.`;
+  }
+  return undefined;
+}
+
+/**
+ * Les poids d'EXTRACTION sont-ils là et entiers ?
+ *
+ * Ce que le seul appelant demande, et rien de plus : il lance `your-cases.ts`, qui ouvre les
+ * deux extracteurs. « Y a-t-il des octets dans le cache ? » et « ce cas peut-il tourner ? »
+ * étaient deux questions pour une seule constante.
+ */
+export function poidsEnCache(racine?: string): boolean {
+  const base = racineDesPoids(racine);
+  if (!existsSync(base)) return false;
+  try {
+    return modelesAbsents(MODELES_EXTRACTION, racine).length === 0
+      && modelesTronques(MODELES_EXTRACTION, racine).length === 0;
+  } catch { return false; }
 }
 
 /**
@@ -549,6 +676,7 @@ export async function rechauffer(tier: TierName): Promise<boolean> {
 let qaSmall: any = null, qaLarge: any = null;
 
 export async function loadExtractors(): Promise<void> {
+  exigerModelesEntiers(MODELES_EXTRACTION);
   qaSmall ??= await pipeline("question-answering", "Xenova/distilbert-base-cased-distilled-squad", { revision: REVISIONS.small });
   qaLarge ??= await pipeline("question-answering", "onnx-community/roberta-base-squad2-ONNX", { revision: REVISIONS.large });
 }
@@ -754,6 +882,7 @@ const mean = (t: any): number[] => {
 const cos = (a: number[], b: number[]) => a.reduce((s, x, i) => s + x * b[i], 0);
 
 export async function loadClassifiers(): Promise<void> {
+  exigerModelesEntiers(MODELES_CLASSEMENT);
   embSmall ??= await pipeline("feature-extraction", "Xenova/all-MiniLM-L6-v2", { revision: REVISIONS.embSmall });
   embLarge ??= await pipeline("feature-extraction", "Xenova/multilingual-e5-small", { revision: REVISIONS.embLarge });
   vectorsSmall ??= await Promise.all(TYPOLOGIES.map(async (t) => mean(await embSmall(DESCRIPTIONS[t]))));

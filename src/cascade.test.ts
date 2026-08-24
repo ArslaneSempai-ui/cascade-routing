@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import { INTERVALLE_EGRESS } from "./egress.ts";
 import { porteDesInvisibles, melangeDEcritures, horsRepertoire } from "./signal.ts";
-import { poidsEnCache } from "./tiers.ts";
+import { poidsEnCache, diagnosticDesPoids } from "./tiers.ts";
 import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
 import { PREMIER_COMMIT_MULTI_FORMULATION } from "./landing.ts";
@@ -3253,10 +3253,13 @@ test("aucune valeur du client n'entre dans le fichier que l'outil lui rend", (t)
      * pendre indéfiniment.
      */
     if (!poidsEnCache()) {
-      return t.skip(
-        "les poids d'encodeur ne sont pas en cache : ce cas lancerait un téléchargement de\n"
-        + "  740 Mo et n'éprouverait rien pendant ce temps. Lancez d'abord une commande qui\n"
-        + "  charge les modèles, puis relancez la suite.");
+      /* Le motif de l'ignoré vient de `tiers.ts`, qui sait DANS QUEL ÉTAT sont les poids.
+         Mesuré le 25 août 2026 : avec un `model.onnx` tronqué, l'ancien garde répondait
+         « les poids sont là », ce cas s'exécutait, son sous-processus s'abattait, et il se
+         déclarait ignoré en accusant **le délai** — en 242 ms, nulle part près d'un délai.
+         Un ignoré qui nomme la mauvaise cause coûte plus cher qu'un rouge : le rouge, on le
+         regarde ; un ignoré, on le compte et on passe. */
+      return t.skip(diagnosticDesPoids() ?? "les poids d'encodeur ne sont pas utilisables.");
     }
 
     /*

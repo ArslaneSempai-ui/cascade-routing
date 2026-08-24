@@ -440,7 +440,7 @@ lit donc rien du tout, et son silence ressemble à un succès.
 
 Ou, quand la sortie n'est pas nécessaire : `cmd > /dev/null 2>&1; code=$?`.
 
-## `Abort trap: 6` pendant `npm test` sous charge n'est pas une régression
+## `Abort trap: 6` : regarder les poids AVANT de conclure à la charge
 
     libc++abi: terminating due to uncaught exception of type
       std::__1::system_error: mutex lock failed: Invalid argument
@@ -453,13 +453,51 @@ il échoue, proprement, sur les deux chemins. Le plantage n'arrive que sous char
 **Il sort en 134**, donc il ne se déguise pas en succès — c'est sa seule qualité. Mais il
 ressemble à un défaut du code, et il coûte le temps qu'on met à chercher dans le code.
 
-**Remède : relancer au calme AVANT d'enquêter.** Si le code passe au second essai sans
-qu'une ligne ait changé, c'était la charge. Et regarder ce qui tourne à côté : deux passes
-qui chargent des modèles ne peuvent pas coexister sur cette machine (voir plus haut).
+**CORRECTION DU 25 AOÛT 2026 — LA CHARGE N'EST PAS LA SEULE CAUSE, ET CE N'EST
+PROBABLEMENT PAS LA PLUS FRÉQUENTE.** Le même message, le même code 134, se produit **de
+façon déterministe et en 0,2 seconde** quand un `model.onnx` du cache est tronqué :
 
-**Ce qu'il ne faut PAS en conclure** : qu'un `npm test` rouge est toujours la charge. Un
-134 est la charge ; un **1** est un vrai échec, et le distinguer prend une seconde — c'est
-le code de sortie qui le dit, à condition de ne pas l'avoir lu à travers un tube.
+    .cache/onnx-community/roberta-base-squad2-ONNX/6d1aeed784b6/onnx/model.onnx
+    57 905 102 octets  →  SIGABRT en 0,2 s      (charge 2,8)
+    496 550 525 octets →  code 0 en 1,5 s       (même commande, même minute)
+
+Mesuré dans les deux sens à quelques secondes d'intervalle. Un téléchargement interrompu
+laisse le fichier tronqué **à son emplacement final** : rien ne le distingue d'un fichier
+complet, et il ne guérit jamais tout seul. C'est le premier contact d'un client avec
+l'outil, et ça ressemble à un logiciel cassé.
+
+**ET QUAND LA MORT ARRIVE DANS UN SOUS-PROCESSUS, IL N'Y A MÊME PAS D'ABORT À VOIR.**
+Reproduit le 25 août 2026, même fichier tronqué, `node --test src/cascade.test.ts` :
+
+    ﹣ aucune valeur du client n'entre dans le fichier que l'outil lui rend (242 ms)
+      # sous-processus tué par le délai
+
+Le garde répondait « les poids sont là », le cas s'exécutait, l'enfant s'abattait, et le cas
+se déclarait **ignoré en accusant le délai** — en 242 millisecondes, c'est-à-dire nulle part
+près d'un délai. Le contrôle le plus important du dépôt passait pour un ignoré ordinaire, et
+son message envoyait chercher une lenteur. **Un ignoré qui nomme la mauvaise cause coûte plus
+cher qu'un rouge.** `diagnosticDesPoids()` rend maintenant la phrase juste, et distingue
+« pas encore téléchargé » de « téléchargement coupé ».
+
+**Remède, dans cet ordre.** D'abord vérifier les poids, ensuite seulement soupçonner la
+charge :
+
+    node -e 'const{modelesTronques,MODELES_EXTRACTION}=await import("./src/tiers.ts");
+             console.log(modelesTronques(MODELES_EXTRACTION))' --input-type=module
+
+`poidsEnCache()` compare désormais chaque modèle épinglé à sa taille servie et le chemin de
+chargement refuse **avant** `pipeline(...)` en nommant le fichier, sa taille, celle qu'il
+devrait avoir et la commande. Le seuil précédent — un total supérieur à 50 Mo — laissait
+passer 57 Mo de fichier coupé ; **le bon ordre de grandeur était écrit trois lignes plus
+haut, dans le commentaire du garde appelant : « un téléchargement de 740 Mo »**. Deux
+fichiers, deux chiffres, personne ne les avait lus ensemble.
+
+**Ce qu'il ne faut PAS en conclure** : qu'un `npm test` rouge est toujours la charge — ni,
+depuis cette correction, qu'un 134 est toujours la charge. Un **1** reste un vrai échec, et
+le distinguer prend une seconde — c'est le code de sortie qui le dit, à condition de ne pas
+l'avoir lu à travers un tube. « Relancer au calme et voir si ça passe » reste utile, mais
+**après** avoir regardé les poids : un cache tronqué échoue au calme aussi, et l'ancien
+conseil envoyait chercher dans le code.
 
 ## Un instrument qui ne lit rien rend zéro, et zéro se lit « ça ne monte pas »
 
@@ -538,6 +576,28 @@ et une suite verte avec un ignoré ressemble à une suite verte.
 retéléchargement et le dire dans le rapport. La leçon générale : `node_modules` n'est pas un
 endroit où garder quoi que ce soit qu'on ne veut pas reperdre — c'est un dossier dérivé, et
 npm se réserve le droit de le reconstruire entièrement.
+
+**Un second symptôme, plus cher que « skipped 1 » — 25 août 2026.** Quand le cache est
+effacé mais que la commande suivante charge quand même les modèles, il n'y a **aucun message** :
+la bibliothèque retélécharge en silence. Ce qu'on voit est **une exécution de 3 secondes qui
+prend 70 secondes**. Ça ne ressemble pas à une panne, ça ressemble à une machine lente — et on
+va chercher la lenteur ailleurs. Ce qui le prouve en une commande, sur le process node :
+
+    lsof -nP -p <pid> | grep TCP
+
+Une connexion ouverte pendant un « calcul » local est un téléchargement, pas un calcul.
+
+**Et si ce retéléchargement est interrompu**, le fichier reste tronqué à son emplacement final
+et abat le processus à chaque exécution suivante — voir « `Abort trap: 6` » plus haut. Les deux
+pièges s'enchaînent : le premier retélécharge sans le dire, le second transforme l'interruption
+en plantage natif.
+
+**Parade quand `npm ci` est inévitable** (lockfile qui a changé, contrôle de licences qui
+échoue) : sortir le cache et le remettre.
+
+    mv node_modules/@huggingface/transformers/.cache /tmp/poids
+    npm ci
+    mv /tmp/poids node_modules/@huggingface/transformers/.cache
 
 **La famille.** Même forme que « ce que git ne transporte pas » : un état précieux rangé dans
 un dossier qu'un outil considère comme le sien.

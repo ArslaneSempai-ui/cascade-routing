@@ -485,3 +485,203 @@ test("le plafond d'appels refuse le fichier qui occupe la machine sans prévenir
     rmSync(dossier, { recursive: true, force: true });
   }
 });
+
+
+/*
+ * ————————————————————————————————————————————————————————————————————————————————————
+ * `--rules` : LA SEULE ENTRÉE CLIENT QUI NE SE FAISAIT PAS TRAITER COMME UNE ENTRÉE.
+ *
+ * `--questions` refuse un fichier illisible et nomme la clé fautive. `--rules` faisait
+ * `JSON.parse` puis `new RegExp` sans rien vérifier, et chaque forme d'erreur avait sa
+ * façon de passer inaperçue.
+ * ————————————————————————————————————————————————————————————————————————————————————
+ */
+
+async function ecrireRegles(contenu: string): Promise<string> {
+  const dossier = mkdtempSync(join(tmpdir(), "regles-"));
+  const chemin = join(dossier, "rules.json");
+  writeFileSync(chemin, contenu);
+  return chemin;
+}
+
+test("un tableau JSON passé à --rules est refusé, pas lu comme des colonnes « 0 » et « 1 »", async () => {
+  const { chargerRegles } = await import("./your-cases.ts");
+  const chemin = await ecrireRegles('["supplier","total"]');
+
+  assert.throws(() => chargerRegles(chemin, ["supplier", "total"]), (e: Error) => {
+    assert.match(e.message, /an array/, "le message doit dire ce qui a été trouvé.");
+    assert.ok(e.message.includes(chemin),
+      "trois fichiers sur la ligne de commande : sans le nom, le client ne sait pas lequel.");
+    return true;
+  });
+
+  /* Témoin de non-vacuité : c'est bien ce que l'ancien code produisait. */
+  assert.deepEqual(Object.keys(Object.fromEntries(Object.entries(["supplier", "total"]))),
+    ["0", "1"], "Object.entries d'un tableau rend des clés numériques : le trou d'origine.");
+});
+
+test("une règle qui n'est pas une chaîne est refusée, et non transformée en motif", async () => {
+  const { chargerRegles } = await import("./your-cases.ts");
+  const chemin = await ecrireRegles('{"supplier": 42}');
+  assert.throws(() => chargerRegles(chemin, ["supplier"]), /"supplier" is number/,
+    "new RegExp(42) rend /42/ : une règle que le client n'a pas écrite, dont on lui rend\n"
+    + "  ensuite l'exactitude comme si elle était la sienne.");
+});
+
+test("un motif invalide nomme le champ, pas seulement le motif", async () => {
+  const { chargerRegles } = await import("./your-cases.ts");
+  const chemin = await ecrireRegles('{"supplier": "([a-z"}');
+  assert.throws(() => chargerRegles(chemin, ["supplier"]), (e: Error) => {
+    assert.match(e.message, /"supplier"/, "avec vingt règles, le motif seul ne suffit pas.");
+    assert.match(e.message, /not a valid regular expression/, "");
+    return true;
+  });
+});
+
+test("un JSON illisible ne sort pas en message d'analyseur nu", async () => {
+  const { chargerRegles } = await import("./your-cases.ts");
+  const chemin = await ecrireRegles("not json at all {");
+  assert.throws(() => chargerRegles(chemin, ["supplier"]), (e: Error) => {
+    assert.ok(e.message.includes(chemin), "le fichier fautif doit être nommé.");
+    assert.match(e.message, /Expected \{ "your column"/, "et la forme attendue, montrée.");
+    return true;
+  });
+});
+
+test("des règles qui ne nomment aucune colonne existante sont refusées", async () => {
+  const { chargerRegles } = await import("./your-cases.ts");
+
+  const aucune = await ecrireRegles('{"suplier": "x", "totl": "y"}');
+  assert.throws(() => chargerRegles(aucune, ["supplier", "total"]), (e: Error) => {
+    assert.match(e.message, /none of its 2 rule\(s\)/,
+      "un fichier dont rien ne s'applique produisait un rapport qui affirmait le contraire.");
+    assert.match(e.message, /Your columns: supplier, total/, "les deux listes se comparent.");
+    return true;
+  });
+
+  /* Témoin : une seule faute de frappe ne fait pas tout tomber — les bonnes sont gardées. */
+  const partielle = await ecrireRegles('{"supplier": "Acme", "totl": "y"}');
+  const regles = chargerRegles(partielle, ["supplier", "total"]);
+  assert.deepEqual(Object.keys(regles), ["supplier", "totl"]);
+  assert.ok(regles["supplier"] instanceof RegExp, "et ce sont bien des expressions régulières.");
+});
+
+test("un fichier de règles vide est refusé plutôt que lu comme « aucune règle »", async () => {
+  const { chargerRegles } = await import("./your-cases.ts");
+  const chemin = await ecrireRegles("{}");
+  assert.throws(() => chargerRegles(chemin, ["supplier"]), /is empty/);
+});
+
+test("le rapport ne dit pas qu'un palier gratuit a été mesuré quand il ne l'a pas été", async () => {
+  const src = readFileSync(fileURLToPath(new URL("./your-cases.ts", import.meta.url)), "utf8");
+
+  assert.match(src, /avecRegles: reglesMesurees/,
+    "« un fichier a-t-il été donné ? » et « une règle a-t-elle été mesurée ? » ne sont pas\n"
+    + "  la même question, et c'est la seconde que le rapport prétend répondre.");
+  assert.ok(!/avecRegles: Boolean\(regles\)/.test(src),
+    "la présence d'un fichier ne prouve pas qu'une règle a tourné.");
+  assert.match(src, /const reglesMesurees = Object\.values\(releve\)\.some/,
+    "la réponse doit venir du relevé, seul endroit qui sait ce qui a tourné.");
+});
+
+
+test("le rapport écrit ne cite pas un taux que la console refuse de citer", async () => {
+  const { rapportPourLeClient } = await import("./your-cases.ts");
+  const { rate, cellulesDeTaux } = await import("./interval.ts");
+
+  const q = rate(1, 1);
+  const c = cellulesDeTaux(q);
+  const md = rapportPourLeClient({
+    cas: 1, champs: ["total"], date: "2026-08-25", questions: { total: { texte: "What is the total?", provenance: "deduite" as const } }, avecRegles: false,
+    lignes: [["`total`", "small", c.taux, c.intervalle, q.n, "14 ms"]],
+  });
+
+  assert.ok(!/100\.0 %/.test(md),
+    "« 100 % » sur un seul dossier est exactement le chiffre qu'un acheteur montrera à\n"
+    + "  quelqu'un d'autre, sans l'intervalle qui le borne.");
+  assert.match(md, /too few to quote/, "et le tableau dit pourquoi la case est vide.");
+
+  /* Témoin : au-dessus du seuil, le même chemin cite. */
+  const q2 = rate(16, 20);
+  const c2 = cellulesDeTaux(q2);
+  const md2 = rapportPourLeClient({
+    cas: 20, champs: ["total"], date: "2026-08-25", questions: { total: { texte: "What is the total?", provenance: "deduite" as const } }, avecRegles: false,
+    lignes: [["`total`", "small", c2.taux, c2.intervalle, q2.n, "14 ms"]],
+  });
+  assert.match(md2, /80\.0 %/, "sinon ce cas passerait pour la mauvaise raison.");
+});
+
+test("les lignes du rapport ne formatent aucun taux à la main", () => {
+  /*
+   * Le cas ci-dessus éprouve le RENDU du rapport ; celui-ci éprouve l'endroit qui fabrique
+   * ses lignes. Les deux sont nécessaires : j'ai remis à la main la construction des
+   * cellules et le premier cas est resté vert. Un témoin planté au mauvais endroit dit
+   * quelque chose de la garde, pas seulement de lui.
+   */
+  const src = readFileSync(fileURLToPath(new URL("./your-cases.ts", import.meta.url)), "utf8");
+
+  assert.match(src, /const c = cellulesDeTaux\(q\);/,
+    "les cellules du tableau doivent venir du formateur qui porte la condition de publication.");
+  assert.ok(!/\(q\.rate \* 100\)\.toFixed/.test(src),
+    "un pourcentage formaté ici est un pourcentage qui ne consulte pas `reportable` :\n"
+    + "  c'est exactement par là que « 100.0 % » sur un seul dossier est entré dans le\n"
+    + "  fichier que le client transfère.");
+  assert.ok(!/q\.low \* 100/.test(src),
+    "même chose pour l'intervalle : il ne se fabrique pas deux fois.");
+});
+
+test("un CSV réduit à sa ligne d'en-tête ne rend pas un document qui ressemble à un audit", async () => {
+  const { lireCsv } = await import("./your-cases.ts");
+
+  /* Le lecteur, lui, a le droit de rendre zéro cas : c'est le programme qui doit refuser. */
+  assert.equal(lireCsv("text,total\n").cas.length, 0);
+
+  const dossier = mkdtempSync(join(tmpdir(), "vide-"));
+  try {
+    const fichier = join(dossier, "cases.csv");
+    writeFileSync(fichier, "text,total\n\n\n");
+    const bin = fileURLToPath(new URL("./your-cases.ts", import.meta.url));
+    const r = spawnSync(process.execPath, [bin, "--cases=" + fichier], { encoding: "utf8" });
+    const sortie = (r.stdout ?? "") + (r.stderr ?? "");
+
+    assert.notEqual(r.status, 0, "un refus qui rend 0 est un refus que rien n'entend.");
+    assert.match(sortie, /header line and no cases under it/, "et il dit ce qui a été lu.");
+    assert.ok(!existsSync(join(dossier, "cases-measured.md")),
+      "vingt-trois lignes intitulées « Your cases, measured » sur zéro cas : chaque phrase\n"
+      + "  est vraie et l'ensemble est un artefact livrable qui n'a rien mesuré.");
+  } finally { rmSync(dossier, { recursive: true, force: true }); }
+});
+
+
+test("--sample n'est pas ignoré en silence quand il n'est pas un nombre de cas", async () => {
+  const { lireEchantillon } = await import("./your-cases.ts");
+
+  assert.equal(lireEchantillon(undefined), undefined, "drapeau absent : rien à dire.");
+  assert.equal(lireEchantillon("100"), 100, "témoin positif : le chemin normal passe.");
+
+  for (const brut of ["abc", "", "  ", "-5", "0", "3.7", "1e", "NaN", "Infinity"]) {
+    assert.throws(() => lireEchantillon(brut), /is not a whole number of cases/,
+      `--sample=${JSON.stringify(brut)} passait sans un mot : Number() s'exécute avant qu'on\n`
+      + "  demande si c'est un nombre, et NaN > 0 est faux. Le client croyait avoir mesuré\n"
+      + "  cent dossiers et en avait mesuré dix mille.");
+  }
+
+  /* Témoin de non-vacuité : c'est bien ce que l'ancienne expression produisait. */
+  assert.equal(Number("abc") > 0, false);
+  assert.equal(Number(""), 0);
+  assert.equal(Number("3.7") > 0, true, "et 3.7 passait, puis slice tronquait à 3.");
+});
+
+test("une clé `__proto__` dans un fichier client n'écrit pas sur un prototype", async () => {
+  const { chargerRegles } = await import("./your-cases.ts");
+  const dossier = mkdtempSync(join(tmpdir(), "proto-"));
+  try {
+    const chemin = join(dossier, "rules.json");
+    writeFileSync(chemin, '{"__proto__": "x", "supplier": "Acme"}');
+    const regles = chargerRegles(chemin, ["supplier", "__proto__"]);
+    assert.ok(Object.prototype.hasOwnProperty.call(regles, "__proto__"),
+      "la clé doit devenir une entrée ordinaire, pas une écriture sur le prototype.");
+    assert.equal(Object.getPrototypeOf(regles), null, "et l'objet n'a pas de prototype du tout.");
+    assert.ok(regles["supplier"] instanceof RegExp, "témoin : le reste du fichier est lu.");
+  } finally { rmSync(dossier, { recursive: true, force: true }); }
+});
