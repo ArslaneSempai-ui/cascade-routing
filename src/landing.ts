@@ -1029,6 +1029,53 @@ export function construire(p: Profiles): unknown {
       latencyBudgetMs: ASSUMPTIONS.latencyBudgetMs,
       provenance: "assumed" as Provenance,
     },
+    /*
+     * L'ÉTAGE DE LECTURE, POUR LA PAGE QUI VEND.
+     *
+     * `landing.json` est ce qu'une page publiée lit. Le fait le plus vendable trouvé cette
+     * nuit — ce que coûte le passage par une image — n'y était pas, donc la page ne pouvait
+     * pas s'en servir sans le retaper, et un chiffre retapé est un chiffre qui dérive.
+     *
+     * Absent le relevé, le bloc vaut `null` : la page saura qu'il n'y a rien à afficher au
+     * lieu de recevoir des zéros qui ressemblent à une mesure.
+     */
+    readingStage: (() => {
+      const chemin = fileURLToPath(new URL("../ocr.json", import.meta.url));
+      if (!existsSync(chemin)) return null;
+      const r = JSON.parse(readFileSync(chemin, "utf8")) as {
+        documents: number;
+        lignesParDocument: { moyenne: number; maximum: number };
+        fideliteDeLaTranscription: { taux: number; bas: number; haut: number; n: number };
+        paliers: { palier: string; surTexte: { taux: number; n: number };
+          surImage: { taux: number; n: number }; ecartEnPoints: number; separable: boolean }[];
+        paliersEcartes: string[];
+        mesureLe: string;
+      };
+      return {
+        provenance: "measured" as Provenance,
+        measuredAt: r.mesureLe,
+        documents: r.documents,
+        linesPerDocument: r.lignesParDocument,
+        wordFidelity: {
+          rate: r.fideliteDeLaTranscription.taux,
+          low: r.fideliteDeLaTranscription.bas,
+          high: r.fideliteDeLaTranscription.haut,
+          n: r.fideliteDeLaTranscription.n,
+        },
+        tiers: r.paliers.map((x) => ({
+          tier: x.palier,
+          fromText: { rate: x.surTexte.taux, n: x.surTexte.n },
+          fromImage: { rate: x.surImage.taux, n: x.surImage.n },
+          gapPoints: x.ecartEnPoints,
+          beyondNoise: x.separable,
+        })),
+        excludedTiers: r.paliersEcartes,
+        caveat: "Les images sont rendues, pas photographiées, et les documents sont courts. "
+          + "L'écart publié est un PLANCHER : une page photographiée apporte colonnes, "
+          + "inclinaison et ordre de lecture que celles-ci n'ont pas.",
+        runsLocally: "L'OCR passe par le système d'exploitation : aucune API, aucun coût par page.",
+      };
+    })(),
     caveats: [
       "Le corpus est synthétique et écrit par l'auteur, sur une coupe held-out. Cela protège "
       + "contre l'auto-notation, pas contre l'écart avec de vrais documents.",
