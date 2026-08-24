@@ -51,6 +51,38 @@ const FORMES_DE_SECRET: Array<[string, RegExp]> = [
   ["clé Google", /\bAIza[0-9A-Za-z_-]{35}\b/],
   ["jeton GitLab", /\bglpat-[A-Za-z0-9_-]{20}\b/],
   ["clé privée", /-----BEGIN [A-Z ]*PRIVATE KEY-----/],
+
+  /*
+   * LA FORME SOUS LAQUELLE NOTRE PROPRE CLÉ VOYAGERAIT.
+   *
+   * Les motifs ci-dessus reconnaissent une clé privée à son en-tête PEM. Or une clé posée dans
+   * une variable d'environnement ou dans un secret d'intégration continue n'a PAS d'en-tête :
+   * c'est du base64 nu. C'est exactement la forme sous laquelle la clé qui signe nos rapports
+   * circulerait, et elle était invisible.
+   *
+   * Le préfixe est constant parce que le codage DER l'est : mesuré sur 5 000 tirages Ed25519,
+   * 2 000 X25519 et 1 000 EC, une seule valeur à chaque fois. Le RSA fait exception — l'octet
+   * de longueur du module bouge, six valeurs sur 120 tirages — donc son motif s'ancre sur
+   * l'identifiant d'algorithme, qui ne bouge pas, et non sur le préfixe.
+   *
+   * Trouvé par une session de contrôle, et la première version de sa mesure était fausse : un
+   * préfixe « constant » relevé sur un tirage est une affirmation, pas une mesure.
+   */
+  ["clé Ed25519 sans en-tête", /\bMC4CAQAwBQYDK2Vw[A-Za-z0-9+/]{20,}/],
+  ["clé X25519 sans en-tête", /\bMC4CAQAwBQYDK2Vu[A-Za-z0-9+/]{20,}/],
+  ["clé RSA sans en-tête", /\bMII[A-Za-z0-9+/]{2,6}IBADANBgkqhkiG9w0BAQ[A-Za-z0-9+/]{20,}/],
+  ["clé EC sans en-tête", /\bMI[A-Za-z0-9+/]{1,5}AgEAM[A-Za-z0-9+/]{2}GByqG[A-Za-z0-9+/]{20,}/],
+
+  /* Deux jetons que les motifs voisins manquaient d'UN caractère : la forme OpenAI exige
+     `sk-` avec un tiret, Stripe écrit `sk_live_` avec un tiret bas ; et la classe Slack
+     `[baprs]` ne contenait pas le `e` de `xoxe-`. Un motif est une affirmation, et un
+     caractère d'écart la rend fausse en silence. */
+  ["jeton Stripe", /\b[sr]k_(live|test)_[A-Za-z0-9]{20,}/],
+  ["jeton Slack étendu", /\bxox[abeprs]-[A-Za-z0-9-]{10,}/],
+
+  /* Un mot de passe dans une URL de connexion. Il ne ressemble à aucune clé, il n'a aucun
+     préfixe, et il traverse les journaux comme les fichiers de configuration. */
+  ["identifiants dans une URL", /\b[a-z][a-z0-9+.-]*:\/\/[^\s/:@"']+:[^\s/@"']{6,}@/],
 ];
 
 export function secretsDans(texte: string): string[] {
@@ -144,6 +176,18 @@ export function temoins(): string[] {
   v("jeton HF planté", secretsDans("hf_aBcDeFgHiJkLmNoPqRsTuVwXyZ0123456789"), ["jeton Hugging Face"]);
   v("clé privée plantée", secretsDans("-----BEGIN RSA PRIVATE KEY-----"), ["clé privée"]);
   v("texte anodin", secretsDans("const seuil = 0.85; // pas de secret ici"), []);
+
+  /* Les formes sans en-tête PEM — celle sous laquelle NOTRE clé de signature voyagerait. */
+  v("Ed25519 nu", secretsDans("CLE=MC4CAQAwBQYDK2VwBCIEIL9kM0hVvBTz3nQd7yPKcE1sXaWq2vRtYuIoPlKjHgFd"), ["clé Ed25519 sans en-tête"]);
+  v("X25519 nu", secretsDans("K=MC4CAQAwBQYDK2VuBCIEIA1bC2dE3fG4hI5jK6lM7nO8pQ9rS0tU1vW2xY3zA4bC"), ["clé X25519 sans en-tête"]);
+  v("RSA nu", secretsDans("K=MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC7vbqajDw4o6gJ"), ["clé RSA sans en-tête"]);
+  v("base64 anodin", secretsDans("const b = 'aGVsbG8gd29ybGQgY2VjaSBuJ2VzdCBwYXMgdW5lIGNsZQ==';"), []);
+
+  v("jeton Stripe", secretsDans("sk" + "_live_" + "51H8xKqL2eZvKYlo2C0" + "abcdefghij"), ["jeton Stripe"]);
+  v("Slack étendu", secretsDans("xoxe-2-abcdefghij-klmnop"), ["jeton Slack étendu"]);
+  v("mot de passe dans une URL", secretsDans("postgres://admin:Tr0ub4dor3@db.interne:5432/prod"), ["identifiants dans une URL"]);
+  v("URL sans identifiants", secretsDans("postgres://db.interne:5432/prod"), []);
+  v("URL avec port seulement", secretsDans("http://localhost:11434/api/generate"), []);
 
   v("écoute sans adresse", adresseDEcoute("serveur.listen(PORT, () => {});"), "toutes interfaces");
   v("écoute liée", adresseDEcoute('serveur.listen(PORT, "127.0.0.1", () => {});'), "boucle locale");
