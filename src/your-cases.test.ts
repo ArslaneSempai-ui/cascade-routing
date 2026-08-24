@@ -276,3 +276,21 @@ test("aucun message que le client peut voir n'est en français", () => {
     `message(s) en français sur le chemin d'un client anglophone :\n`
     + fautifs.map((x) => `  - ${x}`).join("\n"));
 });
+
+test("un en-tête qui nomme deux fois la même colonne est refusé, pas deviné", () => {
+  /*
+   * Mesuré sur `text,name,name` : le texte mesuré devenait « Anna » au lieu de
+   * « bonjour Anna », et la vérité attendue devenait la seconde colonne. L'outil ne plantait
+   * pas — il mesurait un autre champ que celui voulu, et rendait un taux présenté comme un
+   * résultat. Un doublon d'en-tête n'a aucune lecture raisonnable, et deviner serait pire.
+   */
+  assert.throws(() => lireCsv("text,name,name\nbonjour Anna,Anna,Bea\n"), /same column twice/);
+  assert.throws(() => lireCsv("text,name,name\nbonjour Anna,Anna,Bea\n"), /"name"/,
+    "le refus doit nommer la colonne en double : sur trente colonnes, « il y a un doublon » n'aide personne.");
+  /* Le témoin négatif : un en-tête sain ne doit pas être refusé, sinon la garde interdit
+     l'usage normal et sera retirée. */
+  assert.doesNotThrow(() => lireCsv("text,name,birth\nbonjour Anna,Anna,1980\n"));
+  /* Et l'espace ne fait pas deux colonnes différentes : « name » et « name » sont le même
+     nom, comme le lecteur les lira. */
+  assert.throws(() => lireCsv("text,name, name\nbonjour Anna,Anna,Bea\n"), /same column twice/);
+});

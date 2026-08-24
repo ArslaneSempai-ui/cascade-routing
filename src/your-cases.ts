@@ -107,6 +107,31 @@ export function lireCsv(texte: string): { champs: string[]; cas: Cas[] } {
       + `  was consumed as one — add a header row naming the columns.`);
   }
   /*
+   * DEUX COLONNES DU MÊME NOM DÉCALENT TOUT, EN SILENCE.
+   *
+   * Mesuré sur un fichier `text,name,name` : le texte mesuré devenait « Anna » au lieu de
+   * « bonjour Anna », et la vérité attendue devenait la seconde colonne. L'outil ne
+   * plantait pas — il mesurait autre chose et rendait un taux, présenté comme un résultat.
+   *
+   * Un doublon d'en-tête n'a aucune lecture raisonnable : on ne peut pas savoir laquelle des
+   * deux colonnes le client voulait, et deviner serait pire que refuser.
+   */
+  const vus = new Map<string, number>();
+  for (const nom of entete) {
+    const propre = nom.trim().replace(/^\uFEFF/, "");
+    vus.set(propre, (vus.get(propre) ?? 0) + 1);
+  }
+  const doublons = [...vus.entries()].filter(([, n]) => n > 1).map(([nom]) => nom);
+  if (doublons.length > 0) {
+    throw new Error(
+      `Your header names the same column twice: ${doublons.map((d) => `"${d}"`).join(", ")}.\n\n`
+      + `  There is no reasonable reading of that. The columns would shift, and this tool\n`
+      + `  would measure a different field from the one you meant — silently, and still\n`
+      + `  report a rate.\n\n`
+      + `  Rename one of them, or remove it.`);
+  }
+
+  /*
    * Deux colonnes veut dire « texte, réponse » — pas d'identifiant.
    *
    * C'est la forme de tous les jeux publics de classification, et exiger une colonne d'ids
@@ -514,6 +539,23 @@ Nothing leaves your machine: the models are local and this path makes no network
   ];
 
   console.log(`\n${cas.length} cases, ${champs.length} field(s): ${champs.join(", ")}`);
+  /*
+   * ZÉRO CAS N'EST PAS UN INTERVALLE LARGE, C'EST L'ABSENCE DE MESURE.
+   *
+   * Un fichier ne portant qu'un en-tête passait avec un avertissement, puis chargeait les
+   * modèles et rendait un tableau. Un taux sur zéro dossier ne se calcule pas — il ne se
+   * publie pas non plus, et « les intervalles seront larges » laisse croire qu'il existe
+   * quelque part un chiffre trop imprécis, alors qu'il n'y a rien du tout.
+   */
+  if (cas.length === 0) {
+    console.error(
+      `\nNo records were read from your file.\n\n`
+      + `  A rate over zero records is not a wide interval — it does not exist. Nothing will\n`
+      + `  be measured, so nothing is run.\n\n`
+      + `  The most common cause is a file holding only a header row. The second is a header\n`
+      + `  that names your columns differently from the rows below it.`);
+    process.exit(1);
+  }
   if (cas.length < 20) {
     console.log(`\n⚠ ${cas.length} cases is below the point where a rate says anything. `
       + `The intervals below will be wider than the differences you are trying to see.`);
