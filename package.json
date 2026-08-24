@@ -5,6 +5,7 @@
   "type": "module",
   "description": "Where should the next euro go? A measured cascade: rules, a small model, a large one, a human.",
   "scripts": {
+    "prepare": "git config core.hooksPath .githooks 2>/dev/null || true",
     "premiere-reponse": "node src/premiere-reponse.mjs",
     "measure": "node src/measure.ts",
     "optimise": "node src/optimise.ts",

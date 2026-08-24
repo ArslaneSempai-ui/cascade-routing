@@ -131,7 +131,32 @@ export function appliquerHypotheses(
   return { hypotheses, refuses };
 }
 
+/*
+ * L'ÉTAT SE RECALCULAIT ENTIÈREMENT À CHAQUE REQUÊTE, Y COMPRIS QUAND RIEN N'AVAIT BOUGÉ.
+ *
+ * Mesuré : 437 ms par appel, et un simple GET `/api/etat` les payait. Trois appels de suite
+ * sans rien changer rendent le MÊME objet, à l'octet près — le recalcul était donc redondant,
+ * pas cher. Mille requêtes mettaient la démonstration à genoux pendant cinq minutes.
+ *
+ * On garde le dernier résultat, indexé sur ce dont il dépend : le routage courant et les
+ * hypothèses. Les profils ne changent pas en cours d'exécution — ils sont lus au démarrage —
+ * mais ils entrent quand même dans la clé, pour que la mémoire ne survive pas à un rechargement
+ * qu'on ajouterait plus tard sans y penser.
+ *
+ * Une limite de débit posée AVANT ce correctif aurait masqué la lenteur au lieu de la
+ * corriger, et le plafond aurait été calibré sur un coût qui n'avait pas lieu d'être.
+ */
+let memoire: { cle: string; valeur: ReturnType<typeof calculerEtat> } | null = null;
+
 export function etat() {
+  const cle = JSON.stringify([routage, hypotheses, profils.measuredAt]);
+  if (memoire && memoire.cle === cle) return memoire.valeur;
+  const valeur = calculerEtat();
+  memoire = { cle, valeur };
+  return valeur;
+}
+
+function calculerEtat() {
   const optimum = optimiseExtraction(profils, hypotheses);
   const mien = evaluer(profils, hypotheses, routage);
   return {
@@ -261,6 +286,18 @@ const serveur = createServer(async (req, res) => {
     }
 
     if (url.pathname === "/api/optimum" && req.method === "POST") {
+      /*
+       * CETTE ROUTE N'A BESOIN D'AUCUN CORPS, ET C'EST PRÉCISÉMENT POURQUOI ELLE LE LISAIT PAS.
+       *
+       * Deux routes POST sur trois passaient par `corps()`, qui détruit la socket au-delà de
+       * `PLAFOND_CORPS` ; celle-ci ne l'appelait pas du tout. Mesuré : 100 Mo envoyés ici
+       * répondaient 200, quand les deux autres coupaient. L'impact mémoire est nul — Node jette
+       * ce que personne ne lit — mais une garde portée par deux routes sur trois n'est pas une
+       * garde : c'est un usage, et la prochaine route copiera peut-être la mauvaise.
+       *
+       * On lit donc le corps même sans l'utiliser, pour que la borne s'applique ici aussi.
+       */
+      await corps(req);
       const o = optimiseExtraction(profils, hypotheses);
       if (o) routage = { ...o.routing };
       return json(res, etat());

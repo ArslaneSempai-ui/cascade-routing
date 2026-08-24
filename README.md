@@ -60,7 +60,7 @@ what that pass actually cost is stated below, read from the relevé rather than 
 | `npm run captures` | re-record the images on this page |
 | `npm run ocr` | read the same documents as images and measure what the reading stage costs (macOS: Vision, no API) |
 
-⚠ 3 command(s) exist in package.json and are not classified above: `premiere-reponse`, `licences`, `menace`.
+⚠ 4 command(s) exist in package.json and are not classified above: `prepare`, `premiere-reponse`, `licences`, `menace`.
 <!-- /figures:commandes -->
 
 ```bash
@@ -83,7 +83,7 @@ npm test           # types, README figures, landing.json, and the suite
 <!-- /figures:documents -->
 
 <!-- figures:tests -->
-**240 tests** across 17 files, counted from the sources rather than typed here.
+**242 tests** across 18 files, counted from the sources rather than typed here.
 <!-- /figures:tests -->
 
 Everything runs locally. No API key, nothing leaves the machine, and anyone who clones this

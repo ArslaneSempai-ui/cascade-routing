@@ -169,3 +169,60 @@ qui chargent des modèles ne peuvent pas coexister sur cette machine (voir plus 
 **Ce qu'il ne faut PAS en conclure** : qu'un `npm test` rouge est toujours la charge. Un
 134 est la charge ; un **1** est un vrai échec, et le distinguer prend une seconde — c'est
 le code de sortie qui le dit, à condition de ne pas l'avoir lu à travers un tube.
+
+## Un instrument qui ne lit rien rend zéro, et zéro se lit « ça ne monte pas »
+
+Une sonde mesurait la mémoire du serveur pendant qu'on lui envoyait 100 Mo. Elle a rendu
+`-0 Mo` **au repos, pendant, et après** — un `require` laissé dans un module ESM, donc une
+lecture morte. La conclusion qui attendait était « la mémoire ne monte pas », c'est-à-dire
+exactement ce qu'on espérait lire.
+
+**Un chiffre qui ne bouge JAMAIS est suspect avant d'être rassurant.** Un instrument sain
+bouge : la même mesure refaite avec `execFileSync("ps", …)` donne 135 Mo au repos et 144 Mo
+après 300 Mo de corps — elle varie, donc elle lit. Le verdict final (« l'impact est nul »)
+s'est trouvé identique, et c'est le piège : **la bonne réponse obtenue par un instrument
+cassé reste une réponse qu'on n'a pas mesurée.**
+
+**Remède :** avant de publier un zéro ou une constante, vérifier que l'instrument sait rendre
+autre chose. Une valeur de repos plausible (135 Mo, pas `-0`) est déjà un test.
+
+## Une règle importée porte le contexte de qui l'a écrite
+
+Le skill `security-audit` interdit toute requête HTTP : « code tracing only, never test
+against live APIs ». La règle est juste — elle protège d'un audit qui frappe un système
+tiers. Elle ne s'appliquait pas ici : la cible était notre propre serveur, sur notre machine,
+dans un clone à nous, et le lot demandait explicitement de l'éprouver en marche.
+
+**Une règle qu'on suit sans savoir pourquoi elle existe se suit aussi quand elle ne
+s'applique pas** — et l'audit se serait réduit à relire du code qui, précisément, a l'air
+correct. Les deux défauts trouvés ce jour-là ne se voyaient qu'en lançant : 437 ms par
+requête, et une route POST qui répond 200 à 100 Mo.
+
+**Remède :** retrouver la raison de la règle avant de l'appliquer **ou** de s'en écarter, et
+**dire l'écart dans le rapport**. Une divergence annoncée se discute ; une divergence
+silencieuse se découvre.
+
+## Une garde portée par deux routes sur trois n'est pas une garde
+
+`PLAFOND_CORPS` était appliqué par `corps()`, que deux routes POST sur trois appelaient.
+`/api/optimum` n'avait pas besoin du corps, donc ne le lisait pas, donc échappait à la
+borne : 100 Mo y répondaient 200. L'impact mesuré était nul — Node jette ce que personne ne
+lit — mais **c'est un usage, pas une garde**, et la route suivante copiera peut-être celle
+qui ne l'a pas.
+
+**Remède :** un cas qui dérive la liste des routes du routeur lui-même, jamais d'une liste
+écrite à la main — sinon la quatrième route arrive non couverte exactement comme la
+troisième, et le vert du cas dit seulement que les trois routes connues vont bien.
+
+## Corriger la lenteur avant de poser une limite
+
+`/api/etat` coûtait 437 ms, et la tentation était d'ajouter une limite de débit. Elle aurait
+**masqué** la lenteur : le plafond aurait été calibré sur un coût qui n'avait pas lieu
+d'être, et personne ne serait revenu dessus.
+
+Trois appels consécutifs sans changement d'état rendaient le **même objet à l'octet près** :
+le calcul était redondant, pas cher. Une fois mémorisé sur ce dont il dépend, 440 ms → 1,5 ms.
+La limite reste utile ensuite, mais elle protège d'un abus au lieu de cacher un défaut.
+
+**Remède :** devant une route lente, chercher d'abord ce qui est recalculé pour rien. La
+question qui tranche : *deux appels identiques rendent-ils le même résultat ?*
