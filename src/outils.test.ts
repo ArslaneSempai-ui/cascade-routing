@@ -33,17 +33,25 @@ test("un palier qui ne bouge pas ne figure pas dans l'écart", () => {
 test("une chute réelle est signalée comme réelle", () => {
   /* 63,3 % → 51,0 % sur mille cas : les intervalles ne se touchent pas. C'est le cas qu'on
      veut voir crier — un modèle a changé sous les pieds de quelqu'un. */
-  const d = ecart({ paliers: { small: { bons: 633, sur: 1000 } } },
-                  { paliers: { small: { bons: 510, sur: 1000 } } })!;
+  /* LES CHIFFRES DU MESSAGE VIENNENT DU MONTAGE, PAS DE MA MÉMOIRE. Il disait « douze
+     points sur mille cas » : exact pour ce montage-ci, et faux dès qu'on le change — un
+     message n'est lu qu'au moment où le cas tombe, c'est-à-dire au pire moment pour
+     découvrir qu'il compte faux. */
+  const AVANT = 633, APRES = 510, SUR = 1000;
+  const d = ecart({ paliers: { small: { bons: AVANT, sur: SUR } } },
+                  { paliers: { small: { bons: APRES, sur: SUR } } })!;
   assert.equal(d.length, 1);
   assert.ok(d[0]!.points < 0, "la chute doit être négative");
-  assert.equal(d[0]!.reel, true, "douze points sur mille cas doivent être significatifs");
+  assert.equal(d[0]!.reel, true,
+    `${((AVANT - APRES) / SUR * 100).toFixed(1)} points sur ${SUR} cas doivent être significatifs`);
 });
 
 test("un frémissement n'est pas présenté comme un écart réel", () => {
-  const d = ecart({ paliers: { small: { bons: 633, sur: 1000 } } },
-                  { paliers: { small: { bons: 640, sur: 1000 } } })!;
-  assert.equal(d[0]!.reel, false, "sept dixièmes de point ne se distinguent pas du bruit");
+  const AVANT = 633, APRES = 640, SUR = 1000;
+  const d = ecart({ paliers: { small: { bons: AVANT, sur: SUR } } },
+                  { paliers: { small: { bons: APRES, sur: SUR } } })!;
+  assert.equal(d[0]!.reel, false,
+    `${((APRES - AVANT) / SUR * 100).toFixed(1)} point ne se distingue pas du bruit`);
 });
 
 test("deux relevés de tailles différentes ne se comparent pas", () => {
