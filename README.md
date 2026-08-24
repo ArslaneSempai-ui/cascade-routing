@@ -83,7 +83,7 @@ npm test           # types, README figures, landing.json, and the suite
 <!-- /figures:documents -->
 
 <!-- figures:tests -->
-**224 tests** across 14 files, counted from the sources rather than typed here.
+**228 tests** across 15 files, counted from the sources rather than typed here.
 <!-- /figures:tests -->
 
 Everything runs locally. No API key, nothing leaves the machine, and anyone who clones this

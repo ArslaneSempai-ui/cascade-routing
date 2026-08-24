@@ -17,15 +17,32 @@ import { ASSUMPTIONS, BOUNDS } from "./assumptions.ts";
 
 import type { Assumptions } from "./assumptions.ts";
 
+/*
+ * LES CLÉS QUI NE SONT PAS DES CHIFFRES, DÉCLARÉES UNE FOIS.
+ *
+ * Elles l'étaient deux fois : dans le type `Reponses` ci-dessous, et dans le `Set`
+ * des clés connues du contrôle d'exécution. Les deux étaient corrects et personne
+ * ne les faisait se regarder — le type déclarait `chaine`, `residence`,
+ * `replisiPalierIndisponible` et `quiSigne`, le contrôle ne les connaissait pas.
+ *
+ * Conséquence mesurée le 24 août 2026 : **`intake-template.json`, le gabarit que ce
+ * dépôt livre, était REFUSÉ par son propre outil** — quatre de ses clés annoncées
+ * « not a key of this questionnaire ». Un acheteur remplit le fichier qu'on lui
+ * donne, lance la commande qu'on lui indique, et le premier mot qu'il lit est
+ * REFUSED. Il en conclut que rien de ce dépôt n'a jamais été essayé.
+ *
+ * Une liste écrite à la main se périme en silence. Celle-ci est la source unique :
+ * le type EN DÉCOULE, donc ils ne peuvent plus diverger.
+ */
+export const CLES_DE_PROSE = [
+  "chaine", "residence", "replisiPalierIndisponible", "quiSigne",
+] as const;
+export const CLES_DE_FORME = ["paliersDisponibles", "aUnJeuAnnote"] as const;
+
 /** Ce qu'un prospect peut renseigner. Tout est facultatif : un vide reste un vide. */
-export type Reponses = Partial<Record<keyof Assumptions, number>> & {
-  chaine?: string;
-  paliersDisponibles?: string[];
-  residence?: string;
-  replisiPalierIndisponible?: string;
-  aUnJeuAnnote?: boolean;
-  quiSigne?: string;
-};
+export type Reponses = Partial<Record<keyof Assumptions, number>>
+  & Partial<Record<(typeof CLES_DE_PROSE)[number], string>>
+  & { paliersDisponibles?: string[]; aUnJeuAnnote?: boolean };
 
 export type Lecture = {
   hypotheses: Assumptions;
@@ -67,7 +84,9 @@ export function lire(r: Reponses): Lecture {
    * On propose la clé la plus proche quand il y en a une : sur douze noms, « clé inconnue »
    * laisse le lecteur relire son fichier ligne à ligne.
    */
-  const connues = new Set([...Object.keys(ASSUMPTIONS), "aUnJeuAnnote", "paliersDisponibles"]);
+  const connues = new Set<string>([
+    ...Object.keys(ASSUMPTIONS), ...CLES_DE_FORME, ...CLES_DE_PROSE,
+  ]);
   const proche = (k: string) => [...connues].find((c) =>
     c.toLowerCase().startsWith(k.toLowerCase().slice(0, Math.max(3, k.length - 2)))
     || k.toLowerCase().startsWith(c.toLowerCase().slice(0, Math.max(3, c.length - 2))));
@@ -144,7 +163,36 @@ if (isMain(import.meta)) {
     process.exit(0);
   }
 
-  const l = lire(JSON.parse(readFileSync(fichier, "utf8")));
+  /*
+   * UN JSON QU'ON NE SAIT PAS LIRE SE DIT, IL NE SE JETTE PAS.
+   *
+   * `JSON.parse` d'un fichier vide ou portant un BOM rendait une `SyntaxError` de
+   * Node avec sa trace d'appel — du texte interne dans une interface destinée à un
+   * acheteur. Et le BOM n'est pas un cas exotique : c'est ce qu'un éditeur Windows
+   * ajoute, et c'est exactement ce que le lecteur CSV de ce dépôt gère très bien
+   * deux commandes plus loin.
+   */
+  const brut = readFileSync(fichier, "utf8").replace(/^\uFEFF/, "");
+  if (brut.trim() === "") {
+    console.error(`\n  "${fichier}" is empty. Nothing was read.\n\n`
+      + `  Start from the template:  npm run intake\n`);
+    process.exit(2);
+  }
+  let repondu: unknown;
+  try {
+    repondu = JSON.parse(brut);
+  } catch (e) {
+    console.error(`\n  "${fichier}" is not valid JSON: ${(e as Error).message}\n\n`
+      + `  Nothing was read and nothing was written. A questionnaire is a JSON object:\n`
+      + `  every line but the last inside { } ends with a comma, and every key is quoted.\n`);
+    process.exit(2);
+  }
+  if (repondu === null || typeof repondu !== "object" || Array.isArray(repondu)) {
+    console.error(`\n  "${fichier}" holds ${Array.isArray(repondu) ? "a list" : `a ${typeof repondu}`}, `
+      + `not a questionnaire.\n\n  It has to be a JSON object: { "volume": 100000, … }\n`);
+    process.exit(2);
+  }
+  const l = lire(repondu as Reponses);
 
   if (l.bloquant.length) {
     console.log("\nWHAT PREVENTS MEASURING AT ALL:\n");
@@ -194,4 +242,26 @@ if (isMain(import.meta)) {
   }, null, 2) + "\n");
   console.log(`\nWritten to ${sortie}. The ${l.defauts.length} values you did not supply are listed`);
   console.log(`separately: a repository default must never pass for a client's figure.\n`);
+
+  /*
+   * UN REFUS SORT EN NON NUL, SINON SEUL UN HUMAIN LE VOIT.
+   *
+   * `REFUSED — CONFIRM BEFORE CONTINUING` sortait en **0**. Un enchaînement `&&`
+   * continuait, une chaîne d'intégration passait au vert, et la seule chose qui
+   * séparait un refus d'un succès était quelqu'un qui lit. Le fichier est écrit
+   * quand même — l'analyse reste utile — mais le code de sortie dit qu'elle
+   * attend une confirmation.
+   */
+  if (l.bloquant.length || l.refus.length) {
+    /* Comptes recopiés dans des noms anglais avant d'entrer dans le message.
+     * La garde de langue lit le SOURCE, pas la sortie : `${l.refus.length}` porte
+     * un identifiant français dans une phrase anglaise, et elle le compte comme
+     * de la prose française. Elle a raison de ne pas savoir faire la différence —
+     * c'est à la chaîne rendue à l'acheteur de ne pas mélanger les deux. */
+    const blocking = l.bloquant.length;
+    const toConfirm = l.refus.length;
+    console.log(`Exit code 3: ${blocking} blocking, ${toConfirm} to confirm.`);
+    console.log(`The file above was written; these assumptions are not confirmed.\n`);
+    process.exit(3);
+  }
 }
