@@ -26,6 +26,7 @@ import { readProfiles, empreinteDuReleve, RELEVE_DE_REFERENCE, type Profile, typ
 import { optimiseExtraction, optimiseClassification, budgetShadowPrice, latenceRepresentative, paliersMesures, evaluer, pricePerThousandDocuments } from "./optimise.ts";
 import { exposition, optimiseExposition, ouLaRecommandationBascule, decompositionsIncoherentes } from "./exposition.ts";
 import { documentsComplets, comparer as comparerDocuments } from "./document.ts";
+import { rapportPourLeClient } from "./your-cases.ts";
 import { FORME as FORME_INTERNE } from "./signal.ts";
 import { PROMPTS as PROMPTS_INTERNES, questionPour as questionPourInterne } from "./tiers.ts";
 import { memoireDisponibleMo, etatMachine as etatMachineInterne } from "./contrainte.ts";
@@ -4004,4 +4005,46 @@ test("la mémoire disponible se lit avec la taille de page annoncée, inactif co
   const reelle = etatMachineInterne();
   assert.ok(reelle.memoireLibreMo > 0,
     "la lecture réelle rend zéro : `vm_stat` n'a pas été lu, et le zéro se lirait comme une machine pleine.");
+});
+
+test("le rapport que le client garde porte la réserve, pas seulement le terminal", () => {
+  /*
+   * LE FICHIER NE CONTENAIT QU'UN TABLEAU DE TAUX.
+   *
+   * Sur des colonnes que nous ne connaissons pas, il annonçait « large · 0,0 % » sur le nom
+   * SANS un mot sur la question déduite. Quelqu'un qui le relit la semaine suivante conclut
+   * que le modèle ne sait pas lire un nom — le même champ fait 100 % sous la question du
+   * client. L'avertissement vivait dans le terminal et mourait avec lui.
+   *
+   * **Une réserve qui ne voyage pas avec le chiffre n'existe pas.**
+   */
+  const lignes = [["nom_complet", "large", "0.0 %", "[0–13]", 25, "20 ms"]];
+
+  /* AVEC UNE QUESTION DÉDUITE : la réserve doit être dans le fichier, pas ailleurs. */
+  const deduit = rapportPourLeClient({
+    cas: 25, champs: ["nom_complet"], date: "2026-08-24", avecRegles: false, lignes,
+    questions: { nom_complet: questionPourInterne("nom_complet") },
+  });
+  assert.match(deduit, /derived from your column name/,
+    "le rapport ne dit plus que la question vient du nom de colonne.");
+  assert.match(deduit, /not comparable/,
+    "le rapport publie un taux obtenu sous une question déduite sans dire qu'il n'est pas comparable.");
+  assert.match(deduit, /--questions=file\.json/,
+    "le rapport ne dit plus comment corriger la question.");
+  assert.match(deduit, /What this does not establish/,
+    "le rapport ne porte plus ce qu'il n'établit pas.");
+  assert.ok(deduit.indexOf("not comparable") < deduit.indexOf("0.0 %"),
+    "la réserve est publiée APRÈS le tableau : un lecteur voit le chiffre avant de savoir qu'il ne compte pas.");
+
+  /* CONTRE-ÉPREUVE — sous une question fournie, l'avertissement N'APPARAÎT PAS. Un rapport
+     qui crie à chaque fois ne distingue plus rien, et on cesse de le lire. */
+  const fourni = rapportPourLeClient({
+    cas: 25, champs: ["nom_complet"], date: "2026-08-24", avecRegles: true, lignes,
+    questions: { nom_complet: questionPourInterne("nom_complet", { nom_complet: "What is the name of the client?" }) },
+  });
+  assert.ok(!/not comparable/.test(fourni),
+    "le rapport avertit d'une question déduite alors que le client a fourni la sienne.");
+  assert.match(fourni, /\*\*yours\*\*/, "une question fournie n'est plus signalée comme telle.");
+  assert.ok(!/no `--rules` was given/.test(fourni),
+    "le rapport dit qu'aucune règle n'a été donnée alors qu'il y en avait.");
 });

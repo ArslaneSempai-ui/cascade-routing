@@ -263,6 +263,69 @@ function chargerRegles(chemin: string): Record<string, RegExp> {
  * six requêtes gratuites marchent sur ses cas comme sur les nôtres — mais c'est lui qui
  * décide qu'une deuxième copie existe.
  */
+/**
+ * Le rapport que le client garde, construit à part pour pouvoir être éprouvé.
+ *
+ * Il ne contenait qu'un tableau de taux. Sur des colonnes que nous ne connaissons pas, il
+ * annonçait donc « large · 0,0 % » sur le nom, SANS un mot sur la question déduite — et
+ * quelqu'un qui le relit la semaine suivante conclut que le modèle ne sait pas lire un nom.
+ * Le même champ fait 100 % sous la question du client.
+ *
+ * L'avertissement vivait dans le terminal et mourait avec lui. **Une réserve qui ne voyage
+ * pas avec le chiffre n'existe pas.**
+ *
+ * Fonction pure, et c'est délibéré : un témoin qui devrait lancer toute la mesure pour la
+ * lire chargerait deux modèles, donc ne tournerait pas — et le seul endroit qui a menti
+ * resterait sans témoin.
+ */
+export function rapportPourLeClient(o: {
+  cas: number; champs: string[]; date: string;
+  questions: Record<string, { texte: string; provenance: "fournie" | "mesuree" | "deduite" }>;
+  lignes: (string | number)[][];
+  avecRegles: boolean;
+}): string {
+  const deduites = o.champs.filter((c) => o.questions[c]!.provenance === "deduite");
+  const entete = [
+    `# Your cases, measured`,
+    ``,
+    `${o.cas} case(s), ${o.champs.length} field(s), measured on this machine on ${o.date}. `
+      + `Nothing left it.`,
+    ``,
+    `## The question each field was asked`,
+    ``,
+    table(["Field", "Question", "Where it comes from"], o.champs.map((c) => {
+      const q = o.questions[c]!;
+      return [`\`${c}\``, q.texte,
+        { fournie: "**yours**",
+          mesuree: "measured — our own field, published rates were measured under it",
+          deduite: "**derived from your column name**" }[q.provenance]];
+    })),
+  ];
+  if (deduites.length) {
+    entete.push(``,
+      `> **${deduites.length} question(s) were derived from your column names.** That is a `
+      + `choice made on your behalf, not a measurement. **The rates below are not comparable `
+      + `to the ones in cascade's README**, which were measured under the questions marked `
+      + `"measured" above. On a sample of client cases, the same field scored 0 % under a `
+      + `derived question and 100 % under the client's own — the question is worth a hundred `
+      + `points. Supply yours with \`--questions=file.json\` and measure again before `
+      + `concluding anything about a tier.`);
+  }
+  /* Un blanc avant et après chaque tableau : un lecteur markdown strict colle sinon le titre
+     au tableau, et la section entière se rend en un seul paragraphe. */
+  entete.push(``, `## Accuracy per field and tier`, ``, ``);
+
+  const pied = [``, ``, `## What this does not establish`, ``,
+    `- That these rates hold on documents other than the ${o.cas} you supplied.`,
+    `- ${o.avecRegles ? "That your regexes generalise beyond these cases."
+      : "What a free tier would carry: no `--rules` was given, so none was measured."}`,
+    `- That the tiers here are the ones you should run: they are the ones this repository has.`,
+  ];
+  return entete.join("\n")
+    + table(["Field", "Tier", "Accuracy", "Interval", "n", "Median ms"], o.lignes)
+    + pied.join("\n") + "\n";
+}
+
 export async function mesurerVosCas(
   cas: Cas[], champs: string[], paliers: TierName[], regles?: Record<string, RegExp>,
   journaliser = false, sorties?: SortiesFournies,
@@ -390,6 +453,10 @@ The CSV wants an id, the input text, then one column per field to extract:
          answers — that is measured. Its cost and latency are the ones you give us: assumed,
          never measured here, and marked so everywhere they travel.
          Without it the routing is over models only, and will overstate what you need to pay.
+--questions  a JSON of { "your column": "What is …?" }. Without it, the question is derived
+         from the column name — a choice made for you, printed before anything loads. On a
+         sample of client cases the same field scored 0 % under a derived question and 100 %
+         under the client's own: supply these before concluding anything about a tier.
 --llm    add the local generative tiers (needs Ollama and the models pulled).
 
 Nothing leaves your machine: the models are local and this path makes no network call.
@@ -595,13 +662,16 @@ Nothing leaves your machine: the models are local and this path makes no network
   }
 
   const sortie = fichier.replace(/\.csv$/i, "") + "-measured.md";
-  writeFileSync(sortie, table(["Field", "Tier", "Accuracy", "Interval", "n", "Median ms"],
-    champs.flatMap((champ) => Object.entries(releve[champ]!).map(([palier, r]) => {
+  writeFileSync(sortie, rapportPourLeClient({
+    cas: cas.length, champs, date: new Date().toISOString().slice(0, 10),
+    questions, avecRegles: Boolean(regles),
+    lignes: champs.flatMap((champ) => Object.entries(releve[champ]!).map(([palier, r]) => {
       const q = rate(r.bons, r.sur);
       return [champ, palier, (q.rate * 100).toFixed(1) + " %",
         `[${(q.low * 100).toFixed(0)}–${(q.high * 100).toFixed(0)}]`, q.n,
         ecrireMs(r.ms, palier === sorties?.nom)];
-    }))) + "\n");
+    })),
+  }));
   console.log(`Written to ${sortie}\n`);
   if (!regles) {
     console.log("No --rules given, so no free tier was measured. On my own corpus free regexes");
