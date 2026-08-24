@@ -105,6 +105,7 @@ test("chaque façon de ne pas être un rapport a son propre motif", () => {
     [`<script type="application/json" id="rapport">{"a":1}</script>`
       + `<script type="application/json" id="signature">{"alg":"RSA","cle":"x","valeur":"y"}</script>`, /Ed25519/],
   ];
+  assert.ok(cas.length > 0, "`cas` est vide : la boucle qui suit ne vérifie rien.");
   for (const [contenu, attendu] of cas) {
     const r = verifier(contenu, pem);
     assert.equal(r.valide, false);

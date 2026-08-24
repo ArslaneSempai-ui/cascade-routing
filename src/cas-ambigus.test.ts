@@ -46,8 +46,10 @@ test("la clé ne déclare aucune lecture que le corpus ne contient pas", (t) => 
   const ajoutees = new Set(cle.additionsBeyondTheProse.map((a) => `${a.case}|${normaliserReponse(a.reading)}`));
 
   let verifiees = 0;
+  assert.ok(cle.cases.length > 0, "`cle.cases` est vide : la boucle qui suit ne vérifie rien.");
   for (const c of cle.cases) {
     const b = normaliserReponse(bloc(prose, c.id));
+    assert.ok(c.readings.length > 0, "`c.readings` est vide : la boucle qui suit ne vérifie rien.");
     for (const l of c.readings) {
       verifiees++;
       if (ajoutees.has(`${c.id}|${normaliserReponse(l)}`)) continue;
@@ -99,6 +101,7 @@ test("un cas rendu non ambigu par notre schéma dit pourquoi, et n'en garde qu'u
 test("toute lecture ajoutée porte sa date et sa raison", (t) => {
   if (!existsSync(CLE)) return t.skip("!existsSync(CLE) — ce cas n'a rien regardé, et il le dit.");
   const { cle } = charger();
+  assert.ok(cle.additionsBeyondTheProse.length > 0, "`cle.additionsBeyondTheProse` est vide : la boucle qui suit ne vérifie rien.");
   for (const a of cle.additionsBeyondTheProse) {
     assert.ok(/before any measurement/.test(a.addedOn),
       `l'ajout ${a.case}/« ${a.reading} » ne dit pas qu'il précède la mesure — s'il la suit, il est nul.`);

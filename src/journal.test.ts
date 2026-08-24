@@ -9,6 +9,7 @@
  */
 
 import { test } from "node:test";
+import { TIERS, ENCODEURS, GENERATIFS } from "./tiers.ts";
 import assert from "node:assert/strict";
 import { readFileSync, writeFileSync, mkdtempSync, rmSync, readdirSync, existsSync } from "node:fs";
 import { execFileSync, spawnSync } from "node:child_process";
@@ -257,6 +258,7 @@ test("aucun relevé livré ne cite un commit introuvable", () => {
     try {
       const b = execFileSync("git", ["for-each-ref", "--format=%(refname:short)", "refs/heads/"],
         { cwd: racine, encoding: "utf8" }).split("\n").filter(Boolean);
+      assert.ok(b.length > 0, "`b` est vide : la boucle qui suit ne vérifie rien.");
       for (const nom of b) {
         const h = execFileSync("git", ["rev-parse", nom], { cwd: racine, encoding: "utf8" }).trim();
         if (!atteignable(h)) return h;
@@ -653,6 +655,7 @@ test("aucun contrôle ne lit un produit que rien ne vérifie avant lui", () => {
   const tests = readdirSync(dossier).filter((n) => n.endsWith(".test.ts"));
   let examines = 0, lisentUnProduit = 0;
   const nonCouverts: string[] = [];
+  assert.ok(tests.length > 0, "`tests` est vide : la boucle qui suit ne vérifie rien.");
   for (const n of tests) {
     const src = readFileSync(join(dossier, n), "utf8");
     for (const fichier of [...Object.keys(produits), ...sources]) {
@@ -747,6 +750,7 @@ test("les sorties brutes ne sont lues qu'à un seul endroit", () => {
   const fichiers = readdirSync(dossier).filter((n) => n.endsWith(".ts") && !n.endsWith(".test.ts"));
 
   const lecteurs: string[] = [];
+  assert.ok(fichiers.length > 0, "`fichiers` est vide : la boucle qui suit ne vérifie rien.");
   for (const n of fichiers) {
     const src = readFileSync(join(dossier, n), "utf8");
     /* Écrire les sorties est le travail de la mesure ; les *décomposer* est ce qui doit rester
@@ -864,4 +868,31 @@ test("un cas qui ne regarde pas le DIT, il ne rend pas la main en silence", (t) 
     `cas rendant la main sans avoir rien vérifié :\n${muets.map((x) => `  - ${x}`).join("\n")}\n`
     + "  → remplacez `return;` par `return t.skip(\"pourquoi\")`, et prenez `(t)` en paramètre.\n"
     + "    Le lanceur comptera un ignoré au lieu d'une réussite, et la perte se verra.");
+});
+
+test("les collections partagées ne sont pas vides, sinon dix cas s'évaporent", () => {
+  /*
+   * Une dizaine de cas portent leurs assertions DANS une boucle sur `FIELDS`, `TIERS` ou
+   * `LIVRES`. Si l'une de ces constantes devenait vide — un champ retiré, un chargement de
+   * corpus qui échoue en silence — ces cas passeraient en n'ayant rien exécuté, et la suite
+   * annoncerait le même nombre de réussites qu'avant.
+   *
+   * Une borne par boucle aurait fait dix assertions identiques. Une seule ici les couvre
+   * toutes, et elle dit ce qu'elle protège plutôt que de compter.
+   */
+  const collections: [string, readonly unknown[]][] = [
+    ["FIELDS", FIELDS],
+    ["TIERS", TIERS],
+    ["ENCODEURS", ENCODEURS],
+    ["GENERATIFS", GENERATIFS],
+  ];
+  const vides = collections.filter(([, c]) => c.length === 0).map(([n]) => n);
+  assert.deepEqual(vides, [],
+    `collection(s) partagée(s) vide(s) : ${vides.join(", ")}.\n`
+    + "  → une dizaine de cas portent leurs assertions dans une boucle sur ces collections.\n"
+    + "    Vides, ils passent sans rien exécuter et la suite annonce le même total qu'avant.");
+  /* Et un plancher, parce que « non vide » se satisferait d'un seul élément là où les cas
+     comparent des paliers entre eux. */
+  assert.ok(FIELDS.length >= 3, `${FIELDS.length} champ(s) : trop peu pour que les cas qui comparent des champs veuillent dire quelque chose.`);
+  assert.ok(TIERS.length >= 3, `${TIERS.length} palier(s) : trop peu pour que le routage soit un choix.`);
 });

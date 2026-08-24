@@ -530,6 +530,7 @@ test("aucun chiffre n'est tapé à la main dans la prose du README, et la garde 
     ["en dollars", readme + "\n\nThree client teams saved $402,750 last quarter.\n"],
     ["une taille", readme + "\n\nThe weights come to 174 MB on disk.\n"],
   ];
+  assert.ok(poisons.length > 0, "`poisons` est vide : la boucle qui suit ne vérifie rien.");
   for (const [quoi, empoisonne] of poisons) {
     assert.ok(chiffresNus(empoisonne, permis).nus.length > 0,
       `la garde ne voit pas un chiffre inventé ajouté ${quoi}. Elle ne prouve donc rien, et `
@@ -559,6 +560,7 @@ test("le routage est exhaustif, pas heuristique", (t) => {
        sortie muette et a fait ignorer le test entier — le contrôle qui cherche les cas qui
        ne regardent pas doit compter la profondeur des accolades, pas se fier au texte. */
     if (i === FIELDS.length) { vues++; return; }
+    assert.ok(paliers.length > 0, "`paliers` est vide : la boucle qui suit ne vérifie rien.");
     for (const e of paliers) compter(i + 1, { ...courant, [FIELDS[i]!]: e });
   };
   compter(0, {});
@@ -608,7 +610,9 @@ test("les gestes du pilote de capture mènent à l'optimum courant", (t) => {
   const etat: Record<string, string> = Object.fromEntries(FIELDS.map((c) => [c, "large"]));
   const paliers = paliersMesures(p);
 
+  assert.ok(gif.scenes.length > 0, "`gif.scenes` est vide : la boucle qui suit ne vérifie rien.");
   for (const scene of gif.scenes) {
+    assert.ok(scene.length > 0, "`scene` est vide : la boucle qui suit ne vérifie rien.");
     for (const geste of scene) {
       const m = geste.match(/data-choix="([^"~]+)~([^"]+)"/);
       assert.ok(m, `geste illisible dans captures.json : ${geste}`);
@@ -1096,6 +1100,7 @@ test("aucun appel sortant n'a été ajouté hors de la liste", () => {
   const fichiers = readdirSync(dossier).filter((f) => /\.(ts|mjs)$/.test(f) && !f.endsWith(".test.ts"));
 
   const permis = SORTIES_AUTORISEES.map((s) => s.motif);
+  assert.ok(fichiers.length > 0, "`fichiers` est vide : la boucle qui suit ne vérifie rien.");
   for (const f of fichiers) {
     const src = readFileSync(join(dossier, f), "utf8");
     for (const m of src.matchAll(/fetch\(\s*[`"']?([^`"'),\s]+)/g)) {
@@ -2572,6 +2577,7 @@ test("l'estimation du palier 1.7b n'affirme rien que le dépôt contredise", () 
     ["la puissance changée", doc.replace(puissance(n), `${n}⁵ = 99,999`)],
     ["le palier de plus changé", doc.replace(puissance(n + 1), `${n + 1}⁵ = 99,999`)],
   ];
+  assert.ok(falsifications.length > 0, "`falsifications` est vide : la boucle qui suit ne vérifie rien.");
   for (const [quoi, faux] of falsifications) {
     const tientEncore = /not published latencies and must not be quoted as any/.test(faux)
       && /`[0-9a-f]{12}`/.test(faux)
@@ -2939,6 +2945,7 @@ test("aucun outil n'écrit dans un dossier que git ne transporte pas sans le cr�
     if (!/\.(ts|mjs)$/.test(f) || /\.test\./.test(f)) continue;
     const src = sansMentions(readFileSync(join(racine, "src", f), "utf8"));
     if (!/writeFileSync\(/.test(src) || /mkdirSync/.test(src)) continue;
+    assert.ok(ignores.length > 0, "`ignores` est vide : la boucle qui suit ne vérifie rien.");
     for (const d of ignores) {
       const litteral = src.match(new RegExp(`["'\`](${d}/[^"'\`]*)["'\`]`));
       if (litteral) fautifs.push(`${f}  ->  ${litteral[1]}`);
@@ -3342,6 +3349,7 @@ test("le coût de l'étage de lecture est publié avec ce qu'il ne couvre pas", 
   }
 
   /* AUCUN TAUX SOUS LE PLANCHER D'OBSERVATIONS. La règle du dépôt vaut aussi ici. */
+  assert.ok(r.paliers.length > 0, "`r.paliers` est vide : la boucle qui suit ne vérifie rien.");
   for (const p of r.paliers) {
     assert.ok(p.surTexte.n >= OBSERVATIONS_MINIMALES && p.surImage.n >= OBSERVATIONS_MINIMALES,
       `\`${p.palier}\` publie un écart sur ${Math.min(p.surTexte.n, p.surImage.n)} observations, `
@@ -3744,6 +3752,7 @@ test("la frontière d'abstention applique son plancher au bon dénominateur", ()
     return cellules[5] ?? null;   // « Precision of what is delivered »
   };
 
+  assert.ok(a!.rules.length > 0, "`a!.rules` est vide : la boucle qui suit ne vérifie rien.");
   for (const r of a!.rules) {
     if (r.deliveredPrecisionPct === null) continue;
     const citable = r.delivered >= ENOUGH_CAS;

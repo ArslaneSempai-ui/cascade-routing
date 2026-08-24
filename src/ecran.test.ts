@@ -74,6 +74,7 @@ test("aucun nom importé n'est redéclaré dans l'écran", () => {
   const ligne = src.match(/import\s*\{([^}]*)\}\s*from\s*["'][^"']*graphes\.js["']/);
   if (!ligne) return;
   const noms = ligne[1].split(",").map((m) => m.split(/\s+as\s+/).pop()!.trim()).filter(Boolean);
+  assert.ok(noms.length > 0, "`noms` est vide : la boucle qui suit ne vérifie rien.");
   for (const nom of noms) {
     const declare = new RegExp(`^\\s*(?:export\\s+)?(?:function|const|let|var)\\s+${nom}\\b`, "m");
     assert.equal(
@@ -110,6 +111,7 @@ test("chaque symbole importé par le gabarit de pages.ts existe vraiment", async
    */
   const attendus = ["corpus", "paliers", "optimise", "assumptions"];
   const trouves = imports.map((m) => m[2]!);
+  assert.ok(attendus.length > 0, "`attendus` est vide : la boucle qui suit ne vérifie rien.");
   for (const m of attendus) {
     assert.ok(trouves.includes(m),
       `le gabarit de pages.ts n'importe plus rien depuis ./js/${m}.js.\n`
@@ -117,12 +119,14 @@ test("chaque symbole importé par le gabarit de pages.ts existe vraiment", async
       + ` ne surveille plus cette partie du gabarit.`);
   }
 
+  assert.ok(imports.length > 0, "`imports` est vide : la boucle qui suit ne vérifie rien.");
   for (const [, liste, module] of imports) {
     const mod = await import(fileURLToPath(new URL(`./${module}.ts`, import.meta.url))) as Record<string, unknown>;
     const noms = liste!.split(",")
       .map((n) => n.trim().replace(/^type\s+/, "").split(/\s+as\s+/)[0]!.trim())
       .filter(Boolean);
 
+    assert.ok(noms.length > 0, "`noms` est vide : la boucle qui suit ne vérifie rien.");
     for (const nom of noms) {
       assert.ok(nom in mod,
         `le gabarit de pages.ts importe « ${nom} » depuis ${module}.js, que src/${module}.ts n'exporte pas.\n`

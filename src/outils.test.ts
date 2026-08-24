@@ -136,6 +136,7 @@ test("chaque fichier de data/ a la forme que le générateur suppose", () => {
     if (!existsSync(racine + chemin)) continue;   // pas encore produit : rien à tenir
     vus++;
     const d = JSON.parse(readFileSync(racine + chemin, "utf8"));
+    assert.ok(cles.length > 0, "`cles` est vide : la boucle qui suit ne vérifie rien.");
     for (const c of cles) {
       assert.ok(c in d, `${chemin} n'a pas de clé « ${c} » — le générateur du README la lit`);
     }
