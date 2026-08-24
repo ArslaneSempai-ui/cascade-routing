@@ -29,8 +29,10 @@ test("deux colonnes : texte et réponse, sans identifiant", () => {
   assert.equal(cas[0]!.id, "1", "un identifiant est fabriqué quand la colonne manque");
 });
 
-test("trois colonnes ou plus : un champ par colonne restante", () => {
-  const { champs, cas } = lireCsv("id,text,name,birth\na1,Anna Petrova born 3 May 1990,Anna Petrova,3 May 1990\n");
+test("au-delà de deux colonnes : un champ par colonne restante", () => {
+  const entete = "id,text,name,birth";
+  assert.equal(entete.split(",").length, 4, "l'en-tête de ce cas, compté plutôt qu'annoncé.");
+  const { champs, cas } = lireCsv(`${entete}\na1,Anna Petrova born 3 May 1990,Anna Petrova,3 May 1990\n`);
   assert.deepEqual(champs, ["name", "birth"]);
   assert.equal(cas[0]!.id, "a1");
   assert.equal(cas[0]!.truth["birth"], "3 May 1990");
@@ -341,9 +343,13 @@ test("une colonne « id » est reconnue par son nom, et n'est pas un champ", () 
 test("trois colonnes sans « text » sont refusées, deux colonnes sans « text » ne le sont pas", () => {
   /* Trois colonnes offrent deux lectures — la première peut être un identifiant ou le
      texte — et deviner était le défaut : le document du client devenait une étiquette. */
-  assert.throws(() => lireCsv("texte,nom,naissance\na,b,c\n"), /none of them is "text"/);
+  const trois = "texte,nom,naissance";
+  assert.equal(trois.split(",").length, 3, "les colonnes du titre, comptées plutôt qu'annoncées.");
+  assert.throws(() => lireCsv(`${trois}\na,b,c\n`), /none of them is "text"/);
   /* Deux colonnes n'en offrent qu'une : c'est la forme des jeux publics, elle est gardée. */
-  const l = lireCsv("sentence,label\nbonjour,salutation\n");
+  const deux = "sentence,label";
+  assert.equal(deux.split(",").length, 2, "et celles de la seconde moitié du titre.");
+  const l = lireCsv(`${deux}\nbonjour,salutation\n`);
   assert.equal(l.cas[0]!.text, "bonjour");
   assert.deepEqual(l.champs, ["label"]);
 });
@@ -478,8 +484,8 @@ test("le plafond d'appels refuse le fichier qui occupe la machine sans prévenir
     assert.match(sortie, /--yes-run-it/,
       "un refus sans issue se contourne en retirant la garde du fichier.");
     assert.ok(sortie.split("\n").length < 25,
-      "l'annonce doit être bornée : sans borne, ce refus arrive après dix mille lignes\n"
-      + "  de noms de colonne, soit " + sortie.split("\n").length + " lignes ici.");
+      "l'annonce doit être bornée : sans borne, ce refus arrive après une ligne par nom de\n"
+      + "  colonne, soit " + sortie.split("\n").length + " lignes ici.");
     assert.ok(!/\bc9998\b/.test(sortie), "le 9 999e nom ne doit pas s'imprimer.");
   } finally {
     rmSync(dossier, { recursive: true, force: true });
@@ -511,7 +517,8 @@ test("un tableau JSON passé à --rules est refusé, pas lu comme des colonnes �
   assert.throws(() => chargerRegles(chemin, ["supplier", "total"]), (e: Error) => {
     assert.match(e.message, /an array/, "le message doit dire ce qui a été trouvé.");
     assert.ok(e.message.includes(chemin),
-      "trois fichiers sur la ligne de commande : sans le nom, le client ne sait pas lequel.");
+      "avec plusieurs fichiers sur la ligne de commande, sans le nom, le client ne sait\n"
+      + "  pas lequel est en cause.");
     return true;
   });
 
@@ -698,7 +705,8 @@ test("le nom de la chaîne du client est une entrée, pas une chaîne de confian
   assert.throws(() => nomDeChaine("a\nb", "f.json"), /line break or a control character/,
     "un retour à la ligne coupe la ligne du tableau en deux.");
   assert.throws(() => nomDeChaine("x".repeat(41), "f.json"), /40 at most/,
-    "quatre cents caractères détruisaient l'alignement de la console et du tableau.");
+    "un nom de plusieurs centaines de caractères détruisait l'alignement de la console\n"
+    + "  et du tableau qu'on rend au client.");
 });
 
 test("chargerSorties fait passer le nom par la validation, et pas seulement le fichier", async () => {
@@ -836,10 +844,10 @@ test("les règles du client sont bornées, et évaluées avant qu'un modèle soi
 
   const mesure = src.indexOf("await mesurerVosCas(");
   assert.ok(mesure > 0 && appel < mesure,
-    "les règles s'évaluent AVANT la mesure : découvrir au dossier quatre mille qu'une règle\n"
+    "les règles s'évaluent AVANT la mesure : découvrir au milieu du corpus qu'une règle\n"
     + "  ne termine pas coûte tout ce qui précède.");
 
   assert.ok(!/c\.text\.match\(regles/.test(src),
-    "plus aucune évaluation de règle hors du fil borné : c'est par là que 162 secondes\n"
-    + "  d'un seul cas entraient dans le temps par palier.");
+    "plus aucune évaluation de règle hors du fil borné : c'est par là qu'une évaluation\n"
+    + "  qui ne rend pas la main entrait dans le temps par palier.");
 });

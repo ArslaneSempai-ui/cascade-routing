@@ -236,10 +236,12 @@ export function modelesTronques(cles: readonly CleModele[], racine?: string): Et
   const abimes: EtatModele[] = [];
   for (const cle of cles) {
     const m = POIDS_MODELES[cle];
-    for (const chemin of [
-      join(base, m.depot, m.revision, "onnx", "model.onnx"),
-      join(base, m.depot, "onnx", "model.onnx"),
-    ]) {
+    /* Les deux dispositions que la bibliothèque écrit : avec la révision épinglée, et sans.
+       Ce sont des chemins CALCULÉS depuis `POIDS_MODELES`, pas une liste de fichiers écrite
+       à la main — ce que la table déclare est confronté au disque juste en dessous. */
+    const avecRevision = join(base, m.depot, m.revision, "onnx", "model.onnx");
+    const sansRevision = join(base, m.depot, "onnx", "model.onnx");
+    for (const chemin of [avecRevision, sansRevision]) {
       if (!existsSync(chemin)) continue;
       const taille = statSync(chemin).size;
       if (taille !== m.octets) abimes.push({ cle, chemin, taille, attendu: m.octets });

@@ -15,7 +15,8 @@
  */
 
 import { test } from "node:test";
-import { mkdtempSync, mkdirSync, writeFileSync, truncateSync, rmSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, truncateSync, rmSync, readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import assert from "node:assert/strict";
@@ -133,4 +134,30 @@ test("le diagnostic distingue « pas téléchargé » de « téléchargement cou
   } finally {
     for (const d of [tronque, vide, entier]) rmSync(d, { recursive: true, force: true });
   }
+});
+
+test("tout modèle que le code ouvre a son poids dans la table", () => {
+  /*
+   * LA TABLE NE SE RÉCITE PAS : ELLE SE CONFRONTE À CE QUE LE CODE CHARGE.
+   *
+   * `POIDS_MODELES` est écrite à la main. Le jour où un cinquième `pipeline(...)` arrive
+   * sans sa taille, `modelesTronques` ne le regarde pas — et rend un tableau vide, qui se
+   * lit « rien n'est tronqué ». Un zéro parfaitement silencieux.
+   *
+   * La seule source juste est le fichier qui appelle : chaque dépôt de modèle qui traverse
+   * `pipeline()` doit être déclaré ici.
+   */
+  const src = readFileSync(fileURLToPath(new URL("./tiers.ts", import.meta.url)), "utf8");
+  const charges = [...src.matchAll(/pipeline\([^,]+,\s*"([^"]+)"/g)].map((m) => m[1]!);
+  assert.ok(charges.length > 0, "témoin de non-vacuité : le motif trouve bien des appels.");
+
+  const declares = new Set<string>(Object.values(POIDS_MODELES).map((m) => m.depot));
+  for (const depot of charges) {
+    assert.ok(declares.has(depot),
+      `${depot} est chargé par ce fichier et n'a pas de poids déclaré : son fichier tronqué\n`
+      + "  ne serait jamais vu, et le contrôle rendrait « rien n'est tronqué ».");
+  }
+  assert.equal(declares.size, new Set(charges).size,
+    "et l'inverse : un poids déclaré pour un modèle que plus personne ne charge est une\n"
+    + "  ligne que rien ne vérifie.");
 });

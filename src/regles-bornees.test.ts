@@ -12,6 +12,8 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { evaluerRegles, direLesRefus, MS_PAR_EVALUATION } from "./regles-bornees.ts";
 
 /* Le coût de ce motif double tous les deux caractères : n=20 coûte quelques dizaines de
@@ -38,20 +40,49 @@ test("une règle ordinaire traverse, avec ses valeurs et son temps", async () =>
   assert.ok(Number.isFinite(r.ms["supplier"]), "un temps mesuré, pas un NaN.");
 });
 
-test("la borne porte sur une évaluation, pas sur la passe entière", async () => {
+test("beaucoup d'évaluations courtes passent, une évaluation qui diverge est refusée", async () => {
   /*
-   * Une règle qui met un peu sur chacun de beaucoup de cas est LENTE mais évaluable ; une
-   * règle qui ne rend pas la main sur un seul cas ne l'est pas. Une borne posée sur le
-   * total confondrait les deux et refuserait un gros corpus honnête.
+   * PREMIÈRE VERSION DE CE CAS : quarante chaînes calibrées pour coûter « quelques dizaines
+   * de millisecondes » chacune, et l'affirmation que leur total dépassait la borne sans
+   * qu'aucune ne la franchisse. Instable, et une session pair a rendu le diagnostic plutôt
+   * qu'une impression : lancé seul ✔ 702 · 687 · 712 ms, dans la suite complète ✖ 253 · 253.
+   * Dans la suite, un des quarante franchissait 250 ms tout seul, était refusé, et la
+   * première assertion tombait — le cas était PLUS RAPIDE quand il échouait.
+   *
+   * C'est la faute qu'on corrige partout ailleurs, appliquée à un témoin : **un seuil
+   * calibré sur une machine.** La borne de 250 ms dans le code est bonne, elle a sa
+   * provenance et elle protège le client ; c'est le témoin qui ne peut pas dépendre du
+   * temps réel.
+   *
+   * Ce qui reste ici ne dépend d'aucune vitesse : beaucoup d'évaluations en microsecondes
+   * passent, une évaluation qui ne rend pas la main est refusée. Le réarmement de la borne,
+   * lui, se prouve sur la forme — voir le cas suivant — parce que l'entrée qui le
+   * discriminerait serait précisément celle dont le coût dépend de la machine.
    */
-  const beaucoup = await evaluerRegles({ a: /(a+)+$/ }, Array.from({ length: 40 }, () => dur(20)), 250);
-  assert.deepEqual(beaucoup.refusees, {},
-    "quarante cas à quelques dizaines de millisecondes dépassent 250 ms au total, et\n"
-    + "  chacun reste très en dessous : cette règle doit passer.");
-  assert.equal(beaucoup.valeurs["a"]!.length, 40);
+  const beaucoup = await evaluerRegles({ a: /Globex/ },
+    Array.from({ length: 500 }, (_, i) => `Invoice ${i} from Globex`));
+  assert.deepEqual(beaucoup.refusees, {}, "aucune évaluation courte ne doit être refusée.");
+  assert.equal(beaucoup.valeurs["a"]!.length, 500);
 
-  const unSeul = await evaluerRegles({ a: /(a+)+$/ }, [dur(28)], 250);
-  assert.ok(unSeul.refusees["a"], "un seul cas au-dessus de la borne suffit à refuser.");
+  const unSeul = await evaluerRegles({ a: /(a+)+$/ }, [dur(61)], 250);
+  assert.ok(unSeul.refusees["a"], "une évaluation qui ne rend pas la main est refusée.");
+});
+
+test("la borne est réarmée à chaque cas, pas posée une fois pour la passe", () => {
+  /*
+   * Une borne posée une seule fois est une borne sur le TOTAL : elle confondrait « gros
+   * corpus honnête » et « motif qui ne termine pas ». La différence ne se voit pas sur une
+   * entrée dont le coût est indépendant de la machine — cinquante mille évaluations
+   * triviales tiennent en 74 ms mesurées, très en dessous de la borne — donc elle se lit
+   * sur la source, qui, elle, ne dépend d'aucune vitesse.
+   */
+  const src = readFileSync(fileURLToPath(new URL("./regles-bornees.ts", import.meta.url)), "utf8");
+  const handler = src.slice(src.indexOf('w.on("message"'), src.indexOf('w.on("error"'));
+
+  assert.match(handler, /clearTimeout\(minuteur\)/,
+    "sans annuler la borne en cours, elle tire pendant l'évaluation suivante.");
+  assert.match(handler, /armer\(\)/,
+    "et sans la réarmer, la première borne posée devient une borne sur la passe entière.");
 });
 
 test("le compte des refus voyage avec le chiffre", async () => {
@@ -68,7 +99,7 @@ test("le compte des refus voyage avec le chiffre", async () => {
     "témoin : rien à dire quand rien n'est refusé.");
 });
 
-test("la borne par défaut laisse quatre ordres de grandeur à une règle qui travaille", () => {
+test("la borne par défaut est bien au-dessus du coût de démarrage du fil", () => {
   assert.equal(MS_PAR_EVALUATION, 250);
   assert.ok(MS_PAR_EVALUATION > 20,
     "le démarrage du fil coûte une vingtaine de millisecondes, une fois par règle : une\n"
