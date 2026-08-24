@@ -12,3 +12,5 @@ benchmarks/data/
 # à une passe dont le code, lui, était bien committé. Une garde qui crie à tort finit
 # commentée.
 src/ocr/lire
+cle-privee.pem
+*.key
