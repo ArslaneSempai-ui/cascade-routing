@@ -76,6 +76,78 @@ export type Lecture = {
   lecture: { colTexte: number; colId: number; noms: string[] };
 };
 
+/*
+ * ─── LE NOM D'UNE COLONNE EST UNE DONNÉE DU CLIENT ───
+ *
+ * Il ressort **quatre fois** dans le rapport qu'on lui rend : deux fois entre accents
+ * graves — inerte — et **deux fois nu**, dans la phrase de la question et à chaque ligne du
+ * tableau d'exactitude. Mesuré le 25 août 2026 sur un en-tête hostile :
+ *
+ *   | <img src=x onerror=alert(1)> | small | 0.0 % | [0–66] | 2 | 11 ms |
+ *
+ * Trois conséquences, et la troisième est la plus grave :
+ *
+ *   — rendu en HTML, l'écho nu **s'exécute** ;
+ *   — un `|` dans un nom — `=cmd|' /C calc'!A0` — **ouvre une colonne de plus** et désaligne
+ *     en silence le tableau remis au client ;
+ *   — `questionPour(champ)` construit « What is the <nom> ? » et ce texte **part dans
+ *     l'invite du modèle** : le client écrit une partie de l'invite. Sans `--llm` les paliers
+ *     sont extractifs et la portée est bornée ; le palier génératif est précisément ce qui se
+ *     vend au-dessus, et un fichier fourni par un tiers devient alors une entrée d'invite.
+ *
+ * Le modèle d'échappement existait déjà dans ce fichier — deux échos sur quatre le font. Il
+ * n'était simplement pas appliqué partout.
+ */
+
+/*
+ * La question envoyée au modèle, nettoyée SANS changer la recherche.
+ *
+ * On garde le nom d'origine pour retrouver une question fournie par le client ou l'une des
+ * nôtres — c'est la clé, et la nettoyer ferait manquer les deux. Seule la question DÉDUITE
+ * contient le nom de colonne, et c'est la seule qu'on refabrique à partir du nom nettoyé.
+ */
+/**
+ * Une énumération bornée qui porte le compte de ce qu'elle écarte : dix mille noms de
+ * colonne ne se lisent pas, et une liste coupée en silence ment sur ce qu'elle montre.
+ */
+export function apercu(noms: readonly string[], max: number): string {
+  return noms.length <= max
+    ? noms.join(", ")
+    : noms.slice(0, max).join(", ") + `, and ${noms.length - max} more`;
+}
+
+/** Combien de noms on montre avant de compter le reste. */
+export const MONTRES = 12;
+
+/** Au-delà de ce nombre d'appels au modèle, on demande une confirmation explicite. */
+export const PLAFOND_APPELS = 10_000;
+
+export function questionSure(champ: string, fournies?: Record<string, string>): string {
+  const q = questionPour(champ, fournies);
+  /* Une question fournie par le client ou l'une des nôtres part telle quelle : ni l'une ni
+     l'autre ne contient le nom de colonne. Seule la déduite le contient, et c'est la seule
+     qu'on refabrique — depuis le nom nettoyé. */
+  return q.provenance === "deduite" ? `What is the ${nomSur(champ)}?` : q.texte;
+}
+
+/** Un nom de colonne rendu inoffensif dans une cellule de tableau markdown. */
+export function cellule(v: string | number): string {
+  const t = String(v);
+  /* Le `|` d'abord : c'est lui qui casse la structure. Les accents graves ensuite, sinon le
+     bloc de code qu'on ouvre se referme au milieu du nom. */
+  return "`" + t.replace(/\|/g, "\\|").replace(/`/g, "'") + "`";
+}
+
+/** Le même nom, réduit à ce qui peut entrer dans une invite sans la réécrire. */
+export function nomSur(champ: string): string {
+  /* Liste blanche, pas liste noire : on énumère ce qui passe, jamais ce qui ne passe pas.
+     Une liste noire se contourne par le caractère auquel personne n'a pensé. */
+  const propre = champ.replace(/[^\p{L}\p{N} _.'-]/gu, " ").replace(/\s+/g, " ").trim();
+  /* Vidé par le nettoyage : on ne renvoie pas une chaîne vide dans « What is the … ? »,
+     qui produirait une question sans objet. Un repli nommé vaut mieux. */
+  return propre.length > 0 ? propre : "unnamed field";
+}
+
 export function lireCsv(texte: string): Lecture {
   const lignes: string[][] = [];
   let ligne: string[] = [], cellule = "", guillemets = false;
@@ -408,7 +480,7 @@ export function rapportPourLeClient(o: {
     ``,
     table(["Field", "Question", "Where it comes from"], o.champs.map((c) => {
       const q = o.questions[c]!;
-      return [`\`${c}\``, q.texte,
+      return [cellule(c), cellule(q.texte),
         { fournie: "**yours**",
           mesuree: "measured — our own field, published rates were measured under it",
           deduite: "**derived from your column name**" }[q.provenance]];
@@ -511,7 +583,7 @@ export async function mesurerVosCas(
            propriétés utiles, et le champ n'est qu'une clé. Le typage local est plus étroit
            que la réalité, d'où la conversion — explicite plutôt que silencieuse. */
         const got = await extract(palier, { id: c.id, text: c.text, truth: c.truth } as never,
-          champ as never, "reference", questionPour(champ, questions).texte);
+          champ as never, "reference", questionSure(champ, questions));
         const ms = performance.now() - t0;
         durees.push(ms);
         journal?.ligne({
@@ -589,6 +661,11 @@ The CSV wants an id, the input text, then one column per field to extract:
          sample of client cases the same field scored 0 % under a derived question and 100 %
          under the client's own: supply these before concluding anything about a tier.
 --llm    add the local generative tiers (needs Ollama and the models pulled).
+--show-questions  print the derived question for every field, however many there are.
+         Without it the list is cut after the first few and the rest are counted.
+--yes-run-it  run even when the number of model calls is above the printed ceiling. The
+         count is cases × fields × tiers and is printed before anything loads; nothing is
+         predicted about how long it takes, since that depends on your machine.
 
 Nothing leaves your machine: the models are local and this path makes no network call.
 `);
@@ -640,7 +717,48 @@ Nothing leaves your machine: the models are local and this path makes no network
     ...(avecLlm ? GENERATIFS : []),
   ];
 
-  console.log(`\n${cas.length} cases, ${champs.length} field(s): ${champs.join(", ")}`);
+  /* Une énumération sans borne n'informe personne : 9 999 noms de colonne font plus de dix
+     mille lignes de console avant la première mesure. On en montre quelques-uns et on dit
+     combien restent — une sélection porte le compte de ce qu'elle écarte. */
+  console.log(`\n${cas.length} cases, ${champs.length} field(s): ${apercu(champs, MONTRES)}`);
+
+  /*
+   * COMBIEN D'APPELS, ANNONCÉ AVANT DE COMMENCER — ET UN REFUS AU-DELÀ.
+   *
+   * Mesuré le 25 août 2026 : un fichier de **79 Kio** portant dix mille colonnes déclenche
+   * ≈ 20 000 inférences, sans un mot et sans borne. Le calcul se fait sur la machine du
+   * client, donc ça ne nous attaque pas — mais un fichier plus petit qu'une photo qui
+   * occupe une machine pendant des heures sans prévenir reste un défaut d'accueil.
+   *
+   * Ce qui s'annonce est un COMPTE, pas une durée : le compte est exact et connu d'avance,
+   * une durée serait devinée, et une prédiction fausse d'un facteur deux fait plus de mal
+   * que pas de prédiction du tout.
+   *
+   * Au-delà du seuil, on refuse et on dit comment continuer. Un refus qu'on ne peut pas
+   * lever se contourne en retirant la garde.
+   *
+   * D'OÙ VIENT LE PLAFOND. Mesuré ici le 25 août 2026, machine sous charge 5,3 → 6,6,
+   * deux paliers d'encodeurs, deux tours par taille :
+   *
+   *     40 appels (5 cas × 4 champs × 2)  :  2,5 s  et  3,2 s
+   *    200 appels (25 cas × 4 champs × 2) :  8,2 s  et 10,1 s
+   *
+   * La pente — le coût du seul appel, chargement des modèles retiré — vaut (8,2 − 2,5)/160
+   * et (10,1 − 3,2)/160, soit 36 et 43 ms par appel : de l'ordre de 25 appels par seconde.
+   * Dix mille appels est donc l'endroit où l'exécution cesse d'être quelque chose qu'on
+   * attend devant le clavier. Le nombre est CHOISI, la vitesse qui l'a choisi est MESURÉE ;
+   * elle dépend de la machine, et le message affiché n'annonce jamais qu'un compte.
+   */
+  const appels = cas.length * champs.length * paliers.length;
+  console.log(`  ${cas.length} × ${champs.length} field(s) × ${paliers.length} tier(s) `
+    + `= ${appels.toLocaleString("en-GB")} model call(s) on this machine.`);
+  if (appels > PLAFOND_APPELS && !process.argv.includes("--yes-run-it")) {
+    console.error(`\n  That is above ${PLAFOND_APPELS.toLocaleString("en-GB")} calls and `
+      + `nothing has been measured yet.\n\n`
+      + `  Measure a subset first, or pass --yes-run-it to run it anyway.\n`
+      + `  Nothing was written.\n`);
+    process.exit(3);
+  }
 
   /*
    * DIRE COMMENT ON A LU, AVANT DE DIRE CE QU'ON A MESURÉ.
@@ -708,13 +826,31 @@ Nothing leaves your machine: the models are local and this path makes no network
    * donc avant la mesure, pour qu'il puisse la corriger — et le taux qu'elle produit n'est
    * pas comparable au notre, ce qui se dit ici plutot que de se deviner.
    */
-  const questions = Object.fromEntries(champs.map((c) => [c, questionPour(c, questionsFournies)]));
+  /* La question AFFICHÉE doit être celle qui est POSÉE. Nettoyer l'invite sans nettoyer
+   l'affichage montrerait au client une question qui n'a pas été envoyée — un écart
+   invisible entre ce qu'on dit avoir demandé et ce qu'on a demandé. */
+  const questions = Object.fromEntries(champs.map((c) => {
+    const q = questionPour(c, questionsFournies);
+    return [c, { ...q, texte: questionSure(c, questionsFournies) }];
+  }));
   const deduites = champs.filter((c) => questions[c]!.provenance === "deduite");
+  /* Dix mille lignes de questions ne se lisent pas. On en montre autant que le reste des
+     annonces, on dit combien sont cachées ET de quelle provenance — une sélection porte le
+     compte de ce qu'elle écarte — et on donne le moyen de tout voir. Un affichage tronqué
+     sans issue pousse à relancer sans lire. */
+  const montrees = process.argv.includes("--show-questions") ? champs : champs.slice(0, MONTRES);
   console.log(`\nThe question each field is asked, and where it comes from:\n`);
-  for (const c of champs) {
+  for (const c of montrees) {
     const q = questions[c]!;
     const marque = { fournie: "yours   ", mesuree: "measured", deduite: "derived " }[q.provenance];
     console.log(`  ${marque}  ${c.padEnd(18)} ${q.texte}`);
+  }
+  const caches = champs.slice(montrees.length);
+  if (caches.length) {
+    const par = (p: string) => caches.filter((c) => questions[c]!.provenance === p).length;
+    console.log(`  … and ${caches.length} more not shown `
+      + `(${par("deduite")} derived, ${par("fournie")} yours, ${par("mesuree")} measured). `
+      + `Pass --show-questions to see them all.`);
   }
   if (deduites.length) {
     console.log(`\n⚠ ${deduites.length} question(s) derived from your column names — a choice we`);
@@ -849,7 +985,7 @@ Nothing leaves your machine: the models are local and this path makes no network
     questions, avecRegles: Boolean(regles),
     lignes: champs.flatMap((champ) => Object.entries(releve[champ]!).map(([palier, r]) => {
       const q = rate(r.bons, r.sur);
-      return [champ, palier, (q.rate * 100).toFixed(1) + " %",
+      return [cellule(champ), palier, (q.rate * 100).toFixed(1) + " %",
         `[${(q.low * 100).toFixed(0)}–${(q.high * 100).toFixed(0)}]`, q.n,
         ecrireMs(r.ms, palier === sorties?.nom)];
     })),
