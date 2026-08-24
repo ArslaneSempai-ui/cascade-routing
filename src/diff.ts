@@ -100,7 +100,7 @@ export function comparer(a: Releve, b: Releve): Comparaison {
 
 function lire(f: string): Releve {
   const c = join(RACINE, f);
-  if (!existsSync(c)) throw new Error(`${f} n'existe pas. Relevés disponibles : ${relevesDisponibles().join(", ")}`);
+  if (!existsSync(c)) throw new Error(`${f} does not exist. Records available: ${relevesDisponibles().join(", ")}`);
   return JSON.parse(readFileSync(c, "utf8")) as Releve;
 }
 
@@ -108,7 +108,7 @@ if (isMain(import.meta)) {
   const args = process.argv.slice(2).filter((x) => !x.startsWith("-"));
   const dispo = relevesDisponibles();
   if (dispo.length < 2 && args.length < 2) {
-    console.error(`  Il faut deux relevés pour en comparer deux. ${dispo.length} trouvé(s).`);
+    console.error(`  Comparing two records takes two records. ${dispo.length} found.`);
     process.exit(2);
   }
   const [fa, fb] = args.length >= 2 ? [args[0]!, args[1]!] : [dispo.at(-2)!, dispo.at(-1)!];
@@ -116,32 +116,32 @@ if (isMain(import.meta)) {
 
   console.log(`\n  ${fa}  ->  ${fb}`);
   console.log(`  ${r.avant.slice(0, 16)}  ->  ${r.apres.slice(0, 16)}\n`);
-  console.log(`  ${r.cellulesComparees} cellule(s) comparée(s), ${r.casCompares.toLocaleString("en-GB")} cas.`);
+  console.log(`  ${r.cellulesComparees} cell(s) compared, ${r.casCompares.toLocaleString("en-GB")} cases.`);
   if (r.cellulesEcartees.length) {
-    console.log(`  ${r.cellulesEcartees.length} écartée(s) :`);
+    console.log(`  ${r.cellulesEcartees.length} set aside:`);
     for (const e of r.cellulesEcartees.slice(0, 6)) console.log(`     ${e.cellule} — ${e.pourquoi}`);
-    if (r.cellulesEcartees.length > 6) console.log(`     … et ${r.cellulesEcartees.length - 6} autre(s)`);
+    if (r.cellulesEcartees.length > 6) console.log(`     … and ${r.cellulesEcartees.length - 6} more`);
   }
   if (!r.cellulesComparees) {
-    console.log(`\n  RIEN N'A ÉTÉ COMPARÉ. Ce n'est pas « aucun changement ».\n`);
+    console.log(`\n  NOTHING WAS COMPARED. That is not the same as \u201cno change\u201d.\n`);
     process.exit(2);
   }
-  console.log(`\n  cas gagnés : ${r.gagnes}   ·   CAS PERDUS : ${r.perdus}\n`);
+  console.log(`\n  cases gained: ${r.gagnes}   ·   CASES LOST: ${r.perdus}\n`);
   if (!r.ecarts.length) {
-    console.log(`  Aucun cas n'a changé d'issue.\n`);
+    console.log(`  No case changed outcome.\n`);
     process.exit(0);
   }
   for (const e of r.ecarts.sort((x, y) => y.perdus - x.perdus)) {
     const d = (e.tauxApres - e.tauxAvant) * 100;
-    const sens = d > 0 ? "monte" : d < 0 ? "baisse" : "égal";
-    const alerte = e.perdus && d >= 0 ? "  ← LE TAUX NE BAISSE PAS ET DES CAS SONT PERDUS" : "";
+    const sens = d > 0 ? "up" : d < 0 ? "down" : "level";
+    const alerte = e.perdus && d >= 0 ? "  ← THE RATE DOES NOT FALL AND CASES ARE LOST" : "";
     console.log(`  ${e.palier}/${e.champ}  ${(e.tauxAvant * 100).toFixed(1)} % -> ${(e.tauxApres * 100).toFixed(1)} % (${sens})`
       + `   +${e.gagnes} / -${e.perdus} sur ${e.cas}${alerte}`);
   }
   /* McNemar apparié : deux passes sur les MÊMES cas ne se comparent pas par recouvrement
      d'intervalles, qui traiterait deux mesures appariées comme deux échantillons indépendants. */
   const v = pairedVerdict(r.gagnes, r.perdus);
-  console.log(`\n  ${v.discordant} cas discordant(s)`
+  console.log(`\n  ${v.discordant} discordant case(s)`
     + (typeof (v as { p?: number }).p === "number" ? ` · p = ${(v as { p: number }).p.toFixed(4)}` : "")
     + `\n  ${v.note}\n`);
   process.exit(r.perdus ? 1 : 0);
