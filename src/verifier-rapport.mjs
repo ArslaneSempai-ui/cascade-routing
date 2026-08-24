@@ -70,8 +70,8 @@ export function empreinteDeCle(pem) {
  */
 export function verifier(contenu, clePubliquePem) {
   const donnees = bloc(contenu, DEBUT_DONNEES);
-  if (donnees === null) return { valide: false, motif: "aucun bloc de données : ce fichier n'est pas un rapport signé." };
-  if (contenu.lastIndexOf(DEBUT_SIGNATURE) === -1) return { valide: false, motif: "le rapport ne porte aucune signature." };
+  if (donnees === null) return { valide: false, motif: "no data block: this file is not a signed report." };
+  if (contenu.lastIndexOf(DEBUT_SIGNATURE) === -1) return { valide: false, motif: "the report carries no signature." };
 
   /*
    * LA FIN DU BLOC SE TROUVE AVEC LA RÈGLE DU NAVIGATEUR, PAS AVEC UNE ÉGALITÉ DE CHAÎNE.
@@ -90,10 +90,10 @@ export function verifier(contenu, clePubliquePem) {
   const debut = contenu.lastIndexOf(DEBUT_SIGNATURE);
   const apres = contenu.slice(debut + DEBUT_SIGNATURE.length);
   const m = apres.match(/<\/script[\s/>]/i);
-  if (!m) return { valide: false, motif: "le bloc de signature n'est pas refermé." };
+  if (!m) return { valide: false, motif: "the signature block is never closed." };
   const finBloc = debut + DEBUT_SIGNATURE.length + m.index;
   const finFermeture = finBloc + apres.slice(m.index).indexOf(">") + 1;
-  if (finFermeture <= finBloc) return { valide: false, motif: "la fermeture du bloc de signature est tronquée." };
+  if (finFermeture <= finBloc) return { valide: false, motif: "the signature block's closing tag is truncated." };
 
   /*
    * ET LE BLOC NE PEUT CONTENIR AUCUN « < ».
@@ -106,22 +106,22 @@ export function verifier(contenu, clePubliquePem) {
    */
   if (contenu.slice(debut + DEBUT_SIGNATURE.length, finBloc).includes("<")) {
     return { valide: false, motif:
-      "le bloc de signature contient un « < » : une signature authentique n'en porte jamais.\n"
-      + "  Ce caractère sert à rouvrir une balise depuis l'intérieur des octets exclus." };
+      "the signature block contains a \"<\": an authentic signature never carries one.\n"
+      + "  That character is what reopens a tag from inside the excluded bytes." };
   }
 
   const brutSignature = contenu.slice(debut + DEBUT_SIGNATURE.length, finBloc);
 
   let sig;
   try { sig = JSON.parse(brutSignature); }
-  catch { return { valide: false, motif: "le bloc de signature n'est pas du JSON lisible." }; }
-  if (sig.alg !== "Ed25519") return { valide: false, motif: `algorithme « ${sig.alg} » inattendu — seul Ed25519 est reconnu.` };
+  catch { return { valide: false, motif: "the signature block is not readable JSON." }; }
+  if (sig.alg !== "Ed25519") return { valide: false, motif: `unexpected algorithm "${sig.alg}" — only Ed25519 is recognised.` };
 
   const attendue = empreinteDeCle(clePubliquePem);
   if (sig.cle !== attendue) {
     return { valide: false, motif:
-      `le rapport est signé par une autre clé que celle de ce dépôt.\n`
-      + `  rapport : ${sig.cle}\n  dépôt   : ${attendue}` };
+      `this report is signed by a key other than the one in this repository.\n`
+      + `  report     : ${sig.cle}\n  repository : ${attendue}` };
   }
 
   /*
@@ -150,19 +150,19 @@ export function verifier(contenu, clePubliquePem) {
    * précède, plus ce qui suit. Un octet ajouté n'importe où tombe dans l'un des deux.
    */
   const corps = contenu.slice(0, debut) + contenu.slice(finFermeture);
-  if (corps.trim().length === 0) return { valide: false, motif: "le document signé est vide." };
+  if (corps.trim().length === 0) return { valide: false, motif: "the signed document is empty." };
 
   let ok;
   try {
     ok = verifierBrut(null, Buffer.from(corps, "utf8"), createPublicKey(clePubliquePem), Buffer.from(sig.valeur, "base64"));
   } catch (e) {
-    return { valide: false, motif: `la vérification a échoué : ${e instanceof Error ? e.message : String(e)}` };
+    return { valide: false, motif: `verification failed: ${e instanceof Error ? e.message : String(e)}` };
   }
-  if (!ok) return { valide: false, motif: "la signature ne correspond pas au contenu : le rapport a été modifié après émission." };
+  if (!ok) return { valide: false, motif: "the signature does not match the content: this report was altered after it was issued." };
 
   let data;
   try { data = JSON.parse(donnees); }
-  catch { return { valide: false, motif: "la signature est bonne mais les données ne sont pas du JSON lisible." }; }
+  catch { return { valide: false, motif: "the signature is good but the data is not readable JSON." }; }
   return { valide: true, donnees: data, octets: Buffer.byteLength(corps, "utf8") };
 }
 
@@ -171,34 +171,45 @@ void createVerify;   // gardé pour lisibilité de l'import ; la vérification E
 function principal() {
   const chemin = process.argv[2];
   if (!chemin) {
-    console.error("Usage : node src/verifier-rapport.mjs <rapport.html>\n\n"
-      + "Vérifie qu'un rapport d'audit cascade a été émis par le détenteur de la clé\n"
-      + "publiée dans ce dépôt, et qu'aucun octet n'a bougé depuis.");
+    console.error("Usage: node src/verifier-rapport.mjs <report.html>\n\n"
+      + "Checks that a cascade audit report was issued by the holder of the key published\n"
+      + "in this repository, and that no byte has changed since.");
     process.exit(2);
   }
   const cle = readFileSync(fileURLToPath(new URL("../cle-publique.pem", import.meta.url)), "utf8");
   let contenu;
   try { contenu = readFileSync(chemin, "utf8"); }
-  catch (e) { console.error(`impossible de lire ${chemin} : ${e instanceof Error ? e.message : e}`); process.exit(2); }
+  catch (e) {
+    /* Le message d'exécution de Node dit « ENOENT » et le chemin deux fois. On dit ce qui
+       s'est passé et ce que ça n'est PAS : un fichier illisible n'est pas un rapport invalide,
+       et confondre les deux ferait conclure à une falsification. */
+    const raison = (e && e.code === "ENOENT") ? "no such file"
+      : (e && e.code === "EISDIR") ? "that is a directory, not a file"
+      : (e && e.code === "EACCES") ? "permission denied"
+      : (e instanceof Error ? e.message : String(e));
+    console.error(`Cannot read ${chemin}: ${raison}.\n\n`
+      + `  Nothing was verified. This is not a failed verification — it is a file that could\n`
+      + `  not be opened.`);
+    process.exit(2);
+  }
 
   const r = verifier(contenu, cle);
   if (!r.valide) {
-    console.error(`✗ NON VÉRIFIÉ\n\n  ${r.motif}`);
+    console.error(`✗ NOT VERIFIED\n\n  ${r.motif}`);
     process.exit(1);
   }
   const d = r.donnees;
   console.log(
-    `✓ Signature valide — ${r.octets} octets signés.\n\n`
-    + `  Émis le      ${d.emisLe ?? "?"}\n`
-    + `  Pour         ${d.client ?? "?"}\n`
-    + `  Corpus       ${d.corpus?.empreinte ?? "?"} (${d.corpus?.dossiers ?? "?"} dossiers)\n`
-    + `  Outil        ${d.outil?.commit ?? "?"}\n\n`
-    + `Ce que ça prouve : le rapport vient du détenteur de la clé de ce dépôt, et aucun\n`
-    + `octet n'a bougé depuis son émission.\n\n`
-    + `Ce que ça ne prouve pas : que les chiffres sont justes. Un rapport faux et signé\n`
-    + `reste faux — il devient seulement impossible d'en attribuer l'origine à quelqu'un\n`
-    + `d'autre. La justesse est tenue par les mesures, leurs intervalles, et le journal\n`
-    + `des rétractations.`);
+    `✓ Signature valid — ${r.octets} bytes signed.\n\n`
+    + `  Issued      ${d.emisLe ?? "?"}\n`
+    + `  For         ${d.client ?? "?"}\n`
+    + `  Corpus      ${d.corpus?.empreinte ?? "?"} (${d.corpus?.dossiers ?? "?"} records)\n`
+    + `  Tool        ${d.outil?.commit ?? "?"}\n\n`
+    + `What this proves: the report comes from the holder of this repository's key, and no\n`
+    + `byte has changed since it was issued.\n\n`
+    + `What it does not prove: that the numbers are right. A false report, signed, is still\n`
+    + `false — it merely becomes impossible to attribute it to anyone else. Correctness is\n`
+    + `held by the measurements, their intervals, and the retraction log.`);
 }
 
 /**

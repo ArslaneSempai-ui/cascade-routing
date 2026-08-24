@@ -48,7 +48,7 @@ test("UN OCTET MODIFIÉ FAIT ÉCHOUER LA VÉRIFICATION", () => {
   assert.notEqual(altere, html, "l'altération n'a rien changé : ce cas ne vérifie rien.");
   const r = verifier(altere, pem);
   assert.equal(r.valide, false);
-  assert.match(r.motif, /modifié après émission/);
+  assert.match(r.motif, /altered after it was issued/);
 });
 
 test("ALTÉRER LE TEXTE LISIBLE casse aussi la signature", () => {
@@ -63,7 +63,7 @@ test("ALTÉRER LE TEXTE LISIBLE casse aussi la signature", () => {
   assert.notEqual(altere, html, "l'altération n'a rien changé : ce cas ne vérifie rien.");
   const r = verifier(altere, pem);
   assert.equal(r.valide, false);
-  assert.match(r.motif, /modifié après émission/);
+  assert.match(r.motif, /altered after it was issued/);
 });
 
 test("AJOUTER QUOI QUE CE SOIT APRÈS LA SIGNATURE CASSE LA VÉRIFICATION", () => {
@@ -92,16 +92,16 @@ test("un rapport signé par une autre clé est refusé, et le motif nomme les de
   const { html, pem } = rapportSigne(EXEMPLE, { fausseCle: true });
   const r = verifier(html, pem);
   assert.equal(r.valide, false);
-  assert.match(r.motif, /ne correspond pas au contenu|autre clé/);
+  assert.match(r.motif, /does not match the content|other than the one/);
 });
 
 test("chaque façon de ne pas être un rapport a son propre motif", () => {
   const { pem } = rapportSigne(EXEMPLE);
   const cas: [string, RegExp][] = [
-    ["<!doctype html><h1>rien</h1>", /pas un rapport signé/],
-    [`<script type="application/json" id="rapport">{"a":1}</script>`, /aucune signature/],
+    ["<!doctype html><h1>rien</h1>", /not a signed report/],
+    [`<script type="application/json" id="rapport">{"a":1}</script>`, /carries no signature/],
     [`<script type="application/json" id="rapport">{"a":1}</script>`
-      + `<script type="application/json" id="signature">pas du json</script>`, /pas du JSON lisible/],
+      + `<script type="application/json" id="signature">pas du json</script>`, /not readable JSON/],
     [`<script type="application/json" id="rapport">{"a":1}</script>`
       + `<script type="application/json" id="signature">{"alg":"RSA","cle":"x","valeur":"y"}</script>`, /Ed25519/],
   ];
@@ -162,5 +162,5 @@ test("un « < » dans le bloc de signature est refusé d'emblée", () => {
   const forge = html.slice(0, i + bloc.length) + '{"pad":"<b>"}' + html.slice(html.indexOf("</script>", i));
   const r = verifier(forge, pem);
   assert.equal(r.valide, false);
-  assert.match(r.motif, /« < »/);
+  assert.match(r.motif, /"<"/);
 });
