@@ -288,17 +288,16 @@ export function readProfiles(): Profiles | null {
     const calculee = empreinteDuReleve(p);
     if (typeof attendue !== "string") {
       throw new Error(
-        `${FICHIER} ne porte pas d'empreinte de contenu : impossible de dire si ses chiffres\n`
-        + `  sont ceux qui ont été mesurés. Reposez le scellé avec « npm run sceller », ou\n`
-        + `  remesurez avec « npm run measure ».`);
+        `${FICHIER} carries no content fingerprint: there is no way to tell whether its\n`
+        + `  figures are the ones that were measured. Re-seal it with \u201cnpm run sceller\u201d, or\n`
+        + `  measure again with \u201cnpm run measure\u201d.`);
     }
     if (attendue !== calculee) {
       throw new Error(
-        `${FICHIER} a changé depuis sa mesure — empreinte ${attendue}, contenu ${calculee}.\n`
-        + `  Un chiffre de ce fichier a été modifié à la main, ou le fichier a été assemblé\n`
-        + `  depuis deux relevés. Aucun chiffre publié à partir de lui n'a de valeur tant que\n`
-        + `  ce n'est pas éclairci. Remesurez, ou reposez le scellé si la modification est\n`
-        + `  voulue et assumée.`);
+        `${FICHIER} has changed since it was measured — fingerprint ${attendue}, content ${calculee}.\n`
+        + `  A figure in this file was edited by hand, or the file was assembled from two\n`
+        + `  separate records. No figure published from it has any value until that is\n`
+        + `  cleared up. Measure again, or re-seal if the change is intended and owned.`);
     }
     return p;
   }
@@ -326,25 +325,25 @@ export function readProfiles(): Profiles | null {
     const calculee = empreinteDuReleve(ref.p);
     if (typeof attendue !== "string") {
       throw new Error(
-        `${ref.f} ne porte pas d'empreinte de contenu : impossible de dire si ses chiffres\n`
-        + `  sont ceux qui ont été mesurés. Reposez le scellé : npm run sceller -- ${ref.f}`);
+        `${ref.f} carries no content fingerprint: there is no way to tell whether its\n`
+        + `  figures are the ones that were measured. Re-seal it: npm run sceller -- ${ref.f}`);
     }
     if (attendue !== calculee) {
       throw new Error(
-        `${ref.f} a changé depuis sa mesure — empreinte ${attendue}, contenu ${calculee}.\n`
-        + `  C'est le relevé qu'un clone neuf emploie pour engendrer TOUS les chiffres publiés.\n`
-        + `  Aucun d'eux n'a de valeur tant que ce n'est pas éclairci.`);
+        `${ref.f} has changed since it was measured — fingerprint ${attendue}, content ${calculee}.\n`
+        + `  This is the record a fresh clone uses to generate EVERY published figure.\n`
+        + `  None of them has any value until that is cleared up.`);
     }
   }
   if (ref.f !== RELEVE_DE_REFERENCE && !refReferenceAnnoncee) {
-    console.warn(`\n⚠ ${RELEVE_DE_REFERENCE} est introuvable : repli sur ${ref.f}, dont les`);
-    console.warn(`  chiffres ne sont pas ceux dont le README et landing.json ont été engendrés.\n`);
+    console.warn(`\n⚠ ${RELEVE_DE_REFERENCE} is missing: falling back to ${ref.f}, whose`);
+    console.warn(`  figures are not the ones the README and landing.json were generated from.\n`);
   }
   if (!refReferenceAnnoncee) {
     refReferenceAnnoncee = true;
-    console.warn(`\n⚠ Aucune mesure à vous dans data/profiles.json.`);
-    console.warn(`  Lecture du relevé de référence livré avec le dépôt : ${ref.f}`);
-    console.warn(`  Ce sont NOS chiffres, pas les vôtres — \`npm run measure\` mesure les vôtres.\n`);
+    console.warn(`\n⚠ No measurement of your own in data/profiles.json.`);
+    console.warn(`  Reading the reference record shipped with the repository: ${ref.f}`);
+    console.warn(`  These are OUR figures, not yours — \`npm run measure\` measures yours.\n`);
   }
   return ref.p;
 }
@@ -692,7 +691,7 @@ export async function measure(
   (profils as Record<string, unknown>).empreinte = empreinteDuReleve(profils);
   writeFileSync(FICHIER, JSON.stringify(profils, null, 2));
   const { lignes, chemin } = journal.fermer();
-  console.log(`\n${lignes} tentatives enregistrées dans ${chemin.split("/").slice(-2).join("/")}`);
+  console.log(`\n${lignes} attempts recorded in ${chemin.split("/").slice(-2).join("/")}`);
   return profils;
 }
 
@@ -702,7 +701,7 @@ if (isMain(import.meta)) {
      plus petit écart détectable est d'environ dix-huit points ; à 1 000, de six. */
   const cases = Number(process.argv.find((a) => a.startsWith("--cases="))?.split("=")[1] ?? 120);
   if (!Number.isFinite(cases) || cases < 20) {
-    console.error("--cases doit valoir au moins 20 : en dessous, un taux n'est pas rapportable.");
+    console.error("--cases must be at least 20: below that, a rate is not reportable.");
     process.exit(1);
   }
   /*
@@ -714,7 +713,7 @@ if (isMain(import.meta)) {
    */
   const casesGen = Number(process.argv.find((a) => a.startsWith("--cases-gen="))?.split("=")[1] ?? cases);
   if (!Number.isFinite(casesGen) || casesGen < 20) {
-    console.error("--cases-gen doit valoir au moins 20 : en dessous, un taux n'est pas rapportable.");
+    console.error("--cases-gen must be at least 20: below that, a rate is not reportable.");
     process.exit(1);
   }
 
@@ -724,7 +723,7 @@ if (isMain(import.meta)) {
   /* Un nom de palier mal tapé produisait un profil avec une clé inventée, sans un mot. */
   const inconnus = brut?.filter((e) => !(TIERS as string[]).includes(e)) ?? [];
   if (inconnus.length) {
-    console.error(`palier inconnu : ${inconnus.join(", ")}\nles paliers sont : ${TIERS.join(", ")}`);
+    console.error(`unknown tier: ${inconnus.join(", ")}\nthe tiers are: ${TIERS.join(", ")}`);
     process.exit(1);
   }
   const choisis = brut as TierName[] | undefined;
@@ -762,10 +761,10 @@ if (isMain(import.meta)) {
   const malgreCharge = brutCharge ? (brutCharge.split("=")[1] || "raison non donnée") : undefined;
   const latenceValide = chargeParCoeur <= CHARGE_MAX_PAR_COEUR || malgreCharge !== undefined;
   if (!latenceValide) {
-    console.warn(`\n⚠ charge ${loadavg()[0]!.toFixed(2)} sur ${coeurs} cœurs `
-      + `(${(100 * chargeParCoeur).toFixed(0)} %, seuil ${(100 * CHARGE_MAX_PAR_COEUR).toFixed(0)} %) — trop pour chronométrer.`);
-    console.warn(`  Les exactitudes seront mesurées, les durées précédentes conservées.`);
-    console.warn(`  Fermez ce qui tourne, ou --allow-load pour enregistrer quand même.\n`);
+    console.warn(`\n⚠ load ${loadavg()[0]!.toFixed(2)} on ${coeurs} cores `
+      + `(${(100 * chargeParCoeur).toFixed(0)} %, threshold ${(100 * CHARGE_MAX_PAR_COEUR).toFixed(0)} %) — too high to time.`);
+    console.warn(`  Accuracies will be measured, previous latencies kept.`);
+    console.warn(`  Close what is running, or --allow-load to record anyway.\n`);
   }
 
   /*
@@ -785,10 +784,10 @@ if (isMain(import.meta)) {
   const brutSale = process.argv.find((a) => a.startsWith("--allow-dirty"));
   const malgreArbreSale = brutSale ? (brutSale.split("=")[1] || "raison non donnée") : undefined;
   if (etat?.sale && !malgreArbreSale) {
-    console.error(`\nL'arbre de travail porte des modifications non enregistrées.`);
-    console.error(`Chaque palier mesuré serait marqué non reproductible, y compris par vous.\n`);
-    console.error(`  git commit -am "…"        puis relancez`);
-    console.error(`  ou --allow-dirty="pourquoi"  si c'est délibéré — la raison ira dans le relevé\n`);
+    console.error(`\nThe working tree carries uncommitted changes.`);
+    console.error(`Every tier measured would be marked not reproducible, including by you.\n`);
+    console.error(`  git commit -am "…"        then run again`);
+    console.error(`  or --allow-dirty="why"       if this is deliberate — the reason goes into the record\n`);
     process.exit(1);
   }
 
@@ -802,9 +801,9 @@ if (isMain(import.meta)) {
    * drapeau : un consentement se tape, il ne se déduit pas.
    */
   if (!estLocal(OLLAMA) && !process.argv.includes("--remote-ollama")) {
-    console.error(`\nOLLAMA_HOST vise ${OLLAMA}, qui n'est pas cette machine.`);
-    console.error(`Chaque document mesuré partirait chez cet hôte.\n`);
-    console.error(`Si c'est voulu, relancez avec --remote-ollama. Sinon, retirez OLLAMA_HOST.\n`);
+    console.error(`\nOLLAMA_HOST points at ${OLLAMA}, which is not this machine.`);
+    console.error(`Every document measured would leave for that host.\n`);
+    console.error(`If that is intended, run again with --remote-ollama. Otherwise unset OLLAMA_HOST.\n`);
     process.exit(1);
   }
 
@@ -816,7 +815,7 @@ if (isMain(import.meta)) {
   /* `--prompt=C-minimal` : mesurer sous une autre formulation, en l'inscrivant dans le relevé. */
   const brutPrompt = process.argv.find((a) => a.startsWith("--prompt="))?.split("=")[1];
   if (brutPrompt && !(brutPrompt in PROMPTS)) {
-    console.error(`formulation inconnue : ${brutPrompt}\nles formulations sont : ${Object.keys(PROMPTS).join(", ")}`);
+    console.error(`unknown prompt: ${brutPrompt}\nthe prompts are: ${Object.keys(PROMPTS).join(", ")}`);
     process.exit(1);
   }
   const prompt = brutPrompt as NomPrompt | undefined;
