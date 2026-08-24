@@ -1,5 +1,21 @@
-# Les tests ne valent que s'ils tournent sans qu'on y pense.
+# Ce qui tourne à chaque poussée, et pourquoi ce n'est pas seulement `npm test`.
+#
+# ─── UN CAS IGNORÉ N'EST PAS UN CAS PASSÉ, ET LA CONSTRUCTION DOIT LE DIRE ───
+#
+# Plusieurs cas se déclarent ignorés quand ce qu'ils devraient examiner n'est pas là. C'est le
+# bon comportement — bien meilleur qu'un `return` muet qui compte parmi les réussites — mais
+# sur une machine neuve, le plus important d'entre eux s'ignore : celui qui vérifie qu'AUCUNE
+# valeur du client n'entre dans le fichier que l'outil lui rend. Il a besoin des poids
+# d'encodeur, qui ne sont pas dans le dépôt.
+#
+# Sans la mise en cache ci-dessous, l'intégration continue passait au vert pendant que la
+# promesse la plus importante du produit n'était éprouvée sur rien. Mesuré : 104 passés,
+# 1 ignoré, et l'ignoré était celui-là.
+#
+# D'où deux choses : on garde les poids d'un tour à l'autre, et on REFUSE une construction qui
+# ignore quoi que ce soit. Le premier tour paiera le téléchargement ; les suivants non.
 name: verifier
+
 on:
   push:
     branches: [main]
@@ -13,6 +29,35 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
+          cache: npm
+
+      # Les poids d'encodeur — 740 Mo, mesurés — vivent sous node_modules, ce que la
+      # bibliothèque décide et pas nous. La clé porte le verrou de dépendances : une
+      # bibliothèque qui change de version peut changer de disposition.
+      - name: cache des poids de modèle
+        uses: actions/cache@v4
+        with:
+          path: node_modules/@huggingface/transformers/.cache
+          key: poids-${{ hashFiles('package-lock.json') }}
+
       - run: npm install
-      # Le typage passe avant les tests : une erreur de type fait échouer la suite.
-      - run: npm test
+
+      # `npm test` rend 0 quand des cas s'ignorent. On lit le compte et on refuse : un cas qui
+      # n'a pas regardé ne doit pas compter comme un cas qui a regardé, et une construction
+      # verte sur un contrôle qui ne s'est pas exécuté est exactement ce qu'on passe la journée
+      # à corriger ailleurs.
+      - name: suite, et aucun cas ignoré
+        run: |
+          set -o pipefail
+          npm test 2>&1 | tee /tmp/suite.txt
+          ignores=$(grep -oE '^# skipped [0-9]+' /tmp/suite.txt | grep -oE '[0-9]+' | head -1)
+          ignores=${ignores:-0}
+          if [ "$ignores" != "0" ]; then
+            echo ""
+            echo "::error::$ignores cas ignoré(s) — ils n'ont rien vérifié, et une construction verte le cacherait."
+            grep -E '# SKIP' /tmp/suite.txt | head -10
+            echo ""
+            echo "Le plus probable : les poids d'encodeur ne sont pas en cache, donc le contrôle"
+            echo "qui garantit qu'aucune valeur du client ne sort ne s'est pas exécuté."
+            exit 1
+          fi
