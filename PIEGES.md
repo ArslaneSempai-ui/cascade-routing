@@ -127,3 +127,24 @@ nomme les fichiers dans les deux cas.
 Corollaire de la même famille : une boucle qui indexe à l'envers ne se signale pas non plus.
 Quand un script écrit N fichiers depuis N sources, vérifier **un** couple à la main coûte
 trois secondes et attrape l'inversion entière.
+
+## Un code de sortie ne se lit jamais après un tube
+
+Un tube remplace le code de sortie par celui du **dernier** maillon : `cmd | head -2` rend
+le code de `head`, qui vaut 0 quoi qu'il arrive. La commande a beau refuser en 2, la mesure
+lit 0 — et on conclut que la garde ne refuse pas.
+
+Signalé par une session à une autre, puis commis par celle qui l'avait signalé quatre heures
+plus tard, sur la garde qu'elle venait d'installer. **Le connaître ne protège pas ; seule
+la façon d'écrire la commande protège.**
+
+Et sous `zsh`, la parade habituelle n'existe pas : `PIPESTATUS` est **vide**, c'est
+`$pipestatus[1]` (indexé à partir de 1). Une vérification écrite avec `${PIPESTATUS[0]}` ne
+lit donc rien du tout, et son silence ressemble à un succès.
+
+**Remède :** capturer le code **avant** tout tube.
+
+    sortie=$(cmd 2>&1); code=$?
+    printf '%s\n' "$sortie" | head -2      # le tube vient après, sur la variable
+
+Ou, quand la sortie n'est pas nécessaire : `cmd > /dev/null 2>&1; code=$?`.
