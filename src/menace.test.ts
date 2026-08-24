@@ -1,0 +1,67 @@
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { readFileSync, existsSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { spawnSync } from "node:child_process";
+import { temoins, controles, secretsDans, racineServie, adresseDEcoute, bornePosee, document, type Controle } from "./menace.ts";
+
+const racine = fileURLToPath(new URL("..", import.meta.url));
+
+test("les détecteurs de sécurité reconnaissent encore ce qu'ils prétendent reconnaître", () => {
+  assert.deepEqual(temoins(), [],
+    "un détecteur a changé de réponse : le relevé de sécurité est sans valeur tant qu'il n'est pas réparé.");
+});
+
+test("aucun contrôle de sécurité n'est non tenu", () => {
+  const c = controles(racine);
+  assert.ok(c.length >= 5, `${c.length} contrôle(s) : la lecture des sources a échoué et ce cas ne vérifie rien.`);
+  const nonTenus = c.filter((x) => x.verdict === "non tenu");
+  assert.deepEqual(nonTenus.map((x) => `${x.nom} — ${x.constat}`), []);
+  const horsPortee = c.filter((x) => x.verdict === "hors de portée");
+  assert.deepEqual(horsPortee.map((x) => x.nom), [],
+    "un contrôle n'a pas pu lire son fichier : « hors de portée » n'est pas « tenu ».");
+});
+
+test("le serveur reste lié à la boucle locale", () => {
+  const s = readFileSync(new URL("./server.ts", import.meta.url), "utf8");
+  assert.equal(adresseDEcoute(s), "boucle locale",
+    "listen() sans adresse écoute sur toutes les interfaces, donc sur le wifi partagé.");
+  assert.equal(racineServie(s).construitDepuisLUrl, false);
+  assert.deepEqual(bornePosee(s), { plafond: true, fluxCoupe: true },
+    "un plafond qui règle la promesse sans couper le flux annonce une borne qu'il n'impose pas.");
+});
+
+test("le document nomme ce qui n'est pas tenu, il ne le compte pas", () => {
+  const sale: Controle[] = [
+    { nom: "Adresse d'écoute", verdict: "non tenu", constat: "écoute sur toutes les interfaces.", denominateur: "src/server.ts" },
+    { nom: "Empreinte des dépendances", verdict: "tenu", constat: "toutes empreintes.", denominateur: "82 dépendances" },
+  ];
+  const md = document(sale, null);
+  assert.match(md, /## À corriger/);
+  assert.match(md, /Adresse d'écoute.*toutes les interfaces/s);
+  /* Chaque ligne porte son dénominateur : « aucune menace » sans ce qui a été lu est la
+     phrase qu'un contrôle cassé produit aussi. */
+  assert.match(md, /82 dépendances/);
+  assert.match(md, /Ce qu'ils ne voient pas/, "un angle mort non publié est une fausse assurance.");
+});
+
+test("le relevé d'historique est scellé sur un commit atteignable", () => {
+  const f = new URL("../menace-historique.json", import.meta.url);
+  if (!existsSync(f)) return;   // pas encore balayé : `npm run menace -- --historique`
+  const r = JSON.parse(readFileSync(f, "utf8")) as { commits: number; trouves: number; temoins: number; commit: string; date: string };
+  assert.equal(r.temoins, 2,
+    "le balayage de l'historique n'a pas retrouvé ses deux témoins : son zéro ne vaut rien.");
+  assert.ok(r.commits > 0 && /^\d{4}-\d{2}-\d{2}$/.test(r.date));
+  /* UN RELEVÉ SCELLÉ SUR UNE BRANCHE ABANDONNÉE RASSURE SUR UN DÉPÔT QUI N'EXISTE PLUS.
+     On vérifie que le commit est réellement dans l'historique d'où l'on parle. */
+  const vu = spawnSync("git", ["cat-file", "-e", `${r.commit}^{commit}`], { cwd: racine });
+  if (vu.error) return;   // pas de git sous la main : on ne conclut pas
+  assert.equal(vu.status, 0,
+    `le relevé de sécurité est scellé sous « ${r.commit} », qui n'est pas dans ce dépôt.`);
+});
+
+test("un secret planté dans une source suivie est trouvé", () => {
+  // Le témoin qui rend le zéro publiable : sans lui, « aucun secret » et « rien lu » se disent pareil.
+  assert.deepEqual(secretsDans("const cle = \"AKIAIOSFODNN7EXAMPLE\";"), ["clé AWS"]);
+  assert.deepEqual(secretsDans("const seuil = 0.85;"), []);
+});

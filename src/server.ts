@@ -52,10 +52,19 @@ function json(res: ServerResponse, corps: unknown, code = 200): void {
   res.end(load);
 }
 
+/** Le plafond du corps d'une requête, nommé pour être éprouvable ailleurs. */
+export const PLAFOND_CORPS = 50_000;
+
 function corps(req: IncomingMessage): Promise<Record<string, unknown>> {
   return new Promise((resoudre, rejeter) => {
     let brut = "";
-    req.on("data", (b) => { brut += b; if (brut.length > 50_000) rejeter(new Error("request too large")); });
+    /* REJETER NE COUPE PAS LE FLUX. La promesse est réglée, mais `data` continue de se
+       déclencher et `brut` continue de grossir : la borne annonçait un plafond qu'elle
+       n'imposait pas. On détruit la socket, seul geste qui arrête réellement l'envoi. */
+    req.on("data", (b) => {
+      brut += b;
+      if (brut.length > PLAFOND_CORPS) { req.destroy(); rejeter(new Error(`request too large (> ${PLAFOND_CORPS} octets)`)); }
+    });
     req.on("end", () => { try { resoudre(brut ? JSON.parse(brut) : {}); } catch (e) { rejeter(e); } });
     req.on("error", rejeter);
   });

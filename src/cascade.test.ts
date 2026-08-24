@@ -4020,7 +4020,11 @@ test("un relevé publié porte les paramètres sous lesquels le code le prendrai
    * élargissement qui n'aurait rien fermé.
    */
   const COMPTES = new Set(["documents", "champs", "cas", "passes", "valeurs", "cibleN", "tauxDeBase",
-    "sbom.json:version"]);
+    "sbom.json:version",
+    /* Le relevé de sécurité porte des comptes de sa passe, pas des réglages : combien de
+       commits ont été balayés, combien de secrets sont sortis, combien de témoins ont
+       traversé. Qualifiés par leur fichier, comme le reste. */
+    "menace-historique.json:commits", "menace-historique.json:trouves", "menace-historique.json:temoins"]);
   /* Le gabarit porte AUSSI les hypothèses éditables : elles se confrontent au code comme les
      autres, mais sous leur propre nom. */
   for (const k of ["volume", "budget", "latencyBudgetMs", "pricePerThousandSmall",
