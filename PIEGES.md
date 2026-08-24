@@ -148,3 +148,24 @@ lit donc rien du tout, et son silence ressemble à un succès.
     printf '%s\n' "$sortie" | head -2      # le tube vient après, sur la variable
 
 Ou, quand la sortie n'est pas nécessaire : `cmd > /dev/null 2>&1; code=$?`.
+
+## `Abort trap: 6` pendant `npm test` sous charge n'est pas une régression
+
+    libc++abi: terminating due to uncaught exception of type
+      std::__1::system_error: mutex lock failed: Invalid argument
+    sh: line 1: 43146 Abort trap: 6    node src/readme.ts --check
+
+C'est la bibliothèque native des encodeurs qui s'abat **pendant sa fermeture**, quand la
+machine est chargée. Vérifié au calme : `readme.ts --check` sort 0 quand il passe et 1 quand
+il échoue, proprement, sur les deux chemins. Le plantage n'arrive que sous charge.
+
+**Il sort en 134**, donc il ne se déguise pas en succès — c'est sa seule qualité. Mais il
+ressemble à un défaut du code, et il coûte le temps qu'on met à chercher dans le code.
+
+**Remède : relancer au calme AVANT d'enquêter.** Si le code passe au second essai sans
+qu'une ligne ait changé, c'était la charge. Et regarder ce qui tourne à côté : deux passes
+qui chargent des modèles ne peuvent pas coexister sur cette machine (voir plus haut).
+
+**Ce qu'il ne faut PAS en conclure** : qu'un `npm test` rouge est toujours la charge. Un
+134 est la charge ; un **1** est un vrai échec, et le distinguer prend une seconde — c'est
+le code de sortie qui le dit, à condition de ne pas l'avoir lu à travers un tube.
