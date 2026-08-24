@@ -23,7 +23,7 @@
 import { optimiseExtraction, optimiseClassification, paliersMesures, pricePerThousandDocuments, justessePonderee } from "./optimise.ts";
 import "./figer.ts";  /* pose la table figée : voir figer.ts */
 import { isMain } from "./cli.ts";
-import { ASSUMPTIONS, accuracy, latency } from "./assumptions.ts";
+import { ASSUMPTIONS, latency } from "./assumptions.ts";
 import { FIELDS } from "./corpus.ts";
 import { readProfiles } from "./measure.ts";
 import type { TierName } from "./paliers.ts";

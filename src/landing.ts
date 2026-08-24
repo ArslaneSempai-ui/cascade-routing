@@ -30,7 +30,7 @@ import { optimiseExtraction, evaluer, paliersMesures, pricePerThousandDocuments,
 import "./figer.ts";  /* pose la table figée : voir figer.ts */
 import { rate, CONFIANCE, distinguishable, pairedVerdict } from "./interval.ts";
 import { versLeBas } from "./sensitivity.ts";
-import { journaux, lireJournal, issue } from "./journal.ts";
+import { journaux, lireJournal } from "./journal.ts";
 import { lireDerivees, perime, FICHIER as FIGE } from "./derivees.ts";
 
 /**

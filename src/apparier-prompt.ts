@@ -21,7 +21,7 @@ import { isMain } from "./cli.ts";
 import { ouvrirJournal, issue } from "./journal.ts";
 import { FIELDS, generateRecords } from "./corpus.ts";
 import { loadGeneratifs, extract, correct, PROMPTS } from "./tiers.ts";
-import { rate, distinguishable, pairedVerdict, writeRate } from "./interval.ts";
+import { pairedVerdict } from "./interval.ts";
 
 import type { NomPrompt } from "./tiers.ts";
 import type { TierName } from "./paliers.ts";

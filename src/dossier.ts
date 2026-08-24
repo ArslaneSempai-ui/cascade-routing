@@ -26,10 +26,10 @@ import { writeFileSync, readFileSync, existsSync } from "node:fs";
 import { isMain } from "./cli.ts";
 import { FIELDS } from "./corpus.ts";
 import { readProfiles } from "./measure.ts";
-import { optimiseExtraction, paliersMesures, latenceRepresentative } from "./optimise.ts";
+import { optimiseExtraction, paliersMesures } from "./optimise.ts";
 import "./figer.ts";  /* pose la table figée : voir figer.ts */
 import { ASSUMPTIONS, STATUSES, pricePerThousandExtractions } from "./assumptions.ts";
-import { INVENTORY } from "./inventory.ts";
+
 import { rate, writeRate, distinguishable } from "./interval.ts";
 import { MEANING } from "./provenance.ts";
 import { table } from "./figures.ts";

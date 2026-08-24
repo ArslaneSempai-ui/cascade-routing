@@ -18,7 +18,7 @@ import { ouvrirJournal, issue } from "./journal.ts";
 import { execFileSync } from "node:child_process";
 import { loadavg, cpus } from "node:os";
 import { dirname } from "node:path";
-import { generateRecords, generateAlerts, FIELDS, TYPOLOGIES } from "./corpus.ts";
+import { generateRecords, generateAlerts, FIELDS } from "./corpus.ts";
 import { TIERS, ENCODEURS, GENERATIFS, loadExtractors, loadClassifiers, loadGeneratifs, extract, classify, correct, OLLAMA, estLocal, PROMPTS, type NomPrompt, rechauffer, residents} from "./tiers.ts";
 import type { TierName } from "./tiers.ts";
 import type { Field } from "./corpus.ts";

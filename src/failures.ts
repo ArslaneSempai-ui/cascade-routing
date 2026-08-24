@@ -23,7 +23,7 @@ import { REVISIONS } from "./tiers.ts";
 import { etatMachine, MEMOIRE_LIBRE_MINIMALE_MO } from "./contrainte.ts";
 import { isMain } from "./cli.ts";
 import { ouvrirJournal, issue } from "./journal.ts";
-import { ENCODEURS, GENERATIFS, TIERS, loadExtractors, extract, correct } from "./tiers.ts";
+import { ENCODEURS, GENERATIFS, loadExtractors, extract, correct } from "./tiers.ts";
 import type { TierName } from "./tiers.ts";
 import type { Field } from "./corpus.ts";
 

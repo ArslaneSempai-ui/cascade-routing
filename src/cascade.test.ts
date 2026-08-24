@@ -33,8 +33,8 @@ import { PROMPTS as PROMPTS_INTERNES, questionPour as questionPourInterne } from
 import { memoireDisponibleMo, etatMachine as etatMachineInterne,
   PLAFOND_JETONS as PLAFOND_JETONS_INTERNE,
   MEMOIRE_LIBRE_MINIMALE_MO as MEMOIRE_MINIMALE_INTERNE } from "./contrainte.ts";
-import { normaliserReponse as normaliserReponseInterne } from "./tiers.ts";
-import { pathToFileURL } from "node:url";
+
+
 import { ASSUMPTIONS, UNITS, BOUNDS, pricePerThousandExtractions, accuracy } from "./assumptions.ts";
 import { wilson, rate, writeRate, distinguishable, precision, ENOUGH as ENOUGH_CAS } from "./interval.ts";
 import { PLAUSIBLE, bands, ETIQUETTE, advise } from "./sensitivity.ts";
