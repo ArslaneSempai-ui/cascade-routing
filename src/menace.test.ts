@@ -96,9 +96,23 @@ test("LE DÉNOMINATEUR NE RÉTRÉCIT PAS QUAND UN FICHIER MANQUE", () => {
   const tmp = mkdtempSync(join(tmpdir(), "cascade-menace-"));
   try {
     mkdirSync(join(tmp, "src"));
-    for (const f of ["src/ui.html", ".gitignore", "package-lock.json"]) {
-      copyFileSync(join(racine, f), join(tmp, f));
-    }
+    /*
+     * LA LISTE SE DÉDUIT DE CE QUE LES CONTRÔLES LISENT.
+     *
+     * Elle était écrite à la main. Le mode de panne n'était pas celui qu'on redoute d'habitude
+     * — un contrôle neuf lisant un fichier neuf le déclarerait « hors de portée » et
+     * l'assertion sur les noms tomberait, donc le silence était impossible — mais deux
+     * sources pour la même chose finissent toujours par diverger, et celle-ci se déduit du
+     * dénominateur que chaque contrôle publie déjà.
+     */
+    /* Un dénominateur peut nommer un fichier ET un compte — « package-lock.json, 82
+       dependencies ». On prend la part qui est un chemin. */
+    const lus = [...new Set(controles(racine)
+      .map((c) => c.denominateur.split(",")[0]!.trim())
+      .filter((d) => existsSync(join(racine, d))))].filter((d) => d !== "src/server.ts");
+    assert.ok(lus.length >= 3,
+      `${lus.length} fichier(s) déduits des contrôles : la dérivation ne marche plus, et ce bac d'essai serait vide.`);
+    for (const f of lus) copyFileSync(join(racine, f), join(tmp, f));
     /* src/server.ts n'est PAS copié : c'est tout l'objet du cas. */
     const partiel = controles(tmp);
     assert.equal(partiel.length, complet,

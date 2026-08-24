@@ -305,7 +305,11 @@ export function controles(racine: string): Controle[] {
       i.sans.length === 0
         ? "Every dependency carries a content fingerprint: the package installed is the one that was measured."
         : `Without a fingerprint: ${i.sans.join(", ")}.`,
-      `${i.total} dependencies`);
+      /* LE DÉNOMINATEUR NOMME CE QUI A ÉTÉ LU, PAS SEULEMENT COMBIEN. Il annonçait « 82
+         dependencies » — un compte. Tous les autres contrôles nomment leur fichier, et c'est
+         la règle que ce document énonce lui-même : « chaque ligne porte ce qui a été lu ».
+         Un lecteur qui veut refaire le contrôle a besoin du fichier. */
+      `package-lock.json, ${i.total} dependencies`);
   }
 
   /* Le scan de secrets porte sur les fichiers SUIVIS, pas sur le disque : ce sont eux qui

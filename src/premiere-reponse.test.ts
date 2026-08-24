@@ -60,6 +60,13 @@ test("LA PREMIÈRE RÉPONSE NE DEMANDE AUCUNE INSTALLATION", () => {
    * « soixante secondes » annoncé au lecteur inclut SON réseau, que nous ne contrôlons pas.
    * C'est la réserve qui doit voyager avec le chiffre.
    */
+  /* La liste est dérivée une fois et sert aux deux usages : ce qui doit être versionné, et
+     ce que le bac d'essai doit contenir. Deux dérivations séparées finiraient par différer. */
+  const src = readFileSync(join(racine, "src/premiere-reponse.mjs"), "utf8");
+  const lus = [...src.matchAll(/lire\("([^"]+)"\)/g)].map((m) => m[1]!);
+  assert.ok(lus.length >= 2,
+    `${lus.length} relevé(s) lu(s) par la première réponse : la dérivation ne marche plus, et ce cas ne vérifie rien.`);
+
   const suivis = spawnSync("git", ["ls-files"], { cwd: racine, encoding: "utf8" });
   if (suivis.status === 0) {
     const liste = suivis.stdout.split("\n");
@@ -71,10 +78,6 @@ test("LA PREMIÈRE RÉPONSE NE DEMANDE AUCUNE INSTALLATION", () => {
      * en regardant moins. C'est le défaut que ce cas existe pour empêcher, logé dans le cas.
      * Trouvé par le catalogue de pièges, sur du code écrit le même jour.
      */
-    const src = readFileSync(join(racine, "src/premiere-reponse.mjs"), "utf8");
-    const lus = [...src.matchAll(/lire\("([^"]+)"\)/g)].map((m) => m[1]!);
-    assert.ok(lus.length >= 2,
-      `${lus.length} relevé(s) lu(s) par la première réponse : la dérivation ne marche plus, et ce cas ne vérifie rien.`);
     for (const f of ["src/premiere-reponse.mjs", ...lus]) {
       assert.ok(liste.includes(f),
         `${f} n'est pas versionné : un clone frais n'aurait rien à lire, et la promesse serait fausse.`);
@@ -85,7 +88,10 @@ test("LA PREMIÈRE RÉPONSE NE DEMANDE AUCUNE INSTALLATION", () => {
   try {
     mkdirSync(join(tmp, "src"));
     copyFileSync(join(racine, "src/premiere-reponse.mjs"), join(tmp, "src/premiere-reponse.mjs"));
-    for (const f of ["exposition.json", "document.json"]) copyFileSync(join(racine, f), join(tmp, f));
+    /* LA MÊME DÉRIVATION QUE PLUS HAUT. Deux noms écrits à la main ici auraient dit une
+       chose et la dérivation une autre : le jour où la première réponse lit un troisième
+       relevé, la liste versionnée le verrait et le bac d'essai non. Une seule source. */
+    for (const f of lus) copyFileSync(join(racine, f), join(tmp, f));
     assert.ok(!existsSync(join(tmp, "node_modules")),
       "node_modules existe dans le bac d'essai : ce cas n'éprouve pas l'absence d'installation.");
 

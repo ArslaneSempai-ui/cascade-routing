@@ -3900,7 +3900,7 @@ test("la question d'un champ porte sa provenance, et une déduction n'est pas un
      notre choix à sa place, et le taux n'est plus comparable au nôtre. */
   const nôtre = questionPourInterne("birth");
   assert.equal(nôtre.provenance, "mesuree",
-    "un de nos cinq champs ne se reconnaît plus : son taux publié ne serait plus rattachable.");
+    `un de nos ${FIELDS.length} champs ne se reconnaît plus : son taux publié ne serait plus rattachable.`);
 
   const sienne = questionPourInterne("birth", { birth: "Quelle est la date de naissance ?" });
   assert.equal(sienne.provenance, "fournie", "une question fournie par le client est ignorée.");
