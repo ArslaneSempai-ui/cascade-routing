@@ -1091,6 +1091,70 @@ const documentBloc = (() => {
           + `accuracy. ${d.apparie.note ?? ""}`);
 })();
 
+/**
+ * LES DEUX LEVIERS, ET CELUI QU'IL FAUT TIRER D'ABORD.
+ *
+ * Ce depot mesure deux facons de reduire le cout d'avoir tort, et il ne les avait jamais
+ * comparees — chacune vivait dans sa commande.
+ *
+ *   RE-ROUTER : changer quel palier porte quel champ.
+ *   S'ABSTENIR : ne rien rendre quand un signal dit que la valeur est douteuse.
+ *
+ * Les deux se resument par un rapport SANS DIMENSION — « une valeur fausse vaut combien de
+ * relectures ? » — donc les deux se transportent chez un client sans extrapoler quoi que ce
+ * soit. Et les deux seuils ne sont pas du tout au meme endroit.
+ *
+ * C'est la phrase la plus decisive que l'outil sache dire, et elle etait invisible.
+ */
+const leviers = (() => {
+  const cheminExp = fileURLToPath(new URL("../exposition.json", import.meta.url));
+  if (!existsSync(cheminExp)) throw new Error("exposition.json absent — lancez : npm run exposition");
+  const exp = JSON.parse(readFileSync(cheminExp, "utf8")) as { seuil: { bas: number; haut: number } | null };
+
+  const abst = (() => {
+    const l = JSON.parse(readFileSync(fileURLToPath(new URL("../landing.json", import.meta.url)), "utf8")) as {
+      abstention?: { documents: number; valuesMeasured: number; baselinePrecisionPct: number;
+        rules: { signalsRequired: number; abstentions: number; wrongRemoved: number;
+          correctSacrificed: number; breakEvenCostRatio: number | null;
+          deliveredPrecisionPct: number | null; deliveredPrecisionInterval: number[] | null }[] } | null;
+    };
+    const r = l.abstention?.rules?.find((x) => x.breakEvenCostRatio !== null);
+    return r && l.abstention ? { ...r, ...l.abstention } : null;
+  })();
+  if (!abst) throw new Error("landing.json ne porte pas de frontiere d'abstention exploitable.");
+
+  const seuilRoutage = exp.seuil ? exp.seuil.bas : null;
+  const seuilAbstention = abst.breakEvenCostRatio!;
+  const ecart = seuilRoutage ? Math.round(seuilRoutage / seuilAbstention) : null;
+
+  return `**There are two levers, and they are not equally close.** Both reduce the cost of `
+    + `being wrong, and both reduce to one dimensionless question — *how many reviews is one `
+    + `wrong value worth to you?* — so both transfer to your numbers without extrapolating `
+    + `anything.\n\n`
+    + table(["Lever", "Pays off once a wrong value is worth", "What it does"], [
+      ["**Abstain**", `**${seuilAbstention} reviews**`,
+        `returns nothing when a signal says the value is doubtful — ${abst.wrongRemoved} wrong `
+        + `values removed for ${abst.correctSacrificed} correct ones lost, precision `
+        + `${abst.baselinePrecisionPct} % → ${abst.deliveredPrecisionPct} %`],
+      ["Re-route", seuilRoutage ? `${seuilRoutage} reviews` : "never, in the range tested",
+        "moves a field to a different tier — the published recommendation is stable below that"],
+    ])
+    + `\n\n${ecert(ecart)}`
+    + `\n\n*The abstention figures are measured on the **hard corpus** — `
+    + `${abst.documents} deliberately difficult documents, ${abst.valuesMeasured} values — not `
+    + `on the main sample. That is where abstention is worth measuring, and it is also why the `
+    + `baseline precision there is ${abst.baselinePrecisionPct} % rather than the headline. The `
+    + `ratio itself carries no unit and does not depend on that choice.*`;
+
+  function ecert(n: number | null) {
+    return n === null
+      ? `Abstention pays almost immediately; re-routing never became worthwhile in the range tested.`
+      : `**Abstention pays roughly ${n} times sooner than re-routing.** For almost any client, `
+        + `the lever is refusing to answer — not moving fields between tiers. That is the `
+        + `opposite of where attention usually goes.`;
+  }
+})();
+
 const tests = (() => {
   const dossier = fileURLToPath(new URL(".", import.meta.url));
   const fichiers = readdirSync(dossier).filter((n: string) => n.endsWith(".test.ts"));
@@ -1101,6 +1165,6 @@ const tests = (() => {
 })();
 
 emit(fileURLToPath(new URL("../README.md", import.meta.url)),
-  { chapeau, chaines, finding, obligation, ouCaTourne, lecture, exposition: expositionBloc, document: documentBloc, extraction, classification, routing, shadow, gallery, baselines, provenance, coutDeReproduction, embauche,
+  { chapeau, chaines, finding, obligation, ouCaTourne, lecture, exposition: expositionBloc, document: documentBloc, leviers, extraction, classification, routing, shadow, gallery, baselines, provenance, coutDeReproduction, embauche,
     echelles, latence, egalites, fuite, deuxfaits, retractations, public: publicJeu, commandes,
     tests });

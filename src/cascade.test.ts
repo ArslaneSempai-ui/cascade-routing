@@ -3704,3 +3704,43 @@ test("viser le dossier ne dégrade jamais le dossier, et le dit quand ça ne se 
       + `  apparié conclurait sur trop peu de cas, ce qui est exactement ce qu'il existe pour refuser.`);
   }
 });
+
+test("les deux seuils du bloc des leviers viennent de leurs mesures, et leur rapport est calculé", () => {
+  /*
+   * Ce bloc met côte à côte deux chiffres qui vivaient dans deux fichiers différents, et en
+   * tire une phrase — « l'abstention paie N fois plus tôt ». C'est exactement la forme qui
+   * dérive : trois nombres justes le jour où on les écrit, et une phrase fausse le jour où
+   * l'un des trois bouge.
+   */
+  const racine = fileURLToPath(new URL("..", import.meta.url));
+  const readme = readFileSync(join(racine, "README.md"), "utf8");
+  const bloc = readme.match(/<!-- figures:leviers -->([\s\S]*?)<!-- \/figures:leviers -->/)?.[1];
+  assert.ok(bloc, "le bloc des leviers a disparu du README.");
+
+  const exp = JSON.parse(readFileSync(join(racine, "exposition.json"), "utf8")) as
+    { seuil: { bas: number } | null };
+  const landing = JSON.parse(readFileSync(join(racine, "landing.json"), "utf8")) as
+    { abstention: { rules: { breakEvenCostRatio: number | null }[] } | null };
+  const seuilAbst = landing.abstention?.rules?.find((x) => x.breakEvenCostRatio !== null)?.breakEvenCostRatio;
+  assert.ok(typeof seuilAbst === "number", "landing.json ne porte plus de seuil d'abstention.");
+
+  assert.ok(bloc!.includes(String(seuilAbst)),
+    `le bloc n'affiche plus le seuil d'abstention mesuré (${seuilAbst}) : il en affiche un autre.`);
+
+  if (exp.seuil) {
+    assert.ok(bloc!.includes(String(exp.seuil.bas)),
+      `le bloc n'affiche plus le seuil de re-routage mesuré (${exp.seuil.bas}).`);
+    /* LA PHRASE EST UN QUOTIENT, pas un adjectif. Si elle cesse de l'être, elle ment dès que
+       l'un des deux seuils bouge — et personne ne revérifie une affirmation qui a la forme
+       d'un nombre. */
+    const attendu = Math.round(exp.seuil.bas / seuilAbst);
+    const dit = Number(bloc!.match(/roughly (\d+) times sooner/)?.[1]);
+    assert.equal(dit, attendu,
+      `le bloc annonce « ${dit} fois plus tôt » alors que ${exp.seuil.bas} / ${seuilAbst} = ${attendu}.`);
+  }
+
+  /* ET LA RÉSERVE VOYAGE AVEC LES CHIFFRES. Les taux d'abstention sont mesurés sur le corpus
+     DUR ; publiés sans le dire, ils se liraient comme le corpus principal. */
+  assert.match(bloc!, /hard corpus/,
+    "le bloc publie les chiffres d'abstention sans dire qu'ils viennent du corpus dur.");
+});

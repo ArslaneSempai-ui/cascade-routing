@@ -68,7 +68,7 @@ npm test           # types, README figures, landing.json, and the suite
 ```
 
 <!-- figures:tests -->
-**169 tests** across 9 files, counted from the sources rather than typed here.
+**170 tests** across 9 files, counted from the sources rather than typed here.
 <!-- /figures:tests -->
 
 Everything runs locally. No API key, nothing leaves the machine, and anyone who clones this
@@ -370,6 +370,19 @@ No budget buys better: the ceiling is in the tiers available.
 
 **Aiming at the file changes the routing, and it is never worse on any file in the sample** — 3 gained, 0 lost, for **3.5x less**. But 3 discordant pairs cannot separate two rates: what the sample establishes is the cost, not the accuracy. the set cannot distinguish these versions by rate — judge the broken cases instead
 <!-- /figures:document -->
+
+<!-- figures:leviers -->
+**There are two levers, and they are not equally close.** Both reduce the cost of being wrong, and both reduce to one dimensionless question — *how many reviews is one wrong value worth to you?* — so both transfer to your numbers without extrapolating anything.
+
+| Lever | Pays off once a wrong value is worth | What it does |
+|---|---|---|
+| **Abstain** | **1.132 reviews** | returns nothing when a signal says the value is doubtful — 91 wrong values removed for 12 correct ones lost, precision 29.3 % → 68.1 % |
+| Re-route | 29.14 reviews | moves a field to a different tier — the published recommendation is stable below that |
+
+**Abstention pays roughly 26 times sooner than re-routing.** For almost any client, the lever is refusing to answer — not moving fields between tiers. That is the opposite of where attention usually goes.
+
+*The abstention figures are measured on the **hard corpus** — 30 deliberately difficult documents, 150 values — not on the main sample. That is where abstention is worth measuring, and it is also why the baseline precision there is 29.3 % rather than the headline. The ratio itself carries no unit and does not depend on that choice.*
+<!-- /figures:leviers -->
 
 That last sentence is the one worth carrying into a budget meeting. The instinct in the
 room is "we need a bigger model" or "we need more budget". The measurement says the money
