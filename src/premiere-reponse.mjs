@@ -64,6 +64,38 @@ export function reponse(exposition, doc) {
   const rapport = publie.exposition / publie.traitement;
   const b = exposition.seuil;
 
+  /*
+   * L'UNITÉ SE LIT, ELLE NE SE TAPE PAS — ET CETTE LIGNE-CI EN A INVENTÉ DEUX.
+   *
+   * Elle annonçait « ${traitement} EUR a year ». Le modèle déclare `usd/period`, et une
+   * période vaut `volume` documents. Donc la devise était fausse, ET la période était
+   * inventée : rien nulle part ne dit qu'un an s'écoule. Deux erreurs dans quatre mots,
+   * sur la toute première phrase chiffrée qu'un acheteur lit d'un clone frais.
+   *
+   * Et le prix de l'audit est libellé en dollars. Le délai de retour vendu en première page
+   * du rapport est exposition ÷ prix : une exposition lue en euros contre un prix en dollars
+   * fausse d'environ un dixième le seul chiffre qui justifie l'achat.
+   *
+   * Ce fichier n'a AUCUNE dépendance et ne peut donc pas importer la table des unités. Il la
+   * lit dans le relevé, qui la porte depuis. Et s'il ne la trouve pas il se TAIT plutôt que
+   * de reconstituer : une reconstitution est exactement ce qui a écrit « EUR ».
+   */
+  const u = exposition.unites;
+  if (!u?.traitement || !u?.exposition || !exposition.periode) {
+    throw new Error(
+      "exposition.json carries figures without their unit.\n\n"
+      + "  This text refuses to name a currency the reading does not state. The last time it\n"
+      + "  guessed, it printed euros for dollars and a year for a period nothing defines.\n"
+      + "  Regenerate the reading with the component that produces it.");
+  }
+  if (u.traitement !== u.exposition) {
+    throw new Error(`the two figures do not share a unit (${u.traitement} vs ${u.exposition}): they cannot be compared.`);
+  }
+  /* « usd/period » → « USD », « period ». Le dénominateur est nommé à part parce que c'est
+     lui qui a menti, et qu'un lecteur ne le reconstitue pas depuis la devise seule. */
+  const [devise, denominateur] = String(u.traitement).split("/");
+  const DEVISE = devise.toUpperCase();
+
   const lignes = [
     "",
     "  CASCADE — the question is not which model. It is what being wrong costs.",
@@ -75,8 +107,9 @@ export function reponse(exposition, doc) {
     "  or it is not. Averaging across fields flatters: a record missing one field",
     "  still counts as nearly good.",
     "",
-    `  That routing costs ${nombre(publie.traitement)} EUR a year to run.`,
+    `  That routing costs ${nombre(publie.traitement)} ${DEVISE} per ${denominateur} to run.`,
     `  What it lets through costs ${nombre(publie.exposition)}.`,
+    `  A ${denominateur} is ${exposition.periode} — not a calendar year, which nothing here measures.`,
     "",
     `  ${nombre(rapport)} times more. That is where the money is, and it is almost`,
     "  always the variable nobody is measuring.",

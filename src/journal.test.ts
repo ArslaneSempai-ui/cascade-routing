@@ -199,6 +199,13 @@ test("chaque ligne porte sa formulation, référence comprise", () => {
  * Le correctif d'une faute en a donc cassé une autre, en silence, pendant une journée. Ce test
  * est ce qui aurait crié le soir même.
  */
+/*
+ * Les relevés publiés ici mais CALCULÉS AILLEURS. Un seul aujourd'hui, et l'ajout d'un
+ * second doit se voir dans un diff : c'est le seul frein contre une issue qui s'élargit
+ * jusqu'à ne plus rien retenir.
+ */
+const PRODUITS_HORS_DEPOT = new Set(["exposition.json"]);
+
 test("aucun relevé livré ne cite un commit introuvable", () => {
   const racine = fileURLToPath(new URL("..", import.meta.url));
   /*
@@ -274,11 +281,35 @@ test("aucun relevé livré ne cite un commit introuvable", () => {
 
   let verifies = 0;
   const sansCommit: string[] = [];
+  let horsDepotVus = 0;
   for (const n of releves) {
     const p = JSON.parse(readFileSync(join(racine, n), "utf8")) as {
-      code?: { commit?: string };
+      code?: { commit?: string; depot?: string };
       provenance?: Record<string, { accuracy?: { commit?: string }; latency?: { commit?: string } }>;
     };
+    /*
+     * UN COMMIT PRODUIT AILLEURS, ET LA SEULE FAÇON HONNÊTE DE LE DIRE.
+     *
+     * `exposition.json` porte le chiffre central du produit et il est publié ici — mais le
+     * code qui le calcule vit dans le composant licencié, hors de ce dépôt. Son commit n'est
+     * pas atteignable depuis HEAD, et il ne le sera jamais.
+     *
+     * Tant que ce relevé datait d'avant la séparation des dépôts, il citait un commit qui
+     * existait ici par accident et cette garde se taisait. La première régénération correcte
+     * l'a réveillée — elle avait raison : un commit introuvable ne prouve rien.
+     *
+     * L'issue est de NOMMER le dépôt, pas de lever le contrôle. Et elle est étroite à
+     * dessein : le fichier doit être inscrit dans `PRODUITS_HORS_DEPOT` ET porter un
+     * `code.depot` non vide. Une échappatoire ouverte à tous se serait refermée sur le
+     * prochain relevé du banc qui aurait oublié son commit.
+     */
+    if (PRODUITS_HORS_DEPOT.has(n)) horsDepotVus++;
+    const horsDepot = PRODUITS_HORS_DEPOT.has(n) ? (p.code?.depot ?? "").trim() : "";
+    if (PRODUITS_HORS_DEPOT.has(n)) {
+      assert.ok(horsDepot.length > 0,
+        `${n} est inscrit comme produit hors de ce dépôt, mais ne nomme pas lequel dans « code.depot ».\n`
+        + "  Sans ce nom, son commit n'est retrouvable nulle part, et le relevé ne se vérifie pas.");
+    }
     const cites = new Set<string>();
     if (p.code?.commit) cites.add(p.code.commit);
     for (const v of Object.values(p.provenance ?? {})) {
@@ -289,6 +320,7 @@ test("aucun relevé livré ne cite un commit introuvable", () => {
     for (const c of cites) {
       verifies++;
       if (atteignable(c)) continue;
+      if (horsDepot) continue;   // produit ailleurs, et le relevé dit où : rien à chercher ici
       const vers = carte.get(c);
       assert.ok(vers,
         `${n} cite le commit ${c}, qui n'existe pas dans ce dépôt et n'est déclaré nulle part.\n`
@@ -1081,4 +1113,172 @@ test("le relevé qui porte la promesse la plus vendable voyage avec le dépôt",
   const motifs = ignore.split("\n").map((l) => l.trim()).filter((l) => l && !l.startsWith("#"));
   const couvert = motifs.filter((m) => m === cible || m === `/${cible}` || (m.endsWith("/") && cible!.startsWith(m)));
   assert.deepEqual(couvert, [], `« ${cible} » est couvert par .gitignore : ${couvert.join(", ")}.`);
+});
+
+/*
+ * ─── AUCUNE DEVISE NE S'ÉCRIT À LA MAIN ───
+ *
+ * `UNITS`, dans assumptions.ts, déclare la devise de chaque montant : `usd/year`,
+ * `usd/1000 extractions`, `usd/period`. Elle fait autorité, et elle existait déjà.
+ *
+ * Trois rendus ne la lisaient pas et avaient tapé la leur. `escalade.ts` affichait
+ * « €/1000 » sur trois lignes. `premiere-reponse.mjs` — la toute première sortie qu'un
+ * acheteur voit d'un clone frais, avant toute installation — annonçait « EUR a year » : une
+ * devise fausse et une période inventée, quatre mots, deux erreurs. Le README, lui, écrivait
+ * « $ » : juste, et tapé aussi, donc juste par chance.
+ *
+ * Ce que ça coûtait : le prix de l'audit est en dollars, et le délai de retour vendu en
+ * première page du rapport est exposition ÷ prix. Une exposition lue en euros contre un prix
+ * en dollars fausse d'environ un dixième le seul chiffre qui justifie l'achat.
+ *
+ * ─── POURQUOI CE MOTIF-LÀ, ET PAS « EUR » ───
+ *
+ * Un motif de recherche est une affirmation. `EUR` seul affirme « ces trois lettres ne
+ * paraissent que dans une devise » — faux dans un dépôt commenté en français :
+ * DENOMINATEUR, CONTROLES_SERVEUR, PORTEUR, CHARGE_MAX_PAR_COEUR. Le témoin négatif ci-
+ * dessous le prouve, parce qu'une règle qui hurle sur du texte innocent est désactivée dans
+ * la semaine, et qu'une règle désactivée ne détecte plus rien.
+ *
+ * On ne regarde donc que ce qui est RENDU : l'intérieur des chaînes et des gabarits, et
+ * seulement quand la devise touche un nombre ou une substitution.
+ */
+test("aucune source ne tape une devise à la main", () => {
+  const dossier = fileURLToPath(new URL(".", import.meta.url));
+
+  /* Une devise collée à un nombre, à une substitution `${…}`, ou à un séparateur d'unité.
+     `\bEUR\b` et non `EUR` : la frontière de mot est ce qui laisse passer DENOMINATEUR. */
+  const DEVISE_RENDUE = /[€£¥]|\bEUR\b|\bUSD\b|\$(?=[\s]*[\d$])/;
+  /*
+   * `"$1"` N'EST PAS UN PRIX : c'est un renvoi de capture, le second argument de `replace`.
+   * Le motif l'attrapait, et une règle qui accuse `.replace(/x/, "$1")` d'annoncer un dollar
+   * finit par être commentée. On écarte la forme exacte — `$` suivi d'un seul chiffre, rien
+   * d'autre dans la chaîne — qui ne s'écrit jamais pour un montant dans ce dépôt.
+   */
+  const renvoiDeCapture = (c: string) => /^[\"'`]\$\d[\"'`]$/.test(c);
+  /*
+   * ON PARCOURT, ON N'EXPRIME PAS. La première version extrayait les chaînes par expression
+   * régulière — et dans un dépôt commenté en français, chaque apostrophe de « L'UNITÉ » ou
+   * « s'abstenant » ouvrait une chaîne fantôme qui courait jusqu'à la suivante. Elle a
+   * rapporté cinq fautes qui n'existaient pas, sur cinq fichiers différents.
+   *
+   * Une règle qui rapporte du vent est commentée dans la semaine, et une règle commentée ne
+   * détecte plus rien. Le faux positif coûte donc autant que l'oubli. Un seul parcours qui
+   * sait où il est — chaîne, gabarit, commentaire — les supprime tous les deux.
+   */
+  const chaines = (src: string) => {
+    const out: string[] = [];
+    let i = 0;
+    while (i < src.length) {
+      const c = src[i]!, d = src[i + 1];
+      if (c === "/" && d === "/") { while (i < src.length && src[i] !== "\n") i++; continue; }
+      if (c === "/" && d === "*") { i += 2; while (i < src.length && !(src[i] === "*" && src[i + 1] === "/")) i++; i += 2; continue; }
+      if (c === '"' || c === "'") {
+        const debut = i; i++;
+        while (i < src.length && src[i] !== c) { if (src[i] === "\\") i++; i++; }
+        out.push(src.slice(debut, i + 1)); i++; continue;
+      }
+      /*
+       * UN GABARIT S'IMBRIQUE, ET C'EST CE QUI A DÉSYNCHRONISÉ LA VERSION D'AVANT.
+       *
+       * `a ${ cond ? \`x\` : \`y\` } b` porte des accents graves À L'INTÉRIEUR de sa
+       * substitution. Fermer au premier accent grave rencontré ferme au mauvais : la suite du
+       * fichier est alors lue comme du code, le gabarit suivant rouvre à contretemps, et le
+       * parcours rapporte des fragments de commentaires comme s'ils étaient rendus.
+       *
+       * Trouvé dans tiers.ts : trois substitutions imbriquées à la ligne 633 décalaient tout
+       * jusqu'à la ligne 655, où un commentaire innocent ressortait en faute.
+       *
+       * On suit donc la profondeur des accolades de substitution, et on redescend dans
+       * chaque chaîne qu'elles contiennent.
+       */
+      if (c === "`") {
+        const debut = i; i++;
+        let profondeur = 0;
+        while (i < src.length) {
+          const x = src[i]!;
+          if (x === "\\") { i += 2; continue; }
+          if (profondeur === 0 && x === "`") break;
+          if (x === "$" && src[i + 1] === "{") { profondeur++; i += 2; continue; }
+          if (profondeur > 0) {
+            if (x === "{") profondeur++;
+            else if (x === "}") profondeur--;
+            else if (x === '"' || x === "'" || x === "`") {
+              i++;
+              while (i < src.length && src[i] !== x) { if (src[i] === "\\") i++; i++; }
+            }
+          }
+          i++;
+        }
+        out.push(src.slice(debut, i + 1)); i++; continue;
+      }
+      i++;
+    }
+    return out;
+  };
+
+  /* Un fichier peut se déclarer exempt, mais il doit dire pourquoi sur la ligne même. */
+  const EXEMPTS = new Map<string, string>([
+    ["assumptions.ts", "c'est la table qui déclare les unités : elle est la source"],
+    /*
+     * LES SEUILS DE LA LOI SE CITENT, ILS NE SE DÉRIVENT PAS.
+     *
+     * `regulations.ts` porte « $5,000 » et « $10,000 » : les seuils de déclaration du Bank
+     * Secrecy Act, cités mot pour mot avec leur référence. Ce sont des montants FIXÉS PAR UN
+     * TEXTE, en dollars des États-Unis, et ils resteraient en dollars le jour où le corpus
+     * d'un client se libellerait en euros. Les dériver de `UNITS` les rendrait faux : ce
+     * n'est pas notre chiffre, et une citation qui change avec nos hypothèses n'est plus une
+     * citation.
+     */
+    ["regulations.ts", "seuils cités d'un texte de loi, en dollars par la loi et non par nos hypothèses"],
+  ]);
+
+  const fautes: string[] = [];
+  let lus = 0;
+  for (const n of readdirSync(dossier)) {
+    if (!/\.(ts|mjs)$/.test(n) || n.endsWith(".test.ts")) continue;
+    if (EXEMPTS.has(n)) continue;
+    lus++;
+    const src = readFileSync(join(dossier, n), "utf8");
+    for (const c of chaines(src)) {
+      /* Les commentaires vivent hors des chaînes, donc ils ne sont pas lus ici — mais un
+         gabarit peut contenir un commentaire de bloc. On ne l'exclut pas : une devise dans
+         un gabarit finit rendue, commentée ou non. */
+      if (!renvoiDeCapture(c) && DEVISE_RENDUE.test(c)) fautes.push(`${n} : ${c.slice(0, 72)}`);
+    }
+  }
+  assert.ok(lus >= 40, `${lus} source(s) lue(s) : le balayage n'a pas eu lieu, son zéro ne vaut rien.`);
+  assert.deepEqual(fautes, [],
+    `${fautes.length} devise(s) tapée(s) à la main sur ${lus} sources lues.\n`
+    + "  Lisez-la dans UNITS (assumptions.ts) ou dans le champ « unites » du relevé.\n"
+    + `  ${fautes.join("\n  ")}`);
+});
+
+test("le détecteur de devise se déclenche, et se tait sur le français", () => {
+  const DEVISE_RENDUE = /[€£¥]|\bEUR\b|\bUSD\b|\$(?=[\s]*[\d$])/;
+
+  /* TÉMOINS POSITIFS — les quatre formes réellement trouvées dans ce dépôt. */
+  for (const t of [
+    "`  That routing costs ${nombre(x)} EUR a year to run.`",
+    '"   k/doc  score>=  oracle   €/1000   ms moy"',
+    "`  coût ≤ ${b.toFixed(2)} €/1000`",
+    "`total exposure is $${Math.round(e)} a year`",
+  ]) assert.ok(DEVISE_RENDUE.test(t), `témoin positif non détecté : ${t}`);
+
+  /*
+   * TÉMOINS NÉGATIFS — le français de ce dépôt, et les gabarits qui n'ont rien à voir.
+   * Sans eux la règle attrape DENOMINATEUR, se met à hurler, et finit commentée.
+   */
+  /* Le renvoi de capture, écarté par la garde : la contre-épreuve de l'écart lui-même. */
+  const renvoiDeCapture = (c: string) => /^["'`]\$\d["'`]$/.test(c);
+  assert.ok(renvoiDeCapture('"$1"'), "« $1 » doit être reconnu comme un renvoi de capture.");
+  assert.ok(!renvoiDeCapture('"$5,000"'), "un seuil légal n'est pas un renvoi de capture.");
+  assert.ok(!renvoiDeCapture('"$12"'), "l'écart ne couvre qu'un seul chiffre, pas un montant.");
+  assert.ok(DEVISE_RENDUE.test('"$5,000"'), "un seuil légal doit rester détecté par le motif.");
+
+  for (const t of [
+    '"Dénominateur : toute valeur notée par un palier"',
+    '"CONTROLES_SERVEUR"', '"CHARGE_MAX_PAR_COEUR"', '"le PORTEUR celui qui manquait"',
+    "`${nom.padEnd(34)} ${x.champsJustes}/150 champs`",
+    "`écrit dans ${SORTIE}`",
+  ]) assert.ok(!DEVISE_RENDUE.test(t), `faux positif : ${t}`);
 });

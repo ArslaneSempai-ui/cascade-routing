@@ -63,7 +63,11 @@ import { corpusDur } from "./corpus-dur.ts";
 import { casAmbigus } from "./mesurer-dur.ts";
 import { FORME } from "./signal.ts";
 import { readProfiles } from "./measure.ts";
-import { ASSUMPTIONS, pricePerThousandExtractions } from "./assumptions.ts";
+import { ASSUMPTIONS, UNITS, pricePerThousandExtractions } from "./assumptions.ts";
+
+/* La devise des prix, prise à la table qui fait autorité plutôt qu'au clavier. Au niveau du
+   module parce que deux fonctions la rendent, et que deux copies divergent. */
+const DEVISE = UNITS.pricePerThousandSmall.split("/")[0]!.toUpperCase();
 import { optimiseExtraction, paliersMesures } from "./optimise.ts";
 import "./figer.ts";  /* pose la table figée : voir figer.ts */
 import { FIELDS, draw } from "./corpus.ts";
@@ -213,7 +217,16 @@ if (isMain(import.meta)) {
   console.log(`  marches réelles du classement : ${marches.map((m) => `score>=${m.scoreMin} → ${m.disponibles} champs (${(100 * m.disponibles / total).toFixed(1)} %)`).join("  |  ")}\n`);
 
   const lignes: Record<string, unknown>[] = [];
-  console.log("   k/doc  score>=  escal.  taux eff.  entiers  hasard  oracle   €/1000   ms moy   ms p90   ms max   docs > plafond");
+  /*
+   * LA DEVISE EST LUE, PAS TAPÉE. Ces colonnes annonçaient « €/1000 » sur des prix que le
+   * modèle déclare en `usd/1000 extractions`. Le même chiffre sortait en dollars dans le
+   * README et en euros ici, et une rétractation de ce dépôt cite encore « 0,99 € par
+   * millier » — c'est bien ce que l'outil disait.
+   *
+   * `UNITS` existait déjà et fait autorité. Un rendu qui recopie une unité à la main affirme
+   * en silence qu'il sait ce que la source dit ; celui-ci se trompait.
+   */
+  console.log(`   k/doc  score>=  escal.  taux eff.  entiers  hasard  oracle  ${DEVISE}/1000   ms moy   ms p90   ms max   docs > plafond`);
   for (const k of kValeurs) {
     for (const m of marches) {
       const g = mesurer(choisir(m.scoreMin, k, total), cible);
@@ -293,11 +306,11 @@ if (isMain(import.meta)) {
   const recommande = tousLesRoutages.find((x) => FIELDS.every((c) => x.routage[c] === routage[c])) ?? null;
 
   console.log(`\n  ${tousLesRoutages.length} routages, ${admissibles.length} admissibles `
-    + `(latence ≤ ${ASSUMPTIONS.latencyBudgetMs} ms, coût ≤ ${budgetParMille.toFixed(2)} €/1000)`);
+    + `(latence ≤ ${ASSUMPTIONS.latencyBudgetMs} ms, coût ≤ ${budgetParMille.toFixed(2)} ${DEVISE}/1000)`);
   const dire = (nom: string, x: typeof tousLesRoutages[number] | null) => x && console.log(
     `    ${nom.padEnd(34)} ${FIELDS.map((c) => x.routage[c]).join(", ").padEnd(46)}`
     + ` ${String(x.champsJustes).padStart(3)}/150 champs  ${x.dossiersEntiers}/30 entiers`
-    + `  ${x.prixParMille.toFixed(2).padStart(5)} €  ${x.msParDocument.toFixed(0).padStart(5)} ms`);
+    + `  ${x.prixParMille.toFixed(2).padStart(5)} ${DEVISE}  ${x.msParDocument.toFixed(0).padStart(5)} ms`);
   dire("recommandé (réglé sur le propre)", recommande);
   dire("meilleur admissible, champs", meilleurChamps);
   dire("meilleur admissible, dossiers", meilleurEntiers);

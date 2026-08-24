@@ -1,5 +1,15 @@
 {
   "quoi": "À quel rapport de prix entre une valeur fausse et un champ vide la recommandation change.",
+  "unites": {
+    "traitement": "usd/period",
+    "exposition": "usd/period",
+    "prixDeclares.costWrongValue": "usd/wrong value",
+    "prixDeclares.costBlankField": "usd/blank field",
+    "rapport": "sans dimension (costWrongValue / costBlankField)",
+    "seuil.bas": "sans dimension (costWrongValue / costBlankField)",
+    "seuil.haut": "sans dimension (costWrongValue / costBlankField)"
+  },
+  "periode": "100000 documents",
   "commentLire": "Les deux prix sont des hypothèses du client, pas des mesures. Ce qui est mesuré est la décomposition vide/faux de chaque case, et le routage optimal à chaque rapport.",
   "prixDeclares": {
     "costWrongValue": 0.587,
@@ -161,9 +171,10 @@
     "bas": 29.14,
     "haut": 29.38
   },
-  "calculeLe": "2026-08-24T11:05:58.829Z",
+  "calculeLe": "2026-08-24T20:24:04.265Z",
   "code": {
-    "commit": "f553b70",
-    "sale": true
+    "commit": "ab6d216",
+    "sale": false,
+    "depot": "cascade-licencie"
   }
 }

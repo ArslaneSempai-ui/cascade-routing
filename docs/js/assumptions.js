@@ -103,6 +103,32 @@ export const UNITS = {
     costWrongValue: "usd/wrong value",
     costBlankField: "usd/blank field",
 };
+/**
+ * Le symbole d'une unité monétaire, POUR L'AFFICHAGE — et le seul endroit du dépôt où le
+ * couple « usd → $ » est écrit.
+ *
+ * `UNITS` dit `usd`, un lecteur veut voir `$`. Cette traduction devait bien exister quelque
+ * part ; elle existait dans onze chaînes de rendu réparties sur trois fichiers, chacune tapée
+ * de mémoire. Deux d'entre elles s'étaient trompées de devise — `escalade.ts` affichait des
+ * euros, `premiere-reponse.mjs` aussi — et les neuf autres avaient raison par chance.
+ *
+ * Onze copies d'une même affirmation, ce n'est pas onze fois plus sûr : c'est onze occasions
+ * de diverger, et deux avaient déjà divergé. Ici il n'y en a qu'une, et elle REFUSE ce
+ * qu'elle ne connaît pas plutôt que de rendre un symbole faux — le jour où le corpus se
+ * libelle en euros, ce refus est ce qui empêche de publier des dollars.
+ */
+export function symboleDe(unite) {
+    const code = unite.split("/")[0].toLowerCase();
+    const table = { usd: "$", eur: "\u20ac", gbp: "\u00a3" };
+    const s = table[code];
+    if (!s) {
+        throw new Error(`aucun symbole connu pour la devise « ${code} » (unite « ${unite} »).\n\n`
+            + "  Ajoutez-le dans symboleDe(), dans assumptions.ts. Ne le tapez pas au site de rendu :\n"
+            + "  c'est comme ça que ce dépôt s'est mis à publier le même chiffre en euros et en\n"
+            + "  dollars selon la page qu'on lisait.");
+    }
+    return s;
+}
 /** Sanity bounds: a screen that accepts 100 % human accuracy is lying to its reader. */
 export const BOUNDS = {
     humanAccuracy: [0.5, 0.99],

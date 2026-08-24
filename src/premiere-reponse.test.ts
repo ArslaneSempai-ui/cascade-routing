@@ -15,13 +15,25 @@ test("aucun chiffre n'est écrit dans le texte d'accueil : il vient des relevés
    * Un texte d'accueil qui recopie des chiffres est le premier à mentir — lu par tout le
    * monde, relu par personne. On change les relevés et on regarde si la sortie suit.
    */
-  const exposition = { seuil: { bas: 3, haut: 4 },
+  const exposition = { seuil: { bas: 3, haut: 4 }, unites: { traitement: "usd/period", exposition: "usd/period" }, periode: "100000 documents",
     points: [{ identiqueAuPublie: true, traitement: 1000, exposition: 7000 }] };
   const doc = { publie: { taux: { successes: 7, n: 10, rate: 0.7, low: 0.4, high: 0.9 } } };
   const s = reponse(exposition, doc);
   assert.match(s, /7 COMPLETE records out of 10/);
   assert.match(s, /70\.0 %/);
-  assert.match(s, /1,000 EUR a year/);
+  /*
+   * CE CAS FIGEAIT LA FAUTE QU'IL DEVAIT ATTRAPER.
+   *
+   * Il exigeait « 1,000 EUR a year » — et le texte le disait, donc il passait. Les deux
+   * moitiés étaient fausses : le modèle libelle ces montants en `usd/period`, et une période
+   * vaut `volume` documents, pas douze mois. Un contrôle qui recopie la sortie ne vérifie pas
+   * la sortie, il la grave.
+   *
+   * Il lit l'unité du relevé maintenant, comme le texte qu'il éprouve.
+   */
+  assert.match(s, /1,000 USD per period/);
+  assert.match(s, /A period is 100000 documents/);
+  assert.doesNotMatch(s, /\bEUR\b|€/, "la devise ne se réinvente pas.");
   assert.match(s, /7,000/);
   assert.match(s, /\b7 times more/, "le rapport est calculé, pas recopié.");
   assert.match(s, /3–4× one blank field/);
@@ -32,14 +44,32 @@ test("aucun chiffre n'est écrit dans le texte d'accueil : il vient des relevés
 test("un relevé incohérent fait refuser, pas inventer", () => {
   assert.throws(() => reponse({ points: [{ identiqueAuPublie: false }] }, { publie: { taux: { n: 10 } } }),
     /diverged/);
-  assert.throws(() => reponse({ points: [{ identiqueAuPublie: true, traitement: 1, exposition: 2 }] }, { publie: {} }),
+  assert.throws(() => reponse({ unites: { traitement: "usd/period", exposition: "usd/period" }, periode: "100000 documents", points: [{ identiqueAuPublie: true, traitement: 1, exposition: 2 }] }, { publie: {} }),
     /no sample size/);
+
+  /*
+   * UN RELEVÉ SANS UNITÉ FAIT REFUSER. C'est le cas qui manquait : ce fichier n'a aucune
+   * dépendance, donc il ne peut pas importer la table des unités — il la lit dans le relevé
+   * ou il se tait. La version d'avant reconstituait, et sa reconstitution disait « EUR ».
+   */
+  assert.throws(() => reponse(
+    { points: [{ identiqueAuPublie: true, traitement: 1, exposition: 2 }] },
+    { publie: { taux: { successes: 1, n: 2, rate: 0.5, low: 0.1, high: 0.9 } } }),
+    /without their unit/, "un relevé nu doit faire refuser, pas deviner.");
+
+  /* Et deux unités différentes ne se comparent pas : « 86 fois plus » n'aurait aucun sens. */
+  assert.throws(() => reponse(
+    { unites: { traitement: "usd/period", exposition: "eur/period" }, periode: "x",
+       points: [{ identiqueAuPublie: true, traitement: 1, exposition: 2 }] },
+    { publie: { taux: { successes: 1, n: 2, rate: 0.5, low: 0.1, high: 0.9 } } }),
+    /do not share a unit/, "deux devises différentes ne se divisent pas.");
 });
 
 test("le texte respire : la mise en forme n'écrase pas les lignes vides", () => {
   /* La première version filtrait `!== ""` pour retirer une ligne conditionnelle et effaçait
      toute la respiration : trente lignes collées, illisibles. */
-  const s = reponse({ seuil: { bas: 3, haut: 4 }, points: [{ identiqueAuPublie: true, traitement: 1, exposition: 2 }] },
+  const s = reponse({ seuil: { bas: 3, haut: 4 }, unites: { traitement: "usd/period", exposition: "usd/period" }, periode: "100000 documents",
+      points: [{ identiqueAuPublie: true, traitement: 1, exposition: 2 }] },
     { publie: { taux: { successes: 7, n: 10, rate: 0.7, low: 0.4, high: 0.9 } } });
   assert.ok(s.split("\n").filter((l: string) => l.trim() === "").length >= 8,
     "le texte n'a plus de lignes vides : il est rendu illisible par sa propre mise en forme.");

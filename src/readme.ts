@@ -12,7 +12,17 @@ import { INVENTORY } from "./inventory.ts";
 import { markdown } from "./provenance.ts";
 import { optimiseExtraction, budgetShadowPrice, paliersMesures, decompositionDe } from "./optimise.ts";
 import "./figer.ts";  /* pose la table figée : voir figer.ts */
-import { ASSUMPTIONS, pricePerThousandExtractions, accuracy } from "./assumptions.ts";
+import { ASSUMPTIONS, UNITS, pricePerThousandExtractions, accuracy, symboleDe } from "./assumptions.ts";
+
+/*
+ * Le symbole de devise du README, lu dans la table qui l'énonce.
+ *
+ * Onze chaînes tapaient « $ » à la main ici. Aucune ne s'était trompée — mais elles avaient
+ * raison sans le savoir, et deux de leurs sœurs dans d'autres fichiers affichaient des euros
+ * pour les mêmes nombres. Une valeur juste par chance ne se distingue pas d'une valeur juste
+ * par construction tant que la source n'a pas bougé.
+ */
+const D = symboleDe(UNITS.budget);
 import { collect, shape } from "./failures.ts";
 import { FIELDS, type Field } from "./corpus.ts";
 
@@ -107,7 +117,7 @@ const ouCaTourne = (() => {
     const rapport = b > 0 && a / b > 1.05 ? `${(a / b).toFixed(0)}x` : "—";
     const m = FIELDS.map((f) => p!.extraction[t][f].accuracy);
     const moy = (m.reduce((x, y) => x + y, 0) / m.length) * 100;
-    return [`\`${t}\``, `$${a.toFixed(2)}`, `$${b.toFixed(2)}`, rapport, `${moy.toFixed(1)} %`];
+    return [`\`${t}\``, `${D}${a.toFixed(2)}`, `${D}${b.toFixed(2)}`, rapport, `${moy.toFixed(1)} %`];
   });
 
   /* Le renversement se calcule plutot que de s'affirmer : si un jour il cesse d'etre vrai,
@@ -128,8 +138,8 @@ const ouCaTourne = (() => {
     + `column is an estimate: it is the same measured latency billed under two regimes.*`
     + (renverse
         ? `\n\n**This reverses the table.** \`${local.t}\` running locally costs `
-          + `$${local.cout.toFixed(2)} at ${(local.acc * 100).toFixed(1)} % — cheaper AND more `
-          + `accurate than calling \`large\` at a provider for $${heberge.cout.toFixed(2)} at `
+          + `${D}${local.cout.toFixed(2)} at ${(local.acc * 100).toFixed(1)} % — cheaper AND more `
+          + `accurate than calling \`large\` at a provider for ${D}${heberge.cout.toFixed(2)} at `
           + `${(heberge.acc * 100).toFixed(1)} %. If you are asking whether you need a paid API, `
           + `that is the measured answer on this corpus.`
         : "");
@@ -895,9 +905,9 @@ const finding = (() => {
       + `where the mean per field reads ${(s2.accuracy * 100).toFixed(1)} %.`
       + (doc.identiques ? ``
         : ` Aiming at the record instead delivers ${doc.vise.complets} of ${doc.vise.n} for `
-          + `$${Math.round(doc.vise.cost)} rather than $${Math.round(doc.publie.cost)}, worse on `
+          + `${D}${Math.round(doc.vise.cost)} rather than ${D}${Math.round(doc.publie.cost)}, worse on `
           + `no record in the sample.`)
-    : ` Total: **${(s2.accuracy * 100).toFixed(1)} % for $${Math.round(s2.cost)}**.`;
+    : ` Total: **${(s2.accuracy * 100).toFixed(1)} % for ${D}${Math.round(s2.cost)}**.`;
 
   const levier = lev
     ? ` **And the larger lever is not routing at all:** abstaining — returning nothing when a `
@@ -1083,8 +1093,8 @@ const expositionBloc = (() => {
         : `Across every price ratio tested, the optimal routing never moves away from the `
           + `published one.`)
     + `\n\n**And the number that matters most is not the one being optimised.** At equal `
-    + `prices, the same volume costs $${Math.round(base.traitement ?? 0).toLocaleString("en-GB")} `
-    + `to process and $${Math.round(base.exposition ?? 0).toLocaleString("en-GB")} in expected `
+    + `prices, the same volume costs ${D}${Math.round(base.traitement ?? 0).toLocaleString("en-GB")} `
+    + `to process and ${D}${Math.round(base.exposition ?? 0).toLocaleString("en-GB")} in expected `
     + `cost of being wrong — **${facteur}x more**. The optimiser argues about the small `
     + `variable. Both prices are yours to set: they are assumptions, marked as such, and only `
     + `you know what a misfiled record costs.`;
@@ -1116,9 +1126,9 @@ const documentBloc = (() => {
   const tx = (x: { complets: number; n: number }) => writeRate(rate(x.complets, x.n));
   const lignes = [
     ["what the published routing delivers", `\`${FIELDS.map((c) => d.publie.routing[c]).join(", ")}\``,
-      tx(d.publie), `$${Math.round(d.publie.cost).toLocaleString("en-GB")}`],
+      tx(d.publie), `${D}${Math.round(d.publie.cost).toLocaleString("en-GB")}`],
     ["what aiming at the file delivers", `\`${FIELDS.map((c) => d.vise.routing[c]).join(", ")}\``,
-      tx(d.vise), `$${Math.round(d.vise.cost).toLocaleString("en-GB")}`],
+      tx(d.vise), `${D}${Math.round(d.vise.cost).toLocaleString("en-GB")}`],
   ];
 
   const moinsCher = d.publie.cost > 0 ? d.publie.cost / Math.max(d.vise.cost, 1e-9) : 1;
