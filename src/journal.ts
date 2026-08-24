@@ -97,12 +97,25 @@ const GARDE_DERNIERS = 40;
 export function elaguer(dossier = DOSSIER, garde = GARDE_DERNIERS): number {
   let fichiers: string[];
   try { fichiers = readdirSync(dossier).filter((f) => f.endsWith(".jsonl")); }
-  catch { return 0; }
+  catch (e) {
+    /* « PAS ENCORE DE DOSSIER » ET « JE N'AI PAS PU LE LIRE » RENDAIENT TOUS DEUX ZÉRO.
+       Le premier est la première passe et c'est un fait ; le second veut dire que l'élagage
+       a cessé de fonctionner, et les journaux s'accumuleront sans qu'une ligne le dise —
+       jusqu'à ce que quelqu'un trouve trois cents fichiers et se demande depuis quand. */
+    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      process.stderr.write(`  ÉLAGAGE IMPOSSIBLE — ${dossier} : ${(e as Error).message}\n`
+        + `  Les journaux ne sont plus élagués ; ils vont s'accumuler en silence.\n`);
+    }
+    return 0;
+  }
   if (fichiers.length <= garde) return 0;
   /* le nom porte l'horodatage ISO en tête : l'ordre lexical EST l'ordre chronologique,
      et ça évite un stat() par fichier sur trois cents fichiers. */
   const vieux = fichiers.sort().slice(0, fichiers.length - garde);
   let efface = 0;
+  /* piege:ok catch-muet — un journal déjà effacé ou tenu ouvert par une autre passe est le
+     cas normal d'un élagage concurrent, et `efface` compte ce qui a réellement disparu :
+     l'échec n'est donc pas avalé, il est compté à zéro. */
   for (const f of vieux) {
     try { rmSync(join(dossier, f)); efface++; } catch { /* déjà parti, ou pris */ }
   }
