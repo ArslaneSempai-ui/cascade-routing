@@ -685,3 +685,68 @@ test("une clé `__proto__` dans un fichier client n'écrit pas sur un prototype"
     assert.ok(regles["supplier"] instanceof RegExp, "témoin : le reste du fichier est lu.");
   } finally { rmSync(dossier, { recursive: true, force: true }); }
 });
+
+
+test("le nom de la chaîne du client est une entrée, pas une chaîne de confiance", async () => {
+  const { nomDeChaine } = await import("./your-cases.ts");
+
+  assert.equal(nomDeChaine(undefined, "f.json"), "your chain", "clé absente : un nom par défaut.");
+  assert.equal(nomDeChaine("  ma chaine  ", "f.json"), "ma chaine", "témoin positif, espaces ôtés.");
+
+  assert.throws(() => nomDeChaine(42, "f.json"), /`nom` is number/);
+  assert.throws(() => nomDeChaine("   ", "f.json"), /`nom` is empty/);
+  assert.throws(() => nomDeChaine("a\nb", "f.json"), /line break or a control character/,
+    "un retour à la ligne coupe la ligne du tableau en deux.");
+  assert.throws(() => nomDeChaine("x".repeat(41), "f.json"), /40 at most/,
+    "quatre cents caractères détruisaient l'alignement de la console et du tableau.");
+});
+
+test("chargerSorties fait passer le nom par la validation, et pas seulement le fichier", async () => {
+  /*
+   * Le cas précédent éprouve `nomDeChaine`. Celui-ci éprouve le point d'appel : j'ai remis
+   * `brut.nom ?? "your chain"` dans `chargerSorties` et le cas précédent est resté vert.
+   * Un témoin planté à côté du chemin qu'il surveille ne dit rien de ce chemin.
+   */
+  const { chargerSorties } = await import("./your-cases.ts");
+  const dossier = mkdtempSync(join(tmpdir(), "sorties-"));
+  try {
+    const ecrire = (nom: unknown): string => {
+      const chemin = join(dossier, "s.json");
+      writeFileSync(chemin, JSON.stringify({ nom, issues: { total: { "1": "clean" } } }));
+      return chemin;
+    };
+    assert.throws(() => chargerSorties(ecrire("mine\nevil")), /line break or a control character/);
+    assert.throws(() => chargerSorties(ecrire("x".repeat(400))), /40 at most/);
+    assert.throws(() => chargerSorties(ecrire(42)), /`nom` is number/);
+
+    /* Témoin positif : un nom ordinaire traverse, et le défaut par défaut tient. */
+    assert.equal(chargerSorties(ecrire("ma chaine")).nom, "ma chaine");
+    const chemin = join(dossier, "sans-nom.json");
+    writeFileSync(chemin, JSON.stringify({ issues: { total: { "1": "clean" } } }));
+    assert.equal(chargerSorties(chemin).nom, "your chain");
+  } finally { rmSync(dossier, { recursive: true, force: true }); }
+});
+
+test("le nom de palier venu du client est échappé dans le tableau qu'on lui rend", async () => {
+  const { cellule } = await import("./your-cases.ts");
+  const src = readFileSync(fileURLToPath(new URL("./your-cases.ts", import.meta.url)), "utf8");
+
+  assert.match(src, /return \[cellule\(champ\), cellule\(palier\)/,
+    "mesuré : `\"nom\": \"mine|evil\"` rendait\n"
+    + "    | `invoice_number` | mine|evil | … |\n"
+    + "  — la cellule coupée en deux et toute la ligne décalée sous les mauvais en-têtes.");
+  assert.equal(cellule("mine|evil"), "`mine\\|evil`", "témoin : l'échappement fait le travail.");
+});
+
+test("l'avertissement sur les identifiants non appariés est en anglais, comme son voisinage", async () => {
+  const src = readFileSync(fileURLToPath(new URL("./your-cases.ts", import.meta.url)), "utf8");
+  const sortieClient = src.split("\n")
+    .filter((l) => /console\.log\(/.test(l) && !/^\s*\*/.test(l));
+
+  for (const morceau of ["que sur les cas appariés", "des vôtres inconnus de nous"]) {
+    assert.ok(!sortieClient.some((l) => l.includes(morceau)),
+      `« ${morceau} » est du français dans une sortie anglaise — et c'est la phrase qui dit\n`
+      + "  au client que son taux ne couvre pas tous ses dossiers.");
+  }
+  assert.match(src, /covers the matched cases only/, "témoin : la phrase existe bien.");
+});

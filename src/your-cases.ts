@@ -389,6 +389,38 @@ export function ecrireMs(ms: number, declaree: boolean): string {
   return declaree ? `${ms.toFixed(0)} ms (déclaré)` : `${ms.toFixed(0)} ms`;
 }
 
+/**
+ * LE NOM DE LA CHAÎNE DU CLIENT DEVIENT UN NOM DE PALIER, DONC UNE CELLULE DE TABLEAU.
+ *
+ * `brut.nom ?? "your chain"` n'a jamais demandé ce qu'était `brut.nom`. Mesuré le 25 août
+ * 2026 : une barre verticale coupe la cellule du tableau rendu au client et décale toute la
+ * ligne ; quatre cents caractères détruisent l'alignement de la console et du tableau ; un
+ * retour à la ligne coupe la ligne en deux. Aucun des trois n'était refusé, et aucun ne
+ * ressemble à une attaque — ce sont des noms qu'on écrit sans y penser.
+ */
+export function nomDeChaine(brut: unknown, chemin: string): string {
+  if (brut === undefined || brut === null) return "your chain";
+  if (typeof brut !== "string") {
+    throw new Error(`${chemin}: \`nom\` is ${typeof brut}, not a string.\n`
+      + `  It becomes a tier name in the table you are handed, next to ours.`);
+  }
+  const propre = brut.trim();
+  if (propre.length === 0) {
+    throw new Error(`${chemin}: \`nom\` is empty. Leave the key out to be called `
+      + `"your chain", or give it a name.`);
+  }
+  if (/[\u0000-\u001f\u007f]/.test(propre)) {
+    throw new Error(`${chemin}: \`nom\` contains a line break or a control character.\n`
+      + `  It is printed on one line of a table; a second line lands under the wrong column.`);
+  }
+  const MAX = 40;
+  if (propre.length > MAX) {
+    throw new Error(`${chemin}: \`nom\` is ${propre.length} characters. `
+      + `${MAX} at most — it is a column in the table you are handed.`);
+  }
+  return propre;
+}
+
 export function chargerSorties(chemin: string): SortiesFournies {
   const brut = JSON.parse(readFileSync(chemin, "utf8")) as Partial<SortiesFournies>
     & { valeurs?: unknown };
@@ -424,7 +456,7 @@ export function chargerSorties(chemin: string): SortiesFournies {
       }
     }
   }
-  return { nom: brut.nom ?? "your chain", issues: brut.issues,
+  return { nom: nomDeChaine(brut.nom, chemin), issues: brut.issues,
     notePar: brut.notePar, declares: brut.declares };
 }
 
@@ -1050,14 +1082,14 @@ Nothing leaves your machine: the models are local and this path makes no network
       console.log(`  ⚠ no result supplied for: ${corr.champsSansAucuneValeur.join(", ")}`);
     }
     if (corr.total > 0) {
-      console.log(`  ⚠ ${corr.total} identifier(s) with no match — the rate below therefore covers`
-        + ` que sur les cas appariés :`);
+      console.log(`  ⚠ ${corr.total} identifier(s) with no match — the rate below therefore `
+        + `covers the matched cases only:`);
       for (const champ of champs) {
         const m = corr.manquants[champ]!.length, i = corr.inconnus[champ]!.length;
         if (m || i) {
           console.log(`      ${champ.padEnd(14)} ${m} of our cases missing from your file`
             + `${m ? ` (${corr.manquants[champ]!.slice(0, 3).join(", ")}${m > 3 ? "…" : ""})` : ""}`
-            + `, ${i} des vôtres inconnus de nous`
+            + `, ${i} of yours unknown to us`
             + `${i ? ` (${corr.inconnus[champ]!.slice(0, 3).join(", ")}${i > 3 ? "…" : ""})` : ""}`);
         }
       }
@@ -1117,7 +1149,11 @@ Nothing leaves your machine: the models are local and this path makes no network
          refus de citer un taux sous ENOUGH observations. Le fichier est ce qui est classé
          et transféré ; il ne peut pas être le chemin le moins prudent des deux. */
       const c = cellulesDeTaux(q);
-      return [cellule(champ), palier, c.taux, c.intervalle, q.n,
+      /* `palier` est le nom de NOTRE palier — sauf quand il vient de `--sorties`, où c'est
+         une chaîne écrite par le client. Mesuré : `"nom": "mine|evil"` coupait la cellule en
+         deux et décalait toute la ligne sous les mauvais en-têtes. Le même échappement que
+         pour les noms de colonne, un colonne plus loin. */
+      return [cellule(champ), cellule(palier), c.taux, c.intervalle, q.n,
         ecrireMs(r.ms, palier === sorties?.nom)];
     })),
   }));
