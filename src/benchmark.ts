@@ -20,7 +20,7 @@
 import { writeFileSync, mkdirSync, existsSync, readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
-import { isMain } from "./cli.ts";
+import { isMain, refuserDrapeauxInconnus } from "./cli.ts";
 import { loadClassifiers, loadGeneratifs, classerParmi } from "./tiers.ts";
 import { ENCODEURS, GENERATIFS } from "./paliers.ts";
 import { rate, writeRate, distinguishable } from "./interval.ts";
@@ -145,6 +145,8 @@ export function ecart(avant: { paliers: Record<string, { bons: number; sur: numb
 }
 
 if (isMain(import.meta)) {
+
+  refuserDrapeauxInconnus(["--sample", "--no-llm"]);
   const nom = (process.argv.find((a) => !a.startsWith("-") && a in JEUX) ?? "banking77") as NomJeu;
   const echantillon = Number(process.argv.find((a) => a.startsWith("--sample="))?.split("=")[1] ?? 1000);
   const avecLlm = !process.argv.includes("--no-llm");

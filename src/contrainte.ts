@@ -35,7 +35,7 @@
 import { writeFileSync, existsSync, rmSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { loadavg, cpus } from "node:os";
-import { isMain } from "./cli.ts";
+import { isMain, refuserDrapeauxInconnus } from "./cli.ts";
 import { PROMPTS, OLLAMA, MODELES_LOCAUX, correct, normaliserReponse, exigerHoteLocal } from "./tiers.ts";
 import { FIELDS, generateRecords } from "./corpus.ts";
 
@@ -155,6 +155,8 @@ async function appeler(tag: string, invite: string, avecSchema: boolean) {
 }
 
 if (isMain(import.meta)) {
+
+  refuserDrapeauxInconnus(["--cases", "--passes"]);
   const cas = Number(process.argv.find((a) => a.startsWith("--cases="))?.split("=")[1] ?? 4);
   const passes = Number(process.argv.find((a) => a.startsWith("--passes="))?.split("=")[1] ?? 2);
   const dossiers = generateRecords(cas, "dev");

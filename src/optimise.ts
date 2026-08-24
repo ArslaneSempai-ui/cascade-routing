@@ -12,7 +12,7 @@
  */
 
 import { TIERS } from "./paliers.ts";
-import { isMain } from "./cli.ts";
+import { isMain, refuserDrapeauxInconnus } from "./cli.ts";
 import { FIELDS } from "./corpus.ts";
 import { pricePerThousandExtractions, accuracy, latency, ASSUMPTIONS } from "./assumptions.ts";
 import { rate, distinguishable, pairedVerdict } from "./interval.ts";
@@ -477,6 +477,8 @@ export function budgetShadowPrice(p: Profiles, h: Assumptions) {
 }
 
 if (isMain(import.meta)) {
+
+  refuserDrapeauxInconnus([]);
   /* Chargé ici et pas en tête : `measure.ts` ouvre des fichiers et tire le runtime des
    * modèles. L'écran importe ce module dans un navigateur, où ni l'un ni l'autre n'existe. */
   const { readProfiles } = await import("./measure.ts");

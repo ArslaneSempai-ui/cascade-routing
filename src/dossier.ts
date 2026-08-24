@@ -23,7 +23,7 @@
  */
 
 import { writeFileSync, readFileSync, existsSync } from "node:fs";
-import { isMain } from "./cli.ts";
+import { isMain, refuserDrapeauxInconnus } from "./cli.ts";
 import { FIELDS } from "./corpus.ts";
 import { readProfiles } from "./measure.ts";
 import { optimiseExtraction, paliersMesures } from "./optimise.ts";
@@ -372,6 +372,8 @@ export function dossier(p: Profiles, h: Assumptions): string {
 }
 
 if (isMain(import.meta)) {
+
+  refuserDrapeauxInconnus(["--check"]);
   const p = readProfiles();
   if (!p) {
     console.error("No frozen profile. Run `npm run measure` first.");

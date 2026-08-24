@@ -17,7 +17,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { loadavg } from "node:os";
-import { isMain } from "./cli.ts";
+import { isMain, refuserDrapeauxInconnus } from "./cli.ts";
 import { ouvrirJournal, issue } from "./journal.ts";
 import { generateRecords, FIELDS } from "./corpus.ts";
 import { loadGeneratifs, extract, correct } from "./tiers.ts";
@@ -59,6 +59,8 @@ export async function mesurerFuite(palier: TierName, combien = 120) {
 }
 
 if (isMain(import.meta)) {
+
+  refuserDrapeauxInconnus(["--tier", "--cases"]);
   const palier = (process.argv.find((a) => a.startsWith("--tier="))?.split("=")[1] ?? "gen-4b") as TierName;
   const combien = Number(process.argv.find((a) => a.startsWith("--cases="))?.split("=")[1] ?? 120);
 

@@ -21,7 +21,7 @@ import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { REVISIONS } from "./tiers.ts";
 import { etatMachine, MEMOIRE_LIBRE_MINIMALE_MO } from "./contrainte.ts";
-import { isMain } from "./cli.ts";
+import { isMain, refuserDrapeauxInconnus } from "./cli.ts";
 import { ouvrirJournal, issue } from "./journal.ts";
 import { ENCODEURS, GENERATIFS, loadExtractors, extract, correct } from "./tiers.ts";
 import type { TierName } from "./tiers.ts";
@@ -320,6 +320,8 @@ export function shape(failures: Failure[]) {
 }
 
 if (isMain(import.meta)) {
+
+  refuserDrapeauxInconnus(["--check", "--llm"]);
   const avecLlm = process.argv.includes("--llm");
   const paliers = avecLlm ? [...ENCODEURS, ...GENERATIFS] : ENCODEURS;
   const failures = await collect(120, paliers);

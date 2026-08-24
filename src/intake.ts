@@ -12,7 +12,7 @@
 
 import { dirname } from "node:path";
 import { mkdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
-import { isMain } from "./cli.ts";
+import { isMain, refuserDrapeauxInconnus } from "./cli.ts";
 import { ASSUMPTIONS, BOUNDS } from "./assumptions.ts";
 
 import type { Assumptions } from "./assumptions.ts";
@@ -113,6 +113,8 @@ export function lire(r: Reponses): Lecture {
 }
 
 if (isMain(import.meta)) {
+
+  refuserDrapeauxInconnus(["--file"]);
   const fichier = process.argv.find((a) => a.startsWith("--file="))?.split("=")[1];
 
   /*

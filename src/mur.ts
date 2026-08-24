@@ -14,7 +14,7 @@
  */
 
 import { writeFileSync } from "node:fs";
-import { isMain } from "./cli.ts";
+import { isMain, refuserDrapeauxInconnus } from "./cli.ts";
 import { readProfiles } from "./measure.ts";
 import { ASSUMPTIONS } from "./assumptions.ts";
 import { optimiseExtraction, paliersMesures } from "./optimise.ts";
@@ -61,6 +61,8 @@ export function profilSynthetique(reel: Profiles, champs: readonly Field[], nbPa
 }
 
 if (isMain(import.meta)) {
+
+  refuserDrapeauxInconnus(["--plafond"]);
   const reel = readProfiles();
   if (!reel) { console.error("aucun relevé"); process.exit(1); }
   const plafondMs = Number(process.argv.find((a) => a.startsWith("--plafond="))?.split("=")[1] ?? 60_000);

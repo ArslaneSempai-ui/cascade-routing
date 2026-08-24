@@ -22,7 +22,7 @@
  */
 
 import { readFileSync, writeFileSync, existsSync, statSync } from "node:fs";
-import { isMain } from "./cli.ts";
+import { isMain, refuserDrapeauxInconnus } from "./cli.ts";
 import { FIELDS } from "./corpus.ts";
 import { readProfiles } from "./measure.ts";
 import { ASSUMPTIONS, UNITS, pricePerThousandExtractions, latency } from "./assumptions.ts";
@@ -1227,6 +1227,8 @@ export function rendre(p: Profiles): string {
 }
 
 if (isMain(import.meta)) {
+
+  refuserDrapeauxInconnus(["--check", "--derivees"]);
   const check = process.argv.includes("--check");
   const geler = process.argv.includes("--derivees");
   const p = readProfiles();

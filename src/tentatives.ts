@@ -9,7 +9,7 @@
  *     npm run tentatives -- --run=<motif>    un journal en particulier
  */
 
-import { isMain } from "./cli.ts";
+import { isMain, refuserDrapeauxInconnus } from "./cli.ts";
 import { journaux, lireJournal, issues, parDocument, apparie, desaccord } from "./journal.ts";
 
 import type { Tentative } from "./journal.ts";
@@ -26,6 +26,8 @@ export function conditions(t: readonly Tentative[]) {
 }
 
 if (isMain(import.meta)) {
+
+  refuserDrapeauxInconnus(["--run"]);
   const motif = process.argv.find((a) => a.startsWith("--run="))?.split("=")[1];
   const fichiers = journaux().filter((f) => !motif || f.includes(motif));
   if (fichiers.length === 0) {

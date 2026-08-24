@@ -40,7 +40,7 @@
 
 import { writeFileSync, readFileSync, existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { isMain } from "./cli.ts";
+import { isMain, refuserDrapeauxInconnus } from "./cli.ts";
 import { FIELDS, type Field } from "./corpus.ts";
 import { readProfiles, type Profiles } from "./measure.ts";
 import { rate, writeRate, distinguishable, type Rate } from "./interval.ts";
@@ -341,6 +341,8 @@ export function sonde(p: Profiles): string {
 }
 
 if (isMain(import.meta)) {
+
+  refuserDrapeauxInconnus(["--check"]);
   const p = readProfiles();
   if (!p) {
     console.error("No frozen profile. Run `npm run measure` first.");
