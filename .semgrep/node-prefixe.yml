@@ -1,0 +1,52 @@
+# ─── LES RÈGLES DE LA COMMUNAUTÉ RATENT LE PRÉFIXE « node: » ───
+#
+# Mesuré le 25 août 2026, deux fichiers identiques à un caractère près :
+#
+#   import { exec } from "child_process";       → detect-child-process, DÉTECTÉ
+#   import { exec } from "node:child_process";  → passé sans un mot
+#
+# Le préfixe `node:` est la forme moderne et recommandée, et c'est celle que ce dépôt
+# emploie dans chacun de ses fichiers. Le « 0 trouvaille » rendu par Semgrep sur ce dépôt
+# n'était donc pas une absence de défaut : c'était un outil qui ne reconnaissait pas la
+# façon dont ce code est écrit. Un contrôle qui regarde la mauvaise forme rend le même
+# silence que celui qu'il devait détecter.
+#
+# Ces règles couvrent la forme préfixée. Elles ne remplacent pas les règles de la
+# communauté — elles bouchent le trou qu'un témoin planté a révélé.
+rules:
+  - id: node-prefixe-child-process
+    patterns:
+      - pattern-either:
+          - pattern: |
+              import { ..., $F, ... } from "node:child_process"
+          - pattern: |
+              import $M from "node:child_process"
+    message: >-
+      child_process importé avec le préfixe « node: ». Les règles de la communauté ne
+      reconnaissent que la forme sans préfixe : cet appel échappe à leur détection.
+      Vérifier que rien de ce qui vient de l'extérieur n'atteint la commande.
+    languages: [ts, js]
+    severity: INFO
+
+  - id: node-prefixe-condensat-faible
+    patterns:
+      - pattern-either:
+          - pattern: createHash("md5")
+          - pattern: createHash("sha1")
+    message: >-
+      Condensat faible (md5/sha1). Acceptable pour une clé de cache ou une empreinte de
+      fichier non adverse ; jamais pour une signature, un jeton, ou une comparaison qui
+      décide d'un accès.
+    languages: [ts, js]
+    severity: WARNING
+
+  - id: evaluation-de-chaine
+    patterns:
+      - pattern-either:
+          - pattern: eval(...)
+          - pattern: new Function(...)
+    message: >-
+      Évaluation d'une chaîne à l'exécution. Si la chaîne peut venir d'un fichier client,
+      d'une requête ou d'une variable d'environnement, c'est une exécution de code arbitraire.
+    languages: [ts, js]
+    severity: ERROR

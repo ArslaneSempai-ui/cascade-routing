@@ -1392,3 +1392,78 @@ test("aucune dépendance n'exécute de code à l'installation, et toutes sont é
     + "  → « npm ci » ne vérifie que ce que le verrou déclare. Ce qui n'est pas déclaré peut\n"
     + "    être remplacé sur le registre sans que l'installation le refuse.");
 });
+
+/*
+ * ─── AUCUNE COMMANDE N'EST CONSTRUITE EN CHAÎNE, AUCUN SHELL N'EST INVOQUÉ ───
+ *
+ * `child_process.exec` prend une CHAÎNE et la donne à `/bin/sh`. Tout ce qui s'y trouve —
+ * un point-virgule, une apostrophe inverse, un `$(...)` — est interprété par le shell. Si
+ * un fragment de cette chaîne vient d'un fichier client, d'un nom de colonne ou d'une
+ * variable d'environnement, c'est une exécution de code arbitraire sur la machine du client.
+ *
+ * `execFileSync` et `spawn` prennent un TABLEAU d'arguments et n'invoquent aucun shell.
+ * L'argument `; rm -rf /` y est un argument, pas une commande. La différence n'est pas une
+ * précaution qu'on prend : c'est une propriété qu'on a ou qu'on n'a pas.
+ *
+ * Relevé le 25 août 2026 : 43 `execFileSync`, 20 `spawn`/`spawnSync`, zéro `exec` de
+ * sous-processus — les dix occurrences du mot sont des `RegExp.prototype.exec`. Aucun
+ * `shell: true`, aucun `/bin/sh`.
+ *
+ * CE CAS EXISTE PARCE QUE SEMGREP NE POUVAIT PAS LE VOIR. Ses règles communautaires
+ * reconnaissent `from "child_process"` et PAS `from "node:child_process"`, la forme moderne
+ * que ce dépôt emploie partout : deux fichiers identiques à un caractère près, l'un détecté
+ * et l'autre passé sans un mot. Son « 0 trouvaille » n'était pas une absence de défaut,
+ * c'était un outil qui ne reconnaissait pas la façon dont ce code est écrit.
+ */
+test("aucun shell n'est invoqué, et aucune commande n'est construite en chaîne", () => {
+  const dossier = fileURLToPath(new URL(".", import.meta.url));
+  const sources = readdirSync(dossier).filter((n) => /\.(ts|mjs)$/.test(n));
+  assert.ok(sources.length >= 40,
+    `${sources.length} source(s) lue(s) : le balayage n'a pas eu lieu, son zéro ne vaut rien.`);
+
+  const fautes: string[] = [];
+  let appelsSurs = 0;
+  for (const n of sources) {
+    const src = readFileSync(join(dossier, n), "utf8");
+    /* Sans les commentaires : ce fichier-ci en parle, et une garde qui s'accuse elle-même
+       à travers sa propre explication est une garde qu'on désactive. */
+    /* LES RETOURS À LA LIGNE SURVIVENT AU RETRAIT DES COMMENTAIRES, sinon tous les numéros
+       rendus sont décalés — et un diagnostic qu'on ne peut pas localiser ne se corrige pas,
+       il s'ignore. Écrit ici après avoir refait exactement cette faute : le contrôle a
+       désigné « journal.test.ts:964 », où il n'y a rien de tel. */
+    const lignesDe = (t: string) => "\n".repeat((t.match(/\n/g) ?? []).length);
+    const code = src.replace(/\/\*[\s\S]*?\*\//g, (m) => " " + lignesDe(m))
+      .replace(/(^|[^:\\])\/\/[^\n]*/g, "$1 ");
+
+    appelsSurs += (code.match(/\b(execFileSync|execFile|spawnSync|spawn)\s*\(/g) ?? []).length;
+
+    /* `exec(` précédé d'un point est `RegExp.prototype.exec` ou `.exec` d'autre chose. On ne
+       retient que l'appel nu, celui qui vient de child_process. */
+    for (const m of code.matchAll(/(^|[^.\w])(exec|execSync)\s*\(/g)) {
+      fautes.push(`${n}:${code.slice(0, m.index).split("\n").length} — ${m[2]}() donne sa chaîne à /bin/sh`);
+    }
+    /*
+     * LE MOTIF EST ASSEMBLÉ, PAS ÉCRIT — SINON IL SE RECONNAÎT LUI-MÊME.
+     *
+     * Écrit en littéral, `/shell\s*:\s*true/` apparaît dans CE fichier et ce contrôle
+     * s'accusait donc lui-même, en désignant sa propre ligne. Deux issues possibles :
+     * exempter ce fichier — ce qui ouvre un trou exactement là où vit la garde — ou écrire
+     * le motif de façon qu'il ne figure nulle part tel quel. La seconde ne coûte rien et ne
+     * retire aucune couverture.
+     */
+    const SHELL_VRAI = new RegExp("shell" + "\\s*:\\s*" + "true", "g");
+    for (const m of code.matchAll(SHELL_VRAI)) {
+      /* Le message ne peut pas contenir le motif non plus : il s'attrapait lui-même une
+         seconde fois, après que le motif eut cessé de le faire. Deux fois la même famille,
+         à deux endroits, dans la même garde. */
+      fautes.push(`${n}:${code.slice(0, m.index).split("\n").length} — option « shell » activée`);
+    }
+  }
+  assert.ok(appelsSurs >= 20,
+    `${appelsSurs} appel(s) de sous-processus trouvés : la détection ne marche plus, donc `
+    + "l'absence de faute ci-dessous ne prouve rien.");
+  assert.deepEqual(fautes, [],
+    `${fautes.length} invocation(s) de shell sur ${sources.length} sources lues :\n  ${fautes.join("\n  ")}\n`
+    + "  → `execFileSync(cmd, [args])` ne passe par aucun shell : « ; rm -rf / » y est un\n"
+    + "    argument, pas une commande.");
+});
