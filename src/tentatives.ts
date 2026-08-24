@@ -31,25 +31,25 @@ if (isMain(import.meta)) {
   const motif = process.argv.find((a) => a.startsWith("--run="))?.split("=")[1];
   const fichiers = journaux().filter((f) => !motif || f.includes(motif));
   if (fichiers.length === 0) {
-    console.log("\nAucun journal dans data/tentatives/ — lancez une mesure d'abord.\n");
+    console.log("\nNo journal in data/tentatives/ — run a measurement first.\n");
     process.exit(0);
   }
 
   for (const f of fichiers) {
     const { conditions: c, tentatives, complet, tronquees } = lireJournal(f);
     console.log(`\n${f.split("/").pop()}`);
-    console.log(`  ${c?.quoi ?? "(sans en-tête)"}`);
-    console.log(`  ${tentatives.length} tentatives, ${complet ? "passe complète" : "PASSE INCOMPLÈTE"}`
-      + `${tronquees ? `, ${tronquees} ligne(s) tronquée(s)` : ""}`
-      + `${c?.commit ? `, commit ${c.commit}${c.sale ? " (arbre sale)" : ""}` : ""}`);
+    console.log(`  ${c?.quoi ?? "(no header)"}`);
+    console.log(`  ${tentatives.length} attempts, ${complet ? "complete pass" : "INCOMPLETE PASS"}`
+      + `${tronquees ? `, ${tronquees} truncated line(s)` : ""}`
+      + `${c?.commit ? `, commit ${c.commit}${c.sale ? " (dirty tree)" : ""}` : ""}`);
 
     for (const cond of conditions(tentatives)) {
       const i = issues(tentatives, { tier: cond.tier, phrasing: cond.phrasing });
       const d = parDocument(tentatives, { tier: cond.tier, phrasing: cond.phrasing });
       const pct = (x: number) => `${(100 * x / i.total).toFixed(1)} %`;
       console.log(`    ${cond.tier.padEnd(10)} ${cond.phrasing.padEnd(18)} ${String(cond.split).padEnd(12)}`
-        + ` propre ${pct(i.clean).padStart(7)}  blanc ${pct(i.blank).padStart(7)}  faux ${pct(i.wrong).padStart(7)}`
-        + `   dossiers entiers ${d.tauxDocument === null ? "—" : `${(100 * d.tauxDocument).toFixed(1)} %`}`);
+        + ` clean ${pct(i.clean).padStart(7)}  blank ${pct(i.blank).padStart(7)}  wrong ${pct(i.wrong).padStart(7)}`
+        + `   whole files ${d.tauxDocument === null ? "—" : `${(100 * d.tauxDocument).toFixed(1)} %`}`);
     }
 
     /*
@@ -60,13 +60,13 @@ if (isMain(import.meta)) {
      */
     const conds = conditions(tentatives);
     if (conds.length >= 2) {
-      console.log("    — appariements (McNemar sur les cas communs) —");
+      console.log("    — pairings (McNemar on the shared cases) —");
       for (let a = 0; a < conds.length; a++) for (let b = a + 1; b < conds.length; b++) {
         const r = apparie(tentatives, conds[a]!, conds[b]!);
         if (r.communs === 0) continue;
         const g = `${conds[a]!.tier}/${conds[a]!.phrasing}`, p = `${conds[b]!.tier}/${conds[b]!.phrasing}`;
-        console.log(`      ${g.padEnd(28)} contre ${p.padEnd(28)} ${r.gains}–${r.regressions}`
-          + ` sur ${r.communs}   ${r.decidable ? "DÉPARTAGÉ" : "dans le bruit"}`);
+        console.log(`      ${g.padEnd(28)} against ${p.padEnd(28)} ${r.gains}–${r.regressions}`
+          + ` of ${r.communs}   ${r.decidable ? "DECIDED" : "within the noise"}`);
       }
     }
 
@@ -90,7 +90,7 @@ if (isMain(import.meta)) {
         }
       }
       if (lignes.length) {
-        console.log("    — deux paliers justes, deux dossiers différents —");
+        console.log("    — two tiers right, two different files —");
         for (const l of lignes) console.log(l);
       }
     }
