@@ -13,7 +13,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { wilson, rate, distinguishable, precision } from "./interval.ts";
+import { wilson, rate, distinguishable, precision , pairedVerdict } from "./interval.ts";
 
 test("un compte de succès hors de [0, n] est refusé, pas absorbé", () => {
   for (const [s, n] of [[2, 1], [-1, 10], [NaN, 10], [21, 20]] as const) {
@@ -96,4 +96,49 @@ test("precision() rend la demi-largeur en points, calculée hors de ce fichier",
     assert.ok(Math.abs(precision(s, n) - ((haut - bas) / 2) * 100) < 1e-12,
       `precision(${s}, ${n}) n'est plus la demi-largeur de son propre intervalle.`);
   }
+});
+
+test("la binomiale appariée survit au-delà de mille paires discordantes", () => {
+  /*
+   * LE CORRECTIF EXISTAIT, SON TÉMOIN NON.
+   *
+   * `Math.pow(2, discordant)` valait Infinity dès 1024, et les coefficients binomiaux
+   * débordaient avec. Selon lequel des deux débordait le premier, `p` sortait `0` ou `NaN` —
+   * et `NaN < 0.05` vaut `false`, donc le verdict tombait sur « ne distingue pas » sans
+   * qu'aucun calcul n'ait abouti. L'arithmétique est passée en BigInt ; **rien ne l'éprouvait
+   * au-delà de vingt-cinq paires**, et un correctif sans témoin se fait défaire au premier
+   * remaniement qui trouve les BigInt encombrants.
+   *
+   * Les valeurs de référence viennent d'un calcul en entiers exacts fait à part, pas de ce
+   * module : un témoin qui reprend l'arithmétique qu'il éprouve ne prouve rien.
+   */
+  const a = pairedVerdict(548, 481);
+  assert.ok(Number.isFinite(a.p!), `p doit être un nombre, obtenu ${a.p}`);
+  assert.equal(a.p!.toFixed(4), "0.0396");
+  assert.equal(a.decidable, true,
+    "cet échantillon distingue les deux versions ; répondre le contraire refuse une trouvaille "
+    + "qu'on a — et personne ne conteste un outil qui dit « je ne peux pas conclure »");
+
+  const b = pairedVerdict(560, 470);
+  assert.equal(b.p!.toFixed(4), "0.0055");
+  assert.equal(b.decidable, true);
+});
+
+test("l'équilibre parfait sur un grand échantillon vaut p = 1, pas 0 ni NaN", () => {
+  /* La direction qui garde la garde honnête : au-delà du seuil de débordement, un partage
+     exactement égal ne doit rien conclure du tout. Sans ce cas, un vert prouverait seulement
+     que la fonction rend « séparables » à tout coup. */
+  const eq = pairedVerdict(1800, 1800);
+  assert.equal(eq.p, 1, `partage égal : p = 1 attendu, obtenu ${eq.p}`);
+  assert.equal(eq.decidable, false);
+});
+
+test("les petits échantillons n'ont pas bougé", () => {
+  /* Recalculés à part, en entiers. Si le passage aux BigInt avait déplacé un chiffre publié,
+     c'est ici que ça se verrait — et nulle part ailleurs, `outils.test.ts` ne dépassant pas
+     vingt-cinq paires discordantes. */
+  assert.equal(pairedVerdict(10, 0).p!.toFixed(6), "0.001953");
+  assert.equal(pairedVerdict(3, 7).p!.toFixed(6), "0.343750");
+  assert.equal(pairedVerdict(530, 470).p!.toFixed(6), "0.062023");
+  assert.equal(pairedVerdict(0, 0).decidable, false, "aucun cas n'a changé de verdict");
 });
