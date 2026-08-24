@@ -1,7 +1,8 @@
 # Where should the next dollar go?
 
-Four tiers — rules, a small model, a large one, a human — measured on held-out data, then
-routed under a budget. The answer is rarely "buy the bigger model", and this says why.
+<!-- figures:chapeau -->
+**7 tiers**, from a regular expression to a human, measured on held-out data and then routed under a budget. The answer is rarely "buy the bigger model", and this says why.
+<!-- /figures:chapeau -->
 
 <!-- figures:finding -->
 **The finding.** Routing every field to the same tier is the default and it is wrong. Measured per field, 3 of the 5 fields are carried by regexes at **zero cost and up to 100 % accuracy**, and the money is worth spending on exactly the ones that need it. Total: **94.4 % for $191** of a $4,000 budget — the budget does not bind. No available budget buys a better routing. Measured on 1000 and 120 held-out cases depending on the tier — the tables carry each figure's own `n`.
@@ -51,8 +52,7 @@ what that pass actually cost is stated below, read from the relevé rather than 
 | `npm run fuite` | what the prompt owes to the half it was tuned against (needs Ollama) |
 | `npm run pages` | build docs/ and verify the published screen — required before publishing: docs/ carries a compiled copy of the code and goes stale silently |
 | `npm run captures` | re-record the images on this page |
-
-⚠ 1 command(s) exist in package.json and are not classified above: `ocr`.
+| `npm run ocr` | read the same documents as images and measure what the reading stage costs (macOS: Vision, no API) |
 <!-- /figures:commandes -->
 
 ```bash
@@ -60,7 +60,7 @@ npm test           # types, README figures, landing.json, and the suite
 ```
 
 <!-- figures:tests -->
-**161 tests** across 9 files, counted from the sources rather than typed here.
+**162 tests** across 9 files, counted from the sources rather than typed here.
 <!-- /figures:tests -->
 
 Everything runs locally. No API key, nothing leaves the machine, and anyone who clones this
@@ -348,10 +348,9 @@ is not the constraint — no ENCODER tier can read an address, and what fixes it
 another family, not more budget. That prediction has since been paid out: a local 4B
 generative model reads it, and the encoders' extra euros never would have.
 
-**The two chains want opposite things.** Chain A puts three fields on free rules and needs
-the large model exactly once. Chain B finds rules useless and the *small* model better
-than the large one. Any advice that does not begin with measuring your own chain is
-selling you someone else's.
+<!-- figures:chaines -->
+**The two chains want opposite things.** Chain A puts three of the five fields on free rules and needs the large model exactly once. Chain B finds rules useless and the *small* model better than the large one. Any advice that does not begin with measuring your own chain is selling you someone else's.
+<!-- /figures:chaines -->
 
 ---
 

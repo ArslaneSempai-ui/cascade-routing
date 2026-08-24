@@ -3418,3 +3418,52 @@ test("aucun texte de l'écran ne compte les paliers à la main", () => {
   assert.ok(new RegExp(`"[^"\\n]*\\b${MOTS}\\s+(?:of\\s+those\\s+)?${COMPTES}\\b[^"\\n]*"`, "i").test(ancien),
     "le motif ne reconnaît plus « Four tiers » : il ne peut plus détecter ce qu'il prétend.");
 });
+
+test("la prose écrite à la main ne compte pas ce que la mesure détermine", () => {
+  /*
+   * La garde des chiffres nus attrape « 94.4 % » et « $191 » : un nombre AVEC UNE UNITÉ.
+   * Elle ne voyait pas « Four tiers », ni « three fields on free rules » — des comptes sans
+   * unité, qui affirment pourtant un résultat mesuré. Le premier était la phrase d'ouverture
+   * du document, et il annonçait quatre paliers devant un tableau qui en montre sept.
+   *
+   * Ce test ne regarde que la prose : les blocs `figures:` sont tenus par leur générateur, et
+   * la table des rétractations est un enregistrement historique qui doit rester tel quel.
+   */
+  const texte = readFileSync(join(fileURLToPath(new URL("..", import.meta.url)), "README.md"), "utf8");
+  const prose = texte
+    .replace(/```[\s\S]*?```/g, "")
+    .replace(/<!-- figures:(\w+) -->[\s\S]*?<!-- \/figures:\1 -->/g, "")
+    .replace(/`[^`\n]*`/g, "");
+
+  /** Ce qu'on s'autorise à compter en toutes lettres, et pourquoi ça ne bougera pas. */
+  const permis = new Map<string, string>([
+    ["five fields", "les cinq champs sont fixés par 31 CFR 1020.220, pas par la mesure"],
+    ["two tiers", "énoncé d'une règle valable pour deux paliers quelconques, pas un compte"],
+    ["three models", "désigne les trois modèles d'une comparaison nommée sur place"],
+  ]);
+
+  /* « one tier » veut dire « un seul », pas « un ». L'inclure ferait crier la règle sur
+     « pick one tier and send everything through it », et une règle qui crie à tort s'ignore. */
+  const MOTS = "(two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|\\d+)";
+  const NOMS = "(tiers?|fields?|models?|bars?|columns?|routings?)";
+  const vus = [...prose.matchAll(new RegExp(`\\b${MOTS}\\s+${NOMS}\\b`, "gi"))]
+    .map((m) => m[0].replace(/\s+/g, " ").toLowerCase());
+
+  const nus = [...new Set(vus)].filter((x) => !permis.has(x));
+  assert.deepEqual(nus, [],
+    `la prose compte à la main ce que la mesure détermine : ${nus.join(", ")}\n`
+    + `  → l'écrire dans un bloc \`figures:\` calculé, ou l'inscrire dans \`permis\` avec la\n`
+    + `    raison pour laquelle ce compte ne bougera pas.`);
+
+  /* UNE EXEMPTION QUI NE SERT PLUS EST UNE EXEMPTION QUI CACHE : tant qu'elle est là, la
+     formulation reste hors du contrôle, et le jour où elle réapparaît fausse, rien ne le dit. */
+  const mortes = [...permis.keys()].filter((k) => !vus.includes(k));
+  assert.deepEqual(mortes, [],
+    `exemption(s) devenue(s) inutile(s) dans \`permis\` : ${mortes.join(", ")}.\n`
+    + `  → les retirer, sinon elles couvrent une formulation qui n'existe plus.`);
+
+  /* CONTRE-ÉPREUVE — la garde doit encore voir la phrase exacte qui a menti pendant des mois. */
+  const ancien = "Four tiers — rules, a small model, a large one, a human — measured on held-out data.";
+  assert.ok(new RegExp(`\\b${MOTS}\\s+${NOMS}\\b`, "i").test(ancien),
+    "le motif ne reconnaît plus « Four tiers » : il ne peut plus détecter ce qu'il prétend.");
+});

@@ -697,6 +697,7 @@ const commandes = (() => {
     ["fuite", "what the prompt owes to the half it was tuned against (needs Ollama)"],
     ["pages", "build docs/ and verify the published screen — required before publishing: docs/ carries a compiled copy of the code and goes stale silently"],
     ["captures", "re-record the images on this page"],
+    ["ocr", "read the same documents as images and measure what the reading stage costs (macOS: Vision, no API)"],
   ];
   const classees = new Set(ordre.map(([n]) => n));
   const oubliees = Object.keys(pkg.scripts).filter((n) => !classees.has(n) && n !== "typage");
@@ -940,6 +941,51 @@ const lecture = (() => {
     + ` The OCR step runs on the machine, through the operating system: no API, no per-page fee.`;
 })();
 
+/**
+ * LE CHAPEAU, ET SON COMPTE.
+ *
+ * Il disait « Four tiers » — la premiere phrase que lit un acheteur — devant un tableau qui
+ * en montre sept. L'echelle generative locale est OPTIONNELLE : un clone sans Ollama en
+ * mesure quatre, cette machine en mesure sept. Une phrase qui compte a la main se dement
+ * toute seule des que la mesure grandit, et celle-ci se dementait deja.
+ *
+ * Le meme defaut vivait a trois endroits de l'ecran, dont les deux etiquettes
+ * d'accessibilite, que personne ne relit puisque personne ne les voit.
+ */
+const chapeau = (() => {
+  const n = mesures.length + 1;   // les paliers mesures, plus `human` qui n'est pas mesure
+  return `**${n} tiers**, from a regular expression to a human, measured on held-out data and `
+    + `then routed under a budget. The answer is rarely "buy the bigger model", and this says `
+    + `why.`;
+})();
+
+/**
+ * LES DEUX CHAINES VEULENT DES CHOSES OPPOSEES — et le compte se calcule.
+ *
+ * La phrase disait « trois champs sur les regles » et « le grand modele exactement une
+ * fois ». Elle etait vraie le jour ou elle a ete ecrite, et rien ne la tenait : elle n'a pas
+ * d'unite, donc la garde des chiffres nus ne la voyait pas, et une remesure qui deplace un
+ * champ la laissait fausse sur la page la plus lue du depot.
+ *
+ * La moitie « chaine B » reste en prose : elle porte sur un jeu de cas client qui ne vit pas
+ * dans ce depot, donc rien ici ne peut la recalculer. Le dire est la moitie de l'honnetete.
+ */
+const chaines = (() => {
+  const opt = optimiseExtraction(p!, h)?.routing;
+  if (!opt) throw new Error("l'optimiseur ne rend pas de routage : cette phrase ne peut pas être écrite.");
+  const compte = (t: string) => FIELDS.filter((f) => opt[f] === t).length;
+  const gratuits = compte("rules");
+  const grand = compte("large");
+  const mot = (n: number) => ["no", "one", "two", "three", "four", "five", "six"][n] ?? String(n);
+  const fois = grand === 0 ? "never needs the large model"
+    : grand === 1 ? "needs the large model exactly once"
+    : `needs the large model ${mot(grand)} times`;
+  return `**The two chains want opposite things.** Chain A puts ${mot(gratuits)} of the `
+    + `${mot(FIELDS.length)} fields on free rules and ${fois}. Chain B finds rules useless and the `
+    + `*small* model better than the large one. Any advice that does not begin with measuring `
+    + `your own chain is selling you someone else's.`;
+})();
+
 const tests = (() => {
   const dossier = fileURLToPath(new URL(".", import.meta.url));
   const fichiers = readdirSync(dossier).filter((n: string) => n.endsWith(".test.ts"));
@@ -950,6 +996,6 @@ const tests = (() => {
 })();
 
 emit(fileURLToPath(new URL("../README.md", import.meta.url)),
-  { finding, obligation, ouCaTourne, lecture, extraction, classification, routing, shadow, gallery, baselines, provenance, coutDeReproduction, embauche,
+  { chapeau, chaines, finding, obligation, ouCaTourne, lecture, extraction, classification, routing, shadow, gallery, baselines, provenance, coutDeReproduction, embauche,
     echelles, latence, egalites, fuite, deuxfaits, retractations, public: publicJeu, commandes,
     tests });
