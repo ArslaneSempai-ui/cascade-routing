@@ -9,10 +9,25 @@
  * by anyone who clones it without paying.
  */
 import { pipeline } from "@huggingface/transformers";
+import { fileURLToPath } from "node:url";
+import { join } from "node:path";
+import { existsSync, readdirSync, statSync } from "node:fs";
 import { FIELDS, TYPOLOGIES } from "./corpus.js";
 import { estGeneratif } from "./paliers.js";
 export { TIERS, ENCODEURS, GENERATIFS, estGeneratif } from "./paliers.js";
-/* ══════════════════ Chain A — extract ══════════════════ */
+export function questionPour(champ, fournies) {
+    const f = fournies?.[champ];
+    if (typeof f === "string" && f.trim().length > 0)
+        return { texte: f.trim(), provenance: "fournie" };
+    const nôtre = QUESTIONS[champ];
+    if (nôtre)
+        return { texte: nôtre, provenance: "mesuree" };
+    /* Deduite du nom de colonne : les separateurs deviennent des espaces, rien d'autre. On ne
+       traduit pas et on ne devine pas le sens — inventer « date de naissance » a partir de
+       `date_naissance` marcherait ici et echouerait sur la colonne suivante. */
+    const lisible = champ.replace(/[_\-.]+/g, " ").trim();
+    return { texte: `What is the ${lisible}?`, provenance: "deduite" };
+}
 const QUESTIONS = {
     name: "What is the name of the client?",
     birth: "What is the date of birth?",
@@ -117,6 +132,42 @@ export const MODELES_LOCAUX = {
  */
 export const OLLAMA = process.env.OLLAMA_HOST ?? "http://localhost:11434";
 /**
+ * Les poids d'encodeur sont-ils déjà sur cette machine ?
+ *
+ * POURQUOI CETTE QUESTION REMPLACE UNE QUESTION DE DURÉE. Un cas qui lance le chemin client
+ * et l'entoure d'un délai suppose une vitesse de réseau. Le premier chargement prend 578 s
+ * mesurées sur un lien ; sur un lien deux fois plus lent, n'importe quel délai qu'on choisit
+ * se fait dépasser. Un chiffre de marge est un chiffre contre un seul réseau.
+ *
+ * La présence des poids, elle, ne dépend d'aucun réseau. On la regarde, et le mur de dix
+ * minutes devient une étape nommée au lieu d'un cas de test qui meurt à mi-téléchargement.
+ *
+ * Les poids vivent sous `node_modules`, ce que le paquet décide et pas nous — donc on cherche
+ * les dossiers de modèles plutôt que d'affirmer un chemin de fichier. Si la bibliothèque
+ * change sa disposition, cette fonction rend `false` et le cas se déclare ignoré : c'est la
+ * bonne dégradation, elle ne fabrique pas un vert.
+ */
+export function poidsEnCache(racine) {
+    const base = racine ?? fileURLToPath(new URL("../node_modules/@huggingface/transformers/.cache", import.meta.url));
+    if (!existsSync(base))
+        return false;
+    /* Un dossier de modèle vide compte pour absent : un téléchargement coupé en laisse. */
+    const pese = (d) => {
+        let n = 0;
+        for (const e of readdirSync(d, { withFileTypes: true })) {
+            const p = join(d, e.name);
+            n += e.isDirectory() ? pese(p) : statSync(p).size;
+        }
+        return n;
+    };
+    try {
+        return pese(base) > 50_000_000;
+    }
+    catch {
+        return false;
+    }
+}
+/**
  * Les modèles déjà sollicités DANS CE PROCESSUS.
  *
  * Sert à savoir si l'attente qui commence inclut un chargement. Volontairement par processus
@@ -161,6 +212,37 @@ export function estLocal(url) {
     catch {
         return false;
     }
+}
+/**
+ * LA GARDE EST ICI PARCE QUE C'EST ICI QUE LA FRONTIÈRE SE TRAVERSE.
+ *
+ * Elle vivait dans `measure.ts`, au point d'entrée : refus de démarrer si `OLLAMA_HOST` ne
+ * vise pas cette machine, sauf `--remote-ollama` écrit dans la commande. Correcte, et posée
+ * au mauvais endroit — parce qu'il y a d'AUTRES points d'entrée.
+ *
+ * Une session de contrôle l'a montré le 24 août 2026 : `npm run measure:yours -- --llm` passe
+ * par `your-cases.ts`, qui n'appelle pas cette garde. Un `OLLAMA_HOST` hérité d'un `.env`
+ * envoyait alors CHAQUE DOSSIER DU CLIENT — noms, dates de naissance, adresses, numéros de
+ * pièce d'identité — chez un tiers, sans un mot. Et c'est exactement la commande dont le
+ * README dit « nothing leaves your machine ».
+ *
+ * Recopier la garde dans `your-cases.ts` aurait fermé ce chemin-là et laissé le suivant
+ * ouvert. Une frontière se pose là où on la traverse, pas à chaque porte d'entrée : ici,
+ * juste avant l'envoi, sur le seul chemin par lequel un document peut partir.
+ *
+ * La promesse du README redevient donc VRAIE, au lieu d'être affaiblie pour coller au défaut.
+ */
+export function exigerHoteLocal(url = OLLAMA) {
+    if (estLocal(url))
+        return;
+    if (process.argv.includes("--remote-ollama"))
+        return;
+    throw new Error(`refus d'envoyer un document à « ${url} », qui n'est pas cette machine.\n\n`
+        + "  Ce que vous mesurez peut contenir des données personnelles : noms, dates de\n"
+        + "  naissance, adresses, numéros de pièce d'identité. Elles partiraient chez un tiers.\n\n"
+        + "  Si c'est voulu, écrivez-le dans la commande : --remote-ollama\n"
+        + "  Sinon, retirez OLLAMA_HOST de votre environnement — il vient peut-être d'un .env\n"
+        + "  que vous n'avez pas relu.");
 }
 /**
  * Un appel au serveur local, sous schéma.
@@ -234,6 +316,8 @@ async function ollama(tier, prompt, schema) {
     const premierAppel = vuA === undefined || Date.now() - vuA > EVICTION_PAR_DEFAUT_MS;
     modelesDejaSollicites.set(m.tag, Date.now());
     const DELAI_MS = premierAppel ? DELAI_DE_CHARGEMENT_MS : DELAI_DE_GENERATION_MS;
+    /* Rien ne part avant ça. Voir `exigerHoteLocal` : la garde est au passage, pas à l'entrée. */
+    exigerHoteLocal();
     let r;
     try {
         r = await fetch(`${OLLAMA}/api/generate`, {
@@ -277,6 +361,9 @@ async function ollama(tier, prompt, schema) {
 /** Le serveur répond-il, et les trois modèles sont-ils là ? */
 /** Ce qu'Ollama garde effectivement en mémoire, à cet instant. */
 export async function residents() {
+    /* Gardé comme les autres : même une demande de métadonnées révèle à un tiers qu'on
+       tourne, et une règle au cas par cas se re-dérive à chaque ajout. */
+    exigerHoteLocal();
     const r = await fetch(`${OLLAMA}/api/ps`, { signal: AbortSignal.timeout(10_000) });
     const j = await r.json();
     return (j.models ?? []).map((m) => ({ nom: m.name, octets: m.size }));
@@ -301,6 +388,8 @@ export async function residents() {
  */
 async function tailles() {
     try {
+        /* Même règle : aucun appel vers un hôte qui n'est pas cette machine. */
+        exigerHoteLocal();
         const r = await fetch(`${OLLAMA}/api/tags`, { signal: AbortSignal.timeout(10_000) });
         const j = await r.json();
         return new Map((j.models ?? []).map((m) => [m.name, { octets: m.size, digest: (m.digest ?? "").replace(/^sha256:/, "").slice(0, 12) }]));
@@ -389,7 +478,10 @@ export async function loadExtractors() {
     qaSmall ??= await pipeline("question-answering", "Xenova/distilbert-base-cased-distilled-squad", { revision: REVISIONS.small });
     qaLarge ??= await pipeline("question-answering", "onnx-community/roberta-base-squad2-ONNX", { revision: REVISIONS.large });
 }
-export async function extract(tier, d, champ, prompt = "reference") {
+export async function extract(tier, d, champ, prompt = "reference", 
+/* La question a poser. Absente, c'est la notre — celle sous laquelle le taux publie a ete
+   mesure. Presente, elle vient d'un client dont les champs ne sont pas les notres. */
+question) {
     if (tier === "rules")
         return RULES[champ](d.text);
     /*
@@ -403,9 +495,9 @@ export async function extract(tier, d, champ, prompt = "reference") {
     if (tier === "human")
         return d.truth[champ];
     if (estGeneratif(tier))
-        return extraireGeneratif(tier, d.text, champ, prompt);
+        return extraireGeneratif(tier, d.text, champ, prompt, question);
     const qa = tier === "small" ? qaSmall : qaLarge;
-    const r = await qa(QUESTIONS[champ], d.text);
+    const r = await qa(question ?? questionPour(champ).texte, d.text);
     return String(r?.answer ?? "").trim();
 }
 /**
@@ -449,7 +541,7 @@ const EXEMPLES = {
 };
 export const PROMPTS = {
     /* La référence : un exemple unique, dont la question est celle du champ `document`. */
-    reference: (texte, champ) => `Copy a single value out of a document, verbatim. Never rephrase, never reformat, ` +
+    reference: (texte, champ, question) => `Copy a single value out of a document, verbatim. Never rephrase, never reformat, ` +
         `never explain. If the value is absent, return an empty string.\n\n` +
         `Example.\n` +
         `Document: ${EXEMPLE_DOC}\n` +
@@ -457,40 +549,40 @@ export const PROMPTS = {
         `Answer: ${EXEMPLES.document}\n\n` +
         `Now the real one.\n` +
         `Document: ${texte}\n` +
-        `Question: ${QUESTIONS[champ]}\n` +
+        `Question: ${question ?? questionPour(champ).texte}\n` +
         `Answer:`,
     /* A : ce que l'exemple apporte, isolé en le retirant. */
-    "A-sans-exemple": (texte, champ) => `Copy a single value out of a document, verbatim. Never rephrase, never reformat, ` +
+    "A-sans-exemple": (texte, champ, question) => `Copy a single value out of a document, verbatim. Never rephrase, never reformat, ` +
         `never explain. If the value is absent, return an empty string.\n\n` +
         `Document: ${texte}\n` +
-        `Question: ${QUESTIONS[champ]}\n` +
+        `Question: ${question ?? questionPour(champ).texte}\n` +
         `Answer:`,
     /* B : chaque champ voit un exemple qui pose SA question. Même document, aucune information neuve. */
-    "B-exemple-apparie": (texte, champ) => `Copy a single value out of a document, verbatim. Never rephrase, never reformat, ` +
+    "B-exemple-apparie": (texte, champ, question) => `Copy a single value out of a document, verbatim. Never rephrase, never reformat, ` +
         `never explain. If the value is absent, return an empty string.\n\n` +
         `Example.\n` +
         `Document: ${EXEMPLE_DOC}\n` +
-        `Question: ${QUESTIONS[champ]}\n` +
+        `Question: ${question ?? questionPour(champ).texte}\n` +
         `Answer: ${EXEMPLES[champ]}\n\n` +
         `Now the real one.\n` +
         `Document: ${texte}\n` +
-        `Question: ${QUESTIONS[champ]}\n` +
+        `Question: ${question ?? questionPour(champ).texte}\n` +
         `Answer:`,
     /* C : une phrase d'instruction, rien d'autre. La longueur sert-elle à quelque chose ? */
-    "C-minimal": (texte, champ) => `Extract the requested value from the document exactly as written. Return an empty ` +
+    "C-minimal": (texte, champ, question) => `Extract the requested value from the document exactly as written. Return an empty ` +
         `string if it is not there.\n\n` +
         `Document: ${texte}\n` +
-        `Question: ${QUESTIONS[champ]}\n` +
+        `Question: ${question ?? questionPour(champ).texte}\n` +
         `Answer:`,
     /* D : même contenu, contrainte après le document. La position d'une instruction compte. */
-    "D-document-dabord": (texte, champ) => `Document: ${texte}\n\n` +
-        `Question: ${QUESTIONS[champ]}\n\n` +
+    "D-document-dabord": (texte, champ, question) => `Document: ${texte}\n\n` +
+        `Question: ${question ?? questionPour(champ).texte}\n\n` +
         `Answer with the value exactly as it appears in the document above. Do not ` +
         `rephrase, reformat or explain. If it is absent, answer with an empty string.\n\n` +
         `Answer:`,
 };
-async function extraireGeneratif(tier, texte, champ, prompt = "reference") {
-    const r = await ollama(tier, PROMPTS[prompt](texte, champ), { type: "object", properties: { answer: { type: "string" } }, required: ["answer"] });
+async function extraireGeneratif(tier, texte, champ, prompt = "reference", question) {
+    const r = await ollama(tier, PROMPTS[prompt](texte, champ, question), { type: "object", properties: { answer: { type: "string" } }, required: ["answer"] });
     return String(r.answer ?? "").trim();
 }
 /**

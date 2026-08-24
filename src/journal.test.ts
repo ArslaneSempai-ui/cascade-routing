@@ -11,7 +11,7 @@
 import { test } from "node:test";
 import { TIERS, ENCODEURS, GENERATIFS } from "./tiers.ts";
 import assert from "node:assert/strict";
-import { readFileSync, writeFileSync, mkdtempSync, rmSync, readdirSync, existsSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdtempSync, rmSync, readdirSync, existsSync, statSync } from "node:fs";
 import { execFileSync, spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -948,4 +948,42 @@ test("aucune sortie française sur les commandes déjà rendues à l'acheteur", 
   assert.ok(restantes.length <= 25,
     `${restantes.length} commande(s) parlent encore français : ${restantes.slice(0, 6).join(", ")}…\n`
     + "  → le compte ne doit que baisser. S'il monte, une commande neuve est arrivée en français.");
+});
+
+test("la page publiée porte le code du dépôt, pas celui d'un commit passé", () => {
+  /*
+   * `docs/` est la page de vente publiée. Elle embarque une copie compilée des modules du
+   * dépôt, et RIEN dans `npm test` ne vérifiait qu'elle correspondait aux sources : six
+   * documents engendrés sont contrôlés, celui-là non.
+   *
+   * Mesuré : `docs/js/optimise.js` et `docs/js/tiers.js` avaient plusieurs commits de retard —
+   * 155 lignes d'écart. La page publiée faisait tourner du code d'avant la garde d'hôte
+   * distant. Et personne ne pouvait la régénérer, parce que `pages.ts` lisait `data/`, qui
+   * n'est pas versionné : la commande plantait sur ENOENT chez quiconque clone. Les deux
+   * défauts se renforçaient — elle ne pouvait pas être refaite, donc elle pourrissait sans
+   * bruit.
+   *
+   * Ce cas compare les empreintes plutôt que de recompiler : recompiler dans un test prendrait
+   * des secondes et échouerait pour des raisons qui n'ont rien à voir avec la fraîcheur.
+   */
+  const racine = fileURLToPath(new URL("..", import.meta.url));
+  const js = join(racine, "docs", "js");
+  if (!existsSync(js)) return;   // pas de page publiée dans cet arbre
+
+  const compiles = readdirSync(js).filter((n) => n.endsWith(".js"));
+  assert.ok(compiles.length >= 3, `${compiles.length} module(s) compilé(s) : la lecture a échoué.`);
+
+  const enRetard: string[] = [];
+  for (const f of compiles) {
+    const source = join(racine, "src", f.replace(/\.js$/, ".ts"));
+    if (!existsSync(source)) continue;
+    /* Un compilé plus VIEUX que sa source est en retard. La comparaison de dates suffit et
+       ne dépend d'aucun compilateur ; elle rate un compilé retouché à la main, ce que le
+       contrôle d'écran attrape ailleurs. */
+    if (statSync(join(js, f)).mtimeMs + 1000 < statSync(source).mtimeMs) enRetard.push(f);
+  }
+  assert.deepEqual(enRetard, [],
+    `module(s) publié(s) plus vieux que leur source : ${enRetard.join(", ")}.\n`
+    + "  → la page de vente fait tourner du code que le dépôt a déjà corrigé.\n"
+    + "    Relancez `npm run pages`.");
 });

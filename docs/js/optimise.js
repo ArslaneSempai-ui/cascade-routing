@@ -121,19 +121,7 @@ export function justessePonderee(p, h, tier, champ) {
         return profil.accuracy;
     return 1 - part.faux * (h.costWrongValue / pire) - part.vide * (h.costBlankField / pire);
 }
-/**
- * Les deux taux d'échec d'un palier sur un champ, comptés une seule fois.
- *
- * Sans ce cache, `justessePonderee` reparcourait mille caractères à **chaque** évaluation de
- * routage : l'optimiseur en essaie 16 807, cinq champs chacun, ce qui faisait quatre-vingts
- * millions d'opérations par appel et a fait dépasser dix minutes à un test qui en prenait
- * deux secondes. Les comptes ne dépendent que du relevé, jamais des hypothèses — ils se
- * calculent une fois et se relisent.
- *
- * La clé porte `measuredAt` : une re-mesure invalide le cache d'elle-même, sans que personne
- * ait à s'en souvenir.
- */
-const CACHE = new Map();
+const MEMO = new WeakMap();
 /**
  * Le repli sur les comptes gelés, quand le relevé n'a pas ses sorties brutes.
  *
@@ -150,8 +138,17 @@ export function decompositionDe(p, tier, champ) {
     return decomposition(p, tier, champ);
 }
 function decomposition(p, tier, champ) {
-    const cle = `${p.measuredAt}|${tier}|${champ}`;
-    const connu = CACHE.get(cle);
+    let parPalier = MEMO.get(p);
+    if (parPalier === undefined) {
+        parPalier = Object.create(null);
+        MEMO.set(p, parPalier);
+    }
+    let parChamp = parPalier[tier];
+    if (parChamp === undefined) {
+        parChamp = Object.create(null);
+        parPalier[tier] = parChamp;
+    }
+    const connu = parChamp[champ];
     if (connu !== undefined)
         return connu;
     const profil = p.extraction[tier][champ];
@@ -169,7 +166,7 @@ function decomposition(p, tier, champ) {
         const n = profil.sorties.length;
         out = { vide: vide / n, faux: faux / n };
     }
-    CACHE.set(cle, out);
+    parChamp[champ] = out;
     return out;
 }
 export function evaluer(p, h, routing, champs = FIELDS) {

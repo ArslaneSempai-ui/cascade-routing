@@ -86,7 +86,35 @@ export function elaguer(dossier = DOSSIER, garde = GARDE_DERNIERS) {
         return 0;
     /* le nom porte l'horodatage ISO en tête : l'ordre lexical EST l'ordre chronologique,
        et ça évite un stat() par fichier sur trois cents fichiers. */
-    const vieux = fichiers.sort().slice(0, fichiers.length - garde);
+    const parDate = fichiers.sort();
+    /*
+     * ON NE JETTE JAMAIS LE DERNIER D'UN GENRE.
+     *
+     * L'élagage gardait les quarante derniers PAR DATE, sans aucune notion de ce qui porte une
+     * figure publiée : un journal dont trois commandes dépendent était traité comme un essai
+     * jetable. C'est arrivé — une passe de mesure a écrit assez de journaux pour pousser dehors
+     * le dernier journal du corpus dur, et `abstention`, `escalade` et `signal` sont morts
+     * ensemble, sur trois machines à la fois puisque `data/` n'est pas versionné.
+     *
+     * Les chiffres publiés ont survécu, parce qu'ils sont gelés ailleurs — mais la capacité de
+     * les REFAIRE, non. Un dépôt qui publie un chiffre qu'il ne sait plus recalculer a perdu
+     * exactement ce qui le distingue.
+     *
+     * Le genre est le suffixe du nom : `…-ocr.jsonl`, `…-dur.jsonl`. Garder le dernier de
+     * chacun coûte un fichier par genre et ferme la porte.
+     */
+    const genre = (f) => f.replace(/^\d{4}-\d{2}-\d{2}T[\d-]+Z-/, "").replace(/\.jsonl$/, "");
+    const dernierDuGenre = new Set();
+    const vus = new Set();
+    for (const f of [...parDate].reverse()) {
+        const g = genre(f);
+        if (!vus.has(g)) {
+            vus.add(g);
+            dernierDuGenre.add(f);
+        }
+    }
+    const vieux = parDate.slice(0, parDate.length - garde).filter((f) => !dernierDuGenre.has(f));
+    const epargnes = parDate.slice(0, parDate.length - garde).filter((f) => dernierDuGenre.has(f));
     let efface = 0;
     /* piege:ok catch-muet — un journal déjà effacé ou tenu ouvert par une autre passe est le
        cas normal d'un élagage concurrent, et `efface` compte ce qui a réellement disparu :
@@ -101,6 +129,10 @@ export function elaguer(dossier = DOSSIER, garde = GARDE_DERNIERS) {
     if (efface) {
         console.warn(`  ${efface} journal(aux) élagué(s) dans ${dossier.split("/").slice(-2).join("/")} — `
             + `les ${garde} derniers sont gardés.`);
+    }
+    if (epargnes.length) {
+        console.warn(`  ${epargnes.length} épargné(s) parce qu'ils sont les derniers de leur genre : `
+            + `${epargnes.map(genre).join(", ")}.`);
     }
     return efface;
 }

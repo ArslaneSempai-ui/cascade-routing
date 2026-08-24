@@ -16,10 +16,33 @@
 import { readFileSync, writeFileSync, mkdirSync, cpSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { isMain } from "./cli.ts";
+import { readProfiles } from "./measure.ts";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 
-const PROFILS = readFileSync(root + "data/profiles.json", "utf8").trim();
+/*
+ * LA PAGE PUBLIÉE NE POUVAIT PAS ÊTRE REFAITE SUR UN CLONE FRAIS.
+ *
+ * Cette ligne lisait `data/profiles.json` en direct. `data/` n'est pas versionné — c'est
+ * voulu, il porte les mesures faites sur les données d'un client — donc la commande plantait
+ * sur ENOENT chez quiconque clone, nous compris après un nettoyage. Toutes les autres
+ * commandes passent par `readProfiles()`, qui retombe sur le relevé de référence livré avec
+ * le dépôt ; celle-ci était la seule à ne pas le faire.
+ *
+ * Conséquence mesurée : la page publiée faisait tourner du code vieux de plusieurs commits,
+ * parce que personne ne pouvait la régénérer et que rien ne le signalait.
+ */
+const PROFILS = (() => {
+  const p = readProfiles();
+  if (!p) {
+    console.error(
+      "no relevé to build the page from.\n\n"
+      + "  This is normally impossible: a reference relevé ships with the repository.\n"
+      + "  If it is gone, restore it with `git checkout profiles-*.json`.");
+    process.exit(1);
+  }
+  return JSON.stringify(p);
+})();
 
 const SHIM = `<script>window.LOCAL_PRET = new Promise((r) => { window.LOCAL_POSE = r; });</` + `script>
 <script type="module">
