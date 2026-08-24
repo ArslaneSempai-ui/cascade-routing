@@ -819,3 +819,27 @@ test("le programme lui-même refuse l'option inconnue et la tâche inconnue", as
     assert.match((e.stdout ?? "") + (e.stderr ?? ""), /not a whole number of cases/);
   } finally { rmSync(dossier, { recursive: true, force: true }); }
 });
+
+
+test("les règles du client sont bornées, et évaluées avant qu'un modèle soit chargé", () => {
+  /*
+   * Cinquième fois aujourd'hui : les cas de `regles-bornees.test.ts` éprouvent
+   * `evaluerRegles`, et desserrer la borne AU POINT D'APPEL les laissait tous verts. Ce
+   * cas-ci regarde le point d'appel.
+   */
+  const src = readFileSync(fileURLToPath(new URL("./your-cases.ts", import.meta.url)), "utf8");
+
+  const appel = src.indexOf("await evaluerRegles(reglesBrutes, cas.map((c) => c.text))");
+  assert.ok(appel > 0,
+    "la borne par défaut doit s'appliquer : un troisième argument ici la remplacerait, et\n"
+    + "  c'est exactement la mutation qu'aucun cas de l'autre fichier ne voit.");
+
+  const mesure = src.indexOf("await mesurerVosCas(");
+  assert.ok(mesure > 0 && appel < mesure,
+    "les règles s'évaluent AVANT la mesure : découvrir au dossier quatre mille qu'une règle\n"
+    + "  ne termine pas coûte tout ce qui précède.");
+
+  assert.ok(!/c\.text\.match\(regles/.test(src),
+    "plus aucune évaluation de règle hors du fil borné : c'est par là que 162 secondes\n"
+    + "  d'un seul cas entraient dans le temps par palier.");
+});

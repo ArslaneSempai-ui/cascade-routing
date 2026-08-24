@@ -34,6 +34,7 @@ import { ouvrirJournal, issue } from "./journal.ts";
 import { loadExtractors, loadClassifiers, loadGeneratifs, extract, correct, classerParmi, MODELES_LOCAUX, questionPour } from "./tiers.ts";
 import { ENCODEURS, GENERATIFS } from "./paliers.ts";
 import { rate, writeRate, cellulesDeTaux, distinguishable, CONFIANCE, ENOUGH } from "./interval.ts";
+import { evaluerRegles, direLesRefus, type ReglesEvaluees } from "./regles-bornees.ts";
 import { table } from "./figures.ts";
 
 import type { TierName } from "./paliers.ts";
@@ -674,7 +675,7 @@ export function rapportPourLeClient(o: {
 }
 
 export async function mesurerVosCas(
-  cas: Cas[], champs: string[], paliers: TierName[], regles?: Record<string, RegExp>,
+  cas: Cas[], champs: string[], paliers: TierName[], regles?: ReglesEvaluees,
   journaliser = false, sorties?: SortiesFournies,
   /* Les questions posées aux modèles, une par champ. Absentes, elles se déduisent du nom de
      colonne — et ce choix s'affiche, parce qu'un taux obtenu sous une question déduite n'est
@@ -711,11 +712,18 @@ export async function mesurerVosCas(
       };
     }
 
-    if (regles?.[champ]) {
+    /* Les règles ont déjà été évaluées, bornées, avant qu'un modèle soit chargé. Une règle
+       refusée n'a pas de valeurs, donc pas de ligne : elle ne se glisse pas dans le temps
+       par palier sous l'étiquette « lent ». */
+    const valeursRegle = regles?.valeurs[champ];
+    if (valeursRegle) {
       let bons = 0;
-      const t0 = performance.now();
-      for (const c of cas) if (correct(c.text.match(regles[champ]!)?.[0] ?? "", c.truth[champ]!)) bons++;
-      releve[champ]!["rules" as TierName] = { bons, sur: cas.length, ms: (performance.now() - t0) / cas.length };
+      for (let i = 0; i < cas.length; i++) {
+        if (correct(valeursRegle[i] ?? "", cas[i]!.truth[champ]!)) bons++;
+      }
+      releve[champ]!["rules" as TierName] = {
+        bons, sur: cas.length, ms: regles!.ms[champ] ?? 0,
+      };
     }
 
     for (const palier of paliers) {
@@ -887,7 +895,7 @@ Nothing leaves your machine: the models are local and this path makes no network
     }
     cas = melange.slice(0, echantillon);
   }
-  const regles = arg("rules") ? chargerRegles(arg("rules")!, champs) : undefined;
+  const reglesBrutes = arg("rules") ? chargerRegles(arg("rules")!, champs) : undefined;
   const sorties = arg("sorties") ? chargerSorties(arg("sorties")!) : undefined;
   /* Les questions du client, s'il en fournit. Un fichier illisible se refuse en le disant :
      partir sur des questions déduites alors qu'il en a écrit serait pire que de s'arrêter. */
@@ -1059,6 +1067,20 @@ Nothing leaves your machine: the models are local and this path makes no network
     console.log(`  Supply your own with --questions=file.json : { "column": "What is …?" }`);
   }
 
+  /*
+   * LES RÈGLES DU CLIENT SONT ÉVALUÉES ICI, AVANT QUE LE MOINDRE MODÈLE SOIT CHARGÉ.
+   *
+   * Découvrir au dossier quatre mille qu'une règle ne termine pas coûte tout ce qui précède.
+   * Et une règle refusée doit être annoncée avant la mesure, pas expliquée après.
+   */
+  const regles = reglesBrutes
+    ? await evaluerRegles(reglesBrutes, cas.map((c) => c.text))
+    : undefined;
+  if (regles) {
+    const refus = direLesRefus(regles);
+    if (refus) console.log(`\n${refus}\n`);
+  }
+
   if (avecLlm) await loadGeneratifs();
 
   if (tache === "classify") {
@@ -1202,7 +1224,7 @@ Nothing leaves your machine: the models are local and this path makes no network
   }));
   console.log(`Written to ${sortie}\n`);
   if (!reglesMesurees) {
-    console.log(regles
+    console.log(reglesBrutes
       ? "Your --rules file was read, but no rule was measured on any field. The report says so."
       : "No --rules given, so no free tier was measured. On my own corpus free regexes");
     console.log("carried three fields of five — a routing without them overstates what you pay.\n");
