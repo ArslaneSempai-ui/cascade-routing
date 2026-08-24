@@ -3,22 +3,23 @@
     "MUTATION TESTING \u2014 la seule fa\u00e7on de savoir si un cas attrape quelque chose.",
     "Le lanceur est une commande : nos cas tournent sous `node --test`, pas sous un cadre",
     "que Stryker conna\u00eet. Un mutant survivant est un changement de comportement que 244 cas",
-    "n'ont pas vu \u2014 c'est la forme la plus profonde du vert vide, appliqu\u00e9e \u00e0 la suite."
+    "n'ont pas vu \u2014 c'est la forme la plus profonde du vert vide, appliqu\u00e9e \u00e0 la suite.",
+    "Le cas du clone frais est \u00e9cart\u00e9 : il v\u00e9rifie qu-un clone sans git rend un chiffre, ce qui ne peut pas tenir dans le bac que Stryker recopie. L \u00e9carter est correct ; le taire ne le serait pas."
   ],
   "packageManager": "npm",
   "testRunner": "command",
   "commandRunner": {
-    "command": "node --test src/interval.test.ts src/cascade.test.ts"
+    "command": "node --test --test-skip-pattern=\"clone frais\" src/outils.test.ts"
   },
   "mutate": [
-    "src/interval.ts"
+    "src/optimise.ts"
   ],
   "reporters": [
     "clear-text",
     "json"
   ],
   "jsonReporter": {
-    "fileName": "/tmp/mutation.json"
+    "fileName": "/tmp/mut-optimise.json"
   },
   "coverageAnalysis": "off",
   "timeoutMS": 120000,

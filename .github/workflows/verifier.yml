@@ -21,6 +21,19 @@ on:
     branches: [main]
   pull_request:
 
+# ─── LE JETON DE LA CHAÎNE N'A QUE CE QU'IL LUI FAUT ───
+#
+# Signalé par CodeQL sur le dépôt public — « Workflow does not contain permissions », ouvert
+# et jamais lu. Sans ce bloc, GitHub donne au jeton de la passe les droits par défaut du
+# dépôt, qui incluent l'écriture. Une chaîne qui ne fait que lire et lancer des cas n'a besoin
+# que de lire.
+#
+# Ce n'est pas théorique ici : la chaîne tourne sur `pull_request`, donc sur du code que
+# quelqu'un d'extérieur propose. Un jeton en écriture dans un contexte qui exécute du code
+# étranger est la faute que cette catégorie entière décrit.
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
