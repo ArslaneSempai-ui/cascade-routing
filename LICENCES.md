@@ -37,7 +37,31 @@ Le champ dit permissif, le paquet ne livre pas son texte. Ce n'est pas un risque
 
 ## La licence de cet outil
 
-**Le dépôt ne déclare aucune licence.** Sur un dépôt public, cela signifie « tous droits réservés » : personne ne peut légalement s'en servir, y compris le client qui l'a acheté. C'est peut-être voulu — c'est le comportement par défaut d'un produit vendu — mais tant que ce n'est pas écrit, un service juridique bloquera. À trancher : licence commerciale écrite, ou déclaration explicite de propriété.
+Le dépôt déclare **PolyForm-Noncommercial-1.0.0** — une licence *source-available*, pas open source.
+
+Trois niveaux, et un seul se paie :
+
+| Qui | Ce qui est permis |
+| --- | --- |
+| N'importe qui, sans limite de durée | Lire, étudier, forker, s'en servir en non commercial. Le dépôt garde toute sa valeur de démonstration. |
+| Une organisation qui évalue | Le faire tourner **sur ses propres données**, trente jours, pour se décider. Les résultats restent internes et ne se mettent pas en production. |
+| Une organisation qui s'en sert | Licence commerciale, négociée séparément. |
+
+Le deuxième niveau est une permission *ajoutée* au texte PolyForm, pas une
+modification de celui-ci : le titulaire des droits peut toujours accorder plus,
+jamais moins. Il existe parce qu'une licence qui interdit tout usage commercial
+interdit aussi l'essai, et qu'un acheteur qui n'a pas pu essayer n'achète pas.
+
+**Cette licence n'est pas ce que le client achète.** Elle décrit ce qu'un visiteur
+du dépôt a le droit de faire. Un usage commercial se fait sous une licence
+commerciale distincte, négociée séparément — le modèle de la double licence. Le
+titulaire des droits conserve le droit de licencier l'outil à qui il veut et aux
+conditions qu'il veut ; cette licence publique ne lui retire rien.
+
+Conséquence à connaître : n'étant pas approuvée OSI, certains grands groupes
+l'excluent par politique de leur arbre de dépendances. Ça ne gêne pas une vente,
+puisque l'acheteur passe par la licence commerciale de toute façon ; ça gênerait
+une adoption spontanée, qui n'est pas ce qu'on cherche ici.
 
 ## Nomenclature
 

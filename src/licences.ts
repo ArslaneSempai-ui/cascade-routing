@@ -35,7 +35,7 @@ import { readdirSync, readFileSync, writeFileSync, statSync, existsSync } from "
 import { join } from "node:path";
 
 /** Copyleft fort : contamine l'œuvre qui l'incorpore. Bloque une livraison propriétaire. */
-const BLOQUANTES = /\b(GPL-2|GPL-3|GPLv2|GPLv3|AGPL|SSPL|CC-BY-NC|BUSL|Business Source|Commons Clause|OSL-3)\b/i;
+const BLOQUANTES = /\b(GPL-2|GPL-3|GPLv2|GPLv3|AGPL|SSPL|CC-BY-NC|BUSL|Business Source|Commons Clause|OSL-3|PolyForm|Noncommercial|Non-Commercial|Elastic-2|Elastic License)\b/i;
 /** Copyleft de fichier ou de bibliothèque : usage autorisé, obligations à tenir. */
 const A_TENIR = /\b(LGPL|MPL-2|EPL-[12]|CDDL|EUPL)\b/i;
 /** Permissives : attribution, rien de plus. */
@@ -98,6 +98,8 @@ export function temoins(): string[] {
     ["LGPL-3.0-or-later", "", "à tenir", "sigle LGPL"],
     ["MPL-2.0", "", "à tenir", "sigle MPL"],
     ["SEE LICENSE IN LICENSE.txt", "", "indéterminée", "renvoi sans sigle"],
+    ["PolyForm-Noncommercial-1.0.0", "", "bloquante", "source-available non commerciale — la nôtre : dans l'arbre d'un tiers elle bloquerait, et il faut que l'inventaire le dise"],
+    ["Elastic-2.0", "", "bloquante", "sigle Elastic, même famille"],
     [null, TEXTE_AGPL, "bloquante", "texte AGPL sans champ — le cas qui a pris l'outil en défaut"],
     [null, TEXTE_GPL, "bloquante", "texte GPL sans champ"],
     [null, TEXTE_LGPL, "à tenir", "texte LGPL, qui cite la GPL dans son corps"],
@@ -208,7 +210,33 @@ ${sansFichier.length > 0
 ## La licence de cet outil
 
 ${licenceDuDepot
-  ? `Le dépôt déclare **${licenceDuDepot}**.`
+  ? `Le dépôt déclare **${licenceDuDepot}**${/PolyForm|Noncommercial|BUSL|Elastic/i.test(licenceDuDepot)
+      ? ` — une licence *source-available*, pas open source.
+
+Trois niveaux, et un seul se paie :
+
+| Qui | Ce qui est permis |
+| --- | --- |
+| N'importe qui, sans limite de durée | Lire, étudier, forker, s'en servir en non commercial. Le dépôt garde toute sa valeur de démonstration. |
+| Une organisation qui évalue | Le faire tourner **sur ses propres données**, trente jours, pour se décider. Les résultats restent internes et ne se mettent pas en production. |
+| Une organisation qui s'en sert | Licence commerciale, négociée séparément. |
+
+Le deuxième niveau est une permission *ajoutée* au texte PolyForm, pas une
+modification de celui-ci : le titulaire des droits peut toujours accorder plus,
+jamais moins. Il existe parce qu'une licence qui interdit tout usage commercial
+interdit aussi l'essai, et qu'un acheteur qui n'a pas pu essayer n'achète pas.
+
+**Cette licence n'est pas ce que le client achète.** Elle décrit ce qu'un visiteur
+du dépôt a le droit de faire. Un usage commercial se fait sous une licence
+commerciale distincte, négociée séparément — le modèle de la double licence. Le
+titulaire des droits conserve le droit de licencier l'outil à qui il veut et aux
+conditions qu'il veut ; cette licence publique ne lui retire rien.
+
+Conséquence à connaître : n'étant pas approuvée OSI, certains grands groupes
+l'excluent par politique de leur arbre de dépendances. Ça ne gêne pas une vente,
+puisque l'acheteur passe par la licence commerciale de toute façon ; ça gênerait
+une adoption spontanée, qui n'est pas ce qu'on cherche ici.`
+      : "."}`
   : `**Le dépôt ne déclare aucune licence.** Sur un dépôt public, cela signifie « tous droits réservés » : personne ne peut légalement s'en servir, y compris le client qui l'a acheté. C'est peut-être voulu — c'est le comportement par défaut d'un produit vendu — mais tant que ce n'est pas écrit, un service juridique bloquera. À trancher : licence commerciale écrite, ou déclaration explicite de propriété.`}
 
 ## Nomenclature
