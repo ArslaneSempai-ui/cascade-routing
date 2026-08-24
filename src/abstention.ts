@@ -130,19 +130,19 @@ if (isMain(import.meta)) {
     /* UN REFUS A BESOIN D'UNE ISSUE. « journal ou relevé manquant » ne dit ni lequel manque,
        ni quoi lancer — et `data/` n'étant pas versionné, un clone frais tombe TOUJOURS ici.
        C'est le premier écran d'un acheteur sur la commande qui porte notre plus gros levier. */
-    console.error(`\n  Ce calcul rejoue les tentatives du corpus dur, et elles ne sont pas là.`);
-    console.error(`  \`data/\` n'est pas versionné : un clone frais n'en a jamais, c'est normal.\n`);
-    if (!p) console.error(`  Le relevé gelé manque aussi  →  npm run measure`);
-    if (!f) console.error(`  Le journal du corpus dur manque  →  npm run dur`);
-    console.error(`\n  Les chiffres publiés, eux, restent lisibles : ils sont gelés dans`);
-    console.error(`  landing.json et n'ont pas besoin de ce journal pour être cités.\n`);
+    console.error(`\n  This calculation replays the hard-corpus attempts, and they are not here.`);
+    console.error(`  \`data/\` is not versioned: a fresh clone never has any, which is normal.\n`);
+    if (!p) console.error(`  The frozen record is missing too  →  npm run measure`);
+    if (!f) console.error(`  The hard-corpus journal is missing  →  npm run dur`);
+    console.error(`\n  The published figures stay readable regardless: they are frozen in`);
+    console.error(`  landing.json and do not need this journal to be quoted.\n`);
     process.exit(1);
   })();
   const { tentatives } = lireJournal(f);
   const rep = new Map(tentatives.map((t) => [`${t.tier}|${t.caseId}|${t.field}`, t]));
   const textes = new Map([...corpusDur(), ...casAmbigus()].map((c) => [c.cle, c.texte]));
   const optimum = optimiseExtraction(p, ASSUMPTIONS);
-  if (!optimum) { console.error("aucun routage admissible"); process.exit(1); }
+  if (!optimum) { console.error("no admissible routing"); process.exit(1); }
 
   const documents = corpusDur()
     .filter((c) => Object.keys(c.attendus).length === FIELDS.length).map((c) => c.cle);
@@ -217,9 +217,9 @@ if (isMain(import.meta)) {
       + "règle soit rentable",
   }));
 
-  console.log(`\n${documents.length} documents, ${champs.length} champs, routage recommandé.`);
-  console.log(`Un blanc se voit ; une valeur fausse entre au dossier sans bruit.\n`);
-  console.log("  règle                                abst.  faux élim.  justes perdus  échange  livrées  justes livrés  précision livrée       coût");
+  console.log(`\n${documents.length} documents, ${champs.length} fields, recommended routing.`);
+  console.log(`A blank is visible; a wrong value enters the file without a sound.\n`);
+  console.log("  rule                                 abst      wrong cut     right lost    trade  shipped  right shipped      shipped precision    cost");
   for (const b of [...bilans, oracle]) {
     const t = (b as Bilan & { temoinHasard?: { echange: number | null } }).temoinHasard;
     console.log(`  ${b.regle.padEnd(36)} ${String(b.abstentions).padStart(4)}`
@@ -253,9 +253,9 @@ if (isMain(import.meta)) {
       + `${ENOUGH} en dessous duquel ce dépôt ne publie pas de taux ; la précision livrée, elle, `
       + `porte sur plus de cent valeurs et son intervalle est donné.`,
   }, null, 2) + "\n");
-  console.log(`\n  prix déclarés : une valeur fausse ${ASSUMPTIONS.costWrongValue}, un trou `
-    + `${ASSUMPTIONS.costBlankField} — rapport ${(ASSUMPTIONS.costWrongValue / ASSUMPTIONS.costBlankField).toFixed(2)}`);
-  console.log("  point de bascule — à partir de quel rapport se taire devient rentable :");
+  console.log(`\n  declared prices: a wrong value ${ASSUMPTIONS.costWrongValue}, a gap `
+    + `${ASSUMPTIONS.costBlankField} — ratio ${(ASSUMPTIONS.costWrongValue / ASSUMPTIONS.costBlankField).toFixed(2)}`);
+  console.log("  tipping point — the ratio above which staying silent pays:");
   for (const b of bascules) console.log(`    ${b.regle.padEnd(44)} ×${b.rapportDeBascule ?? "—"}`);
-  console.log(`\nÉcrit dans ${SORTIE.split("/").pop()}\n`);
+  console.log(`\nWritten to ${SORTIE.split("/").pop()}\n`);
 }
