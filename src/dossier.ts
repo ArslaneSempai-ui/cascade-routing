@@ -136,6 +136,32 @@ export function dossier(p: Profiles, h: Assumptions): string {
   w(`available one. Where two tiers cannot be told apart on this sample, the cheaper is taken`);
   w(`— a difference inside the confidence interval is not a difference to pay for.`);
   w(``);
+  /*
+   * LA MÉTHODE DE L'INTERVALLE EST NOMMÉE, ET ELLE NE L'ÉTAIT PAS.
+   *
+   * Ce document citait « 95 % interval » quatre fois sans jamais dire lequel. Un acheteur
+   * sceptique — celui qui vaut la peine d'être convaincu — se demande d'abord si c'est du
+   * Wald, parce que c'est le défaut de la plupart des outils et parce que c'est celui qui
+   * FLATTE : près de 0 ou de 1 il sort de [0, 1], et sur petit échantillon il rétrécit à
+   * tort. Un intervalle trop étroit fait paraître un écart significatif quand il ne l'est
+   * pas, et c'est précisément la décision que ce tableau porte.
+   *
+   * C'est du Wilson, et ça l'a toujours été. Une session voisine l'a établi en
+   * réimplémentant la formule depuis sa définition plutôt qu'en relisant le code : six
+   * formules recalculées, zéro écart sur dix-neuf couples, accord à 1e-12.
+   *
+   * Un chiffre juste qui ne dit pas pourquoi il est juste se fait attaquer comme un chiffre
+   * faux. Les deux valeurs aux extrêmes sont écrites ici parce qu'elles sont exactement ce
+   * que Wald rate, et elles sont figées dans `interval.test.ts` : elles ne peuvent plus
+   * bouger en silence.
+   */
+  w(`The interval is **Wilson**, not Wald. The distinction matters at the extremes, which is`);
+  w(`where per-record rates live: Wald leaves [0, 1] near 0 % or 100 % and narrows wrongly on`);
+  w(`a small sample — an interval that is too tight makes a difference look real when it is`);
+  w(`not, and this table decides on exactly that. Wilson stays inside the bounds and widens`);
+  w(`correctly: 0 of 20 gives [0 – 16.1 %], and 20 of 20 gives [83.9 % – 100 %]. Both values`);
+  w(`are pinned in the suite, so no change can move them without saying so.`);
+  w(``);
   w(table(["Field", "Tier", "Accuracy", "95 % interval", "Sample", "Cost at volume"],
     FIELDS.map((c) => {
       const e = s.routing[c], r = taux(p, e, c);

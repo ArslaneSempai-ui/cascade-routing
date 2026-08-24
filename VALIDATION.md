@@ -34,6 +34,13 @@ Each field is assigned to the cheapest tier that is not measurably worse than th
 available one. Where two tiers cannot be told apart on this sample, the cheaper is taken
 — a difference inside the confidence interval is not a difference to pay for.
 
+The interval is **Wilson**, not Wald. The distinction matters at the extremes, which is
+where per-record rates live: Wald leaves [0, 1] near 0 % or 100 % and narrows wrongly on
+a small sample — an interval that is too tight makes a difference look real when it is
+not, and this table decides on exactly that. Wilson stays inside the bounds and widens
+correctly: 0 of 20 gives [0 – 16.1 %], and 20 of 20 gives [83.9 % – 100 %]. Both values
+are pinned in the suite, so no change can move them without saying so.
+
 | Field | Tier | Accuracy | 95 % interval | Sample | Cost at volume |
 |---|---|---|---|---|---|
 | `name` | `large` | 96.6 % | [95–98] | n=1000 | $160 |
