@@ -1,0 +1,26 @@
+{
+  "_commentaire": [
+    "MUTATION TESTING \u2014 la seule fa\u00e7on de savoir si un cas attrape quelque chose.",
+    "Le lanceur est une commande : nos cas tournent sous `node --test`, pas sous un cadre",
+    "que Stryker conna\u00eet. Un mutant survivant est un changement de comportement que 244 cas",
+    "n'ont pas vu \u2014 c'est la forme la plus profonde du vert vide, appliqu\u00e9e \u00e0 la suite."
+  ],
+  "packageManager": "npm",
+  "testRunner": "command",
+  "commandRunner": {
+    "command": "node --test src/interval.test.ts src/cascade.test.ts"
+  },
+  "mutate": [
+    "src/interval.ts"
+  ],
+  "reporters": [
+    "clear-text",
+    "json"
+  ],
+  "jsonReporter": {
+    "fileName": "/tmp/mutation.json"
+  },
+  "coverageAnalysis": "off",
+  "timeoutMS": 120000,
+  "concurrency": 2
+}

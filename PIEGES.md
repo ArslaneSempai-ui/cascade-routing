@@ -226,3 +226,27 @@ La limite reste utile ensuite, mais elle protège d'un abus au lieu de cacher un
 
 **Remède :** devant une route lente, chercher d'abord ce qui est recalculé pour rien. La
 question qui tranche : *deux appels identiques rendent-ils le même résultat ?*
+## `npm install` efface les caches que les bibliothèques rangent sous `node_modules`
+
+**Le fait.** Ajouter deux dépendances de développement — `fast-check` et
+`@stryker-mutator/core` — a effacé **1,3 Go de poids d'encodeur** rangés par
+`@huggingface/transformers` dans `node_modules/@huggingface/transformers/.cache`. npm élague
+tout ce qui n'appartient pas à l'arbre qu'il vient de résoudre, et un cache n'y appartient pas.
+
+**Ce que ça a coûté.** Le cas qui garantit qu'aucune valeur du client n'entre dans le fichier
+qu'on lui rend s'est mis à s'ignorer : `poidsEnCache()` rend `false`, et le contrôle le plus
+important du dépôt ne tourne plus localement. Il tourne encore en intégration continue, qui
+met ce dossier en cache exprès — c'est d'ailleurs pourquoi cette mise en cache existe.
+
+**Comment le repérer.** Après tout `npm install`, `npm ci`, ou toute commande qui touche aux
+dépendances : `node -e 'import("./src/tiers.ts").then(t=>console.log(t.poidsEnCache()))'`.
+Un `false` inattendu est ça. Le symptôme visible est « skipped 1 » à la fin de la suite —
+et une suite verte avec un ignoré ressemble à une suite verte.
+
+**Le remède.** Ranger un cache coûteux HORS de `node_modules`, ou accepter le
+retéléchargement et le dire dans le rapport. La leçon générale : `node_modules` n'est pas un
+endroit où garder quoi que ce soit qu'on ne veut pas reperdre — c'est un dossier dérivé, et
+npm se réserve le droit de le reconstruire entièrement.
+
+**La famille.** Même forme que « ce que git ne transporte pas » : un état précieux rangé dans
+un dossier qu'un outil considère comme le sien.

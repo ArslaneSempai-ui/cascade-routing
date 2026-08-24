@@ -13,7 +13,7 @@ a broken scan produces too, and that is the most expensive mistake in this field
 | Request body bounded | held | The body is capped and the socket destroyed at the limit. | `src/server.ts` |
 | Third-party resources | held | The screen loads nothing from a third-party domain. A dependency loaded from a domain you do not control runs with the page's privileges. | `src/ui.html` |
 | Client data unversioned | held | Measurements taken on a client's data live in data/, which git ignores. What is not versioned does not travel into a public repository. | `.gitignore` |
-| Dependency fingerprints | held | Every dependency carries a content fingerprint: the package installed is the one that was measured. | `package-lock.json, 81 dependencies` |
+| Dependency fingerprints | held | Every dependency carries a content fingerprint: the package installed is the one that was measured. | `package-lock.json, 243 dependencies` |
 
 
 ## What these checks are worth

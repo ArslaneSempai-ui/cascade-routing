@@ -4111,7 +4111,20 @@ test("un relevé publié porte les paramètres sous lesquels le code le prendrai
     "menace-historique.json:temoins", "menace-historique.json:declares",
     /* Le relevé de sortie réseau : `releves` est le nombre d'échantillons de SA passe et
        `codeSortie` celui de la commande observée — deux comptes, pas des réglages. */
-    "egress.json:releves", "egress.json:codeSortie"]);
+    "egress.json:releves", "egress.json:codeSortie",
+    /*
+     * `stryker.conf.json` N'EST PAS UN RELEVÉ, C'EST LA CONFIGURATION D'UN OUTIL.
+     *
+     * `timeoutMS` et `concurrency` disent combien de temps laisser à un mutant et combien de
+     * processus lancer en parallèle. Ils décrivent la MACHINE qui mesure, pas ce qui est
+     * mesuré, et aucun chiffre publié n'en dépend : changer la concurrence ne change aucun
+     * résultat, seulement la durée.
+     *
+     * La garde a tiré dès que ce fichier est arrivé, et elle a eu raison de tirer — elle ne
+     * peut pas distinguer un réglage d'outil d'un paramètre de mesure. C'est à l'exception de
+     * le dire, avec sa raison, plutôt qu'à la garde de deviner.
+     */
+    "stryker.conf.json:timeoutMS", "stryker.conf.json:concurrency"]);
   /* Le gabarit porte AUSSI les hypothèses éditables : elles se confrontent au code comme les
      autres, mais sous leur propre nom. */
   for (const k of ["volume", "budget", "latencyBudgetMs", "pricePerThousandSmall",
