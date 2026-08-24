@@ -3462,6 +3462,15 @@ test("la prose écrite à la main ne compte pas ce que la mesure détermine", ()
     `exemption(s) devenue(s) inutile(s) dans \`permis\` : ${mortes.join(", ")}.\n`
     + `  → les retirer, sinon elles couvrent une formulation qui n'existe plus.`);
 
+  /* LE CATALOGUE PARTAGÉ EST EXEMPTÉ ICI, ET L'EXEMPTION DÉSIGNE CE TEST.
+     `pieges.mjs` porte la même règle, mais son exemption vaut pour le fichier entier — trop
+     grossier pour un document qui compte légitimement cinq champs. La marque dans le README
+     renvoie donc ici ; si elle disparaît, le README se retrouve sous la garde grossière sans
+     que personne l'ait décidé. */
+  assert.match(texte, /piege:ok compte-en-prose[\s\S]{0,200}cascade\.test\.ts/,
+    "le README n'exempte plus la règle partagée en désignant ce contrôle-ci : soit l'exemption "
+    + "a disparu, soit elle ne dit plus quel contrôle la remplace.");
+
   /* CONTRE-ÉPREUVE — la garde doit encore voir la phrase exacte qui a menti pendant des mois. */
   const ancien = "Four tiers — rules, a small model, a large one, a human — measured on held-out data.";
   assert.ok(new RegExp(`\\b${MOTS}\\s+${NOMS}\\b`, "i").test(ancien),

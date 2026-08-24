@@ -1,3 +1,9 @@
+<!-- piege:ok compte-en-prose — un contrôle plus fin vit dans src/cascade.test.ts : il liste
+     phrase par phrase ce qu'on s'autorise à compter en toutes lettres, avec la raison pour
+     laquelle ce compte-là ne bougera pas, et il tombe si une de ces exceptions cesse de
+     correspondre à quoi que ce soit. L'exemption ici vaut pour le fichier entier ; elle n'est
+     acceptable que parce que ce contrôle-là existe et couvre plus finement. -->
+
 # Where should the next dollar go?
 
 <!-- figures:chapeau -->
