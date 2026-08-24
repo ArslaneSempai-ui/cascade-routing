@@ -70,6 +70,19 @@ versionnée porte encore la clé que le code produit » passe au rouge.
 Ce n'est pas un défaut : c'est la garde qui fait son travail. Mais la régénération **charge
 les encodeurs**, donc elle se planifie — voir la règle suivante.
 
+**Comment retrouver que c'est ça**, parce qu'aucune lecture du code ne le révèle : le cas qui
+tombe parle de la galerie, et la modification qui l'a fait tomber n'a rien à voir avec elle.
+
+> Rouge sur « la galerie versionnée porte encore la clé que le code produit » après une
+> modification qui semble sans rapport → **regarder ce que `failures.ts` importe**, en
+> transitif. La clé est un hachage de la fermeture des sources, pas du fichier seul.
+
+    grep -n "fermetureDesSources\|empreinteDesEntrees" src/failures.ts
+
+Et la question générale, qui dépasse ce cas : **quand un contrôle tombe en parlant d'autre
+chose, chercher ce qu'il HACHE, pas ce qu'il nomme.** Une clé de cache porte souvent bien
+plus que ce que son nom laisse croire.
+
 ## Deux passes qui chargent des modèles ne peuvent pas coexister
 
 Une charge à 17,2 et un `libc++abi: mutex lock failed` pendant que deux sessions
@@ -88,3 +101,29 @@ calcul crue morte, relancée par-dessus, deux passes à 330 % de CPU chacune.
 
 **Remède :** `pgrep -f 'a|b'`, et prouver le relevé pendant que la chose cherchée tourne —
 trois secondes suffisent à démasquer un motif muet.
+
+## Un message de commit posé sur le mauvais diff ne se fait jamais attraper
+
+Trois commits sont partis avec le message d'un autre : le contenu de chacun était juste, la
+suite était verte, et rien dans l'outillage ne compare un message à son diff. La cause était
+une boucle qui extrayait les messages à l'envers — `for i in 3 2 1 … HEAD~$((i-1))` — et
+l'inversion est invisible tant qu'on ne lit pas les deux côte à côte.
+
+C'est la faute la plus durable qu'on puisse commettre ici : **un message de commit faux
+survit à tout**, parce que rien ne le vérifie jamais. Il sera lu dans six mois comme la
+raison d'un changement qu'il ne décrit pas.
+
+**Remède :** avant d'envoyer une série, confronter chaque message au fichier qu'il décrit.
+
+    git log --format='%h %s' -3 | while read h s; do
+      printf "%-52s ← %s\n" "$s" "$(git show --format= --name-only "$h" | tr '\n' ' ')"
+    done
+
+Le premier jet de cette commande employait `--stat | head -2 | tail -1` : sur un commit à un
+seul fichier, la deuxième ligne est le résumé, et elle affichait « 1 file changed » au lieu
+du nom. Un remède qui ment sur un cas sur deux est pire que pas de remède ; `--name-only`
+nomme les fichiers dans les deux cas.
+
+Corollaire de la même famille : une boucle qui indexe à l'envers ne se signale pas non plus.
+Quand un script écrit N fichiers depuis N sources, vérifier **un** couple à la main coûte
+trois secondes et attrape l'inversion entière.
