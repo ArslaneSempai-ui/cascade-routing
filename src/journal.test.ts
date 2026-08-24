@@ -533,13 +533,37 @@ test("le témoin négatif atteint le taux d'erreur de base, et un signal aveugle
  * Un chiffre publié qui ne se reproduit pas n'est pas un chiffre.
  */
 test("les témoins aléatoires sont graines, pas tirés à chaque exécution", () => {
+  /*
+   * LE BALAYAGE, PAS DEUX NOMS.
+   *
+   * Cette garde ne regardait que `signal.ts` et `escalade.ts`. Un troisième module qui se
+   * mettrait à tirer au hasard passerait sans un mot — et le mode de panne est asymétrique :
+   * un fichier RENOMMÉ fait tomber la lecture, bruyamment ; un fichier AJOUTÉ ne fait rien,
+   * la liste cesse simplement de couvrir et le vert reste vert.
+   */
   const dossier = fileURLToPath(new URL(".", import.meta.url));
-  for (const n of ["signal.ts", "escalade.ts"]) {
-    const src = readFileSync(join(dossier, n), "utf8");
-    assert.ok(!/Math\.random\(/.test(src),
-      `${n} tire sur Math.random : ses témoins ne se reproduisent pas d'une exécution à l'autre.`);
-    assert.ok(/draw\(/.test(src), `${n} ne prend pas de générateur graine.`);
-  }
+  const sources = readdirSync(dossier).filter((n) => n.endsWith(".ts") && !n.endsWith(".test.ts"));
+  assert.ok(sources.length >= 20,
+    `${sources.length} source(s) balayée(s) : la lecture a échoué, ce test ne vérifie rien.`);
+
+  /* SANS LES COMMENTAIRES. `corpus.ts` cite `Math.random()` dans la prose qui raconte
+     pourquoi il ne s'en sert plus — et le motif l'accusait de le faire. Une règle qui accuse
+     l'explication de son propre remède se fait retirer. Les retours à la ligne sont préservés,
+     sinon les numéros de ligne d'un futur message seraient décalés. */
+  const nu = (src: string) => src
+    .replace(/\/\*[\s\S]*?\*\//g, (m) => " " + "\n".repeat((m.match(/\n/g) ?? []).length))
+    .replace(/(^|[^:\\])\/\/[^\n]*/g, "$1 ");
+  const tireurs = sources.filter((n) => /Math\.random\(/.test(nu(readFileSync(join(dossier, n), "utf8"))));
+  assert.deepEqual(tireurs, [],
+    `module(s) tirant sur Math.random : ${tireurs.join(", ")}\n`
+    + `  → leurs témoins ne se reproduisent pas d'une exécution à l'autre. Prendre un générateur\n`
+    + `    graine, comme signal.ts et escalade.ts.`);
+
+  /* Et ceux qui produisent de l'aléa doivent le prendre graine — vérifié sur ceux qui en ont. */
+  const graines = sources.filter((n) => /\bdraw\(/.test(nu(readFileSync(join(dossier, n), "utf8"))));
+  assert.ok(graines.length >= 2,
+    `${graines.length} module(s) prennent un générateur graine : il y en avait au moins deux `
+    + `(signal.ts, escalade.ts). Si l'un a disparu, dire pourquoi ; sinon la détection a échoué.`);
 
   /* Et la même graine doit rendre exactement la même suite. */
   const a = draw(20260821), b = draw(20260821);

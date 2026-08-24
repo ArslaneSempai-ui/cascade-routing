@@ -13,7 +13,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 const racine = fileURLToPath(new URL("..", import.meta.url));
@@ -81,8 +81,49 @@ test("les couches partagées sont bien celles d'identite", () => {
    */
   const source = fileURLToPath(new URL("../../identite/", import.meta.url));
   if (!existsSync(source + "registre.css")) return; // dépôt cloné seul : rien à comparer
-  for (const f of ["registre.css", "graphes.js"]) {
-    assert.equal(readFileSync(racine + "src/" + f, "utf8"), readFileSync(source + f, "utf8"),
-      `src/${f} a divergé de identite/${f} — recopier plutôt que corriger sur place`);
+
+  /*
+   * LA LISTE VIENT DU DISQUE, PAS D'ICI.
+   *
+   * Elle a longtemps tenu en deux noms — `registre.css` et `graphes.js` — écrits à la main.
+   * Or ce dépôt porte QUINZE fichiers du même nom qu'identite, et les deux qui avaient
+   * réellement pourri, `capturer.mjs` et `verifier-ecran.mjs`, étaient précisément hors de la
+   * liste : 436 et 220 lignes de retard, sans qu'un seul contrôle s'en aperçoive. L'un
+   * comptait les figures d'un écran au lieu de les inspecter, et disait « vérifié » sur une
+   * page morte.
+   *
+   * Le mode de panne est asymétrique : un fichier retiré fait tomber la lecture, bruyamment.
+   * Un fichier AJOUTÉ ne fait rien — la liste cesse de couvrir, et le vert reste vert.
+   */
+  const DETACHES: Record<string, { pourquoi: string; depuis: string }> = {
+    "registre.test.ts": { pourquoi: "reprend le contrôle partagé et y ajoute celui-ci", depuis: "2026-08-24" },
+    "demo.test.ts": { pourquoi: "dérive les routes du src/ui.html de ce dépôt, pas d'un modèle commun", depuis: "2026-08-24" },
+    "ecran.test.ts": { pourquoi: "parse le script du ui.html de ce dépôt", depuis: "2026-08-24" },
+    "clone-neuf.mjs": { pourquoi: "la chaîne de vérification d'un clone est propre à ce dépôt", depuis: "2026-08-24" },
+  };
+
+  const communs = readdirSync(source)
+    .filter((f) => /\.(ts|js|mjs|css)$/.test(f) && existsSync(racine + "src/" + f));
+  assert.ok(communs.length >= 8,
+    `${communs.length} fichier(s) commun(s) trouvé(s) avec identite : la lecture a échoué, et ce `
+    + `test passerait au vert sans avoir rien comparé.`);
+
+  const divergents: string[] = [];
+  const exceptionsMortes: string[] = [];
+  for (const f of communs) {
+    const pareil = readFileSync(racine + "src/" + f, "utf8") === readFileSync(source + f, "utf8");
+    if (f in DETACHES) { if (pareil) exceptionsMortes.push(f); continue; }
+    if (!pareil) divergents.push(f);
   }
+
+  assert.deepEqual(divergents, [],
+    `fichier(s) partagé(s) ayant divergé d'identite : ${divergents.join(", ")}\n`
+    + `  → recopier depuis identite plutôt que corriger sur place ; ou, si la divergence est\n`
+    + `    voulue, l'inscrire dans DETACHES avec sa raison et sa date.`);
+
+  /* UNE EXCEPTION QUI NE SERT PLUS EST UNE EXCEPTION QUI CACHE. Tant qu'elle est là, le
+     fichier n'est plus comparé — et le jour où il divergera pour de bon, rien ne le dira. */
+  assert.deepEqual(exceptionsMortes, [],
+    `exception(s) devenue(s) inutile(s) : ${exceptionsMortes.join(", ")} ne diverge(nt) plus.\n`
+    + `  → les retirer de DETACHES, sinon ces fichiers restent hors du contrôle pour rien.`);
 });

@@ -13,7 +13,7 @@ import { correct, TIERS, estLocal, OLLAMA, MODELES_LOCAUX, digestsQuiDivergent,
   DELAI_DE_GENERATION_MS, DELAI_DE_CHARGEMENT_MS, CHARGEMENTS_MESURES_MS } from "./tiers.ts";
 import { GENERATIFS } from "./paliers.ts";
 import type { TierName } from "./paliers.ts";
-import { classify, empreinteDesEntrees, modulesAtteints, cleDeLaGalerieLivree, cleDuFichierLivre } from "./failures.ts";
+import { classify, empreinteDesEntrees, modulesAtteints, cleDeLaGalerieLivree, cleDuFichierLivre, fermetureDesSources } from "./failures.ts";
 import { comparer } from "./diff.ts";
 import { sonde } from "./sonde.ts";
 import { appliquerHypotheses } from "./server.ts";
@@ -1705,8 +1705,11 @@ test("la galerie en cache s'invalide quand le code qui la produit change", () =>
      constante passerait l'assertion du dessus sans rien garantir. On recalcule la même
      empreinte que `failures.ts`, une fois telle quelle et une fois avec une source
      modifiée d'un caractère, et les deux doivent différer. */
-  const sources = ["tiers.ts", "corpus.ts", "failures.ts"]
-    .map((f) => readFileSync(fileURLToPath(new URL(`./${f}`, import.meta.url)), "utf8")).join("\u0000");
+  /* La MÊME fermeture d'imports que celle dont l'empreinte se sert. Trois noms écrits ici
+     recopiaient une liste que le code, lui, dérive du graphe — donc dès qu'un module de plus
+     entre dans la fermeture, la contre-épreuve cesse de porter sur ce qui est réellement haché,
+     sans que rien ne le dise. */
+  const sources = fermetureDesSources("./failures.ts").join("\u0000");
   const h = (x: string) => createHash("sha256").update(x).digest("hex");
   assert.notEqual(h(sources), h(sources + " "),
     "l'empreinte du code ne bouge pas quand le code bouge : la clé ne protège rien.");
@@ -1738,11 +1741,14 @@ test("l'empreinte du cache discrimine, elle ne dégrade pas en constante", () =>
   /* ET LA COMPOSANTE « CODE » EST RÉELLEMENT LUE, de la même façon que l'empreinte la lit.
      Si les trois sources devenaient illisibles, la clé cesserait de suivre le code sans que
      rien ne le dise. */
-  for (const f of ["tiers.ts", "corpus.ts", "failures.ts"]) {
-    const t = readFileSync(fileURLToPath(new URL("./" + f, import.meta.url)), "utf8");
-    assert.ok(t.length > 500,
-      "la source " + f + " lue par l'empreinte fait " + t.length + " caractères : la clé ne suit plus le code.");
-  }
+  const lues = fermetureDesSources("./failures.ts");
+  assert.ok(lues.length >= 3,
+    `${lues.length} source(s) dans la fermeture d'imports : le parcours a échoué, et cette `
+    + `contre-épreuve regarderait un ensemble vide en restant verte.`);
+  lues.forEach((t, i) => {
+    assert.ok(t.length > 200,
+      `la source n°${i + 1} lue par l'empreinte fait ${t.length} caractères : la clé ne suit plus le code.`);
+  });
 });
 
 
