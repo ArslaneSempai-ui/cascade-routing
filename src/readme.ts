@@ -853,12 +853,61 @@ const finding = (() => {
   const melange = tailles.length > 1
     ? ` Measured on ${tailles.join(" and ")} held-out cases depending on the tier — the tables carry each figure's own \`n\`.`
     : "";
-  return `**The finding.** Routing every field to the same tier is the default and it is ` +
-    `wrong. Measured per field, ${free} of the ${FIELDS.length} fields are carried by regexes ` +
-    `at **zero cost and up to 100 % accuracy**, and the money is worth spending on exactly the ` +
-    `ones that need it. Total: **${(s2.accuracy * 100).toFixed(1)} % for $${Math.round(s2.cost)}** ` +
-    `of a $${ASSUMPTIONS.budget.toLocaleString("en-GB")} budget — the budget does not bind. ` +
-    suivant() + melange;
+  /*
+   * CE QUE LE TITRE DISAIT, ET POURQUOI IL A CHANGE.
+   *
+   * Il annoncait « 94,4 % pour 191 $ » et « aucun budget n'achete un meilleur routage ». Les
+   * deux etaient vraies de l'objectif que le solveur optimise — la moyenne par champ — et le
+   * lecteur n'avait aucune raison de soupconner qu'il en existait un autre.
+   *
+   * L'unite qui se classe est le DOSSIER, et sur ce routage-la 92 sur 120 sortent complets :
+   * 76,7 %, pas 94,4 %. Un routage qui vise le dossier en sort 95 pour 54 $. La phrase du
+   * titre restait vraie du budget et fausse de la conclusion qu'elle laissait tirer.
+   *
+   * Le titre porte donc les trois faits, dans l'ordre ou ils decident : l'unite, le levier,
+   * puis le chiffre. Rétracté le 24 aout 2026, entree dans retractations.json.
+   */
+  const doc = (() => {
+    const chemin = fileURLToPath(new URL("../document.json", import.meta.url));
+    if (!existsSync(chemin)) return null;
+    return JSON.parse(readFileSync(chemin, "utf8")) as {
+      publie: { complets: number; n: number; cost: number };
+      vise: { complets: number; n: number; cost: number }; identiques: boolean;
+    };
+  })();
+  const lev = (() => {
+    const e = fileURLToPath(new URL("../exposition.json", import.meta.url));
+    if (!existsSync(e)) return null;
+    const seuil = (JSON.parse(readFileSync(e, "utf8")) as { seuil: { bas: number } | null }).seuil;
+    const l = JSON.parse(readFileSync(fileURLToPath(new URL("../landing.json", import.meta.url)), "utf8")) as
+      { abstention: { rules: { breakEvenCostRatio: number | null }[] } | null };
+    const a = l.abstention?.rules?.find((x) => x.breakEvenCostRatio !== null)?.breakEvenCostRatio;
+    return seuil && a ? Math.round(seuil.bas / a) : null;
+  })();
+
+  const tete = `**The finding.** Routing every field to the same tier is the default and it is `
+    + `wrong. Measured per field, ${free} of the ${FIELDS.length} fields are carried by regexes `
+    + `at **zero cost and up to 100 % accuracy**, and the money is worth spending on exactly the `
+    + `ones that need it.`;
+
+  const unite = doc
+    ? ` **But the unit that gets filed is the record, and it is not the headline:** `
+      + `${doc.publie.complets} of ${doc.publie.n} records come out with all `
+      + `${FIELDS.length} fields right — ${writeRate(rate(doc.publie.complets, doc.publie.n))} — `
+      + `where the mean per field reads ${(s2.accuracy * 100).toFixed(1)} %.`
+      + (doc.identiques ? ``
+        : ` Aiming at the record instead delivers ${doc.vise.complets} of ${doc.vise.n} for `
+          + `$${Math.round(doc.vise.cost)} rather than $${Math.round(doc.publie.cost)}, worse on `
+          + `no record in the sample.`)
+    : ` Total: **${(s2.accuracy * 100).toFixed(1)} % for $${Math.round(s2.cost)}**.`;
+
+  const levier = lev
+    ? ` **And the larger lever is not routing at all:** abstaining — returning nothing when a `
+      + `signal says the value is doubtful — pays off about ${lev} times sooner than moving a `
+      + `field to another tier.`
+    : ``;
+
+  return tete + unite + levier + melange;
 })();
 
 /**

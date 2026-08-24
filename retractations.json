@@ -291,6 +291,17 @@
       "heldBy": null,
       "notHeld": "No test holds this one. What caught it was emitting the count of calls that reached the cap beside the length, so the reader can see that the maximum is the setting. A single call cannot be made to report that it is a single call.",
       "caughtBeforeAnyoneSawIt": true
+    },
+    {
+      "date": "2026-08-24",
+      "headline": "Led with the mean of five field rates and called it the finding, in a document whose buyer files whole records.",
+      "claimed": "That the finding is 94.4 % for $191, and that no available budget buys a better routing. Both were true of the objective the solver optimises — the mean per field — and the headline gave a reader no reason to suspect there was another objective.",
+      "actually": "The unit that gets filed is the record. On the published routing, 92 of 120 records come out with all five fields right: 76.7 % [68-83], not 94.4 %. And a routing that aims at the record delivers 95 of 120 for $54 rather than $191, worse on no record in the sample. 'No available budget buys a better routing' is still true about the budget and false about the reader's conclusion, which is the shape of overclaim this file exists to record.",
+      "caughtBy": "Building the per-record measurement asked for in the plan, and finding that the headline and the middle of the same document now told different stories.",
+      "cost": "Nothing published outside this repository. The claim stood at the top of the README for weeks, and the per-record figure it contradicts was already in landing.json the whole time — measured, and never surfaced.",
+      "heldBy": "le taux par dossier se recalcule depuis les réussites, et retombe sur la mesure publiée",
+      "notHeld": null,
+      "caughtBeforeAnyoneSawIt": false
     }
   ]
 }
