@@ -1,0 +1,33 @@
+{
+  "_lisez_moi": [
+    "LES PLANCHERS QUI NE PEUVENT ALLER QUE DANS UN SENS.",
+    "",
+    "Un chiffre de qualité qu'on relève de temps en temps ne fait rien : il monte, il descend,",
+    "et personne ne s'en aperçoit parce qu'il n'y a rien à quoi le comparer. Un cliquet, si.",
+    "",
+    "Chacun de ces chiffres a été MESURÉ le jour où il a été posé, jamais choisi. Le contrôle",
+    "refuse quand la mesure d'aujourd'hui est pire, et il refuse AUSSI quand elle est meilleure",
+    "sans que le plancher ait suivi — sinon le cliquet se détend en silence et cesse de tenir.",
+    "",
+    "Pour déplacer un plancher : lancer la mesure, écrire le nouveau chiffre, dire pourquoi.",
+    "Le baisser demande une raison écrite dans le commit ; c'est le seul frein contre",
+    "l'habitude de céder un point à chaque fois qu'on est pressé."
+  ],
+  "couverture": {
+    "lignes": 65.7,
+    "branches": 80.6,
+    "fonctions": 64.6,
+    "mesureLe": "2026-08-25",
+    "comment": "node --test --experimental-test-coverage src/*.test.ts, ligne « all files »"
+  },
+  "catalogue": {
+    "occurrences": 134,
+    "mesureLe": "2026-08-25",
+    "comment": "node ~/.claude/skills/equipe/scripts/pieges.mjs . — 121 des 134 sont la façade française, qui descend avec les traductions. Les 6 « compte-non-tenu » restants sont des titres et messages de cas qui annoncent un nombre que rien n'impose : réels, chacun dans le fichier d'une session, à corriger là où ils vivent."
+  },
+  "semgrep": {
+    "trouvailles": 26,
+    "mesureLe": "2026-08-25",
+    "comment": "règles communautaires + .semgrep/ ; les 25 sites node:child_process sont connus et inertes, la 26e est notre propre motif de détection"
+  }
+}

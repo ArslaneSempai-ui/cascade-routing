@@ -1,0 +1,30 @@
+# ─── LES ALERTES DE DÉPENDANCES ARRIVENT SANS QU'ON LES DEMANDE ───
+#
+# Catégorie « ce qui tourne sans nous ». CodeQL était déjà activé sur ce dépôt et avait
+# quatre alertes ouvertes que personne n'avait lues — dont une XSS réelle dans une couche que
+# douze dépôts publient. Un signal qui existe et que personne ne lit est un contrôle qui ne
+# compte pas ; celui-ci ouvre une demande de fusion, donc il se voit.
+#
+# Le rythme est HEBDOMADAIRE et non quotidien : une alerte par jour sur un dépôt à 83 paquets
+# se transforme en bruit, et le bruit se ferme sans lire. Une fois par semaine se lit.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    # Les correctifs de sécurité passent quoi qu'il arrive ; le reste est groupé pour qu'une
+    # semaine calme ne produise pas cinq demandes distinctes à relire une par une.
+    groups:
+      outillage:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+
+  # La chaîne d'intégration elle-même est du code exécuté avec un jeton. Les actions y sont
+  # épinglées par étiquette, et une étiquette se déplace : c'est la voie par laquelle un
+  # dépôt tiers compromis entre dans notre passe.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

@@ -203,8 +203,17 @@ test("un champ inconnu dans le bloc de signature fait refuser", () => {
 
   /* ET LE CHEMIN SAIN : réécrire le bloc avec ses trois champs seuls doit rester valide.
      Sans ce second sens, un vérificateur qui refuse TOUT passerait ce cas. */
+  /* LE COMPTE EST IMPOSÉ, PAS SEULEMENT ANNONCÉ. Le commentaire et le message parlent des
+     « trois champs attendus » ; sans cette ligne, un quatrième champ ajouté demain à la
+     signature laisserait la prose mentir et le cas passer. Un chiffre écrit dans un message
+     dérive exactement comme un chiffre écrit dans une prose : rien ne le recalcule. */
+  const ATTENDUS = ["alg", "cle", "valeur"];
+  assert.deepEqual(Object.keys(sig).sort(), [...ATTENDUS].sort(),
+    `le bloc de signature porte ${Object.keys(sig).length} champ(s) et non ${ATTENDUS.length} : `
+    + "la prose de ce cas et le vérificateur ne parlent plus du même objet.");
+
   const remis = html.slice(0, i)
-    + JSON.stringify({ alg: sig.alg, cle: sig.cle, valeur: sig.valeur }) + html.slice(j);
+    + JSON.stringify(Object.fromEntries(ATTENDUS.map((k) => [k, sig[k]]))) + html.slice(j);
   assert.equal(verifier(remis, pem).valide, true,
-    "un bloc réécrit avec ses trois champs attendus est refusé : la garde refuse trop.");
+    `un bloc réécrit avec ses ${ATTENDUS.length} champs attendus est refusé : la garde refuse trop.`);
 });

@@ -36,6 +36,23 @@ permissions:
 
 jobs:
   test:
+    # ─── DEUX VERSIONS DE NODE, PARCE QU'ON EN DÉCLARE UNE INFINITÉ ───
+    #
+    # `engines` dit `>=24`. La passe n'en éprouvait qu'une : 24. La machine de développement
+    # tourne en 26, donc les deux seules versions jamais exercées l'étaient chacune d'un côté,
+    # et rien ne comparait leurs résultats.
+    #
+    # Ce n'est pas théorique pour ce produit : le client installe et lance chez lui, sur la
+    # version qu'il a. Une promesse « ça tourne chez vous » qui n'a été vérifiée que sur la
+    # version du développeur est une promesse sur une machine.
+    #
+    # 24 est la version d'appui long ; 26 est celle de développement. Les deux, à chaque
+    # passe. Le jour où une troisième arrive, on l'ajoute ici plutôt que de l'apprendre d'un
+    # acheteur.
+    strategy:
+      fail-fast: false          # une version qui casse ne cache pas l'autre
+      matrix:
+        node: ['24', '26']
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -54,7 +71,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
-          node-version: '24'
+          node-version: ${{ matrix.node }}
           cache: npm
 
       # Les poids d'encodeur — 740 Mo, mesurés — vivent sous node_modules, ce que la
@@ -64,7 +81,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: node_modules/@huggingface/transformers/.cache
-          key: poids-${{ hashFiles('package-lock.json') }}
+          key: poids-${{ matrix.node }}-${{ hashFiles('package-lock.json') }}
 
       - run: npm install
 
