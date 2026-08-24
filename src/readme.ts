@@ -698,8 +698,6 @@ const commandes = (() => {
     ["pages", "build docs/ and verify the published screen — required before publishing: docs/ carries a compiled copy of the code and goes stale silently"],
     ["captures", "re-record the images on this page"],
     ["ocr", "read the same documents as images and measure what the reading stage costs (macOS: Vision, no API)"],
-    ["exposition", "what the routing costs when it is wrong, and the price ratio at which the recommendation changes"],
-    ["document", "the rate per FILE — all five fields right together — against the mean per field"],
   ];
   const classees = new Set(ordre.map(([n]) => n));
   const oubliees = Object.keys(pkg.scripts).filter((n) => !classees.has(n) && n !== "typage");
@@ -1315,7 +1313,50 @@ const tests = (() => {
   return `**${n} tests** across ${fichiers.length} files, counted from the sources rather than typed here.`;
 })();
 
+/**
+ * Les documents livrés — et le fait qu'aucun n'était atteignable depuis ici.
+ *
+ * Le dépôt engendre six documents : ce qui a été mesuré, la surface d'attaque, les licences,
+ * la sonde générative, la notation des cas durs, et le journal des rétractations. Le README
+ * n'en citait AUCUN. Mesuré, pas supposé : zéro occurrence de chacun des six noms.
+ *
+ * Un document qu'on ne peut pas atteindre depuis le point d'entrée n'existe que pour qui sait
+ * déjà qu'il existe. Un service achats qui demande la nomenclature des dépendances ne la
+ * trouve pas ; un délégué à la protection des données non plus. Ils sont écrits, contrôlés,
+ * engendrés — et invisibles.
+ *
+ * LA LISTE SE DÉDUIT DU DISQUE. L'écrire à la main ici serait la couverture récitée qu'on
+ * refuse partout ailleurs : le prochain document engendré n'y serait pas, et son absence
+ * passerait pour un choix.
+ */
+const documents = (() => {
+  const racine = fileURLToPath(new URL("..", import.meta.url));
+  /* Ce qui vaut d'être annoncé : les documents ENGENDRÉS, reconnus à leur en-tête, plus le
+     journal des rétractations, qui est le seul artefact écrit à la main qu'un acheteur doit
+     lire en entier. */
+  const decrit: Record<string, string> = {
+    "VALIDATION.md": "what was measured, on which corpus, and what the numbers do not establish",
+    "SECURITE.md": "the attack surface, checked rather than described",
+    "LICENCES.md": "every package this ships, its licence, and the one that carries obligations",
+    "SONDE.md": "real generative models on the same corpus, judged by the same grader",
+    "NOTATION-CAS-DURS.md": "how the hard cases were graded, and by whom",
+    "retractations.json": "every conclusion published here that turned out to be wrong",
+    "sbom.json": "the dependency inventory, CycloneDX, for a procurement team",
+    "cle-publique.pem": "the key that signs reports — verify one with `node src/verifier-rapport.mjs`",
+  };
+  const presents = readdirSync(racine).filter((n) => n in decrit).sort();
+  if (presents.length === 0) {
+    throw new Error("aucun document livré n'a été trouvé à la racine : la lecture a échoué, et ce bloc annoncerait une absence qui n'existe pas.");
+  }
+  const manquants = Object.keys(decrit).filter((n) => !presents.includes(n));
+  const lignes = presents.map((n) => `| [\`${n}\`](${n}) | ${decrit[n]} |`);
+  return ["| Document | What it answers |", "|---|---|", ...lignes].join("\n")
+    + (manquants.length > 0
+      ? `\n\n⚠ ${manquants.length} document(s) described here are not in the repository: ${manquants.map((n) => `\`${n}\``).join(", ")}.`
+      : "");
+})();
+
 emit(fileURLToPath(new URL("../README.md", import.meta.url)),
   { chapeau, chaines, finding, obligation, ouCaTourne, lecture, exposition: expositionBloc, document: documentBloc, leviers, frontiere, extraction, classification, routing, shadow, gallery, baselines, provenance, coutDeReproduction, embauche,
-    echelles, latence, egalites, fuite, deuxfaits, retractations, public: publicJeu, commandes,
+    echelles, latence, egalites, fuite, deuxfaits, retractations, public: publicJeu, commandes, documents,
     tests });

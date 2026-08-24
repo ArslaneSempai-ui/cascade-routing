@@ -61,13 +61,26 @@ what that pass actually cost is stated below, read from the relevé rather than 
 | `npm run ocr` | read the same documents as images and measure what the reading stage costs (macOS: Vision, no API) |
 
 ⚠ 3 command(s) exist in package.json and are not classified above: `premiere-reponse`, `licences`, `menace`.
-
-⚠ 2 command(s) are described above and no longer exist: `exposition`, `document`.
 <!-- /figures:commandes -->
 
 ```bash
 npm test           # types, README figures, landing.json, and the suite
 ```
+
+## What else is in here
+
+<!-- figures:documents -->
+| Document | What it answers |
+|---|---|
+| [`LICENCES.md`](LICENCES.md) | every package this ships, its licence, and the one that carries obligations |
+| [`NOTATION-CAS-DURS.md`](NOTATION-CAS-DURS.md) | how the hard cases were graded, and by whom |
+| [`SECURITE.md`](SECURITE.md) | the attack surface, checked rather than described |
+| [`SONDE.md`](SONDE.md) | real generative models on the same corpus, judged by the same grader |
+| [`VALIDATION.md`](VALIDATION.md) | what was measured, on which corpus, and what the numbers do not establish |
+| [`cle-publique.pem`](cle-publique.pem) | the key that signs reports — verify one with `node src/verifier-rapport.mjs` |
+| [`retractations.json`](retractations.json) | every conclusion published here that turned out to be wrong |
+| [`sbom.json`](sbom.json) | the dependency inventory, CycloneDX, for a procurement team |
+<!-- /figures:documents -->
 
 <!-- figures:tests -->
 **209 tests** across 14 files, counted from the sources rather than typed here.
