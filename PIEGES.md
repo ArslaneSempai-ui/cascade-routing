@@ -128,6 +128,56 @@ Corollaire de la même famille : une boucle qui indexe à l'envers ne se signale
 Quand un script écrit N fichiers depuis N sources, vérifier **un** couple à la main coûte
 trois secondes et attrape l'inversion entière.
 
+## Deux sondes qui passent ne disent pas que la formule tient
+
+Le pendant du témoin planté dans la forme de la garde, et il se paie dans l'autre sens : ici
+la garde était bonne et **la contre-épreuve rassurait au lieu d'éprouver**.
+
+En recalculant la binomiale appariée, deux sondes successives sur des couples plausibles n'ont
+rendu **aucun** verdict inversé. La conclusion tentante — « la formule tient » — était fausse :
+les deux régimes de débordement tombaient juste par accident, l'un rendant `p = 0` là où le p
+exact était minuscule, l'autre `NaN` là où le p exact était grand. **Les deux erreurs
+s'annulaient sur les cas qu'on avait envie d'essayer.**
+
+Ce qui a marché n'est pas d'essayer plus de couples : c'est de **calculer la fenêtre** où les
+deux régimes cessent de coïncider avec la vérité — `2^n` fini, queue finie, p exact au-dessus
+du seuil — puis d'y aller directement. Elle existait, elle faisait deux entiers de large, et
+aucun tâtonnement raisonnable ne serait tombé dedans.
+
+**Remède :** quand une sonde passe, se demander *quelle propriété du cas essayé la fait
+passer*, et si cette propriété est partagée par tous les cas essayés. Si oui, on a mesuré une
+famille, pas la fonction. Et pour un défaut arithmétique, la fenêtre se calcule — les bornes de
+débordement d'un flottant sont connues, elles ne se cherchent pas à l'aveugle.
+
+## Le terminal refuse, le fichier publie
+
+Deux sorties pour un même chiffre, deux règles différentes — et c'est celle qui survit qui n'a
+pas de garde.
+
+Mesuré dans `your-cases.ts`. Le rapport écrit au client construit ses lignes à la main :
+
+    (q.rate * 100).toFixed(1) + " %"      et      `[${q.low}–${q.high}]`
+
+sans jamais lire `q.reportable`. `writeRate`, qui refuse de citer un taux sous `ENOUGH = 20`
+observations, n'est employé que sur la **sortie console**. Résultat :
+
+    n=1    console : « — (n=1, too few to quote) »      fichier : « 100.0 % [21–100] »
+    n=3    console : refuse                             fichier : « 100.0 % [44–100] »
+    n=19   console : refuse                             fichier : « 78.9 % [57–91] »
+    n=20   les deux citent
+
+**Le terminal défile et se perd ; le fichier est classé, transféré, cité.** La garde protège
+l'artefact éphémère et laisse passer le durable — et un « 100 % » sur un dossier est
+exactement le chiffre qu'un acheteur montrera à quelqu'un d'autre.
+
+Corollaire mesuré au passage : un fichier réduit à sa ligne d'en-tête est accepté et rend
+**zéro cas**, puis un rapport de vingt-trois lignes intitulé « Your cases, measured » qui
+n'établit rien.
+
+**Remède :** une valeur qui porte une condition de publication ne se formate qu'à un seul
+endroit. Si deux chemins l'écrivent, le second oubliera la condition — et ce sera celui qu'on
+garde.
+
 ## Un témoin écrit dans la forme de la garde n'éprouve que la garde
 
 Formulé par la session qui l'a payé : *« un témoin posé dans la même forme que la garde prouve
