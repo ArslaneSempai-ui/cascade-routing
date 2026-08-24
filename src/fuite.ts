@@ -95,15 +95,15 @@ if (isMain(import.meta)) {
   const palier = (process.argv.find((a) => a.startsWith("--tier="))?.split("=")[1] ?? "gen-4b") as TierName;
   const combien = casDemandes(120);
 
-  console.log(`\nMesure de la fuite sur ${palier} : ${combien} cas sur chaque moitié.`);
-  console.log("`heldout` est la moitié contre laquelle l'invite a été réglée.");
-  console.log("`dev` est une moitié qu'elle n'a jamais vue.\n");
+  console.log(`\nLeakage measurement on ${palier}: ${combien} cases on each half.`);
+  console.log("`heldout` is the half the prompt was tuned against.");
+  console.log("`dev` is a half it has never seen.\n");
 
   await loadGeneratifs();
   const d = await mesurerFuite(palier, combien);
 
   const pc = (x: number) => (x * 100).toFixed(1).padStart(6) + " %";
-  console.log("champ      réglé dessus   jamais vu      écart");
+  console.log("field      tuned on       never seen     gap");
   let pire = 0;
   for (const champ of FIELDS) {
     const v = d.champs[champ]!;
@@ -114,9 +114,9 @@ if (isMain(import.meta)) {
   mkdirSync(dirname(FICHIER), { recursive: true });
   writeFileSync(FICHIER, JSON.stringify(d, null, 2));
 
-  console.log(`\nLa pire chute est de ${pire.toFixed(1)} points.`);
+  console.log(`\nThe worst fall is ${pire.toFixed(1)} points.`);
   console.log(pire > -5
-    ? "L'invite se transporte : le réglage sur le jeu de test n'a presque rien emprunté."
-    : "L'invite ne se transporte pas : une partie du chiffre publié avait été ajustée au jeu de test.");
-  console.log(`\nÉcrit dans data/fuite.json — \`npm run figures\` le met dans le README.\n`);
+    ? "The prompt transports: tuning on the test set borrowed almost nothing."
+    : "The prompt does not transport: part of the published figure had been fitted to the test set.");
+  console.log(`\nWritten to data/fuite.json — \`npm run figures\` puts it in the README.\n`);
 }
