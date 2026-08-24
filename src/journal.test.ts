@@ -912,7 +912,7 @@ test("aucune sortie française sur les commandes déjà rendues à l'acheteur", 
   const dossier = fileURLToPath(new URL(".", import.meta.url));
   /** Les commandes dont la sortie a été rendue à l'acheteur, et qui ne doivent plus régresser. */
   const RENDUES = ["premiere-reponse.mjs", "verifier-rapport.mjs", "your-cases.ts", "server.ts",
-    "intake.ts", "licences.ts", "menace.ts", "egress.ts"];
+    "intake.ts", "licences.ts", "menace.ts", "egress.ts", "entree.ts"];
   const FRANCAIS = /\b(votre|vos|aucune?|n'est|n'a|qui|pour|dans|à la|ne se|données|refus|une|des|cette|celle|chaque|est |sont |avec |sans |déjà)\b/i;
 
   const sorties = (src: string) =>
@@ -945,7 +945,7 @@ test("aucune sortie française sur les commandes déjà rendues à l'acheteur", 
   const toutes = readdirSync(dossier).filter((n) => /\.(ts|mjs)$/.test(n) && !n.endsWith(".test.ts"));
   const restantes = toutes.filter((n) => !RENDUES.includes(n))
     .filter((n) => sorties(readFileSync(join(dossier, n), "utf8")).some((t) => FRANCAIS.test(t.replace(/\\n/g, " "))));
-  assert.ok(restantes.length <= 24,
+  assert.ok(restantes.length <= 23,
     `${restantes.length} commande(s) parlent encore français : ${restantes.slice(0, 6).join(", ")}…\n`
     + "  → le compte ne doit que baisser. S'il monte, une commande neuve est arrivée en français.");
 });

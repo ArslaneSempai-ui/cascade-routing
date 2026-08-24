@@ -105,43 +105,43 @@ export function comparerPopulations(
 
 if (isMain(import.meta)) {
   const n = Number(process.argv[2] ?? 1000);
-  console.log(`\n  Indice de stabilité de population sur la longueur des documents, `
-    + `${n} observations par côté.`);
-  console.log(`  Référence : la population sur laquelle le routage a été choisi (heldout).\n`);
+  console.log(`\n  Population stability index on document length, `
+    + `${n} observations per side.`);
+  console.log(`  Reference: the population the routing was chosen on (heldout).\n`);
 
   const plancher = plancherDeBruit("heldout", n);
-  console.log(`  Plancher de bruit à ${n} observations : ${plancher.toFixed(3)} — c'est ce que rend`);
-  console.log(`  un ré-échantillonnage de la population de référence, qui n'a pas bougé.\n`);
+  console.log(`  Noise floor at ${n} observations: ${plancher.toFixed(3)} — this is what a`);
+  console.log(`  resampling of the reference population, which has not moved, returns.\n`);
 
   const releves = (["dev", "training"] as Split[]).map((f) => comparerPopulations("heldout", f, n));
   for (const r of releves) {
     const verdict = !r.assezDObservations
-      ? `INDÉTERMINÉ — ${r.n} observations, il en faut ${OBSERVATIONS_MINIMALES}`
+      ? `UNDETERMINED — ${r.n} observations, ${OBSERVATIONS_MINIMALES} are needed`
       : r.indice < plancher * 2
-        ? `INDISCERNABLE DU TIRAGE (plancher ${plancher.toFixed(3)})`
+        ? `INDISTINGUISHABLE FROM RESAMPLING (floor ${plancher.toFixed(3)})`
         : r.auDessusDuSeuil
-          ? `${(r.indice / plancher).toFixed(0)}x le plancher, au-dessus du seuil `
-            + `de l'industrie (${SEUIL_DE_L_INDUSTRIE})`
-          : `${(r.indice / plancher).toFixed(0)}x le plancher, mais sous le seuil `
-            + `de l'industrie (${SEUIL_DE_L_INDUSTRIE})`;
-    console.log(`  heldout -> ${r.fenetre.padEnd(9)} indice ${r.indice.toFixed(3)}   ${verdict}`);
+          ? `${(r.indice / plancher).toFixed(0)}x the floor, above the industry `
+            + `threshold (${SEUIL_DE_L_INDUSTRIE})`
+          : `${(r.indice / plancher).toFixed(0)}x the floor, but below the industry `
+            + `threshold (${SEUIL_DE_L_INDUSTRIE})`;
+    console.log(`  heldout -> ${r.fenetre.padEnd(9)} index ${r.indice.toFixed(3)}   ${verdict}`);
   }
 
   /* LE SEUIL PEUT ÊTRE SOUS LE BRUIT, et alors il ne dit plus rien : il déclenche sur une
      population immobile. Mesuré ici à 120 observations. Le dire, plutôt que rendre un chiffre
      qui a l'air d'une mesure. */
   if (plancher >= SEUIL_DE_L_INDUSTRIE) {
-    console.log(`\n  ATTENTION — le plancher de bruit (${plancher.toFixed(3)}) dépasse le seuil de`);
-    console.log(`  l'industrie (${SEUIL_DE_L_INDUSTRIE}). À ${n} observations ce seuil se déclenche sur une`);
-    console.log(`  population qui n'a pas bougé. Il faut ${OBSERVATIONS_MINIMALES} observations au moins.`);
+    console.log(`\n  WARNING — the noise floor (${plancher.toFixed(3)}) exceeds the industry`);
+    console.log(`  threshold (${SEUIL_DE_L_INDUSTRIE}). At ${n} observations that threshold fires on a`);
+    console.log(`  population that has not moved. At least ${OBSERVATIONS_MINIMALES} observations are needed.`);
   }
 
-  console.log(`\n  Ce que ces chiffres disent, et ce qu'ils ne disent pas.`);
-  console.log(`  Le seuil de 0,200 vient des notes de risque modèle, et « drift-monitor » a`);
-  console.log(`  mesuré qu'il est AU-DESSUS du signal : un déplacement de 0,3 écart-type porte`);
-  console.log(`  l'indice à 0,090. Un indice sous 0,200 n'est donc pas une absence de dérive —`);
-  console.log(`  c'est une dérive que ce seuil-là ne peut pas voir.\n`);
-  console.log(`  Et un indice qui bouge ne prédit pas une chute d'exactitude. Il dit que la`);
-  console.log(`  population n'est plus celle sur laquelle le routage a été choisi, donc que la`);
-  console.log(`  décision a expiré — ce qui est l'obligation de VALIDATION.md §6.\n`);
+  console.log(`\n  What these numbers say, and what they do not.`);
+  console.log(`  The 0.200 threshold comes from model risk notes, and \u201cdrift-monitor\u201d`);
+  console.log(`  measured that it sits ABOVE the signal: a shift of 0.3 standard deviations puts`);
+  console.log(`  the index at 0.090. An index below 0.200 is therefore not an absence of drift —`);
+  console.log(`  it is drift that this particular threshold cannot see.\n`);
+  console.log(`  And an index that moves does not predict a fall in accuracy. It says the`);
+  console.log(`  population is no longer the one the routing was chosen on, so the decision`);
+  console.log(`  has expired — which is the obligation in VALIDATION.md §6.\n`);
 }
