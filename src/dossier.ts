@@ -28,7 +28,7 @@ import { FIELDS } from "./corpus.ts";
 import { readProfiles } from "./measure.ts";
 import { optimiseExtraction, paliersMesures } from "./optimise.ts";
 import "./figer.ts";  /* pose la table figée : voir figer.ts */
-import { ASSUMPTIONS, STATUSES, pricePerThousandExtractions } from "./assumptions.ts";
+import { ASSUMPTIONS, STATUSES, UNITS, symboleDe, pricePerThousandExtractions } from "./assumptions.ts";
 
 import { rate, writeRate, distinguishable } from "./interval.ts";
 import { MEANING } from "./provenance.ts";
@@ -46,7 +46,31 @@ import { fileURLToPath } from "node:url";
 const FICHIER = fileURLToPath(new URL("../VALIDATION.md", import.meta.url));
 
 const pc = (x: number) => (x * 100).toFixed(1) + " %";
-const euro = (x: number) => "$" + Math.round(x).toLocaleString("en-US");
+/*
+ * L'ARGENT NE PASSE PAS PAR LA LOCALE DE LA MACHINE.
+ *
+ * `toLocaleString("en-US")` dépend de la locale et de la présence d'un ICU complet : le même
+ * montant se rendait « 1,234 » ici, « 1.234 » dans le rapport signé qui emploie `en-GB`, et
+ * « 1234 » tout court sur un Node sans ICU. Trois chaînes pour un chiffre, selon la page
+ * qu'on lit et la machine qui l'a produite.
+ *
+ * Le groupage ci-dessous est celui de `grouper()` dans `rapport.ts` du dépôt licencié, copié
+ * à l'identique — les deux dépôts ne peuvent pas s'importer l'un l'autre, donc la copie est
+ * forcée ; ce qui ne l'est pas, c'est qu'elle soit reconnaissable. **Si l'une des deux change,
+ * l'autre change avec.** Ici les montants sont déjà arrondis à l'entier, donc seule la partie
+ * entière est groupée ; l'expression de groupage est la même, mot pour mot.
+ *
+ * Et le symbole vient de `symboleDe(UNITS.…)`, jamais tapé ici : une devise écrite à la main
+ * au site de rendu est exactement comment ce dépôt s'est mis à publier le même chiffre en
+ * dollars et en euros selon la page.
+ */
+const grouperEntier = (n: number): string => {
+  const neg = n < 0;
+  const ent = String(Math.abs(n));
+  return (neg ? "-" : "") + ent.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+};
+const SYMBOLE_MONETAIRE = symboleDe(UNITS.budget);
+const euro = (x: number) => SYMBOLE_MONETAIRE + grouperEntier(Math.round(x));
 
 /** Le taux mesuré d'un palier sur un champ, avec son échantillon. */
 const taux = (p: Profiles, e: TierName, c: Field) => {
