@@ -1145,7 +1145,7 @@ export function construire(p: Profiles): unknown {
  * qui échoue pour une raison qui n'est pas celle qu'il surveille finit désactivé, et c'est
  * comme ça qu'on perd un test.
  */
-function verifierCoherence(vue: Record<string, unknown>): void {
+export function verifierCoherence(vue: Record<string, unknown>): void {
   const routing = vue.routing as { latencyMsPerDocument: number } | null;
   const spread = (vue.latencySpread as { routed: { median: number } | null }).routed;
   if (routing === null || spread === null) return;
@@ -1186,7 +1186,7 @@ function verifierCoherence(vue: Record<string, unknown>): void {
  */
 const MARGE = 1e-3;   // dix fois le pas d'arrondi de `toPrecision(4)`
 
-function verifierSeuils(p: Profiles, vue: Record<string, unknown>): void {
+export function verifierSeuils(p: Profiles, vue: Record<string, unknown>): void {
   const bloc = vue.sensitivity as { thresholds: Record<string, {
     breaksAt: number | null; moves: { field: Field; from: TierName; to: TierName }[] }> };
   const base = optimiseExtraction(p, ASSUMPTIONS);
