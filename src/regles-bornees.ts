@@ -87,7 +87,16 @@ async function evaluerUne(motif: string, textes: string[], msMax: number): Promi
       vus++;
       armer();
     });
-    w.on("error", (e) => arreter({ refus: `could not be evaluated — ${e.message}` }));
+    /*
+     * `e.message` NE COMPILE PLUS À PARTIR DE @types/node 26 : l'événement `error` d'un
+     * Worker y porte `unknown`, pas `Error`. Les trois propositions de mise à jour du
+     * 25 août 2026 ont toutes échoué ici, `TS18046`, en 22 à 42 secondes — et personne
+     * ne regardait la chaîne, donc trois mises à jour étaient bloquées sans que ça se voie.
+     * Cette écriture compile sous les deux typages et ne change rien à l'exécution.
+     */
+    w.on("error", (e) => arreter({
+      refus: `could not be evaluated — ${e instanceof Error ? e.message : String(e)}`,
+    }));
   });
 }
 
