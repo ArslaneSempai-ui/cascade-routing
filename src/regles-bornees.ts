@@ -59,8 +59,15 @@ async function evaluerUne(motif: string, textes: string[], msMax: number): Promi
         refus: `did not finish within ${msMax} ms on case ${vus + 1} of ${textes.length}`,
       }), msMax);
     };
-    armer();
-    w.on("message", (m: { i?: number; valeur?: string; ms?: number; fini?: boolean }) => {
+    /* La borne s'arme au message « prêt », PAS ici : sinon le démarrage du fil — 43 à 108 ms
+       mesurés — est imputé au budget de la première évaluation, et une règle bonne se fait
+       refuser sous charge. Un garde-fou de dernier recours reste posé au cas où le fil ne
+       démarrerait jamais : sans lui, un fil mort-né attendrait indéfiniment. */
+    minuteur = setTimeout(() => arreter({
+      refus: `worker did not start within ${msMax * 4} ms — the thread never reported ready`,
+    }), msMax * 4);
+    w.on("message", (m: { i?: number; valeur?: string; ms?: number; fini?: boolean; pret?: boolean }) => {
+      if (m.pret) { clearTimeout(minuteur); armer(); return; }
       if (m.fini) return arreter({ valeurs, ms: median(durees) });
       clearTimeout(minuteur);
       valeurs[m.i!] = m.valeur!;

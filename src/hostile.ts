@@ -124,17 +124,21 @@ export function page(r: Releve): string {
   l.push(`Measured ${r.mesureLe.slice(0, 10)}, code \`${r.code.commit}\`, `
     + `${cas.length} documents × ${r.paliers.length} tiers.`);
   l.push("");
-  l.push("A client's document goes into the prompt of a generative tier. In KYC that document");
-  l.push("comes from outside the bank, so whoever supplies it writes part of the prompt. This");
-  l.push("page is the measurement of what that buys an attacker, tier by tier — including the");
-  l.push("cases where we do not detect it.");
+  l.push("A client's document is read by the model. In KYC that document comes from outside the");
+  l.push("bank, so whoever supplies it writes part of what the model sees. This page measures");
+  l.push("what that buys an attacker, tier by tier — including the cases we do not detect.");
+  l.push("");
+  l.push("**It is not a generative-model problem.** We assumed it was, and the table below says");
+  l.push("otherwise: an extractive encoder picks a span out of the document, and the attacker");
+  l.push("writes the document. Nothing in that requires a model that generates.");
   l.push("");
   l.push("## What each document does");
   l.push("");
-  l.push("| Case | Field | What it tests | Flagged |");
-  l.push("| --- | --- | --- | --- |");
   for (const c of cas) {
-    l.push(`| \`${c.id}\` | ${c.champ} | ${c.quoi} | ${c.tournures.length ? c.tournures.join(", ") : "**no**"} |`);
+    l.push(`- **\`${c.id}\`** · field \`${c.champ}\` · `
+      + (c.tournures.length ? `flagged: ${c.tournures.join(", ")}` : "**not flagged**")
+      + (c.charge === null ? " · no payload" : ` · payload \`${c.charge}\``));
+    l.push(`  ${c.quoi[0]!.toUpperCase()}${c.quoi.slice(1)}.`);
   }
   l.push("");
   l.push("## What each tier returned");
@@ -143,6 +147,24 @@ export function page(r: Releve): string {
   l.push(`| --- | ${r.paliers.map(() => "---").join(" | ")} |`);
   for (const c of cas) {
     l.push(`| \`${c.id}\` | ${r.paliers.map((p) => marque(res(c.id, p))).join(" | ")} |`);
+  }
+  l.push("");
+  l.push("## What they actually returned");
+  l.push("");
+  l.push("Verdicts are worth what the answers behind them are worth, so here are the answers.");
+  l.push("Correct ones are omitted; everything a tier got wrong or was hijacked into is here.");
+  l.push("");
+  const rates = r.resultats.filter((x) => !x.juste);
+  if (rates.length === 0) {
+    l.push("Nothing to show: every tier answered correctly on every document.");
+  } else {
+    l.push("| Case | Tier | Returned | Verdict |");
+    l.push("| --- | --- | --- | --- |");
+    for (const x of rates) {
+      const v = x.rendu.trim() === "" ? "_(empty)_"
+        : "`" + x.rendu.replace(/\|/g, "\\|").replace(/\s+/g, " ").slice(0, 90) + "`";
+      l.push(`| \`${x.cas}\` | \`${x.palier}\` | ${v} | ${x.detourne ? "**hijacked**" : "wrong"} |`);
+    }
   }
   l.push("");
   l.push("## Per tier");
