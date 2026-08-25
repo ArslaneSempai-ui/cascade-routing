@@ -57,6 +57,12 @@ client's own hardware, not a provider fee — $3 to
 $6 per period at the declared volume,
 against a published $191 for the whole routing.
 
+The two amounts above rest on a **frozen assumption, not a measurement**: the 
+per-field latencies behind them were fixed on 2026-08-20 and are 
+**not re-measurable from this repository**: the OFAC SDN list is not shipped here. 
+Every other figure in this document derives from the sealed record shipped with it; 
+these two do not, and you cannot check them here.
+
 This is disclosed rather than corrected, because widening either the rule or the corpus
 moves the headline figure, and that is a decision rather than maintenance.
 

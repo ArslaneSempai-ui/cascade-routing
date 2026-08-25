@@ -242,13 +242,61 @@ export function dossier(p: Profiles, h: Assumptions): string {
    * Se tromper de colonne de prix sur son propre produit est la faute qu'un acheteur
    * remarquerait en premier, et elle rendait notre offre plus chère qu'elle n'est.
    */
-  const msParChamp = { small: 32, large: 59 };   /* mesuré sur l'OFAC, 300 cas */
+  /*
+   * ─── D'OÙ VIENNENT CES DEUX LATENCES, DANS LE CODE ET NON DANS UN COMMENTAIRE ───
+   *
+   * Elles étaient écrites `{ small: 32, large: 59 }` avec, à côté, un commentaire disant
+   * « mesuré sur l'OFAC, 300 cas ». Un commentaire n'est pas une provenance : rien ne le
+   * relie à un relevé, et rien ne tombe s'il devient faux.
+   *
+   * Ce qu'un lecteur du dépôt peut vérifier, et qui rend la réserve nécessaire : le relevé
+   * scellé livré ici porte, par champ, 18 · 18 · 18 · 20 · 22 pour `small` et
+   * 43 · 45 · 45 · 45 · 48 pour `large`. **Aucune des deux valeurs ci-dessous n'y
+   * correspond** — ni un champ, ni la médiane, ni le maximum. Elles viennent d'un corpus
+   * externe qui n'est pas versionné ici, donc personne ne peut les contrôler depuis ce
+   * dépôt.
+   *
+   * La valeur n'est pas changée ici : la déplacer déplacerait des montants dans un document
+   * commercial, et c'est une décision, pas une maintenance. Ce qui change, c'est que la
+   * provenance est désormais une donnée — datée, nommée, et marquée non dérivable — et
+   * qu'elle VOYAGE avec le chiffre jusque dans le document.
+   */
+  const LATENCE_RATTRAPAGE = {
+    small: 32,
+    large: 59,
+    /** Le jour où elle a cessé d'être une mesure pour devenir une hypothèse qu'on garde. */
+    geleeLe: "2026-08-20",
+    /** Ce qui manque pour la re-dériver, nommé : « non dérivable » seul ne dit pas quoi faire. */
+    corpusAbsent: "OFAC SDN list is not shipped here",
+    /** Vrai le jour où ces deux valeurs se lisent dans un relevé d'ici. Pas aujourd'hui. */
+    derivableIci: false,
+  } as const;
+  const msParChamp = { small: LATENCE_RATTRAPAGE.small, large: LATENCE_RATTRAPAGE.large };
   const coutRattrapage = (ms: number) =>
     Math.round(3 * ASSUMPTIONS.volume * ms / 1000 / 3600 * ASSUMPTIONS.machineHourlyCost);
   w(`distribution those three fields fall back to a measured tier. That is machine time on the`);
   w(`client's own hardware, not a provider fee — ${symboleDe(UNITS.budget)}${coutRattrapage(msParChamp.small)} to`);
   w(`${symboleDe(UNITS.budget)}${coutRattrapage(msParChamp.large)} per period at the declared volume,`);
-  w(`against a published ${symboleDe(UNITS.budget)}${Math.round(191)} for the whole routing.`);
+  /*
+   * UNE SEULE SOURCE POUR UNE SEULE GRANDEUR.
+   *
+   * Cette ligne portait `${Math.round(191)}` — un littéral enveloppé dans un arrondi, ce qui
+   * le faisait tenir visuellement dans la même famille que les deux montants dérivés juste
+   * au-dessus. Vingt lignes plus bas, la MÊME grandeur s'écrit `${euro(s.cost)}`, elle
+   * dérivée du relevé. Les deux rendaient `$191`, donc rien ne se voyait — jusqu'au jour où
+   * `s.cost` bouge : une ligne suivrait, l'autre resterait, et `--check` figerait la
+   * contradiction comme référence.
+   *
+   * `euro(s.cost)` rend exactement ce que le littéral rendait aujourd'hui : le document
+   * publié ne bouge pas d'un caractère. Ce qui change, c'est qu'il ne PEUT plus diverger.
+   */
+  w(`against a published ${euro(s.cost)} for the whole routing.`);
+  w(``);
+  w(`The two amounts above rest on a **frozen assumption, not a measurement**: the `);
+  w(`per-field latencies behind them were fixed on ${LATENCE_RATTRAPAGE.geleeLe} and are `);
+  w(`**not re-measurable from this repository**: the ${LATENCE_RATTRAPAGE.corpusAbsent}. `);
+  w(`Every other figure in this document derives from the sealed record shipped with it; `);
+  w(`these two do not, and you cannot check them here.`);
   w(``);
   w(`This is disclosed rather than corrected, because widening either the rule or the corpus`);
   w(`moves the headline figure, and that is a decision rather than maintenance.`);
