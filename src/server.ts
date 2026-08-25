@@ -297,9 +297,27 @@ export function sansChemins(texte: string): string {
  *
  * Mesuré le 25 août 2026 : ZÉRO en-tête de sécurité sur toute réponse. Trouvé par un balayage,
  * et c'est le seul de ses quatre signalements sur ce fichier qui ait résisté à la mesure — la
- * garde d'origine refuse bien une page étrangère (403, éprouvé), la route la plus chère coûte
- * une dizaine de millisecondes de travail réel, et le compteur partagé sur la boucle locale
- * est déjà écrit plus haut comme inhérent.
+ * garde d'origine refuse bien une page étrangère (403, éprouvé), et le compteur partagé sur
+ * la boucle locale est déjà écrit plus haut comme inhérent.
+ *
+ * LE COÛT DES ROUTES PORTE MAINTENANT SON ÉTAT. La version précédente de cette phrase — « la
+ * route la plus chère coûte une dizaine de millisecondes » — était fausse dans un sens
+ * pendant qu'une trouvaille d'audit l'était dans l'autre, avec « 239 requêtes ont occupé
+ * 337 s ». Les deux chiffres avaient été pris sur des états différents sans le dire. Mesuré
+ * le 26 août 2026, serveur seul sur un port libre :
+ *
+ *     /api/routage      1,1 ms au premier appel, 0,6 à 1,0 ms ensuite
+ *     /api/etat         3,3 ms puis 0,9 ms
+ *     /api/hypotheses   2,2 ms
+ *     /api/optimum      1 743 ms AU PREMIER APPEL, puis 46 à 59 ms
+ *
+ * Les 337 s supposaient ~1,4 s par requête : c'est le coût FROID de `/api/optimum`, payé une
+ * seule fois. Éprouvé en variant la charge utile à chaque appel, pour qu'un cache trop facile
+ * ne se fasse pas passer pour le vrai tiède — 240 requêtes coûtent 11 à 14 s dans une fenêtre
+ * de 60 s, pas 337.
+ *
+ * Un chiffre qui ne porte pas l'état dans lequel il a été pris ne voyage pas : il se fait
+ * citer.
  *
  * Ce qu'ils protègent VRAIMENT dans un outil local, sans le survendre : la page charge son
  * propre script et sa propre feuille, jamais rien d'externe. Une politique stricte transforme
@@ -368,6 +386,41 @@ async function ecouteur(req: IncomingMessage, res: ServerResponse, cheminUi: str
   res.setHeader("content-security-policy", politiqueDeContenu(jeton));
   const url = new URL(req.url ?? "/", `http://localhost:${PORT}`);
   const adresse = req.socket.remoteAddress ?? "inconnue";
+
+  /*
+   * ─── LA GARDE D'ORIGINE PASSE AVANT LE COMPTEUR, ET C'EST TOUT LE CORRECTIF ───
+   *
+   * Le compteur s'incrémentait en premier. Une page hostile ouverte dans un autre onglet
+   * voyait donc ses écritures refusées — la garde faisait son travail, 403 à chaque fois —
+   * **et son refus coûtait quand même le quota de l'acheteur**. Mesuré le 26 août 2026 :
+   *
+   *     240 requêtes portant « Origin: http://evil.example »  → toutes refusées 403
+   *     puis une requête légitime de l'écran                  → HTTP 429
+   *     puis la page elle-même                                → HTTP 429
+   *
+   * Un déni de service à un onglet de distance, sans authentification et sans outil, contre
+   * l'écran qui sert à vendre. Et invisible dans tout relevé : des 403 d'un côté, un 429 de
+   * l'autre, et rien qui relie les deux.
+   *
+   * Un contrôle correct dont le prix est payé par la victime n'est pas un contrôle.
+   *
+   * CE QUI RESTE, dit plutôt que taire : une page étrangère peut encore faire émettre des 403,
+   * qui coûtent une réponse chacun. C'est le même coût qu'elle peut déjà infliger à n'importe
+   * quel port de la boucle locale, et la boucle locale n'a jamais été la frontière — c'est
+   * écrit plus haut. Ce qui change, c'est qu'elle ne peut plus fermer l'écran de quelqu'un
+   * d'autre.
+   */
+  if (req.method === "POST") {
+    const venueDAilleurs = origineEtrangere(req);
+    if (venueDAilleurs !== null) {
+      return json(res, {
+        erreur: `write refused: this request comes from ${venueDAilleurs}, not from this screen. `
+          + `Listening on the loopback protects against the network, not against the browser — `
+          + `a page open in another tab can post here with nothing to show for it.`,
+      }, 403);
+    }
+  }
+
   const restantes = compter(adresse);
   if (restantes === null) {
     res.writeHead(429, {
@@ -384,16 +437,6 @@ async function ecouteur(req: IncomingMessage, res: ServerResponse, cheminUi: str
   }
   res.setHeader("x-ratelimit-remaining", String(restantes));
   try {
-    if (req.method === "POST") {
-      const etrangere = origineEtrangere(req);
-      if (etrangere !== null) {
-        return json(res, {
-          erreur: `write refused: this request comes from ${etrangere}, not from this screen. `
-            + `Listening on the loopback protects against the network, not against the browser — `
-            + `a page open in another tab can post here with nothing to show for it.`,
-        }, 403);
-      }
-    }
     if (url.pathname === "/") {
       /*
        * Le jeton se pose sur le script EN LIGNE. On REFUSE plutôt que de remplacer en silence :
