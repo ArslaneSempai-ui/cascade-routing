@@ -350,7 +350,7 @@ const racine = (process.argv[2] ?? ".").replace(/\/$/, "") + "/";
 const attendu = Number(process.argv[3] ?? 1);
 const docs = racine + "docs";
 if (!existsSync(docs + "/index.html")) {
-  console.error(`${docs}/index.html absent — lancer \`npm run pages\` d'abord`);
+  console.error(`${docs}/index.html is missing — run \`npm run pages\` first`);
   process.exit(1);
 }
 
@@ -552,7 +552,7 @@ try {
    * ne ferme pas les processus déjà lancés : c'est une leçon à part entière.
    */
   if (soucis.length) {
-    console.error("l'écran construit ne s'affiche pas correctement :");
+    console.error("the built screen does not render correctly:");
     for (const s of soucis) console.error(`  ${s}`);
     process.exitCode = 1;
   } else {

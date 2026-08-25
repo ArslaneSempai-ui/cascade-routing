@@ -21,9 +21,9 @@
     "comment": "node --test --experimental-test-coverage src/*.test.ts, ligne « all files »"
   },
   "catalogue": {
-    "occurrences": 27,
+    "occurrences": 8,
     "mesureLe": "2026-08-25",
-    "comment": "node ~/.claude/skills/equipe/scripts/pieges.mjs <CHEMIN ABSOLU> — 21 des 27 sont la façade française, les 6 autres 2 `harnais-sans-remise-a-neuf` et 4 `devise-tapee`. DESCENDU DE 67 À 27 LE 25 AOÛT 2026 SANS TRADUIRE UNE SEULE LIGNE : la règle elle-même était fausse à 60 %. Trois corrections, chacune avec sa contre-épreuve dans les deux sens : les interpolations `${…}` sont retirées avant le test (un identifiant écrit dans la langue de travail n'est pas une phrase), « on » et « plus » sont sortis de la liste FR (homographes des deux mots anglais les plus courants), et onze mots que l'anglais n'a pas y sont entrés (ne, au, aux, se, ses, sa, déjà, jamais, toujours, même, être). Ce dernier point est le plus important : retirer « plus » avait PERDU « SECURITE.md ne correspond plus au code », vraie sortie française qui ne tenait que par son mot le plus ambigu. Les 3 faux positifs signalés par la session bd (journal.ts:106, :150, charger.mjs:76) sont fermés par la même correction. LES 21 QUI RESTENT SONT DU VRAI FRANÇAIS et se traduisent. Le chemin passé au script doit être ABSOLU : le dossier courant ne survit pas d'un appel à l'autre, et un relevé pris ailleurs rend un chiffre qui n'est pas celui de ce dépôt.",
+    "comment": "node ~/.claude/skills/equipe/scripts/pieges.mjs <CHEMIN ABSOLU> — 8 = 2 façade + 2 `harnais-sans-remise-a-neuf` + 4 `devise-tapee`. Descendu de 27 à 8 le 25 août 2026 : les 19 dernières sorties françaises sont traduites, dans onze fichiers. IL NE RESTE PLUS AUCUN VRAI FRANÇAIS. Les 2 occurrences `facade-en-francais` restantes sont un TROISIÈME faux positif de la règle, encore non corrigé : `src/dossier.ts:516` et `:553` sont des phrases anglaises qui contiennent le nom de la commande `npm run dossier`, et « dossier » est dans la liste FR. Le remède serait de retirer les spans entre accents graves avant le test, comme on retire déjà les interpolations : un littéral cité dans une sortie n'est pas de la prose. Renommer la commande pour satisfaire l'outil serait changer l'interface publique du dépôt pour un faux positif.",
     "parPiege": {
       "facade-en-francais": 21,
       "harnais-sans-remise-a-neuf": 2,

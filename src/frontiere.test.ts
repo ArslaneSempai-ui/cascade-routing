@@ -8,10 +8,10 @@ import { exigerHoteLocal, estLocal } from "./tiers.ts";
 const dossier = fileURLToPath(new URL(".", import.meta.url));
 
 test("un document ne part pas vers un hôte qui n'est pas cette machine", () => {
-  assert.throws(() => exigerHoteLocal("http://192.0.2.10:11434"), /pas cette machine/);
-  assert.throws(() => exigerHoteLocal("https://api.exemple.com"), /pas cette machine/);
+  assert.throws(() => exigerHoteLocal("http://192.0.2.10:11434"), /not this machine/);
+  assert.throws(() => exigerHoteLocal("https://api.exemple.com"), /not this machine/);
   /* Le nom qui COMMENCE par une adresse locale et continue ailleurs. */
-  assert.throws(() => exigerHoteLocal("http://127.0.0.1.evil.example:11434"), /pas cette machine/);
+  assert.throws(() => exigerHoteLocal("http://127.0.0.1.evil.example:11434"), /not this machine/);
   assert.doesNotThrow(() => exigerHoteLocal("http://localhost:11434"));
   assert.doesNotThrow(() => exigerHoteLocal("http://127.0.0.1:11434"));
   assert.doesNotThrow(() => exigerHoteLocal("http://[::1]:11434"));
@@ -24,7 +24,7 @@ test("le refus dit ce qui partirait, et comment consentir", () => {
   try { exigerHoteLocal("http://192.0.2.10:11434"); assert.fail("aucun refus"); }
   catch (e) {
     const m = (e as Error).message;
-    assert.match(m, /données personnelles|pièce d'identité/);
+    assert.match(m, /personal data|identity document/);
     assert.match(m, /--remote-ollama/);
     assert.match(m, /OLLAMA_HOST/, "le message ne dit pas où le réglage a été pris.");
   }

@@ -524,12 +524,12 @@ export function exigerHoteLocal(url: string = OLLAMA): void {
   if (estLocal(url)) return;
   if (process.argv.includes("--remote-ollama")) return;
   throw new Error(
-    `refus d'envoyer un document à « ${url} », qui n'est pas cette machine.\n\n`
-    + "  Ce que vous mesurez peut contenir des données personnelles : noms, dates de\n"
-    + "  naissance, adresses, numéros de pièce d'identité. Elles partiraient chez un tiers.\n\n"
-    + "  Si c'est voulu, écrivez-le dans la commande : --remote-ollama\n"
-    + "  Sinon, retirez OLLAMA_HOST de votre environnement — il vient peut-être d'un .env\n"
-    + "  que vous n'avez pas relu.");
+    `refusing to send a document to "${url}", which is not this machine.\n\n`
+    + "  What you are measuring may contain personal data: names, dates of birth,\n"
+    + "  addresses, identity document numbers. They would leave for a third party.\n\n"
+    + "  If that is intended, say so in the command: --remote-ollama\n"
+    + "  Otherwise remove OLLAMA_HOST from your environment — it may come from a .env\n"
+    + "  you have not read.");
 }
 
 /**
@@ -630,9 +630,9 @@ async function ollama(tier: TierName, prompt: string, schema: unknown): Promise<
           + `évincé : vérifier \`ollama ps\`. Les paliers déjà mesurés gardent leurs chiffres.`);
     }
     throw new Error(
-      `Ollama injoignable sur ${OLLAMA}. L'échelle générative est optionnelle : ` +
-      `\`npm run measure\` sans \`--llm\` mesure les encodeurs et n'a besoin de rien. ` +
-      `Pour celle-ci : \`brew install ollama\`, \`ollama serve\`, puis ` +
+      `Ollama unreachable at ${OLLAMA}. The generative scale is optional: ` +
+      `\`npm run measure\` without \`--llm\` measures the encoders and needs nothing. ` +
+      `For this one: \`brew install ollama\`, \`ollama serve\`, then ` +
       `${Object.values(MODELES_LOCAUX).map((x) => `\`ollama pull ${x.tag}\``).join(", ")}.`);
   }
   if (!r.ok) throw new Error(`Ollama answered ${r.status} for ${m.tag}`);

@@ -81,7 +81,7 @@ function casDemandes(defaut: number): number {
   const n = Number(brut);
   if (!Number.isFinite(n) || !Number.isInteger(n) || n <= 0) {
     process.stderr.write(
-      `\n  --cases=${brut} n'est pas un nombre de dossiers.\n`
+      `\n  --cases=${brut} is not a number of records.\n`
       + `  Il en faut un entier strictement positif. Une mesure sur zéro dossier n'est pas\n`
       + `  une mesure, et elle laisserait derrière elle un fichier qui en a l'air.\n\n`);
     process.exit(1);

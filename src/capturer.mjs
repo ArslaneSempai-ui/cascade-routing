@@ -358,7 +358,7 @@ const lance = (() => {
 
 if (lance) {
   const depot = process.argv[2];
-  if (!depot) { console.error("usage : node capturer.mjs <dossier-du-depot>"); process.exit(1); }
+  if (!depot) { console.error("usage: node capturer.mjs <repository-directory>"); process.exit(1); }
   const racine = depot.endsWith("/") ? depot : depot + "/";
   const plan = JSON.parse(readFileSync(racine + "captures.json", "utf8"));
 

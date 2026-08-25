@@ -1051,7 +1051,7 @@ const chapeau = (() => {
  */
 const chaines = (() => {
   const opt = optimiseExtraction(p!, h)?.routing;
-  if (!opt) throw new Error("l'optimiseur ne rend pas de routage : cette phrase ne peut pas être écrite.");
+  if (!opt) throw new Error("the optimiser returns no routing: this sentence cannot be written.");
   const compte = (t: string) => FIELDS.filter((f) => opt[f] === t).length;
   const gratuits = compte("rules");
   const grand = compte("large");
@@ -1185,7 +1185,7 @@ const documentBloc = (() => {
  */
 const leviers = (() => {
   const cheminExp = fileURLToPath(new URL("../exposition.json", import.meta.url));
-  if (!existsSync(cheminExp)) throw new Error("exposition.json absent — restaurez-le avec « git checkout exposition.json ».");
+  if (!existsSync(cheminExp)) throw new Error("exposition.json is missing — restore it with `git checkout exposition.json`.");
   const exp = JSON.parse(readFileSync(cheminExp, "utf8")) as { seuil: { bas: number; haut: number } | null };
 
   const abst = (() => {
@@ -1198,7 +1198,7 @@ const leviers = (() => {
     const r = l.abstention?.rules?.find((x) => x.breakEvenCostRatio !== null);
     return r && l.abstention ? { ...r, ...l.abstention } : null;
   })();
-  if (!abst) throw new Error("landing.json ne porte pas de frontiere d'abstention exploitable.");
+  if (!abst) throw new Error("landing.json carries no usable abstention boundary.");
 
   const seuilRoutage = exp.seuil ? exp.seuil.bas : null;
   const seuilAbstention = abst.breakEvenCostRatio!;
@@ -1255,7 +1255,7 @@ const frontiere = (() => {
         neverSacrificesInterval: number[] | null }[] } | null;
   };
   const a = l.abstention;
-  if (!a) throw new Error("landing.json ne porte pas de frontiere d'abstention.");
+  if (!a) throw new Error("landing.json carries no abstention boundary.");
 
   const parCent = (x: number) => (100 * x) / a.valuesMeasured;
   const heures = (n: number) => (n * h.humanSeconds) / 3600;

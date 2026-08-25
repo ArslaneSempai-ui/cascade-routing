@@ -47,7 +47,7 @@ if (isMain(import.meta)) {
   })();
   if (version?.sale) { console.error("\nModified tree: commit before measuring.\n"); process.exit(1); }
 
-  console.log(`\n${PALIERS.length} paliers × ${FORMULATIONS.length} formulations × ${FIELDS.length} champs × ${cas} cas, sur \`dev\`.`);
+  console.log(`\n${PALIERS.length} tiers × ${FORMULATIONS.length} phrasings × ${FIELDS.length} fields × ${cas} cases, on \`dev\`.`);
   console.log(`Load before starting: ${loadavg()[0]!.toFixed(2)} on ${cpus().length} cores.\n`);
   const journal = ouvrirJournal("apparier", {
     quoi: "Le classement de gen-4b et gen-8b dépend-il de la formulation ?", split: "dev", cases: cas,

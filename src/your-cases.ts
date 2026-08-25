@@ -1345,7 +1345,7 @@ Nothing leaves your machine: the models are local and this path makes no network
         }
       }
     } else {
-      console.log(`  tous les identifiants correspondent.`);
+      console.log(`  every identifier matches.`);
     }
   }
 

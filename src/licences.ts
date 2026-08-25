@@ -272,7 +272,7 @@ function principal() {
     process.exit(1);
   }
   if (!existsSync("node_modules")) {
-    console.error("node_modules/ absent : l'inventaire ne peut pas être fait.\nLancez « npm install », puis « npm run licences ».");
+    console.error("node_modules/ is missing: the inventory cannot be taken.\nRun `npm install`, then `npm run licences`.");
     process.exit(1);
   }
   const moi = JSON.parse(readFileSync("package.json", "utf8"));
@@ -284,7 +284,7 @@ function principal() {
     const differe = (f: string, attendu: string) => !existsSync(f) || readFileSync(f, "utf8") !== attendu;
     const perimes = [["LICENCES.md", md], ["sbom.json", bom]].filter(([f, a]) => differe(f, a)).map(([f]) => f);
     if (perimes.length > 0) {
-      console.error(`${perimes.join(" et ")} ne correspond plus à l'arbre installé.\n\nRun: npm run licences`);
+      console.error(`${perimes.join(" and ")} no longer matches the installed tree.\n\nRun: npm run licences`);
       process.exit(1);
     }
     console.log(`LICENCES.md and sbom.json are up to date (${paquets.length} packages, ${temoins().length === 0 ? "witnesses green" : "WITNESSES BROKEN"}).`);

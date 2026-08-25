@@ -108,7 +108,7 @@ export async function mesurer(combien = 120, paliers: TierName[] = [...ENCODEURS
       + "anything that reads it will say its code cannot be found again.");
   }
   if (version?.sale) {
-    process.stderr.write("\n  ARBRE MODIFIÉ — ce relevé ne sera pas refaisable à l'identique.\n\n");
+    process.stderr.write("\n  TREE MODIFIED — this record will not be reproducible as it stands.\n\n");
   }
 
   const dossier = join(dirname(SORTIE), "data", "ocr");

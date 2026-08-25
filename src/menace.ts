@@ -538,7 +538,7 @@ function principal() {
   if (process.argv.includes("--check")) {
     const f = join(racine, "SECURITE.md");
     if (!existsSync(f) || readFileSync(f, "utf8") !== md) {
-      console.error("SECURITE.md ne correspond plus au code.\n\nRun: npm run menace");
+      console.error("SECURITE.md no longer matches the code.\n\nRun: npm run menace");
       process.exit(1);
     }
     const nonTenus = c.filter((x) => x.verdict === "non tenu");
