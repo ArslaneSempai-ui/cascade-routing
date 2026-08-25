@@ -4,6 +4,18 @@
   "howEntriesAreEstablished": "Never by assumption. A successor is named only when it is bracketed on both sides: by content, because the relevé carries a field the successor's code introduces and its predecessor's does not; and by time, because the pass began after that commit and no other commit exists before the pass ended. Both are stated per entry so a reader can redo the reasoning.",
   "entries": [
     {
+      "missing": "679bf752e323da600fe1ab8f3b6ae89066e406a0",
+      "nowAt": "b916b9bc01dfcf5aa382b572577205a3b2412ffd",
+      "citedBy": [
+        "survivants.json"
+      ],
+      "establishedBy": "recorded at rewrite time, not inferred",
+      "contentEvidence": "The two commits name the SAME TREE. The rewrite changed authorship only: `git diff sauvegarde-avant-signatures HEAD` returned zero lines across the whole branch, and the 37 subjects map one to one between the old branch and the new. This entry is the only one in this file that did not have to be reasoned out afterwards.",
+      "timeEvidence": "Not needed here, and saying so matters: the other entries in this file infer a successor from timing because the mapping was lost. This one was written down while it was still known.",
+      "limit": "The old object is still reachable through `refs/original/refs/heads/main` and the branch `sauvegarde-avant-signatures` in this working copy, but neither travels with a clone. A reader who fetches this repository will not find 679bf75 at all — which is exactly why the mapping is written here rather than left to a reflog.",
+      "whyTheRewrite": "Eleven commits were authored `a <a@a>` and two `t <t@t>`: a worktree does not own its git configuration, so `git -C <worktree> config user.name` wrote into the shared .git/config and signed everyone's work. Nothing had been pushed, so the public history never carried it."
+    },
+    {
       "missing": "64bdacf",
       "nowAt": "19d19e8",
       "citedBy": [

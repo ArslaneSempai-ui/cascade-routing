@@ -31,6 +31,29 @@
 # sept cas rouges d'affilée, dont un à 50 secondes, puis sept verts en relançant seul.
 #
 # Élargir les bornes serait l'élargissement gratuit. On refuse de démarrer, en le disant.
+# ─── LA CONFIGURATION DU DÉPÔT SE FAIT CORROMPRE, ET SILENCIEUSEMENT ───
+#
+# Deux fois le 26 août 2026, `.git/config` de ce dépôt s'est retrouvé avec `bare = true` et une
+# section `[user] t <t@t>` venue de nulle part. Conséquences vécues : `git status` refuse de
+# tourner pour les cinq sessions à la fois, et treize commits partent signés d'un nom faux —
+# il a fallu réécrire l'historique pour les reprendre.
+#
+# La cause exacte n'est pas établie, et on ne l'attend pas pour se protéger. Ce contrôle
+# RÉPARE et le DIT : une corruption silencieuse qu'on découvre une heure plus tard coûte cent
+# fois une ligne de sortie. Il tourne en tête, avant tout le reste, parce qu'un dépôt marqué
+# nu fait échouer tout ce qui suit avec des messages qui n'ont aucun rapport.
+if [ "$(git config --get core.bare)" = "true" ]; then
+  git config --unset core.bare
+  printf '\n  RÉPARÉ : ce dépôt était marqué `bare = true` et ne pouvait plus rien faire.\n'
+  printf '  Ce n était pas vous. La cause n est pas établie ; dites-le à la session qui coordonne.\n\n'
+fi
+if git config --local --get user.email >/dev/null 2>&1; then
+  ancienne=$(git config --local --get user.email)
+  git config --remove-section user 2>/dev/null
+  printf '\n  RÉPARÉ : ce dépôt portait une identité locale `%s` qui gagnait sur la vôtre.\n' "$ancienne"
+  printf '  Vérifiez `git log --format=%%an` sur vos derniers commits — ils peuvent être mal signés.\n\n'
+fi
+
 CHARGE=$(uptime | sed -E 's/.*averages?: *([0-9.]+).*/\1/' | tr -d ' ')
 COEURS=$(sysctl -n hw.ncpu 2>/dev/null || nproc 2>/dev/null || echo 4)
 if [ "$(echo "$CHARGE > $COEURS * 2" | bc -l 2>/dev/null || echo 0)" = "1" ]; then
@@ -47,8 +70,10 @@ if [ "$(echo "$CHARGE > $COEURS * 2" | bc -l 2>/dev/null || echo 0)" = "1" ]; th
 fi
 
 echo "  contrôle des documents engendrés…"
-if ! (node src/readme.ts --check && node src/landing.ts --check \
-      && node src/dossier.ts --check && node src/sonde.ts --check) > /tmp/cascade-pre-commit.log 2>&1; then
+# Les contrôles de documents lancent git pour lire des empreintes de commit : eux aussi doivent
+# ignorer l'index du commit en cours. Aucune exception — tout ce que le crochet lance.
+if ! (env -u GIT_INDEX_FILE sh -c 'node src/readme.ts --check && node src/landing.ts --check \
+      && node src/dossier.ts --check && node src/sonde.ts --check') > /tmp/cascade-pre-commit.log 2>&1; then
   echo ""
   echo "  DOCUMENT ENGENDRÉ PÉRIMÉ — ce commit livrerait une page qui ne suit plus le code."
   echo ""
@@ -154,7 +179,14 @@ if ! sortie=$(env -u GIT_INDEX_FILE node --test src/*.test.ts src/*.test.mjs 2>&
   if [ -n "$fichiers" ]; then
     printf '  %s fichier(s) rouge(s) — relance seule pour distinguer la charge du défaut…\n' \
       "$(printf '%s\n' "$fichiers" | wc -l | tr -d ' ')"
-    if seul=$(node --test $fichiers 2>&1); then
+    # `env -u` ICI AUSSI, ET C'EST LA LEÇON. Le correctif d'origine protégeait la suite
+    # nominale et laissait cette relance nue. Une session voisine l'a mesuré vingt minutes plus
+    # tard : un fichier rouge sous charge, la relance annoncée, et `clone-neuf.test.mjs` a écrit
+    # dans l'index de SON arbre — emportant son travail indexé dans un commit nommé `base`, puis
+    # échouant sur sa propre assertion de montage parce qu'il lisait un index qui n'était pas
+    # le sien. LE CHEMIN DE DIAGNOSTIC EST CELUI QU'ON N'EMPRUNTE QUE QUAND ÇA VA DÉJÀ MAL,
+    # donc celui qu'on éprouve le moins, donc celui où une protection manque sans se voir.
+    if seul=$(env -u GIT_INDEX_FILE node --test $fichiers 2>&1); then
       printf '\n  LA SUITE A MENTI SOUS CHARGE %s.\n\n' "$CHARGE"
       printf '%s\n' "$sortie" | grep -E '^✖' | head -4 | sed 's/^/    /'
       printf '\n  Relancés seuls, ces fichiers passent. Le commit continue, mais aucune mesure de\n'

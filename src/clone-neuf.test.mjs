@@ -147,7 +147,17 @@ test("un clone propre franchit l'étape et atteint bien l'installation", () => {
 test("un clone n'emporte pas l'index de son appelant", () => {
   const d = mkdtempSync(join(tmpdir(), "cascade-index-"));
   const depot = join(d, "depot");
-  const git = (args, cwd = depot, env = process.env) =>
+  /*
+   * CE CAS DOIT SURVIVRE À SON PROPRE SUJET. Lancé depuis un crochet, il hérite du
+   * `GIT_INDEX_FILE` du commit en cours — et alors son `git add` écrit dans l'index de
+   * l'appelant au lieu du sien, son assertion de montage tombe en accusant le montage, et
+   * le travail indexé de quelqu'un d'autre part avec. Mesuré chez une session voisine :
+   * elle a perdu un commit et son arbre s'est retrouvé sur un « base » fabriqué ici.
+   * Un cas qui éprouve une fuite d'environnement doit d'abord se protéger de cette fuite.
+   */
+  const propre = { ...process.env };
+  delete propre.GIT_INDEX_FILE; delete propre.GIT_DIR; delete propre.GIT_WORK_TREE;
+  const git = (args, cwd = depot, env = propre) =>
     execFileSync("git", args, { cwd, stdio: "pipe", env });
 
   mkdirSync(depot, { recursive: true });
@@ -158,8 +168,11 @@ test("un clone n'emporte pas l'index de son appelant", () => {
 
   writeFileSync(join(depot, "g.txt"), "indexé et attendu\n");
   git(["add", "g.txt"]);
+  /* `propre` ici aussi : sans lui, la LECTURE de l'index vise celui de l'appelant, et le cas
+     rend un verdict sur l'index de quelqu'un d'autre. La protection doit couvrir ce qui lit
+     autant que ce qui écrit — c'est la moitié qu'on oublie. */
   const indexe = () => execFileSync("git", ["diff", "--cached", "--name-only", "HEAD"],
-    { cwd: depot, encoding: "utf8" }).trim();
+    { cwd: depot, encoding: "utf8", env: propre }).trim();
   assert.equal(indexe(), "g.txt", "le montage est faux : rien n'est indexé avant le clone.");
 
   /*
@@ -168,7 +181,7 @@ test("un clone n'emporte pas l'index de son appelant", () => {
    * le cas passe au vert en n'ayant rien éprouvé. Mesuré — la première version de ce témoin
    * restait verte avec le défaut remis, et se serait fait rapporter comme une preuve.
    */
-  const poison = join(depot, ".git", "index");
+  const poison = join(depot, ".git", "index");   /* l'index DU DÉPÔT JETABLE, jamais celui de l'appelant */
   const avant = process.env.GIT_INDEX_FILE;
   process.env.GIT_INDEX_FILE = poison;
   try { clonerNeuf(depot, join(d, "clone"), null); }
