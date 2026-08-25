@@ -1046,7 +1046,7 @@ export async function mesurerVosCas(
         });
         /* La forme est notée EN MÊME TEMPS que la justesse, sur le même appel : deux
            parcours séparés diraient un jour deux choses différentes du même corpus. */
-        if (noter(palier, champ, got, c.truth[champ]!) === "juste") bons++;
+        if (noter(palier, champ, got, c.truth[champ]!, borne.texte) === "juste") bons++;
         /* Noté faux, mais avec exactement les mêmes mots : c'est un désaccord de convention.
            On compte, on ne garde rien — le compte reste chez le client comme le reste. */
         else if (memesMots(got, c.truth[champ]!)) desordre++;
