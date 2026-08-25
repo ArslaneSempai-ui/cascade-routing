@@ -628,3 +628,40 @@ qu'elle est un point d'arrêt — a été examinée et abandonnée : il faudrait
 sites le sachent et le disent dans une forme stable, ce qui coûte plus que le défaut.
 **Toute règle mécanisable ne l'est pas au bon prix**, et une règle mécanisée à contrecœur se
 retire à la première gêne. Celle-ci reste une habitude de lecture, et c'est sa place.
+
+## `git commit -- <chemins>` lit l'arbre, pas l'index — et vide l'index au passage
+
+Payé le 25 août 2026, sur un relevé de mesure.
+
+La forme `git commit -- <chemins>` est celle qu'on conseille pour n'emporter que son
+travail quand plusieurs sessions écrivent dans le même dépôt. Elle fait deux choses
+qu'on n'attend pas :
+
+- elle commite le contenu de **l'arbre de travail**, pas celui de l'index — donc une
+  version soigneusement indexée n'est pas celle qui part ;
+- elle **vide l'index** des chemins nommés au passage : `git diff --cached` retombe à
+  zéro après, sans un mot.
+
+Ce qui a été observé : un commit accepté **sans `--allow-empty`, portant zéro fichier**,
+avec son message complet. Aucune erreur, aucun refus. Il n'a été vu qu'en relisant
+`git status` après coup, et la mesure qu'il devait emporter avait disparu.
+
+**La forme qui tient : `git add <tes chemins>` puis `git commit` nu.** Elle n'emporte
+que ce qui a été nommé, comme l'autre, et elle ne dépend pas de l'état de l'arbre au
+moment où le crochet travaille.
+
+### Ce qui n'est PAS la cause, et c'est la partie qui coûte
+
+Le message de commit `af9ade4` de ce dépôt affirme que le crochet « isole l'arbre de
+travail » pendant qu'il tourne. **C'est faux, et ça n'a jamais été vérifié.** Le crochet
+ne contient aucune commande qui touche à l'arbre : la seule occurrence de `git stash` y
+est un texte de conseil dans un `printf`. Une session voisine l'a lu ligne à ligne.
+
+Le fait observé — l'arbre revenu à sa version committée — est réel et sa cause est
+inconnue. Le mécanisme publié était une explication plausible écrite à la place d'une
+mesure, et il est resté dans un message de commit, c'est-à-dire à un endroit qu'on ne
+peut plus corriger. C'est la faute la plus chère des deux : le commit vide se rattrape
+en une commande, une cause inventée se recopie.
+
+**Un fait observé et une cause supposée ne s'écrivent pas de la même encre.** Si la
+cause n'a pas été éprouvée, elle s'écrit « cause inconnue ».

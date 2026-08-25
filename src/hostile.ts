@@ -260,11 +260,12 @@ async function principal(): Promise<void> {
     const attendu = page(r);
     const actuel = readFileSync(PAGE, "utf8");
     if (attendu !== actuel) {
-      console.error("\n  CORPUS-HOSTILE.md ne correspond plus à corpus-hostile.json.");
-      console.error("  Relance `npm run hostile` (mesure), ou régénère la page si le relevé n'a pas bougé.\n");
+      console.error("\n  CORPUS-HOSTILE.md no longer matches corpus-hostile.json.");
+      console.error("  Run `npm run hostile` to measure again, or regenerate the page if the");
+      console.error("  record itself has not moved.\n");
       process.exit(1);
     }
-    console.log(`  CORPUS-HOSTILE.md est conforme au relevé du ${r.mesureLe.slice(0, 10)}.`);
+    console.log(`  CORPUS-HOSTILE.md matches the record measured ${r.mesureLe.slice(0, 10)}.`);
     return;
   }
 
@@ -276,10 +277,10 @@ async function principal(): Promise<void> {
   if (sale) {
     const quoi = codeNonCommite(execFileSync("git", ["status", "--porcelain"],
       { cwd: racine, encoding: "utf8" }));
-    console.error("\n  Du code n'est pas dans le commit — commite avant de mesurer :");
+    console.error("\n  This code is not in the commit — commit before measuring:");
     for (const f of quoi.slice(0, 8)) console.error(`    ${f}`);
-    console.error("\n  Un relevé estampillé d'un commit qui ne contient pas le code mesuré porte");
-    console.error("  une fausse provenance, et une fausse provenance se cite.\n");
+    console.error("\n  A record stamped with a commit that does not contain the measured code");
+    console.error("  carries a false provenance, and a false provenance gets quoted.\n");
     process.exit(1);
   }
 
@@ -339,7 +340,7 @@ async function principal(): Promise<void> {
   console.log(`\n  ${parPalier.join(" · ")}`);
   const jf = journal.fermer();
   console.log(`  ${jf.lignes} attempts in ${jf.chemin.split("/").slice(-2).join("/")}`);
-  console.log(`  Relevé : corpus-hostile.json · page : CORPUS-HOSTILE.md\n`);
+  console.log(`  Record: corpus-hostile.json · page: CORPUS-HOSTILE.md\n`);
 }
 
 if (isMain(import.meta)) await principal();
