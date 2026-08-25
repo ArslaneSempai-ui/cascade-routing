@@ -159,7 +159,24 @@ export function sbom(paquets: Paquet[], nom: string, version: string) {
       name: p.nom,
       version: p.version,
       licenses: p.declaree ? [{ license: { id: p.declaree } }] : [],
-      purl: `pkg:npm/${p.nom.replace("@", "%40")}@${p.version}`,
+      /*
+       * `replaceAll`, PAS `replace` — ET LA RAISON N'EST PAS CELLE QUE CODEQL DONNE.
+       *
+       * Signalé comme « ne remplace que la première occurrence ». Pour un nom de paquet npm
+       * légitime c'est exactement ce qu'il faut : `@scope/nom` doit devenir `%40scope/nom` et
+       * le `@` de la version, ajouté juste après, doit rester tel quel. La grammaire npm
+       * n'autorise pas un second `@` dans un nom.
+       *
+       * Mais `p.nom` retombe sur le NOM DE DOSSIER quand `package.json` n'a pas de champ
+       * `name` (voir plus haut, `m.name ?? dir`), et un nom de dossier n'a aucune de ces
+       * garanties. Le `purl` publié dans la nomenclature deviendrait alors invalide — dans le
+       * document même qu'un service achats lit pour vérifier ce qu'on embarque.
+       *
+       * Le coût de la version sûre est nul, parce qu'un nom légitime ne porte qu'un seul `@`.
+       * Se fier à une grammaire pour un chemin qui la contourne est le genre de raccourci
+       * qu'on paie une fois.
+       */
+      purl: `pkg:npm/${p.nom.replaceAll("@", "%40")}@${p.version}`,
     })),
   };
 }
