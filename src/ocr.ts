@@ -68,21 +68,22 @@ export function ceQuiManque(): string | null {
  */
 export function lire(chemin: string): Bloc[] {
   /*
-   * CE REFUS NE PEUT PAS TOMBER SUR UNE MACHINE OUTILLÉE, ET C'EST VOULU.
+   * CE REFUS NE TOMBE PAS ICI ET TOMBE SUR LA CHAÎNE — LES DEUX COMPTENT.
    *
-   * Un balayage l'a signalé comme survivant — retiré, aucun cas ne bouge — et la raison n'est
-   * pas qu'il manque un témoin : `ceQuiManque()` **compile le binaire à la demande**. Mesuré
-   * le 25 août 2026 dans un arbre neuf où `src/ocr/lire` était absent : l'appel a rendu `null`
-   * après avoir produit 92 Ko de binaire. Sur une machine avec les outils Xcode, il n'existe
-   * aucune donnée d'entrée qui fasse rendre autre chose que `null`.
+   * Un balayage l'a signalé comme survivant : retiré, aucun cas ne bougeait. La première
+   * explication était que `ceQuiManque()` **compile le binaire à la demande** — mesuré le
+   * 25 août 2026 dans un arbre neuf où `src/ocr/lire` était absent, l'appel a rendu `null`
+   * après avoir produit 92 Ko de binaire. Donc sur une machine macOS outillée, aucune entrée
+   * ne le déclenche.
    *
-   * Les deux seuls états qui le déclenchent sont des propriétés de la MACHINE, pas de l'appel :
-   * une plateforme autre que macOS, ou `swiftc` introuvable. Un témoin qui les simulerait
-   * n'éprouverait plus ce refus mais la simulation.
+   * **Cette explication était vraie de cette machine et fausse de celle qui décide.**
+   * L'intégration publique tourne sur `ubuntu-latest`, et la première condition de
+   * `ceQuiManque()` est `process.platform !== "darwin"`. Le refus y est donc pleinement
+   * atteignable, et c'est là que la vérification publiée se fait.
    *
-   * C'est donc écrit ici plutôt que laissé indéterminé, pour que personne n'écrive dans six
-   * mois un témoin impossible en croyant combler un trou. Le cas correspondant dans
-   * `ocr-gardes.test.ts` s'exécute là où il est atteignable et se DÉCLARE sauté ailleurs.
+   * Le cas correspondant dans `ocr-gardes.test.ts` affirme dans les deux états sans jamais
+   * sauter : la plateforme décide laquelle des deux propriétés est vraie, et chacune est
+   * éprouvée là où elle a un sens. Un cas sauté annoncerait une couverture qu'il n'a pas.
    */
   const manque = ceQuiManque();
   if (manque) throw new Error(manque);
