@@ -350,19 +350,6 @@
     },
     {
       "type": "library",
-      "name": "fast-check",
-      "version": "4.9.0",
-      "licenses": [
-        {
-          "license": {
-            "id": "MIT"
-          }
-        }
-      ],
-      "purl": "pkg:npm/fast-check@4.9.0"
-    },
-    {
-      "type": "library",
       "name": "flatbuffers",
       "version": "25.9.23",
       "licenses": [
@@ -594,19 +581,6 @@
         }
       ],
       "purl": "pkg:npm/protobufjs@7.6.5"
-    },
-    {
-      "type": "library",
-      "name": "pure-rand",
-      "version": "8.4.2",
-      "licenses": [
-        {
-          "license": {
-            "id": "MIT"
-          }
-        }
-      ],
-      "purl": "pkg:npm/pure-rand@8.4.2"
     },
     {
       "type": "library",

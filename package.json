@@ -54,7 +54,6 @@
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
-    "fast-check": "^4.9.0",
     "typescript": "^5.9.0"
   },
   "overrides": {

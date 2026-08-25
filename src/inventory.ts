@@ -20,9 +20,8 @@
  */
 
 import { ASSUMPTIONS, STATUSES } from "./assumptions.ts";
-import { PLAUSIBLE } from "./sensitivity.ts";
 import { FIELDS } from "./corpus.ts";
-import { TIERS, REVISIONS } from "./tiers.ts";
+import { TIERS } from "./tiers.ts";
 import type { Inventory } from "./provenance.ts";
 
 const WHAT: Record<keyof typeof ASSUMPTIONS, { what: string; note: string }> = {
@@ -124,8 +123,3 @@ export const INVENTORY: Inventory = [
   },
 ];
 
-export const MUST_DECLARE = {
-  assumptions: Object.keys(ASSUMPTIONS),
-  swept: Object.keys(PLAUSIBLE),
-  revisions: Object.keys(REVISIONS),
-};
