@@ -38,12 +38,19 @@ in any file.
 
 ## Secrets in the history
 
-**0 undeclared secrets in the published history** across 468 commits — swept on 2026-08-25, sealed at `e678e05`.
+**0 undeclared secrets in the published history** across 476 commits — swept on 2026-08-25, sealed at `cd33d44`.
 
 The sweep reads `--all`, which on the author's machine also covers backup branches and
 the `refs/original/` a history rewrite leaves behind. 10 matches sit there and **are not in
 what you cloned** — reachability from `HEAD` is checked per match rather than assumed. They are
 named rather than dropped, because a ref nobody pushes today can be pushed tomorrow.
+
+Read that as **none among the 20 shapes this sweep looks for**, which is the only
+claim it can make. A pattern written for one era stops seeing the next one in silence, and its
+zero keeps printing unchanged: on 2026-08-25 the detector missed the CURRENT formats of three
+major providers because their prefix carries a hyphen the old pattern stopped at. The shapes
+are listed in `src/menace.ts`; a figure drawn from a selection carries the count of what it
+excludes.
 
 The sweep found 21 matches in total, of which 11 are declared in
 `secrets-declares.json`: those are the decoys planted in our own test cases, which exist to

@@ -174,3 +174,46 @@ test("le constat ne dit pas la même chose selon qu'il tient ou non", () => {
     rmSync(tmp, { recursive: true, force: true });
   }
 });
+
+test("le détecteur reconnaît les formats COURANTS, pas seulement ceux d'hier", () => {
+  /*
+   * ─── UN MOTIF ÉCRIT POUR UNE ÉPOQUE CESSE DE VOIR LA SUIVANTE, EN SILENCE ───
+   *
+   * Mesuré le 25 août 2026 sur seize formes fabriquées : le détecteur en reconnaissait DIX, et
+   * les manquantes n'étaient pas exotiques — c'étaient les formats COURANTS d'OpenAI,
+   * d'Anthropic et de GitHub. Même cause pour les trois : `sk-[A-Za-z0-9]{20,}` s'arrête au
+   * premier tiret, or `sk-proj-…` et `sk-ant-api03-…` en portent un juste après le préfixe.
+   *
+   * Ce qui rend ce défaut cher n'est pas qu'il rate un secret : c'est que son ZÉRO continue de
+   * s'afficher, identique, dans un document publié qu'un acheteur lit comme une garantie.
+   *
+   * Ce cas est daté par construction : chaque forme y est nommée. Le jour où un fournisseur
+   * change son préfixe, il faudra l'ajouter ici — et rien ne le fera à notre place.
+   */
+  const COURANTS: Array<[string, string]> = [
+    ["OpenAI, format projet", "sk-proj-" + "a".repeat(60)],
+    ["Anthropic", "sk-ant-api03-" + "a".repeat(90)],
+    ["GitHub, portée fine", "github_pat_" + "a".repeat(70)],
+    ["GitHub, classique", "ghp_" + "a".repeat(36)],
+    ["AWS", "AKIAIOSFODNN7EXAMPLE"],
+    ["Google", "AIza" + "a".repeat(35)],
+    ["Slack", "xoxb-123456789012-123456789012-abcdefghijklmnop"],
+    ["Stripe", "sk" + "_live_" + "a".repeat(24)],
+    ["Twilio", "SK" + "0".repeat(32)],
+    ["SendGrid", "SG." + "a".repeat(22) + "." + "b".repeat(43)],
+    ["clé privée PEM", "-----BEGIN RSA PRIVATE KEY-----"],
+    ["identifiants dans une URL", "postgres://user:motdepasse@hote/base"],
+  ];
+  const rates = COURANTS.filter(([, v]) => secretsDans(v).length === 0).map(([n]) => n);
+  assert.deepEqual(rates, [],
+    `${rates.length} format(s) COURANT(S) ne sont pas reconnus : ${rates.join(", ")}.\n`
+    + "  Le balayage continuerait d'afficher son zéro sans les voir, dans un document publié\n"
+    + "  qu'un acheteur lit comme une garantie. Ajouter la forme à FORMES_DE_SECRET.");
+
+  /* CONTRE-ÉPREUVE : ce qui n'est PAS un secret ne doit rien déclencher. Sans elle, un
+     détecteur qui répondrait « oui » à tout passerait ce cas en ne distinguant rien. */
+  for (const sain of ["const seuil = 0.85;", "https://example.com/docs", "sk-",
+    "AKIA", "an ordinary English sentence about keys and tokens"]) {
+    assert.deepEqual(secretsDans(sain), [], `« ${sain} » ne devrait rien déclencher`);
+  }
+});

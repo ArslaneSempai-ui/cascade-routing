@@ -53,6 +53,33 @@ const FORMES_DE_SECRET: Array<[string, RegExp]> = [
   ["clé privée", /-----BEGIN [A-Z ]*PRIVATE KEY-----/],
 
   /*
+   * ─── LES FORMATS D'AUJOURD'HUI, QUE LES MOTIFS D'HIER NE VOIENT PAS ───
+   *
+   * Mesuré le 25 août 2026 sur seize formes fabriquées : le détecteur en reconnaissait DIX.
+   * Les six manquantes n'étaient pas exotiques — c'étaient, pour trois d'entre elles, les
+   * formats COURANTS d'OpenAI, d'Anthropic et de GitHub.
+   *
+   * La cause est la même pour les trois, et elle est instructive : `sk-[A-Za-z0-9]{20,}`
+   * s'arrête au premier tiret. `sk-proj-…` et `sk-ant-api03-…` en portent un juste après le
+   * préfixe, donc le motif ne mordait que sur les huit caractères qui précèdent et échouait
+   * sur la borne `\b`. Un motif écrit pour le format d'une époque cesse silencieusement de
+   * voir la suivante — et son zéro continue de s'afficher, identique.
+   *
+   * C'est ce qui rend la ligne publiée dangereuse : « 0 secret non déclaré » se lisait comme
+   * « aucun secret », alors qu'il fallait lire « aucun PARMI LES FORMES QU'ON REGARDE ».
+   * SECURITE.md porte désormais ce dénominateur.
+   *
+   * Le JWT est VOLONTAIREMENT absent : un jeton signé est souvent public et de courte durée,
+   * et son motif — trois blocs base64 séparés par des points — mord sur des chaînes qui n'en
+   * sont pas. Une forme qui crie sans raison fait ignorer la liste entière.
+   */
+  ["clé OpenAI projet", /\bsk-proj-[A-Za-z0-9_-]{20,}\b/],
+  ["clé Anthropic", /\bsk-ant-(?:api\d{2}|admin\d{2})-[A-Za-z0-9_-]{20,}\b/],
+  ["jeton GitHub à portée fine", /\bgithub_pat_[A-Za-z0-9_]{50,}\b/],
+  ["clé Twilio", /\bSK[0-9a-f]{32}\b/],
+  ["clé SendGrid", /\bSG\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{40,}\b/],
+
+  /*
    * LA FORME SOUS LAQUELLE NOTRE PROPRE CLÉ VOYAGERAIT.
    *
    * Les motifs ci-dessus reconnaissent une clé privée à son en-tête PEM. Or une clé posée dans
@@ -391,6 +418,13 @@ the \`refs/original/\` a history rewrite leaves behind. ${secretsHistorique.reel
 what you cloned** — reachability from \`HEAD\` is checked per match rather than assumed. They are
 named rather than dropped, because a ref nobody pushes today can be pushed tomorrow.`
     : ""}
+
+Read that as **none among the ${FORMES_DE_SECRET.length} shapes this sweep looks for**, which is the only
+claim it can make. A pattern written for one era stops seeing the next one in silence, and its
+zero keeps printing unchanged: on 2026-08-25 the detector missed the CURRENT formats of three
+major providers because their prefix carries a hyphen the old pattern stopped at. The shapes
+are listed in \`src/menace.ts\`; a figure drawn from a selection carries the count of what it
+excludes.
 
 The sweep found ${secretsHistorique.trouves} match${secretsHistorique.trouves === 1 ? "" : "es"} in total, of which ${secretsHistorique.declares} ${secretsHistorique.declares === 1 ? "is" : "are"} declared in
 \`secrets-declares.json\`: those are the decoys planted in our own test cases, which exist to
