@@ -252,20 +252,39 @@ export function page(r: Releve): string {
 }
 
 async function principal(): Promise<void> {
-  refuserDrapeauxInconnus(["--check", "--tiers"]);
+  refuserDrapeauxInconnus(["--check", "--tiers", "--releve", "--page"]);
   const verifier = process.argv.includes("--check");
 
   if (verifier) {
-    const r = JSON.parse(readFileSync(RELEVE, "utf8")) as Releve;
+    /*
+     * LES CHEMINS SONT RÉGLABLES POUR QUE LE REFUS SOIT ÉPROUVABLE.
+     *
+     * Ce refus est un `process.exit(1)`, et le balayage des gardes ne mute que `throw new
+     * Error(` : il ne le voit donc pas, et son zéro survivant ne dit rien de lui. Le seul
+     * témoin possible est au site d'appel — il faut lancer la commande sur une page qui a
+     * dérivé et EXIGER le rouge.
+     *
+     * Sans ces deux drapeaux, ce témoin devrait abîmer `CORPUS-HOSTILE.md` dans l'arbre
+     * partagé le temps de la mesure. Six sessions écrivent ici ; un outil qui salit l'arbre
+     * commun fait refuser le commit d'une autre, et c'est exactement ce qui est arrivé
+     * aujourd'hui dans l'autre sens. Un contrôle ne doit pas coûter ça pour exister.
+     */
+    const chemin = (nom: string, defaut: string) =>
+      process.argv.find((x) => x.startsWith(`--${nom}=`))?.split("=").slice(1).join("=") ?? defaut;
+    const releve = chemin("releve", RELEVE);
+    const pageLue = chemin("page", PAGE);
+    const r = JSON.parse(readFileSync(releve, "utf8")) as Releve;
     const attendu = page(r);
-    const actuel = readFileSync(PAGE, "utf8");
+    const actuel = readFileSync(pageLue, "utf8");
     if (attendu !== actuel) {
-      console.error("\n  CORPUS-HOSTILE.md no longer matches corpus-hostile.json.");
+      console.error(`\n  ${pageLue.split("/").pop()} no longer matches `
+        + `${releve.split("/").pop()}.`);
       console.error("  Run `npm run hostile` to measure again, or regenerate the page if the");
       console.error("  record itself has not moved.\n");
       process.exit(1);
     }
-    console.log(`  CORPUS-HOSTILE.md matches the record measured ${r.mesureLe.slice(0, 10)}.`);
+    console.log(`  ${pageLue.split("/").pop()} matches the record measured `
+      + `${r.mesureLe.slice(0, 10)}.`);
     return;
   }
 

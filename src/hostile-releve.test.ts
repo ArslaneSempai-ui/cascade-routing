@@ -1,6 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, existsSync, writeFileSync, copyFileSync, mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import { page, type Releve } from "./hostile.ts";
@@ -50,4 +52,46 @@ test("la commande refuse un drapeau inconnu, et --check vérifie la page", { tim
   const check = spawnSync("node", [cmd, "--check"], { encoding: "utf8", timeout: 100_000 });
   assert.equal(check.status, 0,
     `\`--check\` échoue. Sortie :\n${(check.stdout ?? "") + (check.stderr ?? "")}`);
+});
+
+test("--check REFUSE une page qui a dérivé, et le refuse en s'arrêtant", { timeout: 120_000 }, () => {
+  /*
+   * LE CHEMIN ROUGE DU REFUS, QUE RIEN NE REGARDAIT.
+   *
+   * Le cas ci-dessus n'éprouve que le vert : `--check` sur une page conforme rend 0. Il
+   * resterait vert si le refus était retiré, si `process.exit(1)` devenait `process.exit(0)`,
+   * ou si la comparaison rendait toujours vrai. Et le balayage des gardes ne peut pas
+   * compenser : il ne mute que `throw new Error(`, et cette garde-ci est un `process.exit`.
+   * Une session voisine me l'a signalé — « zéro survivant » sur un fichier qui ne garde pas
+   * par `throw` ne dit rien du tout.
+   *
+   * Le témoin travaille sur des COPIES dans un dossier temporaire. Abîmer la vraie page le
+   * temps de la mesure ferait refuser le commit d'une autre session — c'est arrivé
+   * aujourd'hui dans l'autre sens, et un contrôle ne doit pas coûter ça pour exister.
+   */
+  const cmd = fileURLToPath(new URL("./hostile.ts", import.meta.url));
+  const d = mkdtempSync(join(tmpdir(), "hostile-check-"));
+  const releve = join(d, "releve.json");
+  const page = join(d, "page.md");
+  copyFileSync(RELEVE, releve);
+  copyFileSync(PAGE, page);
+
+  /* Le témoin positif d'abord : sur des copies fidèles, le contrôle passe. Sans lui, le rouge
+     ci-dessous pourrait venir du dossier temporaire et non de la dérive. */
+  const sain = spawnSync("node", [cmd, "--check", `--releve=${releve}`, `--page=${page}`],
+    { encoding: "utf8", timeout: 100_000 });
+  assert.equal(sain.status, 0,
+    `des copies fidèles doivent passer. Sortie :\n${(sain.stdout ?? "") + (sain.stderr ?? "")}`);
+
+  /* Une seule ligne déplacée : c'est la dérive la plus discrète qu'on puisse écrire. */
+  writeFileSync(page, readFileSync(page, "utf8").replace("## Per tier", "## Per  tier"));
+  const derive = spawnSync("node", [cmd, "--check", `--releve=${releve}`, `--page=${page}`],
+    { encoding: "utf8", timeout: 100_000 });
+  assert.equal(derive.status, 1,
+    "une page qui a dérivé doit faire ÉCHOUER la commande, pas seulement afficher un avis. "
+    + `Sortie :\n${(derive.stdout ?? "") + (derive.stderr ?? "")}`);
+  assert.match((derive.stderr ?? "") + (derive.stdout ?? ""), /no longer matches/,
+    "et le refus doit dire ce qui ne correspond plus, sinon le lecteur cherche à l'aveugle.");
+
+  rmSync(d, { recursive: true, force: true });
 });
