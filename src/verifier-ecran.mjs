@@ -488,12 +488,12 @@ try {
   const auditees = Number(dom.match(/data-figures-auditees="(\d+)"/)?.[1] ?? NaN);
   const soucis = [...new Set(console_)];
   const audit = dom.match(/data-audit="([^"]*)"/)?.[1];
-  if (audit === undefined) soucis.push("l'audit de forme n'a pas rendu de verdict");
+  if (audit === undefined) soucis.push("the shape audit returned no verdict");
   else if (audit !== "ok") soucis.push(...[...new Set(audit.split(" | "))]);
-  if (figures < attendu) soucis.push(`${figures} figure(s) rendues pour ${attendu} attendues`);
+  if (figures < attendu) soucis.push(`${figures} figure(s) rendered against ${attendu} expected`);
   if (Number.isFinite(auditees) && auditees < figures) {
-    soucis.push(`${figures} figure(s) rendues mais ${auditees} inspectée(s) : `
-      + `${figures - auditees} figure(s) sans SVG sous .graphe échappent au contrôle de forme`);
+    soucis.push(`${figures} figure(s) rendered but ${auditees} inspected: `
+      + `${figures - auditees} figure(s) with no SVG under .graphe escape the shape check`);
   }
   /*
    * ─── PUBLIER CE QUE LA PAGE NE CHARGE PAS ───

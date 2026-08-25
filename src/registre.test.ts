@@ -147,6 +147,14 @@ test("les couches partagées sont bien celles d'identite", (t) => {
   /** Les gabarits : partagés d'origine, adaptés ensuite, donc divergents par construction. */
   const ADAPTES: Record<string, string> = {
     "baselines.ts": "chaque outil compare à la référence triviale de SON domaine (depuis le 2026-08-19)",
+    /* Divergence VOULUE et vérifiée le 2026-08-25 : dans cascade ce script ne vérifie plus
+       qu'un clone s'installe, il vérifie LA PROMESSE DE LA LETTRE DE MISSION — « vous clonez,
+       vous lancez sur vos propres cas ». Il y parle de `landing.json`, des journaux que `data/`
+       garde hors de git, et des poids. 172 lignes contre 80. Porter la version longue vers
+       identite imposerait le produit de cascade à onze dépôts qui n'ont ni lettre de mission
+       ni acheteur ; écraser la copie détruirait 92 lignes écrites contre des pannes réelles.
+       L'exception est le seul des trois qui ne détruit rien, et elle sait expirer. */
+    "clone-neuf.mjs": "dans cascade il vérifie la promesse de la lettre de mission, pas l'installation (depuis le 2026-08-25)",
   };
 
   /*
