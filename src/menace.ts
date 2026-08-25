@@ -183,7 +183,29 @@ export function temoins(): string[] {
   v("RSA nu", secretsDans("K=MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC7vbqajDw4o6gJ"), ["clé RSA sans en-tête"]);
   v("base64 anodin", secretsDans("const b = 'aGVsbG8gd29ybGQgY2VjaSBuJ2VzdCBwYXMgdW5lIGNsZQ==';"), []);
 
-  v("jeton Stripe", secretsDans("sk" + "_live_" + "51H8xKqL2eZvKYlo2C0" + "abcdefghij"), ["jeton Stripe"]);
+  /*
+   * ─── CE TÉMOIN EST ASSEMBLÉ, PARCE QU'ÉCRIT EN ENTIER IL BLOQUE TOUTE POUSSÉE ───
+   *
+   * Écrit littéralement, `sk_live_…` ressemble assez à une vraie clé Stripe pour que la
+   * protection de GitHub refuse le `git push` : « Push cannot contain secrets », en nommant
+   * cette ligne dans cinq commits. Notre propre témoin de détection de secrets était détecté
+   * comme un secret.
+   *
+   * Ce n'est pas un faux positif de leur part : leur motif fait exactement son travail. C'est
+   * notre témoin qui n'avait pas besoin de ressembler à une clé PLAUSIBLE — il a besoin de
+   * correspondre à NOTRE motif, ce que la concaténation préserve intégralement.
+   *
+   * Et ça ne coûtait pas qu'à nous : n'importe qui clonant ce dépôt et poussant vers son
+   * propre distant se serait fait bloquer par la même règle, sur notre ligne, sans savoir
+   * pourquoi. Un dépôt qui vend un audit de sécurité ne peut pas demander qu'on autorise un
+   * secret pour le publier.
+   *
+   * Le débloquer par l'interface aurait marché et aurait été la mauvaise réponse : il aurait
+   * fallu inscrire une exception permanente chez GitHub pour une chaîne qui n'a jamais eu
+   * besoin d'exister sous cette forme.
+   */
+  const TEMOIN_STRIPE = "sk" + "_live_" + "51H8xKqL2eZvKYlo2C0" + "abcdefghij";
+  v("jeton Stripe", secretsDans(TEMOIN_STRIPE), ["jeton Stripe"]);
   v("Slack étendu", secretsDans("xoxe-2-abcdefghij-klmnop"), ["jeton Slack étendu"]);
   v("mot de passe dans une URL", secretsDans("postgres://admin:Tr0ub4dor3@db.interne:5432/prod"), ["identifiants dans une URL"]);
   v("URL sans identifiants", secretsDans("postgres://db.interne:5432/prod"), []);
