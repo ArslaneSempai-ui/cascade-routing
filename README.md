@@ -26,7 +26,7 @@ what that pass actually cost is stated below, read from the relevé rather than 
 | Command | What it does, in the order that makes sense |
 |---|---|
 | `npm run test` | types, figures and the suite — start here; downloads nothing while the cached failure gallery matches the code |
-| `npm run measure` | measure the encoder tiers and freeze the profile (1.26 GB on the first run) |
+| `npm run measure` | measure the encoder tiers and freeze the profile (at least 1.23 GB downloaded on the first run — `npm run poids` lists each one) |
 | `npm run sceller` | seal a profile: the fingerprint that makes a silently edited measurement fail loudly |
 | `npm run diff` | compare two sealed runs case by case — a rising rate can still have lost cases |
 | `npm run entree` | population drift on the documents alone, no labels, read against its own noise floor |
@@ -40,6 +40,7 @@ what that pass actually cost is stated below, read from the relevé rather than 
 | `npm run tentatives` | query stored per-attempt outcomes — paired tests and clean rates, no GPU |
 | `npm run dur` | measure the hard corpus: broken documents, non-Latin scripts, ambiguous readings |
 | `npm run clone-neuf` | clone from HEAD, install fresh, run the suite — the buyer's first action |
+| `npm run poids` | report the model weights on this machine; --export/--import carry them across an air gap |
 | `npm run contrainte` | what the output constraint buys, at a token cap shown not to bind |
 | `npm run mur` | how far the exhaustive solver goes, in fields and tiers, measured |
 | `npm run signal` | which key-free signals predict a wrong value, against a random control |
@@ -67,6 +68,52 @@ what that pass actually cost is stated below, read from the relevé rather than 
 npm test           # types, README figures, landing.json, and the suite
 ```
 
+## Running it where the network is closed
+
+This tool never sends your data anywhere. It does, on **first run only**, download its model
+weights from `huggingface.co` — and on a corporate network that host is usually blocked.
+Nothing about that is your firewall being wrong; it is the ordinary default. `npm run poids`
+lists those weights with their exact sizes, read from the pinned revisions rather than from a
+sentence someone typed.
+
+Two ways through, and the second needs no exception from anyone.
+
+**Open the host.** `huggingface.co` and `cdn-lfs.huggingface.co`, outbound HTTPS, for the
+first run only. Afterwards the weights are on disk and nothing reaches for the network again.
+
+**Or carry the weights in by hand.** On any machine that can reach the network, from a clone of
+this repository:
+
+```
+npm run poids -- --export /media/usb/cascade-weights
+```
+
+Carry that directory to the closed machine and place it in the cache:
+
+```
+npm run poids -- --import /media/usb/cascade-weights
+```
+
+Every file is checked against its SHA-256 and against the revision this repository pins,
+**before anything is written**. A half-written cache is worse than an empty one — it crashes
+the process natively without naming the file — so a failed check leaves the cache untouched
+and tells you which file disagreed.
+
+Then run any command with the network refused outright:
+
+```
+CASCADE_OFFLINE=1 npm run optimise
+```
+
+Under that flag the library is told not to reach the network at all. If a model is missing it
+says so, names it, gives its size, and stops — instead of stalling on a download that cannot
+finish. `npm run poids` with no argument reports what is on this machine.
+
+## Requirements
+
+Node 24 or newer, on **macOS or Linux**. Windows has not been tested and is not claimed;
+several scripts chain shell commands, which hold under Git Bash and not under `cmd.exe`.
+
 ## What else is in here
 
 <!-- figures:documents -->
@@ -83,7 +130,7 @@ npm test           # types, README figures, landing.json, and the suite
 <!-- /figures:documents -->
 
 <!-- figures:tests -->
-**299 tests** across 22 files, counted from the sources rather than typed here.
+**308 tests** across 22 files, counted from the sources rather than typed here.
 <!-- /figures:tests -->
 
 Everything runs locally. No API key, nothing leaves the machine, and anyone who clones this

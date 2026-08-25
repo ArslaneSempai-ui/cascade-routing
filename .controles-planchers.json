@@ -21,11 +21,11 @@
     "comment": "node --test --experimental-test-coverage src/*.test.ts, ligne « all files »"
   },
   "catalogue": {
-    "occurrences": 67,
+    "occurrences": 27,
     "mesureLe": "2026-08-25",
-    "comment": "node ~/.claude/skills/equipe/scripts/pieges.mjs . — 61 des 67 sont la façade française ; les 6 autres sont 2 `harnais-sans-remise-a-neuf` et 4 `devise-tapee`. Descendu de 71 à 67 le 25 août 2026 (traduction de journal.ts, mur.ts, charger.mjs). ATTENTION : 3 des 61 restantes sont des FAUX POSITIFS de la règle et ne descendront pas sans la corriger — journal.ts:106 et :150 se déclenchent sur l'identifiant `${dossier}` interpolé dans une chaîne ANGLAISE (la liste FR contient « dossier », et les interpolations ne sont pas retirées avant le test), charger.mjs:76 sur le mot « on », pronom français et préposition anglaise la plus courante. Les trois chaînes sont en anglais correct : les tordre pour passer serait abîmer la façade pour satisfaire l'outil, et le plancher qui en descendrait serait un vert vide de notre main. Plancher réel atteignable : 58.",
+    "comment": "node ~/.claude/skills/equipe/scripts/pieges.mjs <CHEMIN ABSOLU> — 21 des 27 sont la façade française, les 6 autres 2 `harnais-sans-remise-a-neuf` et 4 `devise-tapee`. DESCENDU DE 67 À 27 LE 25 AOÛT 2026 SANS TRADUIRE UNE SEULE LIGNE : la règle elle-même était fausse à 60 %. Trois corrections, chacune avec sa contre-épreuve dans les deux sens : les interpolations `${…}` sont retirées avant le test (un identifiant écrit dans la langue de travail n'est pas une phrase), « on » et « plus » sont sortis de la liste FR (homographes des deux mots anglais les plus courants), et onze mots que l'anglais n'a pas y sont entrés (ne, au, aux, se, ses, sa, déjà, jamais, toujours, même, être). Ce dernier point est le plus important : retirer « plus » avait PERDU « SECURITE.md ne correspond plus au code », vraie sortie française qui ne tenait que par son mot le plus ambigu. Les 3 faux positifs signalés par la session bd (journal.ts:106, :150, charger.mjs:76) sont fermés par la même correction. LES 21 QUI RESTENT SONT DU VRAI FRANÇAIS et se traduisent. Le chemin passé au script doit être ABSOLU : le dossier courant ne survit pas d'un appel à l'autre, et un relevé pris ailleurs rend un chiffre qui n'est pas celui de ce dépôt.",
     "parPiege": {
-      "facade-en-francais": 65,
+      "facade-en-francais": 21,
       "harnais-sans-remise-a-neuf": 2,
       "devise-tapee": 4
     },

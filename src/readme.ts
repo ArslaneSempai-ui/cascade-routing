@@ -9,6 +9,7 @@ import { readProfiles } from "./measure.ts";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { INVENTORY } from "./inventory.ts";
+import { POIDS_MODELES } from "./tiers.ts";
 import { markdown } from "./provenance.ts";
 import { optimiseExtraction, budgetShadowPrice, paliersMesures, decompositionDe } from "./optimise.ts";
 import "./figer.ts";  /* pose la table figée : voir figer.ts */
@@ -675,7 +676,23 @@ const commandes = (() => {
        le dit — et c'est là qu'il télécharge. Le libellé porte cette borne : une promesse
        sans sa condition est la même faute qu'avant, écrite dans l'autre sens. */
     ["test", "types, figures and the suite — start here; downloads nothing while the cached failure gallery matches the code"],
-    ["measure", "measure the encoder tiers and freeze the profile (1.26 GB on the first run)"],
+    /*
+     * CE CHIFFRE ÉTAIT TAPÉ À LA MAIN, ET IL SE CACHAIT DE LA GARDE QUI L'INTERDIT.
+     *
+     * `chiffresNus` retire les blocs engendrés avant de chercher — à bon droit, puisqu'ils
+     * viennent d'une mesure. Mais « engendré » ne veut pas dire « calculé » : ce libellé était
+     * une constante recopiée, insérée dans un bloc engendré, donc invisible pour le contrôle le
+     * plus strict du dépôt. Le 25 août 2026 il était encore JUSTE — 1,26 Gio, tokeniseurs
+     * compris, vérifié avant d'y toucher — et c'est précisément ce qui le rendait dangereux :
+     * rien ne l'aurait signalé le jour où une révision change.
+     *
+     * Il est maintenant calculé, et annoncé comme un PLANCHER : `POIDS_MODELES` ne porte que
+     * les `model.onnx`, et un tokeniseur pèse en plus. Un plancher nommé plancher ne ment pas
+     * quand il est dépassé ; un chiffre exact qui ne l'est plus, si.
+     */
+    ["measure", `measure the encoder tiers and freeze the profile (at least ${
+      (Object.values(POIDS_MODELES).reduce((s, m) => s + m.octets, 0) / 2 ** 30).toFixed(2)
+    } GB downloaded on the first run — \`npm run poids\` lists each one)`],
     ["sceller", "seal a profile: the fingerprint that makes a silently edited measurement fail loudly"],
     ["diff", "compare two sealed runs case by case — a rising rate can still have lost cases"],
     ["entree", "population drift on the documents alone, no labels, read against its own noise floor"],
@@ -689,6 +706,9 @@ const commandes = (() => {
     ["tentatives", "query stored per-attempt outcomes — paired tests and clean rates, no GPU"],
     ["dur", "measure the hard corpus: broken documents, non-Latin scripts, ambiguous readings"],
     ["clone-neuf", "clone from HEAD, install fresh, run the suite — the buyer's first action"],
+    /* Le poids total n'est pas écrit ici : la commande le calcule depuis `POIDS_MODELES`, et
+       un chiffre recopié dans une phrase de présentation rouille sans que rien ne le dise. */
+    ["poids", "report the model weights on this machine; --export/--import carry them across an air gap"],
     ["contrainte", "what the output constraint buys, at a token cap shown not to bind"],
     ["mur", "how far the exhaustive solver goes, in fields and tiers, measured"],
     ["signal", "which key-free signals predict a wrong value, against a random control"],

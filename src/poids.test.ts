@@ -1,163 +1,192 @@
-/*
- * LE CACHE DE MODÈLES, ET LA DIFFÉRENCE ENTRE « ABSENT » ET « TRONQUÉ ».
+/**
+ * LES TÉMOINS DU CHEMIN HORS RÉSEAU.
  *
- * L'ancien contrôle additionnait tout le cache et demandait « plus de 50 Mo ? ». Un
- * `model.onnx` tronqué à 57 Mo lui suffisait : il répondait oui, le cas s'exécutait,
- * onnxruntime ouvrait un protobuf coupé, et le processus s'abattait — `libc++abi …
- * mutex lock failed: Invalid argument`, code 134, sans jamais nommer le fichier.
+ * Chacun porte sa contre-épreuve, et la contre-épreuve est ici plus importante qu'ailleurs :
+ * ce chemin s'exécute sur une machine où personne ne peut nous appeler. Un contrôle qui passe
+ * sans regarder y coûte un client, pas un aller-retour.
  *
- * Mesuré le 25 août 2026, dans les deux sens et à quelques secondes d'intervalle :
- * fichier à 57 905 102 octets → SIGABRT à 0,2 s ; le même fichier remis à 496 550 525
- * octets → code 0 en 1,5 s, même commande, machine sous charge 2,8.
- *
- * Ces cas fabriquent un faux cache avec des fichiers creux : la taille est ce qui est
- * vérifié, et un `truncate` la donne sans écrire un demi-gigaoctet.
+ * Les modèles vrais pèsent 1,3 Go. Ces cas construisent un cache FACTICE aux mêmes chemins,
+ * avec des fichiers minuscules : ce qu'on éprouve est l'empreinte, la révision, l'ordre des
+ * écritures et les messages — rien de tout cela ne dépend de la taille.
  */
-
 import { test } from "node:test";
-import { mkdtempSync, mkdirSync, writeFileSync, truncateSync, rmSync, readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import assert from "node:assert/strict";
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
-import assert from "node:assert/strict";
 import {
-  POIDS_MODELES, MODELES_EXTRACTION, modelesTronques, modelesAbsents,
-  exigerModelesEntiers, poidsEnCache, diagnosticDesPoids,
-} from "./tiers.ts";
+  NOM_MANIFESTE, construireManifeste, verifierExport, exporter, importer, lireManifeste,
+  exigerPoidsSurPlace, messageDeTelechargement, ressembleAUnEchecReseau, rapport, fichiersSous,
+  type Manifeste,
+} from "./poids.ts";
+import { POIDS_MODELES } from "./tiers.ts";
 
-/** Un faux cache où chaque modèle nommé pèse exactement ce qu'on demande. */
-function cacheAvec(tailles: Partial<Record<keyof typeof POIDS_MODELES, number>>): string {
-  const base = mkdtempSync(join(tmpdir(), "poids-"));
-  for (const [cle, octets] of Object.entries(tailles)) {
-    const m = POIDS_MODELES[cle as keyof typeof POIDS_MODELES];
-    const chemin = join(base, m.depot, m.revision, "onnx", "model.onnx");
-    mkdirSync(dirname(chemin), { recursive: true });
-    writeFileSync(chemin, "");
-    truncateSync(chemin, octets);
+const M = POIDS_MODELES.small;
+
+/** Un cache factice qui a la forme exacte de celui que la bibliothèque écrit. */
+function cacheFactice(contenus: Record<string, string> = {}): string {
+  const base = mkdtempSync(join(tmpdir(), "cascade-poids-"));
+  const fichiers = {
+    "onnx/model.onnx": "des octets qui font office de modèle",
+    "config.json": '{"model_type":"distilbert"}',
+    "tokenizer.json": '{"version":"1.0"}',
+    ...contenus,
+  };
+  for (const [rel, texte] of Object.entries(fichiers)) {
+    const p = join(base, M.depot, M.revision, rel);
+    mkdirSync(dirname(p), { recursive: true });
+    writeFileSync(p, texte);
   }
   return base;
 }
 
-test("un modèle tronqué est vu, avec sa taille et celle qu'il devrait avoir", () => {
-  const base = cacheAvec({ small: POIDS_MODELES.small.octets, large: 57_905_102 });
-  try {
-    const abimes = modelesTronques(MODELES_EXTRACTION, base);
-    assert.equal(abimes.length, 1, "un seul des deux est coupé.");
-    assert.equal(abimes[0]!.cle, "large");
-    assert.equal(abimes[0]!.taille, 57_905_102);
-    assert.equal(abimes[0]!.attendu, 496_550_525);
-    assert.match(abimes[0]!.chemin, /model\.onnx$/, "le fichier doit être nommé, pas le dossier.");
-  } finally { rmSync(base, { recursive: true, force: true }); }
+const nettoyer = (...d: string[]): void => { for (const x of d) rmSync(x, { recursive: true, force: true }); };
+
+test("un export puis un import rendent le même octet, pas seulement le même nom", () => {
+  const source = cacheFactice(), dossier = mkdtempSync(join(tmpdir(), "cascade-export-")), cible = mkdtempSync(join(tmpdir(), "cascade-cible-"));
+  const m = exporter(dossier, ["small"], source);
+  assert.equal(m.entrees.length, 3, "les trois fichiers du modèle sont pris, pas seulement model.onnx");
+  const { ecrits } = importer(dossier, cible);
+  assert.equal(ecrits, 3);
+  for (const e of m.entrees) {
+    assert.deepEqual(readFileSync(join(cible, e.chemin)), readFileSync(join(source, e.chemin)));
+  }
+  nettoyer(source, dossier, cible);
 });
 
-test("un modèle tronqué n'est pas un modèle absent", () => {
-  const base = cacheAvec({ small: POIDS_MODELES.small.octets, large: 57_905_102 });
-  try {
-    assert.deepEqual(modelesAbsents(MODELES_EXTRACTION, base), [],
-      "les deux fichiers sont là. Les confondre ferait retélécharger là où il faut refuser,\n"
-      + "  et se taire là où il faut parler.");
-  } finally { rmSync(base, { recursive: true, force: true }); }
+test("un octet retourné sans changer la taille est refusé", () => {
+  const source = cacheFactice(), dossier = mkdtempSync(join(tmpdir(), "cascade-export-"));
+  exporter(dossier, ["small"], source);
+  assert.equal(verifierExport(lireManifeste(dossier), dossier).length, 0, "l'export à neuf est propre");
+
+  /* CONTRE-ÉPREUVE : même longueur exactement. Un contrôle qui ne regarde que la taille
+     laisse passer ce cas, et c'est le cas d'un fichier remplacé plutôt que coupé. */
+  const cible = join(dossier, M.depot, M.revision, "config.json");
+  const avant = readFileSync(cible, "utf8");
+  const apres = '{"model_type":"XXXXXXXXXX"}';
+  assert.equal(apres.length, avant.length, "le témoin ne vaut que si la taille est identique");
+  writeFileSync(cible, apres);
+
+  const griefs = verifierExport(lireManifeste(dossier), dossier);
+  assert.equal(griefs.length, 1);
+  assert.match(griefs[0]!.cause, /sha256/);
+  nettoyer(source, dossier);
 });
 
-test("un fichier PLUS GROS que la taille servie est refusé lui aussi", () => {
-  const base = cacheAvec({ small: POIDS_MODELES.small.octets + 1, large: POIDS_MODELES.large.octets });
-  try {
-    assert.equal(modelesTronques(MODELES_EXTRACTION, base).length, 1,
-      "un seuil « au moins tant d'octets » laisserait passer tout fichier assez gros.\n"
-      + "  La taille servie est une égalité, pas un plancher.");
-  } finally { rmSync(base, { recursive: true, force: true }); }
+test("un import qui trouve un grief n'écrit rien du tout", () => {
+  const source = cacheFactice(), dossier = mkdtempSync(join(tmpdir(), "cascade-export-")), cible = mkdtempSync(join(tmpdir(), "cascade-cible-"));
+  exporter(dossier, ["small"], source);
+  /* Abîmer le DERNIER fichier par ordre alphabétique : si l'import copiait au fil de l'eau,
+     les précédents seraient déjà sur le disque quand il s'arrête. C'est cet état à moitié
+     écrit qui abat le processus nativement, sans nommer le fichier. */
+  const ordre = lireManifeste(dossier).entrees.map((e) => e.chemin);
+  writeFileSync(join(dossier, ordre.at(-1)!), "autre chose");
+  assert.throws(() => importer(dossier, cible), /nothing was written/);
+  assert.equal(readdirSync(cible).length, 0, "le cache visé est resté intact");
+  nettoyer(source, dossier, cible);
 });
 
-test("le refus nomme le fichier, les deux tailles et la commande", () => {
-  const base = cacheAvec({ small: POIDS_MODELES.small.octets, large: 57_905_102 });
-  try {
-    assert.throws(() => exigerModelesEntiers(MODELES_EXTRACTION, base), (e: Error) => {
-      assert.match(e.message, /model\.onnx/, "le fichier.");
-      assert.match(e.message, /57\.9 MB/, "ce qu'il pèse.");
-      assert.match(e.message, /496\.6 MB/, "ce qu'il devrait peser.");
-      assert.match(e.message, /Delete the directory above and run the same command again/,
-        "un refus sans issue se contourne en retirant la garde.");
-      assert.ok(!/mutex lock failed/.test(e.message),
-        "c'est précisément le message natif qu'on remplace.");
-      return true;
-    });
-  } finally { rmSync(base, { recursive: true, force: true }); }
+test("des poids exportés pour une autre révision sont refusés avant leur empreinte", () => {
+  const source = cacheFactice(), dossier = mkdtempSync(join(tmpdir(), "cascade-export-"));
+  exporter(dossier, ["small"], source);
+  const m = lireManifeste(dossier);
+  const truque: Manifeste = { ...m, entrees: m.entrees.map((e) => ({ ...e, revision: "0000deadbeef" })) };
+  writeFileSync(join(dossier, NOM_MANIFESTE), JSON.stringify(truque));
+  const griefs = verifierExport(truque, dossier);
+  assert.equal(griefs.length, m.entrees.length);
+  assert.match(griefs[0]!.cause, /pinned revision is/);
+  /* CONTRE-ÉPREUVE : les fichiers eux-mêmes sont intacts, donc seule la révision les écarte.
+     Sans ce contrôle, des poids d'une autre version se chargeraient sans un mot et rendraient
+     des chiffres qui ne sont pas ceux que le dépôt publie. */
+  assert.equal(verifierExport(m, dossier).length, 0);
+  nettoyer(source, dossier);
 });
 
-test("rien n'est refusé quand les deux extracteurs sont entiers", () => {
-  const base = cacheAvec({
-    small: POIDS_MODELES.small.octets,
-    large: POIDS_MODELES.large.octets,
+test("un dossier sans manifeste dit ce qu'il faut lancer, et où", () => {
+  const vide = mkdtempSync(join(tmpdir(), "cascade-vide-"));
+  assert.throws(() => lireManifeste(vide), (e: Error) => {
+    assert.match(e.message, /npm run poids -- --export/);
+    assert.match(e.message, new RegExp(NOM_MANIFESTE));
+    return true;
   });
-  try {
-    assert.deepEqual(modelesTronques(MODELES_EXTRACTION, base), []);
-    exigerModelesEntiers(MODELES_EXTRACTION, base);
-    assert.equal(poidsEnCache(base), true, "témoin positif : le vert doit être atteignable.");
-  } finally { rmSync(base, { recursive: true, force: true }); }
+  nettoyer(vide);
 });
 
-test("le garde du cas long répond « non » sur un cache tronqué, et non « oui » comme avant", () => {
-  const tronque = cacheAvec({ small: POIDS_MODELES.small.octets, large: 57_905_102 });
-  const absent = mkdtempSync(join(tmpdir(), "poids-vide-"));
-  try {
-    assert.equal(poidsEnCache(tronque), false,
-      "c'est ce « oui » qui lançait le cas et faisait avorter le processus.");
-    assert.equal(poidsEnCache(absent), false, "et un cache vide reste un cache vide.");
-
-    /* Témoin de non-vacuité de l'ancien seuil : le cache tronqué pèse bien plus de 50 Mo,
-       donc l'ancien contrôle répondait oui exactement là où celui-ci répond non. */
-    assert.ok(POIDS_MODELES.small.octets + 57_905_102 > 50_000_000,
-      "sans ça, ce cas passerait pour la mauvaise raison.");
-  } finally {
-    rmSync(tronque, { recursive: true, force: true });
-    rmSync(absent, { recursive: true, force: true });
-  }
+test("hors ligne, un modèle absent est refusé AVANT tout téléchargement, avec sa sortie", () => {
+  const vide = mkdtempSync(join(tmpdir(), "cascade-vide-"));
+  assert.throws(() => exigerPoidsSurPlace(["small"], vide), (e: Error) => {
+    assert.match(e.message, /CASCADE_OFFLINE=1/);
+    assert.match(e.message, new RegExp(M.depot));
+    assert.match(e.message, /--export/, "le message porte le geste qui apporte les poids");
+    assert.match(e.message, /--import/);
+    assert.doesNotMatch(e.message, /huggingface\.co/, "on ne renvoie pas vers un domaine qui est justement bloqué");
+    return true;
+  });
+  /* CONTRE-ÉPREUVE : le même appel sur un cache garni ne refuse pas. Sans elle, un garde qui
+     refuse toujours passerait ce cas en prétendant vérifier quelque chose. */
+  const garni = cacheFactice();
+  assert.doesNotThrow(() => exigerPoidsSurPlace(["small"], garni));
+  nettoyer(vide, garni);
 });
 
-test("le diagnostic distingue « pas téléchargé » de « téléchargement coupé »", () => {
-  const tronque = cacheAvec({ small: POIDS_MODELES.small.octets, large: 57_905_102 });
-  const vide = mkdtempSync(join(tmpdir(), "poids-vide-"));
-  const entier = cacheAvec({ small: POIDS_MODELES.small.octets, large: POIDS_MODELES.large.octets });
-  try {
-    const coupe = diagnosticDesPoids(MODELES_EXTRACTION, tronque);
-    assert.match(coupe!, /interrupted download, not a slow machine/,
-      "mesuré : le cas se déclarait ignoré avec « sous-processus tué par le délai », en\n"
-      + "  242 ms. Le message accusait une lenteur là où il y avait un fichier coupé.");
-    assert.match(coupe!, /57\.9 MB/, "et il nomme la taille trouvée.");
-
-    const absent = diagnosticDesPoids(MODELES_EXTRACTION, vide);
-    assert.match(absent!, /not in the cache/, "un premier lancement n'est pas une panne.");
-    assert.ok(!/interrupted/.test(absent!), "et ne doit pas être annoncé comme telle.");
-
-    assert.equal(diagnosticDesPoids(MODELES_EXTRACTION, entier), undefined,
-      "témoin positif : rien à dire quand tout est entier.");
-  } finally {
-    for (const d of [tronque, vide, entier]) rmSync(d, { recursive: true, force: true });
-  }
+test("le message de téléchargement nomme la cause probable ET garde l'erreur d'origine", () => {
+  const s = messageDeTelechargement(new Error("fetch failed: ENOTFOUND huggingface.co"), ["small"]);
+  assert.match(s, /ENOTFOUND huggingface\.co/, "l'erreur brute survit — sinon on cache la seule information vraie");
+  assert.match(s, /blocked/);
+  assert.match(s, /npm run poids -- --import/);
+  assert.match(s, /260\.9 MB/, "la taille vient de POIDS_MODELES, elle n'est pas tapée dans le message");
 });
 
-test("tout modèle que le code ouvre a son poids dans la table", () => {
-  /*
-   * LA TABLE NE SE RÉCITE PAS : ELLE SE CONFRONTE À CE QUE LE CODE CHARGE.
-   *
-   * `POIDS_MODELES` est écrite à la main. Le jour où un cinquième `pipeline(...)` arrive
-   * sans sa taille, `modelesTronques` ne le regarde pas — et rend un tableau vide, qui se
-   * lit « rien n'est tronqué ». Un zéro parfaitement silencieux.
-   *
-   * La seule source juste est le fichier qui appelle : chaque dépôt de modèle qui traverse
-   * `pipeline()` doit être déclaré ici.
-   */
-  const src = readFileSync(fileURLToPath(new URL("./tiers.ts", import.meta.url)), "utf8");
-  const charges = [...src.matchAll(/pipeline\([^,]+,\s*"([^"]+)"/g)].map((m) => m[1]!);
-  assert.ok(charges.length > 0, "témoin de non-vacuité : le motif trouve bien des appels.");
+test("une erreur qui n'est pas un réseau n'est pas rhabillée en problème de proxy", () => {
+  /* Le sens qui compte. Un diagnostic qui désigne la mauvaise cause coûte plus cher que pas
+     de diagnostic : le client fouille son pare-feu pendant qu'un fichier est corrompu. */
+  assert.equal(ressembleAUnEchecReseau("fetch failed"), true);
+  assert.equal(ressembleAUnEchecReseau("connect ECONNREFUSED 127.0.0.1:443"), true);
+  assert.equal(ressembleAUnEchecReseau("self signed certificate in chain"), true);
+  assert.equal(ressembleAUnEchecReseau("HTTP 403 from cdn-lfs.huggingface.co"), true);
+  assert.equal(ressembleAUnEchecReseau("status code 502"), true);
+  /* Le cas qui a resserré le motif : un `403` nu, dans une erreur qui n'a rien d'un réseau. */
+  assert.equal(ressembleAUnEchecReseau("Unexpected token in JSON at position 403"), false);
+  assert.equal(ressembleAUnEchecReseau("model.onnx is 502 bytes, expected 260905268"), false);
+  assert.equal(ressembleAUnEchecReseau("onnxruntime: invalid protobuf"), false);
+  assert.equal(ressembleAUnEchecReseau("Cannot read properties of undefined"), false);
+});
 
-  const declares = new Set<string>(Object.values(POIDS_MODELES).map((m) => m.depot));
-  for (const depot of charges) {
-    assert.ok(declares.has(depot),
-      `${depot} est chargé par ce fichier et n'a pas de poids déclaré : son fichier tronqué\n`
-      + "  ne serait jamais vu, et le contrôle rendrait « rien n'est tronqué ».");
+test("le relevé distingue absent, entier et tronqué, et ne les confond pas", () => {
+  const vide = mkdtempSync(join(tmpdir(), "cascade-vide-"));
+  assert.match(rapport(vide), /small\s+260\.9 MB\s+absent/);
+
+  /* Un modèle présent mais qui n'a pas la taille servie doit se lire comme TRONQUÉ, pas comme
+     présent : c'est la distinction qui, absente, faisait passer un protobuf coupé pour une
+     machine lente. */
+  const tronque = cacheFactice();
+  assert.match(rapport(tronque), /small.*TRUNCATED/);
+  nettoyer(vide, tronque);
+});
+
+test("la liste des fichiers vient du disque, pas d'une énumération écrite à la main", () => {
+  /* Un fichier que la bibliothèque ajoutera dans une version future doit partir dans l'export
+     sans qu'on ait rien à mettre à jour. Une liste tapée regarde une collection figée. */
+  const source = cacheFactice({ "un_fichier_inattendu.bin": "ajouté par une version future" });
+  const m = construireManifeste(["small"], source);
+  assert.equal(m.entrees.length, 4);
+  assert.ok(m.entrees.some((e) => e.chemin.endsWith("un_fichier_inattendu.bin")));
+  /* Les chemins sont relatifs à la racine du cache et écrits avec des barres obliques : un
+     manifeste écrit ici s'importe ailleurs, et l'export d'un poste Windows doit s'ouvrir sur
+     un serveur Linux. */
+  for (const f of fichiersSous(source, join(M.depot, M.revision))) {
+    assert.ok(f.startsWith(M.depot + "/" + M.revision + "/"), `${f} ne part pas de la racine du cache`);
+    assert.doesNotMatch(f, /\\/, "aucune barre inverse ne part dans un manifeste");
+    assert.equal(f.includes(source), false, "aucun chemin absolu de la machine d'export");
   }
-  assert.equal(declares.size, new Set(charges).size,
-    "et l'inverse : un poids déclaré pour un modèle que plus personne ne charge est une\n"
-    + "  ligne que rien ne vérifie.");
+  nettoyer(source);
+});
+
+test("exporter depuis un cache vide refuse au lieu d'écrire un export vide", () => {
+  /* Un dossier d'export vide avec un manifeste vide se transporte, s'importe sans erreur, et
+     ne donne rien — l'échec arriverait sur l'autre machine, celle qui n'a pas le réseau. */
+  const vide = mkdtempSync(join(tmpdir(), "cascade-vide-")), dossier = mkdtempSync(join(tmpdir(), "cascade-export-"));
+  assert.throws(() => exporter(dossier, ["small"], vide), /Nothing to export/);
+  assert.equal(existsSync(join(dossier, NOM_MANIFESTE)), false);
+  nettoyer(vide, dossier);
 });

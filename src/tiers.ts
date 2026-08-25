@@ -9,7 +9,7 @@
  * by anyone who clones it without paying.
  */
 
-import { pipeline } from "@huggingface/transformers";
+import { pipeline, env as envHF } from "@huggingface/transformers";
 import { fileURLToPath } from "node:url";
 import { join } from "node:path";
 import { existsSync, readdirSync, statSync } from "node:fs";
@@ -804,10 +804,55 @@ export async function rechauffer(tier: TierName): Promise<boolean> {
 
 let qaSmall: any = null, qaLarge: any = null;
 
+
+/**
+ * LE RÉSEAU N'EST PAS ACQUIS CHEZ LE CLIENT.
+ *
+ * `pipeline(...)` va chercher 1,3 Go sur huggingface.co au premier lancement. Dans une banque
+ * ce domaine est bloqué par défaut, et l'échec qui en sortait était un message de fetch brut :
+ * il ne nommait ni le modèle, ni la taille, ni le remède. **Le premier écran de l'acheteur
+ * était une erreur de connexion, sur un produit vendu sur le fait qu'il ne dépend de personne.**
+ *
+ * Deux gestes, et il en faut deux. `CASCADE_OFFLINE=1` refuse AVANT de tenter — un refus
+ * précoce qui nomme la commande d'import vaut mieux qu'un échec tardif qui ne nomme rien.
+ * Et quand le drapeau n'est pas mis, ce qui est le cas de celui qui découvre le blocage,
+ * l'échec est réénoncé avec sa cause probable et sa sortie.
+ *
+ * L'import est DIFFÉRÉ parce que `poids.ts` importe ce fichier : au chargement il y aurait un
+ * cycle, ici il n'y en a pas. `loadExtractors` est déjà asynchrone, donc ça ne coûte rien.
+ */
+const HORS_LIGNE = (): boolean => process.env.CASCADE_OFFLINE === "1";
+
+async function chargerAvecFilet<T>(cles: readonly CleModele[], charger: () => Promise<T>): Promise<T> {
+  const poids = await import("./poids.ts");
+  if (HORS_LIGNE()) {
+    poids.exigerPoidsSurPlace(cles);
+    /* LE REFUS PRÉALABLE N'EST PAS LA GARANTIE. Il regarde `model.onnx` ; la bibliothèque va
+       aussi chercher un tokenizer, une configuration, et un fichier ajouté par une version
+       future que notre liste ne connaît pas. Couper le réseau ferme la question pour tout ce
+       qu'on n'a pas pensé à énumérer — mesuré le 25 août 2026 : avec `allowRemoteModels` à
+       faux et les poids en cache, le modèle se charge et répond. Un contrôle qui vérifie ce
+       qu'on a listé promet moins que la coupure qui vérifie ce qu'on a oublié. */
+    envHF.allowRemoteModels = false;
+  }
+  try {
+    return await charger();
+  } catch (e) {
+    /* Ne réénoncer QUE ce qui ressemble à un échec de réseau : une erreur de modèle
+       réhabillée en problème de proxy enverrait le client chercher au mauvais endroit, et
+       un diagnostic qui désigne la mauvaise cause coûte plus cher qu'aucun diagnostic. */
+    const m = e instanceof Error ? e.message : String(e);
+    if (!poids.ressembleAUnEchecReseau(m)) throw e;
+    throw new Error(poids.messageDeTelechargement(e, cles));
+  }
+}
+
 export async function loadExtractors(): Promise<void> {
   exigerModelesEntiers(MODELES_EXTRACTION);
-  qaSmall ??= await pipeline("question-answering", "Xenova/distilbert-base-cased-distilled-squad", { revision: REVISIONS.small });
-  qaLarge ??= await pipeline("question-answering", "onnx-community/roberta-base-squad2-ONNX", { revision: REVISIONS.large });
+  await chargerAvecFilet(MODELES_EXTRACTION, async () => {
+    qaSmall ??= await pipeline("question-answering", "Xenova/distilbert-base-cased-distilled-squad", { revision: REVISIONS.small });
+    qaLarge ??= await pipeline("question-answering", "onnx-community/roberta-base-squad2-ONNX", { revision: REVISIONS.large });
+  });
 }
 
 export async function extract(
@@ -1012,8 +1057,10 @@ const cos = (a: number[], b: number[]) => a.reduce((s, x, i) => s + x * b[i], 0)
 
 export async function loadClassifiers(): Promise<void> {
   exigerModelesEntiers(MODELES_CLASSEMENT);
-  embSmall ??= await pipeline("feature-extraction", "Xenova/all-MiniLM-L6-v2", { revision: REVISIONS.embSmall });
-  embLarge ??= await pipeline("feature-extraction", "Xenova/multilingual-e5-small", { revision: REVISIONS.embLarge });
+  await chargerAvecFilet(MODELES_CLASSEMENT, async () => {
+    embSmall ??= await pipeline("feature-extraction", "Xenova/all-MiniLM-L6-v2", { revision: REVISIONS.embSmall });
+    embLarge ??= await pipeline("feature-extraction", "Xenova/multilingual-e5-small", { revision: REVISIONS.embLarge });
+  });
   vectorsSmall ??= await Promise.all(TYPOLOGIES.map(async (t) => mean(await embSmall(DESCRIPTIONS[t]))));
   // e5 expects its prefixes: omitting them degrades quality without breaking anything, so invisibly.
   vectorsLarge ??= await Promise.all(TYPOLOGIES.map(async (t) => mean(await embLarge(`passage: ${DESCRIPTIONS[t]}`))));
