@@ -12,6 +12,7 @@
  * mesure des modèles, pas au dossier quatre mille.
  */
 import { Worker } from "node:worker_threads";
+import { loadavg, cpus } from "node:os";
 
 /**
  * Le temps qu'une évaluation a le droit de prendre, par cas.
@@ -56,7 +57,18 @@ async function evaluerUne(motif: string, textes: string[], msMax: number): Promi
        règle qui ne rend pas la main sur un seul cas ne l'est pas. */
     const armer = () => {
       minuteur = setTimeout(() => arreter({
-        refus: `did not finish within ${msMax} ms on case ${vus + 1} of ${textes.length}`,
+        /*
+         * LE REFUS DIT LA CHARGE, sinon il accuse la règle du client à tort.
+         *
+         * Une borne en TEMPS RÉEL ne tient sous aucune charge : mesuré le 25 août 2026 avec
+         * une moyenne de 33,7 sur dix cœurs, sept cas sont tombés d'affilée, dont un à
+         * 50 115 ms — puis sept verts en relançant seul dans la minute. Élargir la borne
+         * serait l'élargissement gratuit : elle cesserait de voir le vrai cas sans rien
+         * fermer. Alors on la garde, et on rend le refus LISIBLE — « (load 33.7 on 10 cores) »
+         * se lit tout seul, et personne n'accuse sa propre règle.
+         */
+        refus: `did not finish within ${msMax} ms on case ${vus + 1} of ${textes.length}`
+          + ` (load ${loadavg()[0]!.toFixed(1)} on ${cpus().length} cores)`,
       }), msMax);
     };
     /* La borne s'arme au message « prêt », PAS ici : sinon le démarrage du fil — 43 à 108 ms

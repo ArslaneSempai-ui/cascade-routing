@@ -23,6 +23,29 @@
 # documents livrés correspondent au code — treize secondes, la partie qui se périme.
 #
 # Pour passer outre une fois : git commit --no-verify
+# ─── UN ROUGE QUI MENT COÛTE PLUS CHER QU'UN REFUS DE DÉMARRER ───
+#
+# Plusieurs bornes de ce dépôt comptent un TEMPS RÉEL. Sous forte charge — plusieurs sessions
+# lançant leur suite en parallèle — un fil met des secondes à recevoir son tour, et aucune
+# borne en temps réel ne tient. Mesuré le 25 août 2026 à une charge de 33,7 sur dix cœurs :
+# sept cas rouges d'affilée, dont un à 50 secondes, puis sept verts en relançant seul.
+#
+# Élargir les bornes serait l'élargissement gratuit. On refuse de démarrer, en le disant.
+CHARGE=$(uptime | sed -E 's/.*averages?: *([0-9.]+).*/\1/' | tr -d ' ')
+COEURS=$(sysctl -n hw.ncpu 2>/dev/null || nproc 2>/dev/null || echo 4)
+if [ "$(echo "$CHARGE > $COEURS * 2" | bc -l 2>/dev/null || echo 0)" = "1" ]; then
+  echo
+  echo "  CHARGE $CHARGE SUR $COEURS CŒURS — la suite mentirait."
+  echo
+  echo "    Plusieurs bornes de ce dépôt comptent un temps réel. À ce régime, des cas"
+  echo "    parfaitement bons tombent, avec des durées absurdes et des cas différents à"
+  echo "    chaque passe. Un rouge qui ment coûte plus cher qu'un refus de démarrer."
+  echo
+  echo "  → attendez que la charge retombe sous $((COEURS * 2)), puis recommencez."
+  echo "  → si vous savez pourquoi vous passez outre : git commit --no-verify"
+  exit 1
+fi
+
 echo "  contrôle des documents engendrés…"
 if ! (node src/readme.ts --check && node src/landing.ts --check \
       && node src/dossier.ts --check && node src/sonde.ts --check) > /tmp/cascade-pre-commit.log 2>&1; then

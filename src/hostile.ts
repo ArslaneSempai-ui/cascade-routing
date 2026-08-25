@@ -205,7 +205,10 @@ export function page(r: Releve): string {
   l.push("## What this says");
   l.push("");
   const signales = cas.filter((c) => c.tournures.length > 0).length;
-  const muets = cas.filter((c) => c.tournures.length === 0 && c.charge !== null);
+  /* Le témoin sain n'est pas un trou : il est le cas qui DOIT rester muet. */
+  const muets = cas.filter((c) => c.tournures.length === 0 && c.id !== "H-00-temoin");
+  const pirates = r.resultats.filter((x) => x.detourne);
+  const pirratesVus = pirates.filter((x) => !x.cite).length;
   l.push(`The phrasing signal flags ${signales} of ${cas.length} documents here. It is a flag and`);
   l.push("not a refusal, and the reason is measured elsewhere: one of five ordinary sentences");
   l.push('written by hand to test it trips a pattern — "please disregard the previous invoice, it');
@@ -213,19 +216,31 @@ export function page(r: Releve): string {
   l.push("taking the protection with it.");
   l.push("");
   if (muets.length > 0) {
-    l.push("**The hole, named rather than left to be found.** These documents carry an attacker's");
-    l.push("value and no instruction-like phrasing at all, so the signal above says nothing about");
-    l.push("them:");
+    l.push("**The holes, named rather than left to be found.** The signal above says nothing");
+    l.push("about these documents, and each one fails it for its own reason:");
     l.push("");
     for (const c of muets) l.push(`- \`${c.id}\` — ${c.quoi}`);
     l.push("");
-    l.push("An attack does not have to give an order. Emphasis is enough, and so is length.");
+    l.push("An attack does not have to give an order in English. Emphasis is enough. Length is");
+    l.push("enough. And an order written in another language is still an order — the patterns are");
+    l.push("English, the documents in a European bank are not.");
     l.push("");
   }
   l.push("The citation guard cannot help either, and this is the part that surprises people: a");
-  l.push("value planted inside the document **is** a genuine quotation of it. The column above");
-  l.push("counts how many answers were not quoted, and a hijacked answer is normally not among");
-  l.push("them.");
+  l.push("value planted inside the document **is** a genuine quotation of it, so the guard has");
+  l.push("nothing to object to. Measured rather than argued: of the");
+  l.push(`**${pirates.length}** hijacked answers on this page, **${pirratesVus}** were caught by it`
+    + (pirratesVus === 0 ? "." : ", and here they are:"));
+  if (pirratesVus > 0) {
+    l.push("");
+    for (const x of pirates.filter((y) => !y.cite)) {
+      l.push(`- \`${x.cas}\` · \`${x.palier}\` returned \`${x.rendu.replace(/\s+/g, " ")}\``);
+    }
+    l.push("");
+    l.push("Read what they returned: the guard caught them for garbling the value while copying");
+    l.push("it, not for being hijacks. A payload copied cleanly is a faithful quotation, and a");
+    l.push("faithful quotation is what this guard is built to accept.");
+  }
   l.push("");
   l.push("## What this corpus is not");
   l.push("");

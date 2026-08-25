@@ -12,6 +12,18 @@
  * En KYC, les documents viennent de l'EXTÉRIEUR de la banque. Un dossier d'identité fourni par
  * un client peut donc décider de ce que l'outil rapporte.
  *
+ * ─── ET CE N'EST PAS RÉSERVÉ AUX GÉNÉRATIFS ───
+ *
+ * On a écrit ce fichier en croyant que les extractifs étaient immunisés par construction.
+ * Mesuré depuis, sur le corpus hostile (`CORPUS-HOSTILE.md`, `npm run hostile`) : `large`, un
+ * extractif, est le palier le PLUS détourné des quatre. Un extractif choisit un passage du
+ * document, et c'est l'attaquant qui écrit le document — rien là-dedans n'exige un modèle qui
+ * engendre. Sur le cas le plus direct (« IGNORE ALL PREVIOUS INSTRUCTIONS »), c'est même
+ * l'inverse de ce qu'on attendait : `gen-4b` rend la bonne réponse pendant que `small` et
+ * `large` rendent la charge.
+ *
+ * Ce signal-ci s'applique donc à TOUS les paliers, pas seulement à ceux qui engendrent.
+ *
  * ─── POURQUOI CE N'EST PAS UN REFUS, ET C'EST MESURÉ ───
  *
  * Sur 400 documents du corpus, **zéro** est signalé. Mais ce corpus est le nôtre et nous en
