@@ -266,6 +266,31 @@ export function compter(adresse: string, maintenant = Date.now()): number | null
 /** Pour les cas : remet les compteurs à zéro. */
 export function oublierLesRequetes(): void { vues.clear(); }
 
+/*
+ * CAVIARDER UN CHEMIN AVANT DE RENVOYER UNE ERREUR.
+ *
+ * Aujourd'hui aucune erreur atteignable ne porte de chemin : les routes ne touchent pas au
+ * disque, et les seules erreurs qui remontent ici sont des analyses JSON ratées et des
+ * `TypeError`. Vérifié en le tentant — `/js/../../../etc/passwd` rend « introuvable », sans
+ * un octet de plus. **La propriété est donc vraie par accident, pas par construction.**
+ *
+ * Le jour où quelqu'un ajoute une route qui lit un fichier, `ENOENT: no such file or
+ * directory, open '/Users/…/data/x.json'` traverse ce gestionnaire tel quel — et personne ne
+ * l'aura modifié, donc personne ne le verra. C'est la forme la plus discrète d'une fuite :
+ * elle apparaît par un changement fait ailleurs.
+ *
+ * On ne caviarde QUE ce qui est enraciné dans un système de fichiers. Une route — `/api/etat`
+ * — reste lisible : c'est l'information la plus utile d'un message d'erreur, et la retirer
+ * ferait écrire aux suivants un gestionnaire qui contourne celui-ci.
+ */
+export function sansChemins(texte: string): string {
+  return texte
+    .replace(/file:\/\/\/[^\s"')]+/g, "<file>")
+    .replace(/\b[A-Za-z]:\\[^\s"')]+/g, "<file>")
+    .replace(/(?:\/(?:Users|home|private|var|tmp|opt|etc|Applications)|\.\.?)\/[^\s"')]*/g, "<file>")
+    .replace(/[^\s"')]*node_modules\/[^\s"')]*/g, "<file>");
+}
+
 const serveur = createServer(async (req, res) => {
   const url = new URL(req.url ?? "/", `http://localhost:${PORT}`);
   const adresse = req.socket.remoteAddress ?? "inconnue";
@@ -377,7 +402,7 @@ const serveur = createServer(async (req, res) => {
 
     res.writeHead(404).end("introuvable");
   } catch (e) {
-    json(res, { erreur: String((e as Error).message ?? e) }, 400);
+    json(res, { erreur: sansChemins(String((e as Error).message ?? e)) }, 400);
   }
 });
 
