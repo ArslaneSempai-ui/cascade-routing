@@ -28,6 +28,7 @@
  */
 
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
+import { examiner, direLesDocumentsSuspects, oublierLesDocuments } from "./document-suspect.ts";
 import { noter, direLesFormes, oublierLesFormes } from "./forme-rendue.ts";
 import { loadavg } from "node:os";
 import { isMain } from "./cli.ts";
@@ -1033,6 +1034,9 @@ export async function mesurerVosCas(
         /* `extract` attend un ClientFile et un Field ; les cas du lecteur ont les mêmes deux
            propriétés utiles, et le champ n'est qu'une clé. Le typage local est plus étroit
            que la réalité, d'où la conversion — explicite plutôt que silencieuse. */
+        /* Le document est examiné une fois, avant la première extraction : le signal porte
+           sur le texte fourni, pas sur ce que tel palier en a fait. */
+        examiner(c.id, c.text);
         const borne = bornerTexte(c.text);
         if (borne.ecarte > 0) casBornes.set(c.id, borne.ecarte);
         const got = await extract(palier, { id: c.id, text: borne.texte, truth: c.truth } as never,
@@ -1523,6 +1527,9 @@ Nothing leaves your machine: the models are local and this path makes no network
    * LE DIRE, AVEC LE COMPTE. Une troncature qu'on ne rapporte pas produit un taux qui ne
    * porte pas sur ce que le client croit avoir mesuré — et il le citera.
    */
+  const suspects = direLesDocumentsSuspects(cas.length);
+  if (suspects) console.log(`\n${suspects}`);
+
   const formes = direLesFormes();
   if (formes) console.log(`\n${formes}`);
 
