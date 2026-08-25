@@ -352,6 +352,61 @@ export function nomSur(champ: string): string {
   return propre.length > 0 ? propre : "unnamed field";
 }
 
+/*
+ * LE TEXTE DONNÉ AU MODÈLE EST BORNÉ, ET LA BORNE VIENT DE LA FENÊTRE DU MODÈLE.
+ *
+ * Mesuré étape par étape sur une cellule de 20 Mo : lire le fichier et l'analyser coûte
+ * 92 Mo, `loadExtractors` en coûte 1 557 — constant, indépendant du fichier — et
+ * **l'extraction croît linéairement avec la longueur du texte**, environ 44 Mo par Mo. Sur
+ * une cellule de 20 Mo cela fait près d'un gigaoctet de plus, sur la machine du client.
+ *
+ * LA BORNE NE RETIRE RIEN, et c'est mesuré et non supposé. Les deux extracteurs ont une
+ * fenêtre de 512 et 514 jetons, lue dans leur `config.json` (`max_position_embeddings`), pas
+ * estimée. Au-delà, ils ne voient pas le texte — éprouvé en plaçant la réponse à la fin :
+ * trouvée à 589 caractères de bourrage, **perdue à 2 789**. Pire que perdue : le modèle rend
+ * alors le début du bourrage comme s'il s'agissait de la réponse. Borner rend donc explicite
+ * ce qu'il fait déjà en silence, et remplace une réponse inventée par un fait annoncé.
+ *
+ * LE CHIFFRE. 512 jetons × 16 caractères par jeton. Le 512 est lu ; le 16 est une marge sur
+ * un rapport MESURÉ — au plus 4,60 caractères par jeton sur 200 documents du corpus, donc
+ * une marge de 3,5×. On borne large exprès : couper avant la fenêtre retirerait au modèle du
+ * texte qu'il aurait lu, ce que cette borne ne doit jamais faire.
+ *
+ * Pour situer : le document le plus long du corpus fait 221 caractères. La borne est à
+ * 8 192. Elle ne se déclenche pas sur des données normales, et le cas qui l'accompagne le
+ * vérifie dans les deux sens.
+ */
+export const FENETRE_JETONS = 512;
+export const CARACTERES_PAR_JETON = 16;
+export const PLAFOND_TEXTE = FENETRE_JETONS * CARACTERES_PAR_JETON;
+
+/*
+ * CE QUI A ÉTÉ BORNÉ, POUR LE DIRE. Au module parce que la boucle d'extraction et la sortie
+ * qui l'annonce sont dans deux fonctions différentes, et que cette commande tourne une fois
+ * par processus. Une troncature silencieuse fabriquerait un taux qui ne porte pas sur ce que
+ * le client croit avoir mesuré, et il le citerait.
+ */
+/*
+ * UNE ENTRÉE PAR CAS, PAS PAR EXTRACTION. La boucle passe sur chaque cas une fois PAR PALIER
+ * et par champ : un compteur incrémenté là additionnait le même texte deux fois, et la sortie
+ * annonçait « 8 484 caractères écartés » pour 4 242 réellement retirés. Trouvé par le cas qui
+ * lance la commande — les cas unitaires sur `bornerTexte` ne pouvaient pas le voir.
+ */
+const casBornes = new Map<string, number>();
+
+/** Pour les cas : remet les compteurs à zéro. */
+export function oublierLesBornes(): void { casBornes.clear(); }
+/** Ce que la dernière passe a écarté. */
+export function bornesPosees(): { cas: number; caracteres: number } {
+  return { cas: casBornes.size, caracteres: [...casBornes.values()].reduce((a, b) => a + b, 0) };
+}
+
+/** Rend le texte borné, et de combien il a été raccourci. */
+export function bornerTexte(texte: string): { texte: string; ecarte: number } {
+  if (texte.length <= PLAFOND_TEXTE) return { texte, ecarte: 0 };
+  return { texte: texte.slice(0, PLAFOND_TEXTE), ecarte: texte.length - PLAFOND_TEXTE };
+}
+
 export function lireCsv(texte: string): Lecture {
   const lignes: string[][] = [];
   let ligne: string[] = [], guillemets = false;
@@ -977,7 +1032,9 @@ export async function mesurerVosCas(
         /* `extract` attend un ClientFile et un Field ; les cas du lecteur ont les mêmes deux
            propriétés utiles, et le champ n'est qu'une clé. Le typage local est plus étroit
            que la réalité, d'où la conversion — explicite plutôt que silencieuse. */
-        const got = await extract(palier, { id: c.id, text: c.text, truth: c.truth } as never,
+        const borne = bornerTexte(c.text);
+        if (borne.ecarte > 0) casBornes.set(c.id, borne.ecarte);
+        const got = await extract(palier, { id: c.id, text: borne.texte, truth: c.truth } as never,
           champ as never, "reference", questionSure(champ, questions));
         const ms = performance.now() - t0;
         durees.push(ms);
@@ -1459,6 +1516,20 @@ Nothing leaves your machine: the models are local and this path makes no network
   const reglesMesurees = Object.values(releve).some((r) => "rules" in r);
 
   const sortie = fichier.replace(/\.csv$/i, "") + "-measured.md";
+  /*
+   * LE DIRE, AVEC LE COMPTE. Une troncature qu'on ne rapporte pas produit un taux qui ne
+   * porte pas sur ce que le client croit avoir mesuré — et il le citera.
+   */
+  const bornes = bornesPosees();
+  if (bornes.cas > 0) {
+    console.log(`\n  ${bornes.cas} case(s) had their text cut to the first ${PLAFOND_TEXTE} characters`
+      + ` — ${bornes.caracteres.toLocaleString("en-GB")} character(s) set aside in total.`);
+    console.log(`  The extractors read at most ${FENETRE_JETONS} tokens, so they never saw that text:`);
+    console.log(`  cutting it changes no rate above, and stops one long cell from costing gigabytes.`);
+    console.log(`  If your documents are genuinely longer than that, the fields you need must appear`);
+    console.log(`  in the first ${PLAFOND_TEXTE} characters, or no tier can find them.`);
+  }
+
   writeFileSync(sortie, rapportPourLeClient({
     cas: cas.length, champs, date: new Date().toISOString().slice(0, 10),
     questions, avecRegles: reglesMesurees,
