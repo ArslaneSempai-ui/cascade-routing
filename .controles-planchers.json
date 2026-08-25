@@ -14,16 +14,22 @@
     "l'habitude de céder un point à chaque fois qu'on est pressé."
   ],
   "couverture": {
-    "lignes": 65.7,
-    "branches": 80.6,
-    "fonctions": 64.6,
+    "lignes": 66.07,
+    "branches": 80.98,
+    "fonctions": 65.85,
     "mesureLe": "2026-08-25",
     "comment": "node --test --experimental-test-coverage src/*.test.ts, ligne « all files »"
   },
   "catalogue": {
-    "occurrences": 127,
+    "occurrences": 128,
     "mesureLe": "2026-08-25",
-    "comment": "node ~/.claude/skills/equipe/scripts/pieges.mjs . — 121 des 127 sont la façade française, qui descend avec les traductions. Descendu de 134 à 127 le 25 août 2026 : six `compte-non-tenu` (des titres et messages de cas qui annonçaient un nombre que rien n'imposait — deux sont devenus des comptes tenus, quatre ont cessé de compter, et l'un d'eux comptait faux : « trois colonnes ou plus » sur un en-tête qui en porte quatre) et une `couverture-recitee`, qui était un faux positif de la règle sur des chemins calculés — les deux chemins sont maintenant nommés, et un cas confronte POIDS_MODELES à ce que le code charge réellement."
+    "comment": "node ~/.claude/skills/equipe/scripts/pieges.mjs . — 121 des 127 sont la façade française, qui descend avec les traductions. Descendu de 134 à 127 le 25 août 2026 : six `compte-non-tenu` (des titres et messages de cas qui annonçaient un nombre que rien n'imposait — deux sont devenus des comptes tenus, quatre ont cessé de compter, et l'un d'eux comptait faux : « trois colonnes ou plus » sur un en-tête qui en porte quatre) et une `couverture-recitee`, qui était un faux positif de la règle sur des chemins calculés — les deux chemins sont maintenant nommés, et un cas confronte POIDS_MODELES à ce que le code charge réellement.",
+    "parPiege": {
+      "facade-en-francais": 122,
+      "harnais-sans-remise-a-neuf": 2,
+      "devise-tapee": 4
+    },
+    "_pourquoi_par_piege": "Le total noyait le signal. `facade-en-francais` compte plus de cent occurrences connues, donc une chaîne française écrite aujourd'hui disparaissait dans le bruit et n'était attrapée qu'au bout de la suite, après coup. Un plancher PAR PIÈGE rend une occurrence neuve visible immédiatement, nommée, et refuse tant qu'elle est là."
   },
   "semgrep": {
     "trouvailles": 26,

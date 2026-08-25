@@ -696,6 +696,29 @@ export async function measure(
 }
 
 if (isMain(import.meta)) {
+  /*
+   * ─── CETTE COMMANDE TÉLÉCHARGE 1,26 Go, ET ON NE LA LANCE PAS PAR DISTRACTION ───
+   *
+   * `npm run measure` remesure tout : elle charge l'échelle générative, huit gigaoctets de
+   * plus que les encodeurs, et prend une heure. C'est une règle permanente de ce projet de ne
+   * pas la déclencher sans le vouloir — et elle a tenu parce qu'une session s'en souvenait.
+   *
+   * Une règle qui tient parce que quelqu'un s'en souvient tient jusqu'à la session suivante.
+   * Le refus la rend vraie pour tout le monde, y compris pour qui découvre ce dépôt.
+   *
+   * Ce n'est pas un verrou : la variable se pose en une seconde. C'est le geste distrait
+   * qu'elle empêche, pas la mesure.
+   */
+  if (!process.env.MESURE_VOULUE && !process.argv.includes("--je-veux-mesurer")) {
+    console.error(
+      "this pass downloads up to 1.26 GB and takes about an hour.\n\n"
+      + "  It re-measures everything, generative ladder included. The reading shipped with the\n"
+      + "  repository is enough to read the published figures, and `npm run measure:yours`\n"
+      + "  measures YOUR data without downloading any of it.\n\n"
+      + "  → if that is what you want:  MESURE_VOULUE=1 npm run measure\n"
+      + "  → or:                        npm run measure -- --je-veux-mesurer");
+    process.exit(2);
+  }
   const llm = process.argv.includes("--llm");
   /* `--cases=N` : la taille d'échantillon est un réglage, pas une constante. À 120 cas le
      plus petit écart détectable est d'environ dix-huit points ; à 1 000, de six. */

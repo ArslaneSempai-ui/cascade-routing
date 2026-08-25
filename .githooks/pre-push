@@ -96,4 +96,29 @@ if [ -n "$TROUVES" ]; then
   exit 1
 fi
 
+# ─── POUSSER DEMANDE L'ACCORD ÉCRIT D'ARSLANE, ET C'EST LA RÈGLE LA PLUS ANCIENNE ───
+#
+# « Trois choses ont besoin de mon accord à moi : pousser ou publier, effacer quoi que ce soit,
+# et tout ce qui touche à l'argent. Une permission donnée une fois ne vaut pas pour la suivante. »
+#
+# Cette règle a tenu cent quarante commits sans faille — mais elle tenait dans la mémoire d'une
+# session, et une mémoire ne survit pas à la session suivante. Une session neuve qui trouve un
+# dépôt avec un distant configuré n'a aucune raison de deviner qu'il ne faut pas pousser.
+#
+# Ce n'est pas un verrou : c'est un ralentisseur qui force la décision à être explicite. Le
+# passage demande de nommer l'accord au moment de pousser, ce qu'on ne fait pas par distraction.
+if [ -z "$ACCORD_ARSLANE" ]; then
+  echo "" >&2
+  echo "  POUSSÉE REFUSÉE — publier demande l'accord d'Arslane, à chaque fois." >&2
+  echo "" >&2
+  echo "  Ce dépôt est public. Ce qui part ne revient pas, et une permission donnée" >&2
+  echo "  une fois ne vaut pas pour la suivante." >&2
+  echo "" >&2
+  echo "  Commits en attente : $(git rev-list --count @{u}..HEAD 2>/dev/null || echo '?')" >&2
+  echo "" >&2
+  echo "  → quand l'accord est donné :   ACCORD_ARSLANE=oui git push" >&2
+  echo "  → git push --no-verify   passe outre, et publie sans accord." >&2
+  exit 1
+fi
+
 exit 0
