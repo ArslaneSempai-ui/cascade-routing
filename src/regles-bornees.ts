@@ -43,9 +43,10 @@ function median(xs: number[]): number {
 
 type Issue = { valeurs: string[]; ms: number } | { refus: string };
 
-async function evaluerUne(motif: string, textes: string[], msMax: number): Promise<Issue> {
-  const w = new Worker(new URL("./regles-ouvrier.ts", import.meta.url),
-    { workerData: { motif, textes } });
+async function evaluerUne(
+  motif: string, textes: string[], msMax: number, ouvrier: URL,
+): Promise<Issue> {
+  const w = new Worker(ouvrier, { workerData: { motif, textes } });
   const valeurs: string[] = new Array(textes.length).fill("");
   const durees: number[] = [];
   let vus = 0;
@@ -93,10 +94,12 @@ async function evaluerUne(motif: string, textes: string[], msMax: number): Promi
      * 25 août 2026 ont toutes échoué ici, `TS18046`, en 22 à 42 secondes — et personne
      * ne regardait la chaîne, donc trois mises à jour étaient bloquées sans que ça se voie.
      * Cette écriture compile sous les deux typages et ne change rien à l'exécution.
+     *
+     * Tenue sur UNE ligne à dessein : c'est la seule forme qu'on puisse retirer d'un coup
+     * pour vérifier que le cas qui la couvre vire au rouge. Une garde étalée sur trois
+     * lignes ne se mute pas proprement, donc elle ne se prouve pas.
      */
-    w.on("error", (e) => arreter({
-      refus: `could not be evaluated — ${e instanceof Error ? e.message : String(e)}`,
-    }));
+    w.on("error", (e) => arreter({ refus: `could not be evaluated — ${e instanceof Error ? e.message : String(e)}` }));
   });
 }
 
@@ -107,10 +110,17 @@ async function evaluerUne(motif: string, textes: string[], msMax: number): Promi
  */
 export async function evaluerRegles(
   regles: Record<string, RegExp>, textes: string[], msMax = MS_PAR_EVALUATION,
+  /*
+   * L'OUVRIER EST INJECTABLE POUR QUE SON ÉCHEC SOIT ATTEIGNABLE. Sans ce paramètre, le
+   * chemin `w.on("error")` n'était joué par aucun cas : le seul qui le nommait lisait la
+   * SOURCE du fichier comme du texte au lieu d'exécuter la route. Et un balayage qui ne
+   * mute que `throw new Error(` ne pouvait pas le voir non plus — ce n'en est pas un.
+   */
+  ouvrier: URL = new URL("./regles-ouvrier.ts", import.meta.url),
 ): Promise<ReglesEvaluees> {
   const out: ReglesEvaluees = { valeurs: {}, refusees: {}, ms: {} };
   for (const [champ, re] of Object.entries(regles)) {
-    const r = await evaluerUne(re.source, textes, msMax);
+    const r = await evaluerUne(re.source, textes, msMax, ouvrier);
     if ("refus" in r) out.refusees[champ] = r.refus;
     else { out.valeurs[champ] = r.valeurs; out.ms[champ] = r.ms; }
   }

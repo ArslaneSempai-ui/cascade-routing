@@ -175,3 +175,31 @@ test("le programme SE TERMINE après un refus, et pas seulement le refus s'affic
     + "  commande imprime son refus et reste là. Il manque `void w.terminate()` sur le chemin\n"
     + "  d'arrêt — et aucune valeur de retour ne peut le dire.");
 });
+
+/*
+ * L'OUVRIER QUI NE CHARGE PAS — le chemin d'erreur que rien n'atteignait.
+ *
+ * `evaluerUne` pose un `w.on("error", …)` qui rend un refus « could not be evaluated ». Aucun
+ * cas ne l'exécutait : le seul qui le nommait lisait la SOURCE du fichier comme du texte,
+ * `src.indexOf('w.on("error"')`, ce qui vérifie qu'une ligne existe, pas qu'elle fasse
+ * quelque chose. Et le balayage des gardes ne pouvait pas le voir — il ne mute que
+ * `throw new Error(`, et ceci n'en est pas un.
+ *
+ * Le cas vise la fonction EXPORTÉE, pas `evaluerUne` en isolation : c'est le point d'appel
+ * qui doit tenir, pas la fonction prise à part.
+ *
+ * La borne de temps est explicite. Sans le gestionnaire, la promesse ne se résout jamais et
+ * le cas PEND au lieu d'échouer — un cas qui pend ne dit pas « rouge », il dit « attendez ».
+ */
+test("un ouvrier qui ne charge pas est refusé, pas attendu", { timeout: 15_000 }, async () => {
+  const introuvable = new URL("./regles-ouvrier-qui-nexiste-pas.ts", import.meta.url);
+  const r = await evaluerRegles({ nom: /a+/ }, ["abc"], 250, introuvable);
+
+  assert.deepStrictEqual(Object.keys(r.valeurs), [],
+    "une règle dont l'ouvrier n'a pas chargé ne doit produire AUCUNE valeur : la rendre vide\n"
+    + "  ferait passer un champ non extrait pour un champ sans correspondance.");
+
+  assert.match(r.refusees["nom"] ?? "", /could not be evaluated/,
+    "le refus doit nommer l'échec de l'ouvrier. Sans ce chemin, la promesse ne se résout\n"
+    + `  jamais et la commande reste là sans rien dire. Reçu : ${JSON.stringify(r.refusees)}`);
+});
