@@ -64,16 +64,16 @@ if (isMain(import.meta)) {
       };
     } catch { return undefined; }
   })();
-  if (version?.sale) { console.error("\nArbre modifié : committer avant de mesurer.\n"); process.exit(1); }
+  if (version?.sale) { console.error("\nModified tree: commit before measuring.\n"); process.exit(1); }
 
   const reglage = JSON.parse(readFileSync(REGLAGE, "utf8")) as { surDev: Record<string, Record<string, number>>; code?: { commit: string } };
   const paires = pairesADepartager(reglage.surDev)
     .filter((x) => (GENERATIFS_PUBLICS as readonly string[]).includes(x.palier));
 
-  console.log(`\n${paires.length} paires × ${FIELDS.length} champs × ${cas} cas, sur \`dev\`.`);
-  for (const x of paires) console.log(`  ${x.palier.padEnd(10)} ${x.vainqueur} contre ${x.second}  (${x.ecartPoints} pt sur dev)`);
-  console.log(`\nCe passage peut réfuter un choix, jamais le confirmer — l'indiscernabilité n'est pas transitive.`);
-  console.log(`Charge avant départ : ${loadavg()[0]!.toFixed(2)} sur ${cpus().length} cœurs.\n`);
+  console.log(`\n${paires.length} pairs × ${FIELDS.length} fields × ${cas} cases, on \`dev\`.`);
+  for (const x of paires) console.log(`  ${x.palier.padEnd(10)} ${x.vainqueur} against ${x.second}  (${x.ecartPoints} pt on dev)`);
+  console.log(`\nThis pass can refute a choice, never confirm one — indistinguishability is not transitive.`);
+  console.log(`Load before starting: ${loadavg()[0]!.toFixed(2)} on ${cpus().length} cores.\n`);
   const journal = ouvrirJournal("departager", {
     quoi: "Le vainqueur du réglage est-il séparable de son second ?", split: "dev", cases: cas,
     commit: version?.commit, sale: version?.sale,
@@ -109,7 +109,7 @@ if (isMain(import.meta)) {
       conclusion: d.decidable
         ? `${d.vainqueur} bat ${d.second} sur les mêmes cas, mais « retenu » demanderait aussi les trois autres formulations.`
         : `rien n'est retenu pour ${palier} : ${d.vainqueur} et ${d.second} ne se départagent pas.` };
-    console.log(`    → ${d.gains}–${d.regressions} apparié, ${d.ecartExtractions} extraction(s) d'écart — ${d.decidable ? "DÉPARTAGÉ" : "non départagé"}\n`);
+    console.log(`    → ${d.gains}–${d.regressions} paired, ${d.ecartExtractions} extraction(s) apart — ${d.decidable ? "DECIDED" : "not decided"}\n`);
   }
 
   writeFileSync(SORTIE, JSON.stringify({
@@ -122,5 +122,5 @@ if (isMain(import.meta)) {
     charge: { externalBefore: Number(loadavg()[0]!.toFixed(2)), coeurs: cpus().length },
     resultats, reussites: tousLesBits,
   }, null, 2) + "\n");
-  console.log(`Écrit dans ${SORTIE.split("/").pop()}\n`);
+  console.log(`Written to ${SORTIE.split("/").pop()}\n`);
 }

@@ -45,10 +45,10 @@ if (isMain(import.meta)) {
       };
     } catch { return undefined; }
   })();
-  if (version?.sale) { console.error("\nArbre modifié : committer avant de mesurer.\n"); process.exit(1); }
+  if (version?.sale) { console.error("\nModified tree: commit before measuring.\n"); process.exit(1); }
 
   console.log(`\n${PALIERS.length} paliers × ${FORMULATIONS.length} formulations × ${FIELDS.length} champs × ${cas} cas, sur \`dev\`.`);
-  console.log(`Charge avant départ : ${loadavg()[0]!.toFixed(2)} sur ${cpus().length} cœurs.\n`);
+  console.log(`Load before starting: ${loadavg()[0]!.toFixed(2)} on ${cpus().length} cores.\n`);
   const journal = ouvrirJournal("apparier", {
     quoi: "Le classement de gen-4b et gen-8b dépend-il de la formulation ?", split: "dev", cases: cas,
     commit: version?.commit, sale: version?.sale,
@@ -102,8 +102,8 @@ if (isMain(import.meta)) {
     }
     const groupe = pairedVerdict(G, P);
     verdicts[f] = { parChamp, groupe: { gen4bWins: G, gen8bWins: P, decidable: groupe.decidable } };
-    console.log(`\n  ${f} — groupé : gen-4b gagne ${G}, gen-8b gagne ${P} — ${groupe.decidable ? "DÉPARTAGÉ" : "dans le bruit"}`);
-    console.log(`    champs départagés : ${parChamp.filter((x) => x.decidable).map((x) => x.field).join(", ") || "aucun"}`);
+    console.log(`\n  ${f} — groupé : gen-4b gagne ${G}, gen-8b gagne ${P} — ${groupe.decidable ? "DECIDED" : "within the noise"}`);
+    console.log(`    fields decided: ${parChamp.filter((x) => x.decidable).map((x) => x.field).join(", ") || "none"}`);
   }
 
   writeFileSync(SORTIE, JSON.stringify({
@@ -115,6 +115,6 @@ if (isMain(import.meta)) {
     verdicts,
   }, null, 2) + "\n");
   const j = journal.fermer();
-  console.log(`${j.lignes} tentatives dans ${j.chemin.split("/").slice(-2).join("/")}`);
-  console.log(`\nÉcrit dans ${SORTIE.split("/").pop()}\n`);
+  console.log(`${j.lignes} attempts in ${j.chemin.split("/").slice(-2).join("/")}`);
+  console.log(`\nWritten to ${SORTIE.split("/").pop()}\n`);
 }

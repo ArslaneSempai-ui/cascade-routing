@@ -113,12 +113,12 @@ if (isMain(import.meta)) {
     } catch { return undefined; }
   })();
   if (version?.sale) {
-    console.error("\nArbre modifié : les formulations doivent être committées avant d'être départagées.\n");
+    console.error("\nModified tree: the prompts must be committed before they can be decided between.\n");
     process.exit(1);
   }
 
   console.log(`\n${noms.length} formulations × ${paliers.length} paliers × ${FIELDS.length} champs × ${cas} cas — sur \`dev\`.`);
-  console.log(`Charge avant départ : ${loadavg()[0]!.toFixed(2)} sur ${cpus().length} cœurs.\n`);
+  console.log(`Load before starting: ${loadavg()[0]!.toFixed(2)} on ${cpus().length} cores.\n`);
   const journal = ouvrirJournal("regler", {
     quoi: "Cinq formulations par palier, sur le découpage de réglage.", split: "dev", cases: cas,
     commit: version?.commit, sale: version?.sale,
@@ -176,7 +176,7 @@ if (isMain(import.meta)) {
     retenu, depart, reussites: bits,
   }, null, 2) + "\n");
 
-  console.log("\nretenu par palier, sur `dev` :");
+  console.log("\nkept per tier, on `dev`:");
   for (const t of paliers) {
     const d = depart[t]!;
     console.log(d.retenu
@@ -184,6 +184,6 @@ if (isMain(import.meta)) {
       : `  ${t.padEnd(10)} ${"— non départagé —".padEnd(20)} ${d.vainqueur} devant ${d.second} de ${d.ecartExtractions} extraction(s) sur ${d.total} ; apparié ${d.gains}–${d.regressions}`);
   }
   const j = journal.fermer();
-  console.log(`${j.lignes} tentatives dans ${j.chemin.split("/").slice(-2).join("/")}`);
-  console.log(`\nÉcrit dans ${SORTIE.split("/").pop()} — à mesurer ensuite sur \`heldout\`.\n`);
+  console.log(`${j.lignes} attempts in ${j.chemin.split("/").slice(-2).join("/")}`);
+  console.log(`\nWritten to ${SORTIE.split("/").pop()} — to be measured next on \`heldout\`.\n`);
 }

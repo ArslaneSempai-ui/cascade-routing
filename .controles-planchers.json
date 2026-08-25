@@ -21,11 +21,11 @@
     "comment": "node --test --experimental-test-coverage src/*.test.ts, ligne « all files »"
   },
   "catalogue": {
-    "occurrences": 128,
+    "occurrences": 111,
     "mesureLe": "2026-08-25",
     "comment": "node ~/.claude/skills/equipe/scripts/pieges.mjs . — 121 des 127 sont la façade française, qui descend avec les traductions. Descendu de 134 à 127 le 25 août 2026 : six `compte-non-tenu` (des titres et messages de cas qui annonçaient un nombre que rien n'imposait — deux sont devenus des comptes tenus, quatre ont cessé de compter, et l'un d'eux comptait faux : « trois colonnes ou plus » sur un en-tête qui en porte quatre) et une `couverture-recitee`, qui était un faux positif de la règle sur des chemins calculés — les deux chemins sont maintenant nommés, et un cas confronte POIDS_MODELES à ce que le code charge réellement.",
     "parPiege": {
-      "facade-en-francais": 122,
+      "facade-en-francais": 105,
       "harnais-sans-remise-a-neuf": 2,
       "devise-tapee": 4
     },

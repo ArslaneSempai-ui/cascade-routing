@@ -87,18 +87,18 @@ export function lire(chemin: string): Bloc[] {
     const err = e as { stderr?: Buffer | string; status?: number };
     const dit = String(err.stderr ?? "").trim();
     throw new Error(dit ? `${dit} (code ${err.status})`
-      : `le lecteur d'image a échoué sur ${chemin} sans rien dire (code ${err.status}).`);
+      : `the image reader failed on ${chemin} saying nothing (code ${err.status}).`);
   }
 
   /* Un tableau vide est un FAIT — « j'ai regardé, il n'y a pas de texte ». Une sortie qui ne
      se parse pas est une panne, et les deux ne doivent pas se rapporter pareil. */
   try {
     const blocs = JSON.parse(sortie) as Bloc[];
-    if (!Array.isArray(blocs)) throw new Error("ce n'est pas une liste");
+    if (!Array.isArray(blocs)) throw new Error("this is not a list");
     return blocs;
   } catch (e) {
-    throw new Error(`le lecteur d'image a rendu ${sortie.length} caractère(s) que je ne sais pas `
-      + `lire (${(e as Error).message}) : ${JSON.stringify(sortie.slice(0, 120))}`);
+    throw new Error(`the image reader returned ${sortie.length} character(s) that cannot be `
+      + `read (${(e as Error).message}): ${JSON.stringify(sortie.slice(0, 120))}`);
   }
 }
 

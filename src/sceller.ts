@@ -33,7 +33,7 @@ import { fileURLToPath } from "node:url";
 if (isMain(import.meta)) {
   const cible = process.argv[2] ?? fileURLToPath(new URL("../data/profiles.json", import.meta.url));
   if (!existsSync(cible)) {
-    console.error(`  ${cible} n'existe pas. Rien à sceller.`);
+    console.error(`  ${cible} does not exist. There is nothing to seal.`);
     process.exit(2);
   }
   /*
@@ -55,7 +55,7 @@ if (isMain(import.meta)) {
   const apres = empreinteDuReleve(brut);
 
   if (avant === apres) {
-    console.log(`  ${cible}\n  déjà scellé, et le scellé correspond : ${apres}. Rien à faire.`);
+    console.log(`  ${cible}\n  already sealed, and the seal matches: ${apres}. Nothing to do.`);
     process.exit(0);
   }
 
@@ -63,7 +63,7 @@ if (isMain(import.meta)) {
   writeFileSync(cible, JSON.stringify(brut, null, 2));
   console.log(`  ${cible}`);
   console.log(avant
-    ? `  scellé REMPLACÉ : ${avant} → ${apres}\n  Le contenu avait changé depuis le dernier scellé. Vous venez de déclarer que le\n  contenu actuel fait foi.`
-    : `  scellé posé : ${apres}\n  Ce fichier n'en portait pas. L'empreinte prouve désormais qu'il ne bouge plus ;\n  elle ne dit rien de ce qu'il contenait avant aujourd'hui.`);
+    ? `  seal REPLACED: ${avant} → ${apres}\n  The content had changed since the last seal. You have just declared that the\n  current content is the one that stands.`
+    : `  seal placed: ${apres}\n  This file carried none. The fingerprint now proves it does not move any more;\n  it says nothing about what it held before today.`);
 
 }

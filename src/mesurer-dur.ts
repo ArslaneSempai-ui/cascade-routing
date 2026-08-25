@@ -41,7 +41,7 @@ export function casAmbigus(): CasDur[] {
   const textes = new Map(lireFichier("cas-ambigus.md").map((c) => [c.id, c]));
   return cle.cases.map((c) => {
     const t = textes.get(c.id);
-    if (!t) throw new Error(`le cas ${c.id} n'a pas de document dans la prose.`);
+    if (!t) throw new Error(`case ${c.id} has no document in the prose.`);
     /* Un seul champ par cas ambigu : les quatre autres ne sont pas déclarés, donc pas notés. */
     return { id: c.id, cle: `cas-ambigus#${c.id}`, titre: t.titre, source: "cas-ambigus.md", texte: t.texte,
       attendus: { [c.field]: { lectures: c.readings, silence: false,
@@ -81,16 +81,16 @@ if (isMain(import.meta)) {
       };
     } catch { return undefined; }
   })();
-  if (version?.sale) { console.error("\nArbre modifié : la notation doit être committée avant la mesure.\n"); process.exit(1); }
+  if (version?.sale) { console.error("\nModified tree: the scoring must be committed before the measurement.\n"); process.exit(1); }
 
   const tabulaires = corpusDur();
   const ambigus = casAmbigus();
   const tous = [...tabulaires, ...ambigus];
   const tentatives = tous.reduce((n, c) => n + Object.keys(c.attendus).length, 0);
 
-  console.log(`\n${tous.length} cas (${tabulaires.length} tabulaires, ${ambigus.length} ambigus), `
-    + `${tentatives} champs déclarés, ${paliers.length} paliers.`);
-  console.log(`Notation : ${REGLE_DE_NOTATION}`);
+  console.log(`\n${tous.length} cases (${tabulaires.length} tabular, ${ambigus.length} ambiguous), `
+    + `${tentatives} declared fields, ${paliers.length} tiers.`);
+  console.log(`Scoring: ${REGLE_DE_NOTATION}`);
   /*
    * MESURER SUR UNE MACHINE SATURÉE MESURE LA MACHINE.
    *
@@ -112,15 +112,15 @@ if (isMain(import.meta)) {
    */
   const chargeParCoeur = loadavg()[0]! / cpus().length;
   const malgreCharge = process.argv.find((a) => a.startsWith("--allow-load="))?.split("=")[1];
-  console.log(`Charge avant départ : ${loadavg()[0]!.toFixed(2)} sur ${cpus().length} cœurs.\n`);
+  console.log(`Load before starting: ${loadavg()[0]!.toFixed(2)} on ${cpus().length} cores.\n`);
   if (chargeParCoeur > CHARGE_MAX_PAR_COEUR && malgreCharge === undefined) {
     console.error(
-      `Charge de ${(100 * chargeParCoeur).toFixed(0)} % par cœur, seuil `
-      + `${(100 * CHARGE_MAX_PAR_COEUR).toFixed(0)} %. Cette passe dure une vingtaine de minutes `
-      + `et les appels génératifs ont un délai de trente secondes : sous cette charge ils le\n`
-      + `  dépassent, et la passe meurt après avoir travaillé pour rien.\n\n`
-      + `  Attendre que la machine se calme, ou forcer en disant POURQUOI et avec quoi :\n`
-      + `  npm run dur -- --allow-load="ce qui tourne à côté"\n`
+      `Load of ${(100 * chargeParCoeur).toFixed(0)} % per core, threshold `
+      + `${(100 * CHARGE_MAX_PAR_COEUR).toFixed(0)} %. This pass takes about twenty minutes `
+      + `and the generative calls have a thirty-second timeout: under this load they exceed\n`
+      + `  it, and the pass dies after working for nothing.\n\n`
+      + `  Wait for the machine to go quiet, or force it by saying WHY and with what:\n`
+      + `  npm run dur -- --allow-load="what else is running"\n`
       + `  La raison est écrite dans le relevé, pour que personne n'ait à la deviner plus tard.`);
     process.exit(1);
   }
@@ -173,9 +173,9 @@ if (isMain(import.meta)) {
     }
     const n = par[t].clean + par[t].blank + par[t].wrong;
     const d = entiers.get(t)!;
-    console.log(`  ${t.padEnd(10)} champs ${(100 * par[t].clean / n).toFixed(1).padStart(5)} %`
-      + `   dossiers entiers ${String(d.size).padStart(2)}/${completsAttendus}`
-      + `   sur-refus ${String(par[t].overRefusal).padStart(3)}   sur-réponse ${String(par[t].overAnswer).padStart(3)}`);
+    console.log(`  ${t.padEnd(10)} fields ${(100 * par[t].clean / n).toFixed(1).padStart(5)} %`
+      + `   whole files ${String(d.size).padStart(2)}/${completsAttendus}`
+      + `   over-refusal ${String(par[t].overRefusal).padStart(3)}   over-answer ${String(par[t].overAnswer).padStart(3)}`);
   }
 
   /*
@@ -213,10 +213,10 @@ if (isMain(import.meta)) {
    * avant qu'on en écrive un.
    */
   const meilleurSeul = Math.max(...[...entiers.values()].map((s) => s.size));
-  console.log(`\nPlafond du routage par document : l'oracle rend ${oracle.size} dossier(s) entier(s) `
-    + `sur ${completsAttendus}, le meilleur palier seul ${meilleurSeul}.`);
-  console.log(`  Tout routeur par document est borné par cet écart de ${oracle.size - meilleurSeul}, `
-    + `et l'oracle choisit après coup : il n'est pas réalisable.\n`);
+  console.log(`\nCeiling for per-document routing: the oracle returns ${oracle.size} whole file(s) `
+    + `out of ${completsAttendus}, the best single tier ${meilleurSeul}.`);
+  console.log(`  Any per-document router is bounded by that gap of ${oracle.size - meilleurSeul}, `
+    + `and the oracle chooses after the fact: it is not achievable.\n`);
 
   const j = journal.fermer();
   writeFileSync(SORTIE, JSON.stringify({
@@ -244,7 +244,7 @@ if (isMain(import.meta)) {
     limite: "Aucun taux d'ici ne se compare à un taux du corpus propre : ce ne sont pas les mêmes "
       + "documents ni la même règle de notation. La baisse est attendue et voulue.",
   }, null, 2) + "\n");
-  console.log(`\n${j.lignes} tentatives enregistrées. Écrit dans ${SORTIE.split("/").pop()}\n`);
+  console.log(`\n${j.lignes} attempts recorded. Written to ${SORTIE.split("/").pop()}\n`);
   } catch (e) {
     /*
      * ÉCRIRE EN SYNCHRONE, PUIS SORTIR SANS RENDRE LA MAIN.
