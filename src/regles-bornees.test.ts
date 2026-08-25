@@ -13,6 +13,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { spawn } from "node:child_process";
+import { mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { evaluerRegles, direLesRefus, MS_PAR_EVALUATION } from "./regles-bornees.ts";
 
@@ -104,4 +108,70 @@ test("la borne par défaut est bien au-dessus du coût de démarrage du fil", ()
   assert.ok(MS_PAR_EVALUATION > 20,
     "le démarrage du fil coûte une vingtaine de millisecondes, une fois par règle : une\n"
     + "  borne en dessous refuserait toutes les règles, y compris les bonnes.");
+});
+
+test("le programme SE TERMINE après un refus, et pas seulement le refus s'affiche",
+  { timeout: 120_000 }, async () => {
+  /*
+   * ─── LE REFUS S'AFFICHAIT, ET LA COMMANDE NE RENDAIT JAMAIS LA MAIN ───
+   *
+   * Trouvé le 25 août 2026 par mutation du point d'appel : retirer `void w.terminate()` de
+   * `regles-bornees.ts` laisse la suite ENTIÈREMENT VERTE. Mesuré :
+   *
+   *     avec terminate()   refus rendu, le programme se termine
+   *     sans terminate()   refus rendu en 253 ms — MÊME message — et le programme
+   *                        ne se termine JAMAIS
+   *
+   * Le fil continue d'évaluer la regex catastrophique après que la promesse a été résolue.
+   * Chez le client, la commande imprime son refus et reste là.
+   *
+   * POURQUOI AUCUN CAS NE LE VOYAIT : les six autres appellent la fonction et lisent sa
+   * valeur de retour. Ils vérifient donc que le refus est RENDU — ce qui reste vrai sans
+   * `terminate()`. Un cas de forme exigeait même `clearTimeout` et `armer()`, les deux
+   * choses auxquelles on avait pensé, et jamais `terminate()`.
+   *
+   * La seule façon de le voir est de lancer un PROCESSUS et de regarder s'il meurt. Une
+   * valeur de retour ne dit rien sur ce qui continue de tourner derrière elle.
+   */
+  /*
+   * LE PROGRAMME S'ÉCRIT DANS UN FICHIER, IL NE SE PASSE PAS PAR `-e`.
+   *
+   * Premier jet : `node --input-type=module -e`. Le `Worker` en hérite et refuse de démarrer
+   * — « --input-type can only be used with string input » — donc `evaluerRegles` rendait bien
+   * un refus, mais celui du chemin d'ERREUR, en 9 ms, sans jamais atteindre la borne.
+   * L'assertion sur `/refus:/` passait sur la mauvaise cause, et le cas prétendait éprouver
+   * l'arrêt d'un fil qui n'avait jamais démarré. Mesuré : 253 ms et le vrai message de borne
+   * dès que le programme vit dans un fichier.
+   */
+  const dossier = mkdtempSync(join(tmpdir(), "borne-"));
+  const script = join(dossier, "essai.mjs");
+  writeFileSync(script, `
+    import { evaluerRegles } from ${JSON.stringify(fileURLToPath(new URL("./regles-bornees.ts", import.meta.url)))};
+    const r = await evaluerRegles({ champ: /(a+)+$/ }, ["a".repeat(40) + "!"], 250);
+    console.log("refus:" + (r.refusees.champ ?? "aucun"));
+  `);
+  const debut = Date.now();
+  const fils = spawn(process.execPath, [script], { stdio: ["ignore", "pipe", "pipe"] });
+  let sortie = "";
+  fils.stdout.on("data", (d) => { sortie += String(d); });
+
+  const fini = await new Promise<boolean>((resoudre) => {
+    const couperet = setTimeout(() => { fils.kill("SIGKILL"); resoudre(false); }, 20_000);
+    fils.on("exit", () => { clearTimeout(couperet); resoudre(true); });
+  });
+  const ms = Date.now() - debut;
+
+  /* CONTRE-ÉPREUVE DANS L'AUTRE SENS : sans elle, un programme qui s'arrêterait pour une
+     tout autre raison — une erreur d'import, par exemple — passerait ce cas. */
+  /* Le refus doit venir de LA BORNE, pas d'un fil qui n'a pas démarré : sans cette
+     précision, le cas passe sur une erreur d'environnement en croyant mesurer un arrêt. */
+  assert.match(sortie, /refus:did not finish within/,
+    `le refus ne vient pas de la borne, donc ce cas n'éprouve pas ce qu'il croit.\n`
+    + `  sortie : ${JSON.stringify(sortie.slice(0, 200))}`);
+
+  assert.ok(fini,
+    `le programme ne s'est PAS terminé en ${ms} ms alors que le refus a été rendu. Le fil de\n`
+    + "  travail continue d'évaluer la regex derrière la promesse résolue : chez un client, la\n"
+    + "  commande imprime son refus et reste là. Il manque `void w.terminate()` sur le chemin\n"
+    + "  d'arrêt — et aucune valeur de retour ne peut le dire.");
 });
