@@ -11,6 +11,7 @@
  * lire en entier avant de le lancer. La clé publique est à côté, dans le même dépôt.
  *
  *     node src/verifier-rapport.mjs <rapport.html>
+ *     node src/verifier-rapport.mjs <rapport.html> --cle=<clé obtenue ailleurs>
  *
  * ─── CE QUE LA VÉRIFICATION PROUVE, ET CE QU'ELLE NE PROUVE PAS ───
  *
@@ -197,14 +198,52 @@ export function verifier(contenu, clePubliquePem) {
 void createVerify;   // gardé pour lisibilité de l'import ; la vérification Ed25519 est sans étage de hachage
 
 function principal() {
-  const chemin = process.argv[2];
-  if (!chemin) {
-    console.error("Usage: node src/verifier-rapport.mjs <report.html>\n\n"
-      + "Checks that a cascade audit report was issued by the holder of the key published\n"
-      + "in this repository, and that no byte has changed since.");
+  const args = process.argv.slice(2);
+  /*
+   * TOUT CE QUI COMMENCE PAR `--` ET QU'ON NE LIT PAS EST REFUSÉ.
+   *
+   * Une option ignorée en silence rend un verdict qui répond à une autre question que celle
+   * posée — et ici la question est « ce rapport est-il authentique ». Une faute de frappe sur
+   * `--cle` ferait vérifier contre la clé du dépôt en croyant vérifier contre la sienne.
+   */
+  const inconnues = args.filter((a) => a.startsWith("--") && !a.startsWith("--cle="));
+  if (inconnues.length) {
+    console.error(`Unknown option(s): ${inconnues.join(", ")}\n\n`
+      + `  Accepted: --cle=<public-key.pem>\n`
+      + `  Nothing was verified: a mistyped option would have checked against a different\n`
+      + `  key than the one you meant.`);
     process.exit(2);
   }
-  const cle = readFileSync(fileURLToPath(new URL("../cle-publique.pem", import.meta.url)), "utf8");
+  const chemin = args.find((a) => !a.startsWith("--"));
+  if (!chemin) {
+    console.error("Usage: node src/verifier-rapport.mjs <report.html> [--cle=<public-key.pem>]\n\n"
+      + "Checks that a cascade audit report was issued by the holder of a given public key,\n"
+      + "and that no byte has changed since. Without --cle, the key published in this\n"
+      + "repository is used.");
+    process.exit(2);
+  }
+  /*
+   * ─── POURQUOI LA CLÉ SE DÉSIGNE ───
+   *
+   * Un rapport et la clé qui le vérifie, livrés tous les deux par nous, forment un cercle :
+   * qui remplace l'un peut remplacer l'autre. L'auditeur qui a obtenu notre clé par un autre
+   * canal — une empreinte lue au téléphone, un dépôt de clés, un contrat signé — doit pouvoir
+   * la lui donner sans éditer ce fichier. C'est la différence entre « vérifiable » et
+   * « vérifiable par quelqu'un qui ne nous fait pas confiance », et la seconde est la seule
+   * qui vaille quelque chose.
+   *
+   * Le défaut reste la clé du dépôt : le chemin court continue de marcher.
+   */
+  const cheminCle = args.find((a) => a.startsWith("--cle="))?.slice("--cle=".length);
+  let cle;
+  try {
+    cle = readFileSync(cheminCle ?? fileURLToPath(new URL("../cle-publique.pem", import.meta.url)), "utf8");
+  } catch (e) {
+    console.error(`Cannot read the public key ${cheminCle ?? "shipped with this repository"}: `
+      + `${e && e.code === "ENOENT" ? "no such file" : (e instanceof Error ? e.message : String(e))}.\n\n`
+      + `  Nothing was verified.`);
+    process.exit(2);
+  }
   let contenu;
   try { contenu = readFileSync(chemin, "utf8"); }
   catch (e) {

@@ -1,7 +1,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { generateKeyPairSync, sign as signer } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 // @ts-expect-error — module .mjs sans déclarations, volontairement lisible par un auditeur
 import { verifier, bloc, empreinteDeCle } from "./verifier-rapport.mjs";
@@ -216,4 +219,111 @@ test("un champ inconnu dans le bloc de signature fait refuser", () => {
     + JSON.stringify(Object.fromEntries(ATTENDUS.map((k) => [k, sig[k]]))) + html.slice(j);
   assert.equal(verifier(remis, pem).valide, true,
     `un bloc réécrit avec ses ${ATTENDUS.length} champs attendus est refusé : la garde refuse trop.`);
+});
+
+
+/*
+ * ————————————————————————————————————————————————————————————————————————————————————
+ * LA COMMANDE QUE L'ACHETEUR LANCE, ET NON LA FONCTION QU'ELLE APPELLE.
+ *
+ * Les onze cas ci-dessus éprouvent `verifier()`. Aucun ne lançait le programme — donc le
+ * chemin qu'un auditeur emprunte réellement n'avait aucun témoin : le texte d'usage, les
+ * codes de sortie, la lecture de la clé, la distinction entre « fichier illisible » et
+ * « rapport falsifié ». Un scellé que l'acheteur ne peut pas contrôler lui-même est une
+ * décoration ; un scellé dont la commande n'est pas éprouvée en est une aussi, avec un
+ * fichier en plus.
+ *
+ * Les trois codes de sortie sont le contrat, parce que c'est ce que lit une chaîne
+ * d'intégration : 0 vérifié, 1 REFUSÉ, 2 rien n'a été vérifié.
+ * ————————————————————————————————————————————————————————————————————————————————————
+ */
+
+const BIN = fileURLToPath(new URL("./verifier-rapport.mjs", import.meta.url));
+
+function lancer(dossier: string, ...args: string[]) {
+  const r = spawnSync(process.execPath, [BIN, ...args], { encoding: "utf8", cwd: dossier });
+  return { code: r.status, sortie: (r.stdout ?? "") + (r.stderr ?? "") };
+}
+
+test("la commande rend 0 sur un rapport authentique, et dit ce qu'elle ne prouve pas", () => {
+  const dossier = mkdtempSync(join(tmpdir(), "scelle-"));
+  try {
+    const { html, pem } = rapportSigne(EXEMPLE);
+    const rapport = join(dossier, "rapport.html"), cle = join(dossier, "cle.pem");
+    writeFileSync(rapport, html);
+    writeFileSync(cle, pem);
+
+    const r = lancer(dossier, rapport, `--cle=${cle}`);
+    assert.equal(r.code, 0, "un rapport authentique doit être accepté, sinon rien d'autre ne compte.");
+    assert.match(r.sortie, /Signature valid/);
+    assert.match(r.sortie, /does not prove/,
+      "un scellé qui laisse croire qu'il garantit les chiffres est pire qu'aucun scellé.");
+  } finally { rmSync(dossier, { recursive: true, force: true }); }
+});
+
+test("un seul octet changé, où que ce soit, fait rendre 1", () => {
+  const dossier = mkdtempSync(join(tmpdir(), "scelle-"));
+  try {
+    const { html, pem } = rapportSigne(EXEMPLE);
+    const cle = join(dossier, "cle.pem");
+    writeFileSync(cle, pem);
+
+    /* Trois endroits : le texte lisible, la charge signée, et la signature elle-même. */
+    const endroits: [string, string][] = [
+      ["le texte que l'humain lit", html.replace("<h1>Audit</h1>", "<h1>Audlt</h1>")],
+      ["la charge de données", html.replace('"dossiers":240', '"dossiers":999')],
+      ["un bloc ajouté après coup", html.replace("</script>",
+        '</script>\n<script type="application/json" id="rapport">{"dossiers":999999}</script>')],
+    ];
+    for (const [ou, altere] of endroits) {
+      const f = join(dossier, "r.html");
+      writeFileSync(f, altere);
+      const r = lancer(dossier, f, `--cle=${cle}`);
+      assert.equal(r.code, 1, `modifié dans ${ou} : la commande a rendu ${r.code} au lieu de 1.`);
+      assert.match(r.sortie, /NOT VERIFIED/);
+    }
+
+    /* Témoin : le même rapport intact passe. Sans lui, ces trois refus passeraient aussi
+       si la commande refusait tout. */
+    const intact = join(dossier, "intact.html");
+    writeFileSync(intact, html);
+    assert.equal(lancer(dossier, intact, `--cle=${cle}`).code, 0);
+  } finally { rmSync(dossier, { recursive: true, force: true }); }
+});
+
+test("une clé qui n'est pas la bonne fait rendre 1, pas 0", () => {
+  const dossier = mkdtempSync(join(tmpdir(), "scelle-"));
+  try {
+    const { html } = rapportSigne(EXEMPLE);
+    const autre = rapportSigne(EXEMPLE);          // une seconde paire, jetable elle aussi
+    const cle = join(dossier, "autre.pem"), rapport = join(dossier, "rapport.html");
+    writeFileSync(cle, autre.pem);
+    writeFileSync(rapport, html);
+    const r = lancer(dossier, rapport, `--cle=${cle}`);
+    assert.equal(r.code, 1, "signé par quelqu'un d'autre, donc refusé.");
+    assert.match(r.sortie, /NOT VERIFIED/);
+  } finally { rmSync(dossier, { recursive: true, force: true }); }
+});
+
+test("« rien n'a été vérifié » rend 2, et ne se confond pas avec un refus", () => {
+  const dossier = mkdtempSync(join(tmpdir(), "scelle-"));
+  try {
+    const sans = lancer(dossier);
+    assert.equal(sans.code, 2, "sans argument : on ne peut pas refuser ce qu'on n'a pas lu.");
+    assert.match(sans.sortie, /Usage:/);
+    assert.match(sans.sortie, /--cle=/, "l'option doit être découvrable sans lire le fichier.");
+
+    const absent = lancer(dossier, join(dossier, "pas-la.html"));
+    assert.equal(absent.code, 2);
+    assert.match(absent.sortie, /not a failed verification/,
+      "un fichier illisible pris pour une falsification enverrait accuser quelqu'un.");
+
+    const mauvaiseCle = lancer(dossier, join(dossier, "x.html"), `--cle=${join(dossier, "rien.pem")}`);
+    assert.equal(mauvaiseCle.code, 2, "une clé illisible n'est pas un rapport invalide non plus.");
+
+    const inconnue = lancer(dossier, "r.html", "--clef=x.pem");
+    assert.equal(inconnue.code, 2, "une option mal orthographiée ne doit pas retomber en silence");
+    assert.match(inconnue.sortie, /Unknown option/,
+      "sinon `--clef` vérifierait contre la clé du dépôt en laissant croire au contraire.");
+  } finally { rmSync(dossier, { recursive: true, force: true }); }
 });
