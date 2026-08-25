@@ -86,7 +86,16 @@ fi
 # Et git commit -- <chemins> n est PAS la parade au -A. Mesuré : il lit l ARBRE DE TRAVAIL et
 # non l index, et il VIDE l index des chemins nommés. Une version soigneusement indexée
 # disparaît sans un mot. La forme sûre est un worktree par session : l index y est à vous.
-emporte=$(git diff --cached --name-only)
+# LA BASE DÉPEND DE `--amend`, ET LA PREMIÈRE VERSION L'IGNORAIT. Pendant un amend, l'index est
+# identique à HEAD — seul le message change — donc `git diff --cached` est vide et la garde
+# refusait une opération parfaitement légitime, sans autre issue que `--no-verify`. Un refus sans
+# issue se contourne, et une garde contournée ne garde plus rien. Le commit d'un amend porte en
+# réalité ce que HEAD porte face à SON parent : c'est cette comparaison-là qu'il faut faire.
+base=HEAD
+if ps -o args= -p $PPID 2>/dev/null | grep -q -- "--amend" && git rev-parse -q --verify HEAD^ >/dev/null; then
+  base="HEAD^"
+fi
+emporte=$(git diff --cached --name-only "$base")
 if [ -z "$emporte" ]; then
   printf "\n  CE COMMIT NE PORTE AUCUN FICHIER.\n\n"
   printf "    Git a accepté deux commits vides ce jour-là, avec des messages qui décrivaient\n"
@@ -116,8 +125,39 @@ if [ -n "$naipas" ]; then
   exit 1
 fi
 
+# `.mjs` MANQUAIT : `npm test` lance `src/*.test.ts src/*.test.mjs`, le crochet seulement les
+# premiers. Un fichier de cas en .mjs n'était donc contrôlé nulle part avant la chaîne publique.
 printf '  suite de cas…\n'
-if ! sortie=$(node --test src/*.test.ts 2>&1); then
+if ! sortie=$(node --test src/*.test.ts src/*.test.mjs 2>&1); then
+  #
+  # UN ROUGE SOUS CHARGE N'EST PAS UN VERDICT — mesuré le 26 août 2026.
+  #
+  # Plusieurs bornes de ce dépôt comptent un TEMPS RÉEL. Le refus de démarrer au-dessus de
+  # `cœurs × 2` ne suffit pas : à une charge de 18,93 sur dix cœurs — donc SOUS le seuil — le cas
+  # « chaque route POST refuse un corps au-delà de la borne » a rendu 5 124 ms et bloqué un commit
+  # parfaitement bon. Une session voisine a mesuré la même chose sur `serveur-bornes.test.ts`,
+  # verte deux fois sur deux relancée seule.
+  #
+  # J'avais posé `cœurs × 2` sans le mesurer. Plutôt que de deviner un second chiffre, on demande
+  # à la MESURE de trancher : les fichiers rouges sont relancés SEULS. Rouges seuls, c'est un vrai
+  # défaut et on refuse. Verts seuls, la suite mentait — on passe, et on le dit fort, avec la
+  # charge et le nom du cas. Refuser sur un mensonge coûte plus cher que de le nommer.
+  #
+  fichiers=$(printf '%s\n' "$sortie" | grep -oE '^test at (src/[^:]+)' | sed 's/^test at //' | sort -u)
+  if [ -n "$fichiers" ]; then
+    printf '  %s fichier(s) rouge(s) — relance seule pour distinguer la charge du défaut…\n' \
+      "$(printf '%s\n' "$fichiers" | wc -l | tr -d ' ')"
+    if seul=$(node --test $fichiers 2>&1); then
+      printf '\n  LA SUITE A MENTI SOUS CHARGE %s.\n\n' "$CHARGE"
+      printf '%s\n' "$sortie" | grep -E '^✖' | head -4 | sed 's/^/    /'
+      printf '\n  Relancés seuls, ces fichiers passent. Le commit continue, mais aucune mesure de\n'
+      printf '  temps prise pendant cette fenêtre ne vaut quoi que ce soit.\n\n'
+      ignores=$(printf '%s' "$seul" | grep -oE '^# skipped [0-9]+' | grep -oE '[0-9]+')
+      [ "${ignores:-0}" != "0" ] && printf '  %s cas ignoré(s).\n' "$ignores"
+      exit 0
+    fi
+    sortie="$seul"
+  fi
   printf '\n  CAS ROUGE — ce commit emporterait un test qui échoue.\n\n'
   printf '%s\n' "$sortie" | grep -E '^✖|AssertionError' | head -8 | sed 's/^/    /'
   printf '\n  → corriger, ou   git commit --no-verify   si vous savez pourquoi.\n'

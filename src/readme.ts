@@ -1215,6 +1215,27 @@ const documentBloc = (() => {
  */
 const leviers = (() => {
   const cheminExp = fileURLToPath(new URL("../exposition.json", import.meta.url));
+  /*
+   * ─── CETTE GARDE NE PEUT PAS SE DÉCLENCHER, ET C'EST UNE DÉCISION ÉCRITE ───
+   *
+   * `expositionBloc` (ligne 1110) lit le MÊME fichier, par la MÊME expression, et il est
+   * évalué AVANT celui-ci : ce sont deux IIFE de haut niveau du même module, prises dans
+   * l'ordre du fichier, et readme.ts ne contient aucun try/catch. L'absence d'exposition.json
+   * est donc déjà fatale cent lignes plus haut, à la ligne 1113.
+   *
+   * MESURÉ, pas déduit. Dans un bac d'essai où la garde de la ligne 1113 avait été retirée,
+   * l'absence du relevé n'est jamais descendue jusqu'ici : elle tombe en ENOENT sur le
+   * `readFileSync` de la ligne 1115. Aucun état du disque n'atteint cette ligne — ni fichier
+   * absent (fatal à 1113), ni lien mort (`existsSync` suit le lien, donc faux à 1113 aussi),
+   * ni répertoire du même nom (`existsSync` vrai partout, EISDIR à 1115).
+   *
+   * Elle n'a donc pas de témoin, et ce n'est pas un oubli : un vert la concernant serait un
+   * vert vide. Elle redeviendra atteignable le jour où `expositionBloc` cessera d'être évalué
+   * avant `leviers` — déplacement, passage en fonction paresseuse, ou try/catch autour du
+   * premier bloc — et ce jour-là elle mérite son témoin. Le remède qui la supprimerait pour
+   * de bon est une lecture unique et gardée du relevé, partagée par les deux blocs ; le
+   * témoin de la ligne 1113 (src/readme-gardes.test.ts) la couvrirait alors entièrement.
+   */
   if (!existsSync(cheminExp)) throw new Error("exposition.json is missing — restore it with `git checkout exposition.json`.");
   const exp = JSON.parse(readFileSync(cheminExp, "utf8")) as { seuil: { bas: number; haut: number } | null };
 
