@@ -21,9 +21,9 @@
     "comment": "node --test --experimental-test-coverage src/*.test.ts, ligne « all files »"
   },
   "catalogue": {
-    "occurrences": 71,
+    "occurrences": 67,
     "mesureLe": "2026-08-25",
-    "comment": "node ~/.claude/skills/equipe/scripts/pieges.mjs . — la façade française est descendue de 122 à 65 : dix-sept commandes traduites, deux restantes tenues par une autre session. Le reste des occurrences sont des chaînes anglaises que la règle signale à tort (interpolations non retirées, et « on » qui est un homographe) — à corriger dans la règle, pas dans la façade.",
+    "comment": "node ~/.claude/skills/equipe/scripts/pieges.mjs . — 61 des 67 sont la façade française ; les 6 autres sont 2 `harnais-sans-remise-a-neuf` et 4 `devise-tapee`. Descendu de 71 à 67 le 25 août 2026 (traduction de journal.ts, mur.ts, charger.mjs). ATTENTION : 3 des 61 restantes sont des FAUX POSITIFS de la règle et ne descendront pas sans la corriger — journal.ts:106 et :150 se déclenchent sur l'identifiant `${dossier}` interpolé dans une chaîne ANGLAISE (la liste FR contient « dossier », et les interpolations ne sont pas retirées avant le test), charger.mjs:76 sur le mot « on », pronom français et préposition anglaise la plus courante. Les trois chaînes sont en anglais correct : les tordre pour passer serait abîmer la façade pour satisfaire l'outil, et le plancher qui en descendrait serait un vert vide de notre main. Plancher réel atteignable : 58.",
     "parPiege": {
       "facade-en-francais": 65,
       "harnais-sans-remise-a-neuf": 2,

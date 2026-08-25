@@ -994,3 +994,53 @@ test("les deux annonces sont branchées, l'une avant la mesure et l'autre après
   assert.match(src, /const desordres = direLesDesordres\(releve\);/,
     "et il ressort, sinon il est compté pour personne.");
 });
+
+
+test("aucune seconde copie des cas du client n'existe sans --journal", async (t) => {
+  /*
+   * LA PROMESSE CENTRALE DE CE CHEMIN, ET RIEN NE LA TENAIT.
+   *
+   * Partout ailleurs dans ce dépôt, garder chaque tentative est le bon réflexe : le corpus
+   * est synthétique et le jeter coûte une passe de GPU. Ici les cas sont ceux du lecteur —
+   * des dossiers d'identité réels, potentiellement. Écrire leur texte et les valeurs
+   * extraites dans un fichier qu'il n'a pas demandé n'est pas un service, c'est une copie
+   * de données personnelles fabriquée à son insu.
+   *
+   * `journaliser = false` par défaut et `journal?.ligne(...)` suffisent — tant que personne
+   * ne touche au point d'appel. Rien ne le gardait : la ligne `process.argv.includes(
+   * "--journal")` mise à `true` laissait la suite entièrement verte.
+   */
+  const { poidsEnCache, diagnosticDesPoids } = await import("./tiers.ts");
+  if (!poidsEnCache()) return t.skip(diagnosticDesPoids() ?? "poids d'encodeur inutilisables.");
+  const { DOSSIER } = await import("./journal.ts");
+
+  const dossier = mkdtempSync(join(tmpdir(), "journal-"));
+  const nôtres = () => (existsSync(DOSSIER) ? readdirSync(DOSSIER) : [])
+    .filter((f) => f.includes("vos-cas"));
+  const avant = new Set(nôtres());
+  const nouveaux = () => nôtres().filter((f) => !avant.has(f));
+
+  try {
+    const fichier = join(dossier, "cases.csv");
+    writeFileSync(fichier, "text,supplier\nInvoice from Globex dated today,Globex\n"
+      + "Invoice from Acme Ltd dated today,Acme Ltd\n");
+    const bin = fileURLToPath(new URL("./your-cases.ts", import.meta.url));
+    const lancer = (...flags: string[]) =>
+      spawnSync(process.execPath, [bin, "--cases=" + fichier, ...flags], { encoding: "utf8" });
+
+    assert.equal(lancer().status, 0, "la passe sans drapeau doit aboutir.");
+    assert.deepEqual(nouveaux(), [],
+      "une passe ordinaire vient de fabriquer une copie du texte du client et des valeurs\n"
+      + "  extraites, dans un fichier qu'il n'a pas demandé.");
+
+    /* Témoin positif, sans lequel l'assertion ci-dessus passerait aussi bien si le journal
+       était cassé : avec le drapeau, le fichier existe ET porte les valeurs. */
+    assert.equal(lancer("--journal").status, 0);
+    const ecrits = nouveaux();
+    assert.equal(ecrits.length, 1, "avec --journal, une passe écrit un journal et un seul.");
+    const contenu = readFileSync(join(DOSSIER, ecrits[0]!), "utf8");
+    assert.match(contenu, /"value"/,
+      "et il porte bien les valeurs : c'est ce que le client a demandé en le demandant.");
+    rmSync(join(DOSSIER, ecrits[0]!));
+  } finally { rmSync(dossier, { recursive: true, force: true }); }
+});
