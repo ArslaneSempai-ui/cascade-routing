@@ -46,16 +46,16 @@ every expected answer verified to appear verbatim in the source text:
 
 | Field | This corpus, rules | OFAC, rules | OFAC, `large` |
 |---|---|---|---|
-| `birth` | 100.0 % | **6.9 %** | 96.7 % |
-| `document` | 79.7 % | **0.0 %** | 35.3 % |
-| `country` | 100.0 % | **1.9 %** | 85.3 % |
+| `birth` | 100.0 % | **6.9 %** (n=290) | 96.7 % |
+| `document` | 79.7 % | **76.8 %** (n=198) | 35.3 % |
+| `country` | 100.0 % | **1.9 %** (n=266) | 85.3 % |
 
 They do not answer wrongly — they do not answer at all: 0, 15 and 24 values returned out
 of 198 to 290 cases. The tool is not what fails here; the free tier is. On a real
-distribution those three fields fall back to a paid tier, which the published
-$191 figure does
-not include: $60 to $480 per period at the
-declared volume, depending on the tier.
+distribution those three fields fall back to a measured tier. That is machine time on the
+client's own hardware, not a provider fee — $3 to
+$6 per period at the declared volume,
+against a published $191 for the whole routing.
 
 This is disclosed rather than corrected, because widening either the rule or the corpus
 moves the headline figure, and that is a decision rather than maintenance.

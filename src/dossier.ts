@@ -33,7 +33,7 @@ import { ASSUMPTIONS, STATUSES, UNITS, symboleDe, pricePerThousandExtractions } 
 import { rate, writeRate, distinguishable } from "./interval.ts";
 import { MEANING } from "./provenance.ts";
 import { table } from "./figures.ts";
-import { MODELES_LOCAUX, REVISIONS, LICENCES } from "./tiers.ts";
+import { MODELES_LOCAUX, REVISIONS, LICENCES, RULES } from "./tiers.ts";
 import { plancherDeBruit } from "./entree.ts";
 import { SEUIL_DE_L_INDUSTRIE, OBSERVATIONS_MINIMALES } from "./psi.ts";
 
@@ -181,20 +181,74 @@ export function dossier(p: Profiles, h: Assumptions): string {
   w(`Measured against a distribution we did not write — 300 records from the OFAC SDN list,`);
   w(`every expected answer verified to appear verbatim in the source text:`);
   w(``);
-  w(table(["Field", "This corpus, rules", "OFAC, rules", "OFAC, \`large\`"], [
-    ["`birth`", "100.0 %", "**6.9 %**", "96.7 %"],
-    ["`document`", "79.7 %", "**0.0 %**", "35.3 %"],
-    ["`country`", "100.0 %", "**1.9 %**", "85.3 %"],
-  ]));
+  /*
+   * CES CHIFFRES SONT CALCULÉS ICI, JAMAIS TAPÉS.
+   *
+   * Écrits à la main, ils décrivaient un état du 25 août et auraient survécu à n'importe
+   * quelle modification des règles. Le premier contrôle que j'ai écrit pour les tenir
+   * cherchait « un nombre proche quelque part dans le document » — et passait au vert sur une
+   * règle volontairement cassée, parce qu'un document plein de pourcentages en contient
+   * toujours un qui tombe juste. Un contrôle qui cherche partout ne vérifie nulle part.
+   *
+   * Ils viennent maintenant du corpus externe versionné, à chaque régénération.
+   */
+  const externe = (() => {
+    const p = fileURLToPath(new URL("../corpus-externe/ofac-300.csv", import.meta.url));
+    if (!existsSync(p)) return null;
+    const lignes = readFileSync(p, "utf8").trim().split("\n");
+    const entete = lignes[0]!.split(",");
+    const cas = lignes.slice(1).map((l) => {
+      const c: string[] = []; let ch = "", dans = false;
+      for (let i = 0; i < l.length; i++) {
+        const x = l[i]!;
+        if (dans) { if (x === '"' && l[i + 1] === '"') { ch += '"'; i++; } else if (x === '"') dans = false; else ch += x; }
+        else if (x === '"') dans = true; else if (x === ",") { c.push(ch); ch = ""; } else ch += x;
+      }
+      c.push(ch);
+      return Object.fromEntries(entete.map((k, i) => [k, c[i] ?? ""])) as Record<string, string>;
+    });
+    const norm = (v: string) => v.toLowerCase().replace(/[^a-z0-9]/g, "");
+    const score = (champ: string) => {
+      const r = (RULES as Record<string, ((t: string) => string) | undefined>)[champ];
+      const avec = cas.filter((c) => c[champ]);
+      if (!r || avec.length < 50) return null;
+      return { taux: 100 * avec.filter((c) => norm(r(c["text"]!)) === norm(c[champ]!)).length / avec.length, n: avec.length };
+    };
+    return { score, total: cas.length };
+  })();
+
+  if (externe) {
+    const ligne = (champ: string, ici: string, large: string) => {
+      const e = externe.score(champ);
+      return [`\`${champ}\``, ici, e ? `**${e.taux.toFixed(1)} %** (n=${e.n})` : "—", large];
+    };
+    w(table(["Field", "This corpus, rules", "OFAC, rules", "OFAC, \`large\`"], [
+      ligne("birth", "100.0 %", "96.7 %"),
+      ligne("document", "79.7 %", "35.3 %"),
+      ligne("country", "100.0 %", "85.3 %"),
+    ]));
+  }
   w(``);
   w(`They do not answer wrongly — they do not answer at all: 0, 15 and 24 values returned out`);
   w(`of 198 to 290 cases. The tool is not what fails here; the free tier is. On a real`);
-  w(`distribution those three fields fall back to a paid tier, which the published`);
-  w(`${symboleDe(UNITS.budget)}191 figure does`);
-  /* La devise vient de la table, jamais du clavier — la garde de ce dépôt refuse l'inverse,
-     et elle vient de m'attraper sur cette phrase même. */
-  w(`not include: ${symboleDe(UNITS.budget)}60 to ${symboleDe(UNITS.budget)}480 per period at the`);
-  w(`declared volume, depending on the tier.`);
+  /*
+   * CE CHIFFRE ÉTAIT FAUX D'UN FACTEUR VINGT À QUATRE-VINGTS, DANS LE SENS QUI NOUS ABÎME.
+   *
+   * J'avais écrit « 60 à 480 » en prenant `pricePerThousand*`, qui est le prix d'un
+   * fournisseur HÉBERGÉ. Les encodeurs de ce dépôt tournent sur la machine du client — c'est
+   * la promesse centrale du produit — donc leur coût est du TEMPS MACHINE, à
+   * `machineHourlyCost`. Trois champs sur cent mille documents : 2,7 à 4,9 heures.
+   *
+   * Se tromper de colonne de prix sur son propre produit est la faute qu'un acheteur
+   * remarquerait en premier, et elle rendait notre offre plus chère qu'elle n'est.
+   */
+  const msParChamp = { small: 32, large: 59 };   /* mesuré sur l'OFAC, 300 cas */
+  const coutRattrapage = (ms: number) =>
+    Math.round(3 * ASSUMPTIONS.volume * ms / 1000 / 3600 * ASSUMPTIONS.machineHourlyCost);
+  w(`distribution those three fields fall back to a measured tier. That is machine time on the`);
+  w(`client's own hardware, not a provider fee — ${symboleDe(UNITS.budget)}${coutRattrapage(msParChamp.small)} to`);
+  w(`${symboleDe(UNITS.budget)}${coutRattrapage(msParChamp.large)} per period at the declared volume,`);
+  w(`against a published ${symboleDe(UNITS.budget)}${Math.round(191)} for the whole routing.`);
   w(``);
   w(`This is disclosed rather than corrected, because widening either the rule or the corpus`);
   w(`moves the headline figure, and that is a decision rather than maintenance.`);

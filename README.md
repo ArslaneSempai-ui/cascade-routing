@@ -83,7 +83,7 @@ npm test           # types, README figures, landing.json, and the suite
 <!-- /figures:documents -->
 
 <!-- figures:tests -->
-**296 tests** across 21 files, counted from the sources rather than typed here.
+**297 tests** across 21 files, counted from the sources rather than typed here.
 <!-- /figures:tests -->
 
 Everything runs locally. No API key, nothing leaves the machine, and anyone who clones this
@@ -460,10 +460,10 @@ rules · name · empty   [D-0001]
 ```
 
 ```
-rules · document · empty   [D-0008]
+rules · document · fragment   [D-0008]
   text      re Viktor Vasquez / Italy — address 125 rue Victor Hugo, Lyon — idIT-2390-X — born 17 April 1968 — file opened pending r
   expected  "IT-2390-X"
-  got       ""
+  got       "2390-X"
 ```
 
 ```

@@ -1617,3 +1617,84 @@ test("les règles gratuites ne recopient pas le vocabulaire du générateur", as
     + "  → soit la règle cesse d'énumérer, soit le corpus cesse de se limiter à cette liste,\n"
     + "    soit VALIDATION.md dit que ce chiffre est un ajustement et non une mesure.");
 });
+
+/*
+ * ─── TOUTE RÈGLE GRATUITE EST NOTÉE SUR UNE DISTRIBUTION QU'ELLE N'A PAS VUE ───
+ *
+ * Le levier, et il ne demande pas un bon chiffre : il demande que le chiffre EXISTE et soit
+ * publié à côté de l'autre.
+ *
+ * Ce qui s'est passé sans lui : `RULES.country` énumérait les huit pays que le corpus
+ * engendre, `RULES.document` cherchait le seul format qu'il produit, et VALIDATION.md
+ * publiait 100 % et 79,7 %. Personne n'avait menti — personne n'avait mesuré ailleurs.
+ * Sur 300 dossiers de la liste SDN de l'OFAC : 1,9 % et 0,0 %.
+ *
+ * CE CAS N'EXIGE PAS UN SCORE. Exiger un score forcerait à ajuster la règle jusqu'à ce que
+ * le contrôle passe, ce qui est le défaut avec une étape de plus. Il exige que la règle soit
+ * ÉPROUVÉE dehors et que les deux chiffres voyagent ensemble. Une règle qui rend 5 % dehors
+ * est acceptable si le document le dit ; une règle qui rend 100 % dedans sans qu'on sache ce
+ * qu'elle fait dehors ne l'est pas.
+ *
+ * Le corpus externe est versionné dans `corpus-externe/`, avec sa provenance et le compte de
+ * ce qui a été écarté. S'il disparaît, ce cas refuse plutôt que de se taire.
+ */
+test("toute règle gratuite porte un score mesuré hors de notre corpus", async () => {
+  const racine = fileURLToPath(new URL("..", import.meta.url));
+  const chemin = join(racine, "corpus-externe", "ofac-300.csv");
+  assert.ok(existsSync(chemin),
+    "corpus-externe/ofac-300.csv est absent : ce cas ne peut plus rien éprouver dehors.\n"
+    + "  → il est versionné avec sa provenance ; restaurez-le avec « git checkout corpus-externe ».");
+
+  const { RULES } = await import("./tiers.ts");
+  const lignes = readFileSync(chemin, "utf8").trim().split("\n");
+  const entete = lignes[0]!.split(",");
+  const cas = lignes.slice(1).map((l) => {
+    const c: string[] = []; let ch = "", dans = false;
+    for (let i2 = 0; i2 < l.length; i2++) {
+      const x = l[i2]!;
+      if (dans) { if (x === '"' && l[i2 + 1] === '"') { ch += '"'; i2++; } else if (x === '"') dans = false; else ch += x; }
+      else if (x === '"') dans = true; else if (x === ",") { c.push(ch); ch = ""; } else ch += x;
+    }
+    c.push(ch);
+    return Object.fromEntries(entete.map((k, i3) => [k, c[i3] ?? ""])) as Record<string, string>;
+  });
+  assert.ok(cas.length >= 100,
+    `${cas.length} cas lus dans le corpus externe : la lecture a échoué, et un score obtenu `
+    + "sur une poignée de cas ne dit rien.");
+
+  /*
+   * ON RECALCULE, PUIS ON CONFRONTE AU DOCUMENT — LIGNE PAR LIGNE, PAS « QUELQUE PART ».
+   *
+   * La première version de ce cas cherchait « un nombre proche quelque part dans
+   * VALIDATION.md ». Elle passait au vert sur une règle volontairement cassée : un document
+   * plein de pourcentages en contient toujours un qui tombe juste. Un contrôle qui cherche
+   * partout ne vérifie nulle part — c'est le vert vide, dans la garde écrite pour le chasser.
+   */
+  const norm = (v: string) => v.toLowerCase().replace(/[^a-z0-9]/g, "");
+  const doc = readFileSync(join(racine, "VALIDATION.md"), "utf8");
+  const desaccords: string[] = [];
+  let compares = 0;
+
+  for (const champ of entete.filter((k) => k !== "id" && k !== "text")) {
+    const regle = (RULES as Record<string, ((t: string) => string) | undefined>)[champ];
+    const avec = cas.filter((c) => c[champ]);
+    if (!regle || avec.length < 50) continue;
+    const taux = 100 * avec.filter((c) => norm(regle(c["text"]!)) === norm(c[champ]!)).length / avec.length;
+
+    /* La ligne du tableau qui porte CE champ, et le chiffre qu'elle annonce pour l'extérieur. */
+    const ligne = new RegExp(`^\\| \`${champ}\` \\|[^|]*\\|\\s*\\*\\*([\\d.]+) %\\*\\* \\(n=(\\d+)\\)`, "m").exec(doc);
+    if (!ligne) { desaccords.push(`${champ} : aucune ligne « ${champ} » avec un score externe dans VALIDATION.md`); continue; }
+    compares++;
+    if (Math.abs(Number(ligne[1]) - taux) > 0.05 || Number(ligne[2]) !== avec.length) {
+      desaccords.push(`${champ} : le document dit ${ligne[1]} % sur n=${ligne[2]}, la mesure rend ${taux.toFixed(1)} % sur n=${avec.length}`);
+    }
+  }
+
+  assert.ok(compares >= 2,
+    `${compares} ligne(s) confrontée(s) : le tableau externe de VALIDATION.md ne couvre plus `
+    + "assez de champs pour que ce cas veuille dire quelque chose.");
+  assert.deepEqual(desaccords, [],
+    `${desaccords.length} désaccord(s) entre la mesure et le document :\n  ${desaccords.join("\n  ")}\n`
+    + "  → le tableau est calculé par `dossier.ts` : s'il diverge, c'est qu'il a été écrit à la\n"
+    + "    main ou que le document n'a pas été régénéré. `npm run figures`.");
+});

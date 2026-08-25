@@ -71,8 +71,59 @@ const QUESTIONS: Record<Field, string> = {
  * why routing per field makes sense. A document number shaped `XX-9999-Y` needs no model;
  * a free-text address does.
  */
-const RULES: Record<Field, (t: string) => string> = {
-  document: (t) => t.match(/\b[A-Z]{2}-\d{4}-[A-Z]\b/)?.[0] ?? "",
+export const RULES: Record<Field, (t: string) => string> = {
+  /*
+   * ─── LA FORME TROUVE LES CANDIDATS, LE MOT-CLÉ DÉPARTAGE ───
+   *
+   * Cette règle cherchait `[A-Z]{2}-\d{4}-[A-Z]` : le seul format que notre générateur
+   * produit. 81,7 % ici, et **0,0 % sur 198 numéros de pièce réels** de la liste SDN de
+   * l'OFAC. Ce n'était pas une règle, c'était une copie du vocabulaire du corpus.
+   *
+   * DEUX APPROCHES ONT ÉCHOUÉ AVANT CELLE-CI, ET LEURS ÉCHECS DONNENT LA CONSTRUCTION.
+   *
+   * Le MOT-CLÉ SEUL est un vocabulaire : notre corpus produit à lui seul cent neuf
+   * introducteurs différents — « doc no », « Document ........ », « reference supplied was »,
+   * « We hold », « id » — et l'OFAC en a d'autres. Mesuré : 98 % sur la distribution qui l'a
+   * écrit, 40 % sur l'autre.
+   *
+   * La FORME SEULE trouve tous les candidats et choisit mal quand il y en a plusieurs : elle
+   * rendait un numéro de sécurité sociale là où un passeport était attendu. 72,7 %.
+   *
+   * Donc le mot-clé n'est pas une PORTE, il est un DÉPARTAGE. Un texte sans aucun mot-clé
+   * connu obtient quand même une réponse ; un texte qui en porte un fait gagner le candidat
+   * qui le suit. C'est ce qui permet de tenir sur une distribution dont on ne connaît pas le
+   * vocabulaire — la seule propriété qui compte pour un client.
+   *
+   * Mesuré sur les deux : 81,7 % ici (identique à l'ancienne, donc le chiffre publié ne
+   * bouge pas) et 76,8 % sur l'OFAC, où l'ancienne rendait zéro.
+   */
+  document: (t) => {
+    const MOIS = /^(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)/i;
+    const INDICES = /(?:passport|national id|c\.u\.r\.p\.|cedula|r\.f\.c\.|tax id|identification number|residency|identity card|licen[cs]e|document|doc\.? ?no|référence|reference|id\b|we hold|pièce)/gi;
+    const candidats: { v: string; at: number; score: number; distance: number }[] = [];
+    /* Une espace interne est permise : « AO 2879097 » et « 265 216 » sont des numéros. */
+    for (const m of t.matchAll(/\b[A-Z0-9][A-Z0-9\-/]*(?: [A-Z0-9\-/]+)?[A-Z0-9]\b/g)) {
+      const v = m[0].trim();
+      if (v.length < 5) continue;
+      const lettres = (v.match(/[A-Z]/g) ?? []).length;
+      const chiffres = (v.match(/\d/g) ?? []).length;
+      if (MOIS.test(v)) continue;
+      if (chiffres && !lettres && (v.match(/\//g) ?? []).length >= 2) continue;   /* une date */
+      if (!lettres && chiffres < 5) continue;                                      /* une année */
+      if (lettres && !chiffres) continue;                                          /* un mot */
+      candidats.push({ v, at: m.index, score: chiffres + lettres * 2 + (v.includes("-") ? 3 : 0), distance: Infinity });
+    }
+    if (!candidats.length) return "";
+    const indices = [...t.matchAll(INDICES)].map((m) => m.index + m[0].length);
+    for (const c of candidats) {
+      const avant = indices.filter((i) => i <= c.at);
+      c.distance = avant.length ? c.at - Math.max(...avant) : Infinity;
+    }
+    const proche = Math.min(...candidats.map((c) => c.distance));
+    const enTete = proche <= 3 ? candidats.filter((c) => c.distance === proche) : candidats;
+    enTete.sort((a, b) => b.score - a.score || b.v.length - a.v.length);
+    return enTete[0]!.v;
+  },
   birth: (t) =>
     t.match(/\b\d{1,2}\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}\b/)?.[0]
     ?? t.match(/\b\d{2}\/\d{2}\/\d{4}\b/)?.[0] ?? "",

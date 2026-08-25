@@ -1,7 +1,7 @@
 {
-  "entrees": "b4404cdc214041fe",
+  "entrees": "2926f1d8c9ecc1b4",
   "quoi": "Galerie des échecs, mise en cache. La clé « entrees » couvre le corpus, les révisions de modèles et le texte des modules qui produisent ce résultat. Si elle ne correspond pas, l'outil recalcule au lieu de servir ceci.",
-  "calculeeLe": "2026-08-24T23:55:09.203Z",
+  "calculeeLe": "2026-08-25T00:10:46.741Z",
   "echecs": [
     {
       "tier": "rules",
@@ -1089,8 +1089,8 @@
       "recordId": "D-0008",
       "text": "re Viktor Vasquez / Italy — address 125 rue Victor Hugo, Lyon — idIT-2390-X — born 17 April 1968 — file opened pending r",
       "expected": "IT-2390-X",
-      "got": "",
-      "mode": "empty"
+      "got": "2390-X",
+      "mode": "fragment"
     },
     {
       "tier": "rules",
@@ -1098,8 +1098,8 @@
       "recordId": "D-0013",
       "text": "re Amina Vasquez / Portugal — address 172 Rua da Prata, Lyon — idIT-7286-M — born 27 February 1965 — file opened pending",
       "expected": "IT-7286-M",
-      "got": "",
-      "mode": "empty"
+      "got": "7286-M",
+      "mode": "fragment"
     },
     {
       "tier": "rules",
@@ -1107,8 +1107,8 @@
       "recordId": "D-0017",
       "text": "re Amina Okonkwo / Italy — address 9 rue Victor Hugo, Rotterdam — idIT-4463-M — born 23/09/1973 — file opened pending re",
       "expected": "IT-4463-M",
-      "got": "",
-      "mode": "empty"
+      "got": "4463-M",
+      "mode": "fragment"
     },
     {
       "tier": "rules",
@@ -1116,8 +1116,8 @@
       "recordId": "D-0027",
       "text": "re Sofia Haddad / France — address 76 rue Victor Hugo, Milan — idPT-6548-X — born 03/10/1956 — file opened pending revie",
       "expected": "PT-6548-X",
-      "got": "",
-      "mode": "empty"
+      "got": "6548-X",
+      "mode": "fragment"
     },
     {
       "tier": "rules",
@@ -1125,8 +1125,8 @@
       "recordId": "D-0029",
       "text": "re Karim Lindqvist / Portugal — address 73 Rua da Prata, Valencia — idGR-1222-K — born 16/06/1958 — file opened pending ",
       "expected": "GR-1222-K",
-      "got": "",
-      "mode": "empty"
+      "got": "1222-K",
+      "mode": "fragment"
     },
     {
       "tier": "rules",
@@ -1134,8 +1134,8 @@
       "recordId": "D-0036",
       "text": "re Marcus Ferreira / Greece — address 162 Rua da Prata, Valencia — idIT-9114-X — born 21 September 1969 — file opened pe",
       "expected": "IT-9114-X",
-      "got": "",
-      "mode": "empty"
+      "got": "9114-X",
+      "mode": "fragment"
     },
     {
       "tier": "rules",
@@ -1143,8 +1143,8 @@
       "recordId": "D-0044",
       "text": "re Nadia Okonkwo / Poland — address 109 rue Victor Hugo, Milan — idPT-6884-M — born 21/12/1988 — file opened pending rev",
       "expected": "PT-6884-M",
-      "got": "",
-      "mode": "empty"
+      "got": "6884-M",
+      "mode": "fragment"
     },
     {
       "tier": "rules",
@@ -1152,8 +1152,8 @@
       "recordId": "D-0047",
       "text": "re Nadia Lindqvist / Italy — address 97 Odos Ermou, Lyon — idPT-6646-T — born 16 June 1955 — file opened pending review",
       "expected": "PT-6646-T",
-      "got": "",
-      "mode": "empty"
+      "got": "6646-T",
+      "mode": "fragment"
     },
     {
       "tier": "rules",
@@ -1161,8 +1161,8 @@
       "recordId": "D-0049",
       "text": "re Tomas Chen / Germany — address 94 via Garibaldi, Warsaw — idIT-5462-K — born 14 September 1988 — file opened pending ",
       "expected": "IT-5462-K",
-      "got": "",
-      "mode": "empty"
+      "got": "5462-K",
+      "mode": "fragment"
     },
     {
       "tier": "rules",
@@ -1170,8 +1170,8 @@
       "recordId": "D-0056",
       "text": "re Viktor Novak / France — address 130 ulica Nowy Świat, Rotterdam — idFR-6783-X — born 25 May 1976 — file opened pendin",
       "expected": "FR-6783-X",
-      "got": "",
-      "mode": "empty"
+      "got": "6783-X",
+      "mode": "fragment"
     },
     {
       "tier": "rules",
@@ -1179,8 +1179,8 @@
       "recordId": "D-0062",
       "text": "re Viktor Vasquez / Portugal — address 107 via Garibaldi, Lisbon — idPL-2630-K — born 23 October 1995 — file opened pend",
       "expected": "PL-2630-K",
-      "got": "",
-      "mode": "empty"
+      "got": "2630-K",
+      "mode": "fragment"
     },
     {
       "tier": "rules",
@@ -1188,8 +1188,8 @@
       "recordId": "D-0067",
       "text": "re Leila Mbeki / Greece — address 182 Odos Ermou, Lisbon — idIT-7078-T — born 21/12/1987 — file opened pending review",
       "expected": "IT-7078-T",
-      "got": "",
-      "mode": "empty"
+      "got": "7078-T",
+      "mode": "fragment"
     },
     {
       "tier": "rules",
@@ -1197,8 +1197,8 @@
       "recordId": "D-0075",
       "text": "re Marcus Novak / France — address 157 ulica Nowy Świat, Milan — idPL-4902-X — born 27/05/1968 — file opened pending rev",
       "expected": "PL-4902-X",
-      "got": "",
-      "mode": "empty"
+      "got": "4902-X",
+      "mode": "fragment"
     },
     {
       "tier": "rules",
@@ -1206,8 +1206,8 @@
       "recordId": "D-0090",
       "text": "re Ines Haddad / Poland — address 101 Rua da Prata, Rotterdam — idGR-2645-X — born 4 June 1960 — file opened pending rev",
       "expected": "GR-2645-X",
-      "got": "",
-      "mode": "empty"
+      "got": "2645-X",
+      "mode": "fragment"
     },
     {
       "tier": "rules",
@@ -1215,8 +1215,8 @@
       "recordId": "D-0095",
       "text": "re Marcus Haddad / Italy — address 101 Odos Ermou, Valencia — idPT-1654-K — born 15 January 1985 — file opened pending r",
       "expected": "PT-1654-K",
-      "got": "",
-      "mode": "empty"
+      "got": "1654-K",
+      "mode": "fragment"
     },
     {
       "tier": "rules",
@@ -1224,8 +1224,8 @@
       "recordId": "D-0098",
       "text": "re Sofia Vasquez / Portugal — address 51 Rua da Prata, Lisbon — idPT-1490-T — born 20 November 1971 — file opened pendin",
       "expected": "PT-1490-T",
-      "got": "",
-      "mode": "empty"
+      "got": "1490-T",
+      "mode": "fragment"
     },
     {
       "tier": "rules",
@@ -1233,8 +1233,8 @@
       "recordId": "D-0099",
       "text": "re Viktor Haddad / Germany — address 124 via Garibaldi, Valencia — idIT-7793-T — born 07/07/1998 — file opened pending r",
       "expected": "IT-7793-T",
-      "got": "",
-      "mode": "empty"
+      "got": "7793-T",
+      "mode": "fragment"
     },
     {
       "tier": "rules",
@@ -1242,8 +1242,8 @@
       "recordId": "D-0102",
       "text": "re Viktor Ferreira / Italy — address 66 Odos Ermou, Athens — idGR-7666-K — born 03/12/2000 — file opened pending review",
       "expected": "GR-7666-K",
-      "got": "",
-      "mode": "empty"
+      "got": "7666-K",
+      "mode": "fragment"
     },
     {
       "tier": "rules",
@@ -1251,8 +1251,8 @@
       "recordId": "D-0111",
       "text": "re Karim Morozov / Germany — address 138 Odos Ermou, Rotterdam — idIT-2397-X — born 5 September 1964 — file opened pendi",
       "expected": "IT-2397-X",
-      "got": "",
-      "mode": "empty"
+      "got": "2397-X",
+      "mode": "fragment"
     },
     {
       "tier": "rules",
@@ -1260,8 +1260,8 @@
       "recordId": "D-0114",
       "text": "re Nadia Vasquez / Poland — address 8 Rua da Prata, Lisbon — idGR-1271-X — born 04/04/1968 — file opened pending review",
       "expected": "GR-1271-X",
-      "got": "",
-      "mode": "empty"
+      "got": "1271-X",
+      "mode": "fragment"
     },
     {
       "tier": "rules",
