@@ -613,6 +613,59 @@ test("aucun module compilé pour le navigateur n'importe un module Node", (t) =>
   }
 });
 
+test("une donnée qui traverse data-lecture ressort telle qu'elle est entrée", () => {
+  /*
+   * ─── LE MODÈLE DU TRAJET, VALIDÉ CONTRE UN VRAI NAVIGATEUR AVANT D'ÊTRE FIGÉ ICI ───
+   *
+   * Ce cas simule ce que fait le navigateur : il décode l'attribut au parsing, puis `innerHTML`
+   * décode une seconde fois en interprétant le balisage. Une simulation ne prouve rien par
+   * elle-même — celle-ci a été confrontée à Chrome le 25 août 2026, sur le trajet complet, et
+   * les trois formes y donnent exactement ce que ce cas affirme :
+   *
+   *              « Smith & Co »     « a<b »   « <img src=x onerror=…> »
+   *   aucun      Smith & Co         « a »     ÉLÉMENT CRÉÉ — la faille
+   *   UNE        Smith & Co         a<b       texte inerte
+   *   deux       Smith &amp; Co     a&lt;b    texte inerte
+   *
+   * D'où le cas : une passe est la seule à la fois SÛRE et FIDÈLE. Deux passes ferment bien la
+   * faille et affichent « Smith &amp; Co » à un client dont un champ porte une esperluette.
+   */
+  const src = readFileSync(new URL("./graphes.js", import.meta.url), "utf8");
+
+  const m = src.match(/const echLecture = \(t\) => ([^;]+);/);
+  assert.ok(m, "`echLecture` a disparu ou changé de forme : ce cas ne garde plus rien.");
+  const corps = m[1].trim();
+  assert.equal(corps, "ech(t)",
+    `echLecture applique « ${corps} ». UNE passe et une seule : l'enveloppe de l'attribut en `
+    + "ajoute déjà une, et le trajet n'en défait que deux. Deux passes ici corrompent toute "
+    + "esperluette et tout chevron d'une valeur client ; zéro rouvre la faille.");
+
+  /* Le trajet, joué sur les valeurs qui décident. `ech` est relu du fichier plutôt que
+     réécrit ici : un cas qui redéfinit ce qu'il contrôle ne contrôle que lui-même. */
+  const ech = (t) => String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  const decode = (t) => t.replace(/&quot;/g, '"').replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">").replace(/&amp;/g, "&");
+  const trajet = (v, passes) => {
+    let dedans = v;
+    for (let i = 0; i < passes; i++) dedans = ech(dedans);
+    const attribut = ech("<u>" + dedans + "</u>");
+    const lu = decode(attribut);                 /* le navigateur décode l'attribut */
+    return decode(lu.replace(/<\/?u>/g, ""));    /* puis innerHTML décode le contenu */
+  };
+
+  for (const v of ["Smith & Co", "a<b", 'il a dit "non"', "Dupont"]) {
+    assert.equal(trajet(v, 1), v, `« ${v} » ne ressort pas identique avec UNE passe`);
+    /* CONTRE-ÉPREUVES, dans les deux sens — sans elles, un trajet qui rendrait toujours son
+       entrée passerait ce cas en ne modélisant rien. */
+    if (/[&<>"]/.test(v)) {
+      assert.notEqual(trajet(v, 2), v, `« ${v} » ressort intact avec DEUX passes : le modèle du `
+        + "trajet ne reproduit pas la sur-échappement, donc il ne prouve rien.");
+      assert.notEqual(trajet(v, 0), ech(v), `« ${v} » : le modèle ne distingue pas zéro passe.`);
+    }
+  }
+});
+
 test("un jeton court n'est pas trouvé à l'intérieur d'un nom composé", () => {
   /*
    * Le témoin de la borne, éprouvé sur des littéraux : `\b` s'ouvre après un trait d'union,
