@@ -1,11 +1,12 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync, existsSync, mkdtempSync, mkdirSync, copyFileSync, writeFileSync, rmSync } from "node:fs";
+import { readFileSync, existsSync, mkdtempSync, mkdirSync, copyFileSync, writeFileSync, rmSync, chmodSync, realpathSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
-import { temoins, controles, secretsDans, racineServie, adresseDEcoute, bornePosee, document, type Controle } from "./menace.ts";
+import { temoins, controles, secretsDans, racineServie, adresseDEcoute, bornePosee, document,
+  balayerLHistorique, type Controle } from "./menace.ts";
 
 const racine = fileURLToPath(new URL("..", import.meta.url));
 
@@ -216,4 +217,124 @@ test("le détecteur reconnaît les formats COURANTS, pas seulement ceux d'hier",
     "AKIA", "an ordinary English sentence about keys and tokens"]) {
     assert.deepEqual(secretsDans(sain), [], `« ${sain} » ne devrait rien déclencher`);
   }
+});
+
+
+/*
+ * ─── LES QUATRE REFUS DU BALAYAGE D'HISTORIQUE ───
+ *
+ * Ce balayage publie un CHIFFRE DE SÉCURITÉ : « 0 secret non déclaré ». Le zéro d'un balayage
+ * qui n'a rien lu et celui d'un dépôt propre s'écrivent pareil, et c'est la faute la plus chère
+ * du domaine. Quatre gardes séparent les deux, et chacune a ici son témoin.
+ *
+ * TROIS D'ENTRE ELLES SONT ÉPROUVÉES PAR LE POINT D'APPEL, pas en isolation. `balayerLHistorique`
+ * peut refuser autant qu'elle veut : ce qui compte est que `principal()` sous `--historique`
+ * s'arrête AVANT d'écrire le relevé. On lance donc le programme entier en sous-processus, avec
+ * un `git` de paille en tête du PATH — motif déjà utilisé dans ce dépôt (premiere-reponse.test.ts,
+ * rapport.test.ts).
+ *
+ * ET LE PROGRAMME EST COPIÉ DANS UN BAC D'ESSAI. Sous mutation — quand on retire une garde pour
+ * vérifier qu'elle gardait — le balayage va jusqu'au bout et ÉCRIT un relevé. Dans le dépôt, il
+ * écraserait `menace-historique.json` avec un relevé fabriqué. Dans le bac, il ne touche rien.
+ *
+ * ATTENTION AU CHOIX DU `git` DE PAILLE : il doit RÉPONDRE, pas être absent. Un `git` absent du
+ * PATH laisse `stdout` à `undefined`, et la ligne qui lit `compte.stdout.trim()` casse en
+ * TypeError AVANT la première garde — un refus qui ne dit pas ce qu'il refuse.
+ */
+function lancerAvecGitDePaille(mode: "revlist" | "status" | "court") {
+  /* `realpathSync` N'EST PAS DÉCORATIF. Sur macOS `tmpdir()` rend `/var/folders/…`, un lien
+     vers `/private/var/folders/…`, et `import.meta.url` porte le chemin RÉSOLU. Sans cette
+     résolution, `estLancéDirectement()` compare deux écritures du même fichier, les trouve
+     différentes, et le programme se termine SANS RIEN FAIRE en code 0 — mesuré ici même :
+     les trois cas passaient au vert sur un balayage qui n'avait pas eu lieu. */
+  const tmp = realpathSync(mkdtempSync(join(tmpdir(), "cascade-balayage-")));
+  try {
+    mkdirSync(join(tmp, "src"));
+    mkdirSync(join(tmp, "bin"));
+    copyFileSync(join(racine, "src/menace.ts"), join(tmp, "src/menace.ts"));
+    const paille = join(tmp, "bin/git");
+    writeFileSync(paille,
+      "#!/bin/sh\n"
+      + 'case "$1" in\n'
+      + '  rev-list) [ "$MODE" = revlist ] && exit 0; echo 12 ;;\n'
+      + '  log)      [ "$MODE" = status ] && exit 3; echo court ;;\n'
+      + "  *) exit 0 ;;\n"
+      + "esac\n", { mode: 0o755 });
+    chmodSync(paille, 0o755);
+    const r = spawnSync(process.execPath, [join(tmp, "src/menace.ts"), "--historique"], {
+      cwd: tmp, encoding: "utf8", timeout: 60_000,
+      env: { ...process.env, MODE: mode, PATH: `${join(tmp, "bin")}:${process.env.PATH}` },
+    });
+    /* « Rien n'est publié » est une propriété du DISQUE, pas du texte imprimé. On la relève
+       avant d'effacer le bac : le relevé est ce que la garde existe pour empêcher. */
+    return { ...r, releveEcrit: existsSync(join(tmp, "menace-historique.json")) };
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+}
+
+test("le balayage refuse de publier un compte de commits que git n'a pas rendu", () => {
+  const r = lancerAvecGitDePaille("revlist");   // rev-list rend une sortie VIDE, en code 0
+  assert.equal(r.releveEcrit, false,
+    "un relevé a été écrit alors que l'historique n'a pas été compté : son zéro ne vaut rien.");
+  assert.notEqual(r.status, 0,
+    "le balayage a rendu 0 : il a publié un relevé sans avoir lu l'historique.");
+  /* LE MESSAGE, pas seulement le fait de s'arrêter. Sans cette garde, `commits` vaut 0, donc
+     le PLANCHER vaut 0, donc la garde de la longueur ne se déclenche pas non plus — le
+     programme va au bout et s'arrête plus loin, pour une AUTRE raison. Seul le motif tombe. */
+  assert.match(r.stderr,
+    /git rev-list returned "": the history was not read, and its zero would be worthless\./,
+    "la garde ne se nomme plus : un zéro non lu ressortirait comme un zéro mesuré.");
+  assert.doesNotMatch(r.stdout, /swept/,
+    "« commits swept » a été imprimé sur un historique jamais lu.");
+});
+
+test("le balayage refuse de publier quand `git log` sort en erreur", () => {
+  const r = lancerAvecGitDePaille("status");   // rev-list → 12, log → code 3
+  assert.equal(r.releveEcrit, false,
+    "un relevé a été écrit alors que `git log` a échoué.");
+  assert.notEqual(r.status, 0,
+    "le balayage a rendu 0 alors que `git log` a échoué : son zéro serait publié comme mesuré.");
+  assert.match(r.stderr, /git log returned code 3: nothing is published\./,
+    "la garde doit rendre le CODE : « nothing is published » sans le code ne dit pas quoi rejouer.");
+  assert.doesNotMatch(r.stdout, /swept/);
+});
+
+test("le balayage refuse une sortie trop courte pour être l'historique", () => {
+  const r = lancerAvecGitDePaille("court");   // rev-list → 12, log → « court » en code 0
+  assert.equal(r.releveEcrit, false,
+    "un relevé a été écrit sur six octets d'historique : il aurait annoncé « aucun secret ».");
+  assert.notEqual(r.status, 0);
+  /* LES DEUX NOMBRES ET LE PLANCHER, pas seulement le fait de refuser : un chiffre de sécurité
+     qui ne dit pas ce qu'il a lu ne se rejoue pas, et c'est la faute que tout ce fichier existe
+     pour refuser. 12 commits × 200 = 2400 ; « court\n » fait 6 octets. */
+  assert.match(r.stderr, /git log returned 6 bytes for 12 commits \(floor 2400\)\./,
+    "le refus doit porter la longueur lue, le compte de commits ET le plancher.");
+  assert.match(r.stderr, /too short to be the history: the output was truncated or cut/);
+  assert.doesNotMatch(r.stdout, /swept/,
+    "rien ne doit être publié : le relevé ne s'imprime pas sur un historique non lu.");
+});
+
+/*
+ * LA QUATRIÈME GARDE NE S'ATTEINT PAS DEPUIS LE PATH, et c'est pourquoi le lanceur est injecté.
+ *
+ * `spawnSync` ne remplit `.error` que pour un échec de LANCEMENT ou pour ENOBUFS. Le même
+ * binaire sert aux deux appels : s'il ne se lance pas pour `log`, il ne s'est pas lancé pour
+ * `rev-list` non plus, et l'on n'arrive jamais ici. Seule une disparition de `git` ENTRE les
+ * deux appels y mène — une course qu'aucun test ne produit.
+ *
+ * CE TÉMOIN NE PROUVE DONC RIEN SUR LE POINT D'APPEL : il appelle la fonction en isolation.
+ * C'est `principal()` qui est éprouvé par les trois cas ci-dessus.
+ */
+test("le balayage refuse de publier quand `git log` n'a pas pu être lancé", () => {
+  const echec = Object.assign(new Error("spawn git EAGAIN"), { code: "EAGAIN" });
+  assert.throws(
+    () => balayerLHistorique(racine, (args) =>
+      args[0] === "rev-list"
+        ? { status: 0, stdout: "12\n" }                 // le compte passe : on vise BIEN cette garde
+        : { error: echec, status: null, stdout: "" }),
+    /^Error: git log failed: spawn git EAGAIN — it never ran to completion; nothing is published\.$/,
+    "la garde doit NOMMER l'échec de lancement. Sans son message elle est indistinguable de\n"
+    + "  celle du code de sortie, qui parle d'un code que git n'a jamais eu l'occasion de rendre ;\n"
+    + "  et « truncated » serait faux, puisque rien n'a tourné.");
 });

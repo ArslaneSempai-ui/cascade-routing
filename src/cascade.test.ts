@@ -1785,6 +1785,142 @@ test("le relevé livré correspond à son empreinte, et une valeur changée la f
     "l'empreinte dépend de l'ordre des clés : elle signalera des faux positifs.");
 });
 
+/*
+ * ET LA MOITIÉ QUI MANQUAIT AU SCELLÉ : QUE LE PROGRAMME S'ARRÊTE.
+ *
+ * Le test ci-dessus prouve qu'une valeur changée fait diverger l'empreinte. Il ne prouve
+ * rien sur le fait que `readProfiles` REFUSE quand elle a divergé — il éprouve la fonction
+ * de hachage en isolation, jamais le point d'appel. C'est exactement pourquoi le balayage
+ * de mutation pouvait retirer les quatre `throw` de `readProfiles` sans qu'un seul cas
+ * bouge : quelqu'un avait pris soin de vérifier l'empreinte du fichier qui voyage, et
+ * personne n'avait vérifié que le programme s'arrête quand elle ne correspond plus.
+ *
+ * Les quatre cas qui suivent traversent la couture. Ils lisent un bac à sable, jamais le
+ * dépôt : `cascade.test.ts` et `seuil.test.ts` tournent dans des PROCESSUS PARALLÈLES et
+ * lisent tous ce relevé — un témoin qui écrirait un relevé corrompu à la racine
+ * empoisonnerait les autres fichiers de test pendant sa durée de vie, et écraserait une
+ * vraie mesure là où elle existe.
+ */
+
+/** Un relevé minimal : assez pour passer le filtre `measuredAt` du repli, rien de plus. */
+const RELEVE_MINIMAL = () => ({
+  measuredAt: "2026-08-20T10:40:28.826Z",
+  extraction: { rules: { name: { accuracy: 0.5, latency: 1, latencyP10: 1, latencyP90: 1, items: 10 } } },
+  classification: {},
+  loadTime: {},
+});
+
+const bacASableDeReleve = (t: { after: (f: () => void) => void }): string => {
+  const d = mkdtempSync(join(tmpdir(), "cascade-releve-"));
+  t.after(() => rmSync(d, { recursive: true, force: true }));
+  return d;
+};
+
+test("un relevé de travail sans scellé est refusé, et le refus nomme le fichier et l'issue", (t) => {
+  const d = bacASableDeReleve(t);
+  const fichier = join(d, "profiles.json");
+  writeFileSync(fichier, JSON.stringify(RELEVE_MINIMAL()));   // aucune clé `empreinte`
+
+  let e: Error | null = null;
+  try { readProfiles(fichier, d); } catch (x) { e = x as Error; }
+  assert.ok(e, "un relevé sans scellé a été LU : n'importe quel chiffre tapé à la main se publierait.");
+  assert.match(e!.message, /carries no content fingerprint/,
+    "le refus ne dit pas ce qui manque.");
+  assert.ok(e!.message.includes(fichier),
+    "le refus ne nomme pas le fichier : impossible de le localiser depuis le message.");
+  assert.match(e!.message, /npm run sceller/,
+    "un refus sans issue se contourne : le message doit dire comment sceller.");
+  assert.match(e!.message, /npm run measure/,
+    "et rappeler que le seul geste qui produit une mesure est de mesurer.");
+
+  /* CONTRE-ÉPREUVE — sans elle, une garde qui refuserait TOUT passerait ci-dessus. */
+  const scelle = RELEVE_MINIMAL() as Record<string, unknown>;
+  scelle.empreinte = empreinteDuReleve(scelle);
+  writeFileSync(fichier, JSON.stringify(scelle));
+  assert.ok(readProfiles(fichier, d), "un relevé correctement scellé est refusé : la garde refuse tout.");
+});
+
+test("un relevé de travail dont l'empreinte ne correspond plus est refusé, et le refus donne les deux valeurs", (t) => {
+  const d = bacASableDeReleve(t);
+  const fichier = join(d, "profiles.json");
+  const releve = { ...RELEVE_MINIMAL(), empreinte: "0000000000000000" } as Record<string, unknown>;
+  /* `canonique()` exclut la clé `empreinte` du hachage : poser une empreinte fausse dans le
+     fixture est stable et ne perturbe pas le calcul. */
+  const reelle = empreinteDuReleve(releve);
+  assert.notEqual(reelle, "0000000000000000", "le fixture ne falsifie rien : ce cas n'éprouve rien.");
+  writeFileSync(fichier, JSON.stringify(releve));
+
+  let e: Error | null = null;
+  try { readProfiles(fichier, d); } catch (x) { e = x as Error; }
+  assert.ok(e, "un relevé altéré depuis sa mesure a été LU : le scellé ne scelle rien.");
+  assert.match(e!.message, /has changed since it was measured/,
+    "le refus ne dit pas que le contenu a bougé depuis la mesure.");
+  assert.ok(e!.message.includes("0000000000000000"),
+    "le refus ne dit pas l'empreinte ATTENDUE.");
+  assert.ok(e!.message.includes(reelle),
+    "le refus ne dit pas l'empreinte CALCULÉE : on ne peut pas savoir lequel des deux a bougé.");
+  assert.match(e!.message, /Measure again, or re-seal/,
+    "un refus sans issue se contourne.");
+
+  /* CONTRE-ÉPREUVE : re-sceller le MÊME contenu suffit à le faire passer — donc c'est bien
+     l'écart empreinte/contenu qui est refusé, pas le fichier. */
+  releve.empreinte = reelle;
+  writeFileSync(fichier, JSON.stringify(releve));
+  assert.ok(readProfiles(fichier, d), "re-scellé, le même relevé reste refusé : la garde regarde autre chose.");
+});
+
+test("le relevé qu'un clone neuf lit est refusé s'il ne porte pas de scellé", (t) => {
+  const d = bacASableDeReleve(t);
+  writeFileSync(join(d, RELEVE_DE_REFERENCE), JSON.stringify(RELEVE_MINIMAL()));   // pas d'`empreinte`
+  const absent = join(d, "data", "profiles.json");   // n'existe pas → on passe au repli
+
+  let e: Error | null = null;
+  try { readProfiles(absent, d); } catch (x) { e = x as Error; }
+  assert.ok(e, "le relevé de référence non scellé a été LU : c'est LUI qui engendre les chiffres publiés\n"
+    + "  chez quiconque clone, puisque data/ est ignoré par git.");
+  assert.match(e!.message, /carries no content fingerprint/,
+    "le refus ne dit pas ce qui manque.");
+  assert.ok(e!.message.startsWith(RELEVE_DE_REFERENCE),
+    "le refus ne nomme pas le relevé en cause : plusieurs profiles-*.json vivent à la racine,\n"
+    + "  le message doit dire lequel.");
+  assert.ok(e!.message.includes(`npm run sceller -- ${RELEVE_DE_REFERENCE}`),
+    "l'issue ne nomme pas le fichier à sceller : elle est inapplicable telle quelle.");
+
+  /* CONTRE-ÉPREUVE : scellé, le même relevé de référence passe. */
+  const scelle = RELEVE_MINIMAL() as Record<string, unknown>;
+  scelle.empreinte = empreinteDuReleve(scelle);
+  writeFileSync(join(d, RELEVE_DE_REFERENCE), JSON.stringify(scelle));
+  assert.ok(readProfiles(absent, d), "scellé, le relevé de référence reste refusé : la garde refuse tout.");
+});
+
+test("le relevé qu'un clone neuf lit est refusé si son contenu a bougé depuis son scellé", (t) => {
+  const d = bacASableDeReleve(t);
+  const releve = { ...RELEVE_MINIMAL(), empreinte: "0000000000000000" } as Record<string, unknown>;
+  const reelle = empreinteDuReleve(releve);
+  assert.notEqual(reelle, "0000000000000000", "le fixture ne falsifie rien : ce cas n'éprouve rien.");
+  writeFileSync(join(d, RELEVE_DE_REFERENCE), JSON.stringify(releve));
+  const absent = join(d, "data", "profiles.json");
+
+  let e: Error | null = null;
+  try { readProfiles(absent, d); } catch (x) { e = x as Error; }
+  assert.ok(e, "un relevé de référence altéré a été LU : le README, landing.json et le dossier\n"
+    + "  publieraient ses chiffres depuis un clone sans que rien ne le contredise.");
+  assert.match(e!.message, /has changed since it was measured/,
+    "le refus ne dit pas que le contenu a bougé depuis la mesure.");
+  assert.ok(e!.message.startsWith(RELEVE_DE_REFERENCE), "le refus ne nomme pas le relevé en cause.");
+  assert.ok(e!.message.includes("0000000000000000") && e!.message.includes(reelle),
+    "le refus ne donne pas les deux empreintes : on ne peut pas savoir laquelle a bougé.");
+  assert.match(e!.message, /fresh clone uses to generate EVERY published figure/,
+    "le message ne dit pas la portée : c'est ce qui distingue ce refus de celui du relevé de travail.");
+
+  /* CONTRE-ÉPREUVE : re-scellé, le même relevé passe — la garde vise l'écart, pas le fichier. */
+  releve.empreinte = reelle;
+  writeFileSync(join(d, RELEVE_DE_REFERENCE), JSON.stringify(releve));
+  assert.ok(readProfiles(absent, d), "re-scellé, le relevé de référence reste refusé.");
+});
+
+
+
 
 /*
  * LE CACHE DE LA GALERIE PORTE L'EMPREINTE DE SES ENTRÉES — LE CODE COMPRIS.

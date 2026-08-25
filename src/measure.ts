@@ -277,9 +277,29 @@ function canonique(x: unknown): unknown {
 export function empreinteDuReleve(profils: unknown): string {
   return createHash("sha256").update(JSON.stringify(canonique(profils))).digest("hex").slice(0, 16);
 }
-export function readProfiles(): Profiles | null {
-  if (existsSync(FICHIER)) {
-    const p = JSON.parse(readFileSync(FICHIER, "utf8"));
+export function readProfiles(
+  /*
+   * LES DEUX CHEMINS SONT DES PARAMÈTRES PARCE QU'UNE GARDE QU'AUCUN TEST NE PEUT
+   * DÉCLENCHER N'EST PAS UNE GARDE.
+   *
+   * Les quatre refus de scellé de cette fonction lisaient des chemins calculés depuis
+   * `import.meta.url`. Rien dans la signature exportée ne permettait de leur présenter un
+   * relevé fabriqué, donc le seul déclenchement possible aurait été d'écrire un relevé
+   * corrompu à la racine du dépôt vivant — que la trentaine de cas de `cascade.test.ts` et
+   * `seuil.test.ts` lisent dans des processus PARALLÈLES, et qui aurait écrasé une vraie
+   * mesure là où elle existe. Résultat : le balayage de mutation retirait ces quatre `throw`
+   * sans qu'un seul cas bouge, et le seul témoin proche éprouvait `empreinteDuReleve()` en
+   * isolation — la fonction de hachage, jamais le refus.
+   *
+   * Les valeurs par défaut SONT la production : les appels `readProfiles()` du dépôt les
+   * prennent et continuent donc d'éprouver le point d'appel réel. Seuls les témoins passent
+   * un bac à sable.
+   */
+  fichier: string = FICHIER,
+  racine: string = fileURLToPath(new URL("..", import.meta.url)),
+): Profiles | null {
+  if (existsSync(fichier)) {
+    const p = JSON.parse(readFileSync(fichier, "utf8"));
     /* ON REFUSE, ON NE PRÉVIENT PAS. Un avertissement sur un relevé altéré serait lu une
        fois puis passé — et pendant ce temps la page publierait le chiffre. Le seul niveau
        de sévérité correct pour « la mesure a été modifiée depuis sa mesure » est l'arrêt.
@@ -288,13 +308,13 @@ export function readProfiles(): Profiles | null {
     const calculee = empreinteDuReleve(p);
     if (typeof attendue !== "string") {
       throw new Error(
-        `${FICHIER} carries no content fingerprint: there is no way to tell whether its\n`
+        `${fichier} carries no content fingerprint: there is no way to tell whether its\n`
         + `  figures are the ones that were measured. Re-seal it with \u201cnpm run sceller\u201d, or\n`
         + `  measure again with \u201cnpm run measure\u201d.`);
     }
     if (attendue !== calculee) {
       throw new Error(
-        `${FICHIER} has changed since it was measured — fingerprint ${attendue}, content ${calculee}.\n`
+        `${fichier} has changed since it was measured — fingerprint ${attendue}, content ${calculee}.\n`
         + `  A figure in this file was edited by hand, or the file was assembled from two\n`
         + `  separate records. No figure published from it has any value until that is\n`
         + `  cleared up. Measure again, or re-seal if the change is intended and owned.`);
@@ -302,7 +322,6 @@ export function readProfiles(): Profiles | null {
     return p;
   }
 
-  const racine = fileURLToPath(new URL("..", import.meta.url));
   const livres = readdirSync(racine)
     .filter((f) => /^profiles-.*\.json$/.test(f))
     .map((f) => {

@@ -487,11 +487,46 @@ export type ReleveHistorique = {
   temoins: number; date: string; commit: string;
 };
 
-function balayerLHistorique(racine: string): ReleveHistorique {
+/**
+ * LE LANCEUR DE `git`, INJECTABLE — parce qu'une garde qu'aucun test ne peut atteindre
+ * n'est pas une garde, c'est une intention.
+ *
+ * `spawnSync` ne remplit `.error` que dans deux cas : l'échec de LANCEMENT (ENOENT, EACCES,
+ * EAGAIN, EMFILE) et le dépassement de `maxBuffer` (ENOBUFS). Un enfant tué par signal laisse
+ * `.error` à `undefined`, donc il tombe dans la garde du code de sortie, pas dans celle-ci.
+ *
+ * L'échec de lancement ne se fabrique pas depuis le PATH : le même binaire sert aux deux
+ * appels, donc s'il ne se lance pas pour `log`, il ne s'est pas lancé pour `rev-list` non
+ * plus, et l'on n'arrive jamais ici. Seule une disparition de `git` ENTRE les deux appels y
+ * mène — une course qu'aucun test ne produit. D'où ce paramètre : un seul point d'injection,
+ * qui laisse les appelants existants inchangés.
+ */
+export type LanceurGit = (args: string[]) => { error?: Error; status: number | null; stdout: string };
+
+/**
+ * LE PLAFOND ANNONCÉ DOIT ÊTRE UN PLAFOND QU'ON PEUT ATTEINDRE.
+ *
+ * Il valait 1 Gio, et ce chiffre mentait : avec `encoding: "utf8"`, `spawnSync` construit une
+ * chaîne, et V8 refuse au-delà de 0x1fffffe8 caractères (~512 Mio). Une sortie de 1 Gio faisait
+ * donc JETER `spawnSync` lui-même — « Invalid string length », vérifié le 25 août 2026 par
+ * `node -e "'a'.repeat(0x1fffffe8 + 1)"` — AVANT tout retour, donc avant que `patch.error` ne
+ * puisse porter ENOBUFS. La garde d'en dessous annonçait une troncature qu'elle ne pouvait
+ * jamais voir.
+ *
+ * 400 Mio tient sous la limite de V8 quel que soit le contenu : N octets se décodent en au
+ * plus N unités UTF-16. Et la marge est réelle — `git log -p -m --all --no-color` rend
+ * 22 746 077 octets sur ce dépôt le 25 août 2026, soit 18 fois moins.
+ */
+const PLAFOND_SORTIE_GIT = 400 * 1024 * 1024;
+
+const gitReel = (racine: string): LanceurGit => (args) =>
+  spawnSync("git", args, { cwd: racine, encoding: "utf8", maxBuffer: PLAFOND_SORTIE_GIT });
+
+export function balayerLHistorique(racine: string, lancer: LanceurGit = gitReel(racine)): ReleveHistorique {
   const TEMOINS = "AKIAIOSFODNN7EXAMPLE\nhf_aBcDeFgHiJkLmNoPqRsTuVwXyZ0123456789\n";
   const ATTENDUS = ["clé AWS", "jeton Hugging Face"];
 
-  const compte = spawnSync("git", ["rev-list", "--all", "--count"], { cwd: racine, encoding: "utf8" });
+  const compte = lancer(["rev-list", "--all", "--count"]);
   const commits = Number(compte.stdout.trim());
   if (!Number.isInteger(commits) || commits <= 0) {
     throw new Error(`git rev-list returned "${compte.stdout.trim()}": the history was not read, and its zero would be worthless.`);
@@ -514,9 +549,29 @@ function balayerLHistorique(racine: string): ReleveHistorique {
    * quelques trouvailles vues deux fois : la carte des trouvailles les dédoublonne déjà par
    * forme, fichier et empreinte, et lire deux fois coûte moins cher que ne pas lire.
    */
-  const patch = spawnSync("git", ["log", "-p", "-m", "--all", "--no-color"],
-    { cwd: racine, encoding: "utf8", maxBuffer: 1024 * 1024 * 1024 });
-  if (patch.error) throw new Error(`git log failed: ${patch.error.message}. The output is truncated; nothing is published.`);
+  const patch = lancer(["log", "-p", "-m", "--all", "--no-color"]);
+  /*
+   * DEUX PANNES, UN SEUL REFUS — mais pas le même diagnostic.
+   *
+   * `spawnSync` ne remplit `.error` que pour ENOBUFS (le plafond a coupé la sortie) ou pour un
+   * échec de lancement (ENOENT, EACCES, EAGAIN, EMFILE : le processus n'a jamais démarré).
+   * Le message disait « The output is truncated » dans les deux cas, et c'était FAUX du second :
+   * rien n'a été tronqué quand rien n'a tourné. Un refus qui se trompe de cause envoie chercher
+   * là où il n'y a rien.
+   *
+   * La branche « échec de lancement » est éprouvée par « le balayage refuse de publier quand
+   * `git log` n'a pas pu être lancé » (src/menace.test.ts), via le lanceur injecté — elle est
+   * inatteignable depuis le PATH, voir le commentaire de `LanceurGit`.
+   * La branche ENOBUFS n'a PAS de témoin : la déclencher demande 400 Mio de sortie, soit une
+   * minute de fabrication par exécution. Elle est atteignable depuis que le plafond tient sous
+   * la limite de chaîne de V8 ; c'est le plafond, pas un test, qui la rend vraie.
+   */
+  if (patch.error) {
+    const cause = (patch.error as { code?: string }).code === "ENOBUFS"
+      ? `its output passed the ${PLAFOND_SORTIE_GIT}-byte ceiling and was cut`
+      : "it never ran to completion";
+    throw new Error(`git log failed: ${patch.error.message} — ${cause}; nothing is published.`);
+  }
   if (patch.status !== 0) throw new Error(`git log returned code ${patch.status}: nothing is published.`);
   const PLANCHER = commits * 200;
   if (patch.stdout.length < PLANCHER) {
@@ -574,8 +629,7 @@ function balayerLHistorique(racine: string): ReleveHistorique {
    * branche de sauvegarde chez moi » n'appellent ni la même urgence ni la même correction.
    */
   const atteignables = new Set(
-    (spawnSync("git", ["rev-list", "HEAD"], { cwd: racine, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 })
-      .stdout || "").split("\n").map((l) => l.trim()).filter(Boolean));
+    (lancer(["rev-list", "HEAD"]).stdout || "").split("\n").map((l) => l.trim()).filter(Boolean));
   const trouvailles = new Map<string, Trouvaille>();
   let fichier = "?", sha = "";
   for (const ligne of patch.stdout.split("\n")) {
@@ -609,7 +663,7 @@ function balayerLHistorique(racine: string): ReleveHistorique {
     declares.some((d) => d.forme === t.forme && d.fichier === t.fichier && d.empreinte === t.empreinte);
   const reels = [...trouvailles.values()].filter((t) => !estDeclare(t));
 
-  const tete = spawnSync("git", ["rev-parse", "--short", "HEAD"], { cwd: racine, encoding: "utf8" });
+  const tete = lancer(["rev-parse", "--short", "HEAD"]);
   return {
     commits, temoins,
     trouves: trouvailles.size,
