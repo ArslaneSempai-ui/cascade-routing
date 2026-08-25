@@ -83,14 +83,37 @@ const racine = fileURLToPath(new URL("..", import.meta.url));
  * @param {(dest: string) => void} [o.installer]
  * @param {(dest: string) => string} [o.tester]
  */
+/**
+ * Le clone d'un arbre neuf, extrait pour qu'un cas puisse l'appeler seul.
+ */
+/*
+ * `GIT_INDEX_FILE` EST RETIRÉ, ET C'EST LA LIGNE LA PLUS IMPORTANTE DE CE FICHIER.
+ *
+ * Git l'exporte à ses crochets. Un `pre-commit` qui lance la suite le transmet donc à
+ * tout ce qu'elle lance — et `git clone --no-local` écrit sa copie de travail dans
+ * l'index DÉSIGNÉ PAR CETTE VARIABLE, c'est-à-dire l'index du commit en cours. Celui-ci
+ * est remplacé par l'index du clone, où rien n'est indexé.
+ *
+ * Le symptôme, reproduit le 26 août 2026 : `git commit` réussit, code 0, et n'emporte
+ * AUCUN fichier ; les fichiers indexés redeviennent non indexés. Trois sessions l'ont
+ * subi séparément, quatre commits en portent la trace, et chacun de leurs messages
+ * décrivait un correctif qui n'existait pas. Aucun message d'erreur nulle part.
+ *
+ * `--no-local` est nécessaire : un clone local par liens durs ne fait pas de copie de
+ * travail et ne déclenche pas le défaut, ce qui l'a rendu invisible en contre-épreuve.
+ */
+export function clonerNeuf(depot, dest, ref = null) {
+  const env = { ...process.env };
+  delete env.GIT_INDEX_FILE; delete env.GIT_DIR; delete env.GIT_WORK_TREE;
+  execFileSync("git", ["clone", "--no-local", "--quiet",
+    ...(ref ? ["--branch", ref] : []), depot, dest], { stdio: "pipe", env });
+}
+
 export const controle = ({
   clone = join(mkdtempSync(join(tmpdir(), "cascade-clone-neuf-")), "cascade"),
   depot = racine,
   ref = null,
-  cloner = (dest) => {
-    execFileSync("git", ["clone", "--no-local", "--quiet",
-      ...(ref ? ["--branch", ref] : []), depot, dest], { stdio: "pipe" });
-  },
+  cloner = (dest) => clonerNeuf(depot, dest, ref),
   historique = (dest) => { execFileSync("git", ["-C", dest, "rev-parse", "HEAD"], { stdio: "pipe" }); },
   installer = (dest) => {
     execFileSync("npm", ["ci", "--prefer-offline", "--no-audit", "--no-fund", "--silent"],

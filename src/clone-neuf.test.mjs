@@ -26,10 +26,11 @@
 
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, mkdirSync, rmSync } from "node:fs";
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { controle } from "./clone-neuf.mjs";
+import { execFileSync } from "node:child_process";
+import { controle, clonerNeuf } from "./clone-neuf.mjs";
 
 /**
  * Lance le contrôle sur un clone fabriqué, et rend ce qu'il a fait, dit et décidé.
@@ -126,4 +127,65 @@ test("un clone propre franchit l'étape et atteint bien l'installation", () => {
   assert.deepEqual(appels, ["git rev-parse", "npm ci", "npm test"],
     "sans node_modules hérité la séquence doit se poursuivre jusqu'au bout : sinon la garde "
     + "refuse tout, et le cas précédent ne prouve rien.");
+});
+
+/*
+ * LE CLONE NE DOIT PAS EMPORTER L'INDEX DE CELUI QUI L'APPELLE.
+ *
+ * Git exporte `GIT_INDEX_FILE` à ses crochets. Un `pre-commit` qui lance la suite le
+ * transmet à tout ce qu'elle lance, et `git clone --no-local` écrit sa copie de travail
+ * DANS l'index que cette variable désigne — donc dans l'index du commit en cours, qu'il
+ * remplace par le sien, où rien n'est indexé.
+ *
+ * Symptôme vécu par trois sessions le 25 et 26 août 2026 : `git commit` réussit, code 0,
+ * et n'emporte aucun fichier. Quatre commits en portent la trace, et chacun de leurs
+ * messages décrivait un correctif qui n'existait pas. Aucune erreur nulle part.
+ *
+ * `--no-local` compte : un clone local par liens durs ne fait pas de copie de travail et
+ * ne déclenche rien. La première contre-épreuve a échoué pour cette seule raison.
+ */
+test("un clone n'emporte pas l'index de son appelant", () => {
+  const d = mkdtempSync(join(tmpdir(), "cascade-index-"));
+  const depot = join(d, "depot");
+  const git = (args, cwd = depot, env = process.env) =>
+    execFileSync("git", args, { cwd, stdio: "pipe", env });
+
+  mkdirSync(depot, { recursive: true });
+  git(["init", "--quiet", "-b", "main"]);
+  git(["config", "user.email", "t@t"]); git(["config", "user.name", "t"]);
+  writeFileSync(join(depot, "f.txt"), "v1\n");
+  git(["add", "f.txt"]); git(["commit", "--quiet", "-m", "base"]);
+
+  writeFileSync(join(depot, "g.txt"), "indexé et attendu\n");
+  git(["add", "g.txt"]);
+  const indexe = () => execFileSync("git", ["diff", "--cached", "--name-only", "HEAD"],
+    { cwd: depot, encoding: "utf8" }).trim();
+  assert.equal(indexe(), "g.txt", "le montage est faux : rien n'est indexé avant le clone.");
+
+  /*
+   * LA VARIABLE EST POSÉE DANS NOTRE PROPRE ENVIRONNEMENT, et c'est tout l'objet du cas.
+   * `clonerNeuf` lit `process.env` : sans cette ligne, retirer la parade ne change rien et
+   * le cas passe au vert en n'ayant rien éprouvé. Mesuré — la première version de ce témoin
+   * restait verte avec le défaut remis, et se serait fait rapporter comme une preuve.
+   */
+  const poison = join(depot, ".git", "index");
+  const avant = process.env.GIT_INDEX_FILE;
+  process.env.GIT_INDEX_FILE = poison;
+  try { clonerNeuf(depot, join(d, "clone"), null); }
+  finally {
+    if (avant === undefined) delete process.env.GIT_INDEX_FILE;
+    else process.env.GIT_INDEX_FILE = avant;
+  }
+
+  assert.equal(indexe(), "g.txt",
+    "LE CLONE A VIDÉ L'INDEX DE SON APPELANT. Un commit lancé après lui réussit en\n"
+    + "  n'emportant aucun fichier, sans un mot, et son message décrit un travail absent.");
+
+  // Et la contre-épreuve : avec la variable transmise, le défaut EXISTE bel et bien.
+  writeFileSync(join(depot, "h.txt"), "second témoin\n");
+  git(["add", "h.txt"]);
+  execFileSync("git", ["clone", "--no-local", "--quiet", depot, join(d, "clone2")],
+    { stdio: "pipe", env: { ...process.env, GIT_INDEX_FILE: poison } });
+  assert.notEqual(indexe(), "g.txt\nh.txt",
+    "le défaut ne se reproduit plus : ce cas ne prouve donc plus rien sur la parade.");
 });

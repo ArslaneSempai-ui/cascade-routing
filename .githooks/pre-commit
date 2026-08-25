@@ -128,7 +128,14 @@ fi
 # `.mjs` MANQUAIT : `npm test` lance `src/*.test.ts src/*.test.mjs`, le crochet seulement les
 # premiers. Un fichier de cas en .mjs n'était donc contrôlé nulle part avant la chaîne publique.
 printf '  suite de cas…\n'
-if ! sortie=$(node --test src/*.test.ts src/*.test.mjs 2>&1); then
+# `env -u GIT_INDEX_FILE` — LA SUITE NE DOIT PAS VOIR L'INDEX DU COMMIT EN COURS.
+# Git exporte GIT_INDEX_FILE à ses crochets. Tout ce que la suite lance en hérite, et
+# `git clone --no-local` écrit sa copie de travail DANS cet index : celui du commit en cours
+# est remplacé par celui du clone, vide. `git commit` réussit alors en n'emportant rien.
+# Reproduit puis refermé dans les deux sens le 26 août 2026 — avec la variable, l'index est
+# vidé par la suite ; sans elle, il survit intact. La cause est corrigée dans clone-neuf.mjs ;
+# ceci protège des acteurs qu'on n'a pas encore écrits.
+if ! sortie=$(env -u GIT_INDEX_FILE node --test src/*.test.ts src/*.test.mjs 2>&1); then
   #
   # UN ROUGE SOUS CHARGE N'EST PAS UN VERDICT — mesuré le 26 août 2026.
   #
