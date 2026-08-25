@@ -64,7 +64,7 @@ for (const l of sdn) {
      mesure la capacité à rendre du vide, ce qui n'est pas la question. */
   if ([c.birth, c.document, c.country, c.address].filter(Boolean).length >= 3) cas.push(c);
 }
-console.log(`  ${cas.length} cas retenus sur ${sdn.length} lignes · au moins 3 champs sur 4 présents`);
+console.log(`  ${cas.length} cases kept out of ${sdn.length} lines · at least 3 of 4 fields present`);
 
 /* Le texte est ce qu'un système d'accueil verrait : le nom, puis la prose officielle. */
 const ech = (v) => `"${String(v).replace(/"/g, '""')}"`;

@@ -21,11 +21,11 @@
     "comment": "node --test --experimental-test-coverage src/*.test.ts, ligne « all files »"
   },
   "catalogue": {
-    "occurrences": 8,
+    "occurrences": 6,
     "mesureLe": "2026-08-25",
-    "comment": "node ~/.claude/skills/equipe/scripts/pieges.mjs <CHEMIN ABSOLU> — 8 = 2 façade + 2 `harnais-sans-remise-a-neuf` + 4 `devise-tapee`. Descendu de 27 à 8 le 25 août 2026 : les 19 dernières sorties françaises sont traduites, dans onze fichiers. IL NE RESTE PLUS AUCUN VRAI FRANÇAIS. Les 2 occurrences `facade-en-francais` restantes sont un TROISIÈME faux positif de la règle, encore non corrigé : `src/dossier.ts:516` et `:553` sont des phrases anglaises qui contiennent le nom de la commande `npm run dossier`, et « dossier » est dans la liste FR. Le remède serait de retirer les spans entre accents graves avant le test, comme on retire déjà les interpolations : un littéral cité dans une sortie n'est pas de la prose. Renommer la commande pour satisfaire l'outil serait changer l'interface publique du dépôt pour un faux positif.",
+    "comment": "node ~/.claude/skills/equipe/scripts/pieges.mjs <CHEMIN ABSOLU>. ZÉRO FAÇADE FRANÇAISE : plus une seule sortie du dépôt ne répond en français à un acheteur. Descendu de 8 à 6 le 25 août 2026 en deux mouvements de nature différente, et la distinction compte. D'abord la RÈGLE, fausse à 60 % : elle lisait comme de la prose ce qu'un message CITE — identifiant interpolé, littéral entre accents graves, invocation `npm run <nom>`. Trois formes, trois contre-épreuves. Ensuite les 21 VRAIES occurrences, traduites (session bd, 19 sorties sur 11 fichiers ; les 2 fichiers partagés corrigés d'abord dans identite). Le piège de l'élargissement : retirer « on » et « plus » de la liste FR avait PERDU « SECURITE.md ne correspond plus au code » — un vrai positif qui ne tenait que par son mot le plus ambigu. Le remède est d'ajouter des mots que l'anglais n'a pas, jamais de garder un homographe. LES 6 QUI RESTENT SONT LÉGITIMES : 4 seuils monétaires cités d'un texte de loi (exemption prévue par la règle elle-même) et 2 harnais dans des fichiers partagés. Un plancher à 0 sur la façade signifie qu'UNE SEULE occurrence neuve est refusée et nommée.",
     "parPiege": {
-      "facade-en-francais": 21,
+      "facade-en-francais": 0,
       "harnais-sans-remise-a-neuf": 2,
       "devise-tapee": 4
     },

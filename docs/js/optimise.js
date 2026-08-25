@@ -213,8 +213,8 @@ export function paliersMesures(p) {
     const partiels = TIERS.filter((e) => !complets.includes(e)
         && (p.extraction[e] !== undefined || p.classification[e] !== undefined));
     if (partiels.length) {
-        console.warn(`profil incomplet : ${partiels.join(", ")} n'est mesuré que sur une chaîne `
-            + `et sera ignoré — relancer \`npm run measure --tiers=${partiels.join(",")}\``);
+        console.warn(`incomplete profile: ${partiels.join(", ")} is measured on one chain only `
+            + `and will be ignored — rerun \`npm run measure --tiers=${partiels.join(",")}\``);
     }
     return complets;
 }
