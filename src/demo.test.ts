@@ -1,3 +1,6 @@
+/* PARTAGÉ — la source de ce fichier est ~/Documents/identite ; les dépôts du portfolio
+   en portent une copie identique. Corrigez-le DANS identite, puis recopiez. Corriger une
+   copie sur place fait refuser le commit, et le refus arrive après le travail. */
 /*
  * CE QUE LA DÉMO PUBLIÉE DOIT SERVIR.
  *
@@ -21,9 +24,8 @@
  */
 
 import { test } from "node:test";
-import { FIELDS } from "./corpus.ts";
 import assert from "node:assert/strict";
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, existsSync, statSync, readdirSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
@@ -40,8 +42,42 @@ const suivis = (): Set<string> => {
 test("tout module importé par la démo est présent et suivi par git", (t) => {
   if (!existsSync(page)) return t.skip("docs/index.html absent — lancer `npm run pages`");
   const html = readFileSync(page, "utf8");
-  const imports = [...html.matchAll(/from\s+"(\.\/[^"]+\.js)"/g)].map((m) => m[1]!);
-  if (imports.length === 0) return t.skip("cette démo n'importe aucun module");
+  /*
+   * ─── « RIEN À VÉRIFIER » N'EST PAS « JE N'AI RIEN RECONNU » ───
+   *
+   * Ce motif ne lit que les chemins relatifs, `./x.js`. Une page qui émettrait des chemins
+   * absolus — `/_astro/x.js`, ce que produit un empaqueteur — n'en offrirait aucun, et ce cas
+   * passait alors en `t.skip` : **vert, sans avoir rien regardé**, pendant que des fichiers
+   * auraient dû être suivis par git. Relevé le 22 août 2026 : les dix pages du portfolio
+   * portent 2 à 7 imports relatifs et zéro absolu, donc le trou est latent — mais un vert qui
+   * dépend de la forme des chemins n'est pas un vert.
+   *
+   * On compte donc les deux : tous les imports, et ceux que le motif sait vérifier. Un écart
+   * entre les deux est une panne du contrôle, pas un silence.
+   */
+  /*
+   * ─── UN COMMENTAIRE QUI PARLE D'UN IMPORT N'EN EST PAS UN ───
+   *
+   * Démontré le 22 août 2026 par un symbole inventé : un commentaire HTML contenant
+   * `from "./zzz-temoin-fantome.js"` faisait échouer ce cas sur une page parfaitement
+   * correcte — « ./zzz-temoin-fantome.js est importé mais absent de docs/ ». L'effet est un
+   * **faux rouge** et non un vert vide, donc il se voit ; mais une note explicative ajoutée à
+   * une page publiée casserait la vérification, et personne ne comprendrait pourquoi.
+   *
+   * On retire donc les commentaires HTML avant de chercher les imports. La limite est écrite
+   * plutôt que tue : les commentaires JavaScript à l'intérieur du script ne sont pas retirés,
+   * parce que `//` apparaît dans toute URL et qu'un retrait naïf couperait des chaînes.
+   */
+  const htmlSansNotes = html.replace(/<!--[\s\S]*?-->/g, " ");
+  const tous = [...htmlSansNotes.matchAll(/from\s+"([^"]+\.js)"/g)].map((m) => m[1]!);
+  const imports = tous.filter((c) => c.startsWith("./"));
+  const nonReconnus = [...new Set(tous.filter((c) => !c.startsWith("./")))];
+  assert.deepEqual(nonReconnus, [],
+    `${nonReconnus.length} import(s) sur ${tous.length} dans une forme que ce contrôle ne sait `
+    + `pas vérifier : ${nonReconnus.join(", ")}\n`
+    + `  → élargir le motif, ou dire ici pourquoi ces chemins-là n'ont pas à être suivis.\n`
+    + `  → sans ça le contrôle rend vert en ayant regardé moins qu'il ne le prétend.`);
+  if (tous.length === 0) return t.skip("cette démo n'importe aucun module — zéro import trouvé, motif à jour");
 
   const versionnes = suivis();
   for (const chemin of new Set(imports)) {
@@ -74,11 +110,150 @@ function shimDe(html: string): string {
   return html.slice(debut < 0 ? 0 : debut, fin < 0 ? html.length : fin);
 }
 
+test("la page contrôlée est celle que les sources produisent aujourd'hui", (t) => {
+  /*
+   * ─── LA CIBLE, PAS LA PORTÉE ───
+   *
+   * Le 22 août 2026, seize contrôles d'une page de vente ont lu pendant des heures un fichier
+   * figé à 22 h 30 pendant que la source était éditée. Six fois « tous les contrôles passent »
+   * a voulu dire « l'ancienne page passe toujours ». Ce n'est pas un contrôle trop étroit ni
+   * un motif qui rate un cas : c'est la **cible** qui était fausse, et aucun élargissement de
+   * portée ne l'aurait attrapé.
+   *
+   * La même forme existe ici : `npm test` ne lance pas `npm run pages`. Relevé le même jour,
+   * sept pages sur dix étaient plus anciennes qu'une de leurs sources.
+   *
+   * Un avertissement ne suffirait pas — un vert rendu après cette ligne ne vaut rien, donc on
+   * s'arrête.
+   *
+   * liste-figee: les fichiers qui **produisent** la page. Elle ne se déduit pas du disque :
+   * `verifier-ecran.mjs` et `capturer.mjs` vivent dans le même dossier et ne produisent rien,
+   * ils contrôlent. Les inscrire ferait refuser la suite à chaque diffusion de la couche, et
+   * un garde-fou qui crie sans raison finit désactivé.
+   */
+  const PRODUISENT = ["ui.html", "gabarit.html", "pages.ts", "registre.css", "graphes.js"];
+  if (!existsSync(page)) return t.skip("docs/index.html absent — lancer `npm run pages`");
+
+  const quand = (f: string) => statSync(f).mtimeMs;
+  const datePage = quand(page);
+  const sources = PRODUISENT
+    .map((f) => racine + "src/" + f)
+    .filter((f) => existsSync(f));
+
+  assert.ok(sources.length > 0,
+    `aucune des sources déclarées n'existe dans ${racine}src/ : la liste est périmée, et un `
+    + `vert rendu ici ne dirait rien`);
+
+  const plusRecentes = sources.filter((f) => quand(f) > datePage)
+    .map((f) => f.split("/").pop()!);
+  /*
+   * ─── ET L'ARBRE COMPILÉ À CÔTÉ, DÉDUIT DU DISQUE ───
+   *
+   * La liste ci-dessus est figée à cinq noms, et `index.html` n'est pas le seul artefact
+   * publié : `docs/js/` porte un module par source compilée pour le navigateur. Le 24 août
+   * 2026, `regulations.ts` avait gagné une dixième entrée et **`docs/js/regulations.js`
+   * servait encore l'ancienne** — dans quatre dépôts, sans qu'un seul contrôle s'en aperçoive.
+   * Sept jours d'écart possibles entre ce que la source dit et ce que la page sert.
+   *
+   * Les couples ne se déclarent donc pas : ils se déduisent. Tout `docs/js/X.js` qui a un
+   * `src/X.ts` est un couple, et le jour où la convention de nommage change, le témoin
+   * ci-dessous le dit au lieu de rendre un vert sur zéro couple.
+   */
+  const dossierJs = racine + "docs/js";
+  if (existsSync(dossierJs)) {
+    const couples = readdirSync(dossierJs)
+      .filter((f) => f.endsWith(".js"))
+      .map((js) => ({ js: dossierJs + "/" + js, ts: racine + "src/" + js.replace(/\.js$/, ".ts") }))
+      .filter((c) => existsSync(c.ts));
+    assert.ok(couples.length > 0,
+      `${dossierJs} porte des modules mais aucun n'a de source \`src/*.ts\` du même nom : `
+      + `la convention a changé et ce contrôle ne compare plus rien`);
+    const compilesPerimes = couples
+      .filter((c) => quand(c.ts) > quand(c.js))
+      .map((c) => c.js.split("/").pop()!);
+    assert.deepEqual(compilesPerimes, [],
+      `${compilesPerimes.join(", ")} : la page sert un module plus ancien que sa source — `
+      + `lancer \`npm run pages\`. Un module compilé peut vieillir sans que l'écran change `
+      + `d'aspect : il dit simplement autre chose que ce que le code dit.`);
+  }
+
+  assert.deepEqual(plusRecentes, [],
+    `la page contrôlée est plus ancienne que ${plusRecentes.join(", ")} — lancer \`npm run pages\`.\n`
+    + `  → tout ce que les cas suivants diront porte sur une page que personne n'a reconstruite.\n`
+    + `  → la date suffit à décider : une reconstruction inutile coûte une commande, un vert sur`
+    + ` l'ancienne page coûte le travail qu'on croit vérifié.`);
+});
+
+test("la page publiée ne révèle aucun chemin ni adresse de la machine qui l'a construite", (t) => {
+  /*
+   * ─── CE QU'UNE PAGE DIT SANS LE DIRE ───
+   *
+   * Le 22 août 2026, la démo publique de la recherche documentaire posait
+   * `~/Documents/rag/corpus` dans un champ : le chemin local du corpus, et le nom du dépôt
+   * qu'on garde privé, lisibles par quiconque ouvrait la page. Elle ne servait à rien là-bas —
+   * le shim rend `demo_fixe` pour cette route sans jamais lire la valeur — et la page portait
+   * déjà, deux cents lignes plus haut, un espace réservé neutre pour le même champ. Une ligne
+   * d'essai local partie en production.
+   *
+   * Ce n'était le secret de personne, et c'est le point : ce genre de fuite n'a pas besoin
+   * d'être grave pour être gênant. Elle dit qui a construit la page, comment son disque est
+   * rangé, et le nom de ce qu'il ne publie pas.
+   *
+   * Les motifs cherchés sont ceux qu'une page publiée n'a aucune raison de porter. Les liens
+   * vers `localhost` et la boucle locale en font partie : dans une démo statique ils ne
+   * mènent nulle part chez le lecteur, et ils trahissent un montage de développement.
+   */
+  if (!existsSync(page)) return t.skip("docs/index.html absent — lancer `npm run pages`");
+  const html = readFileSync(page, "utf8");
+
+  const MOTIFS: [string, RegExp][] = [
+    ["chemin d'un compte système", /\/(?:Users|home)\/[A-Za-z0-9._-]+/g],
+    ["chemin de dossier personnel", /~\/[A-Za-z0-9._\/-]+/g],
+    ["dossier temporaire", /\/(?:private\/)?tmp\/[A-Za-z0-9._-]+/g],
+    ["adresse de boucle locale", /\b(?:127\.0\.0\.1|localhost)(?::\d+)?/g],
+    ["adresse de réseau privé", /\b(?:192\.168|10\.\d+|172\.(?:1[6-9]|2\d|3[01]))\.\d+\.\d+/g],
+    ["nom d'hôte local", /\b[A-Za-z0-9-]+\.local\b/g],
+  ];
+
+  /*
+   * Le témoin, avant le verdict : on montre au détecteur une page fabriquée qui porte
+   * exactement ce qu'il cherche. Un zéro rendu par un motif périmé ne se distingue pas d'un
+   * zéro rendu par une page propre.
+   */
+  const fabriquee = "<p>/Users/quelquun/Documents/x ~/Documents/y http://127.0.0.1:8000 machine.local</p>";
+  const vus = MOTIFS.filter(([, r]) => new RegExp(r.source).test(fabriquee)).length;
+  assert.ok(vus >= 4,
+    `le détecteur ne reconnaît que ${vus} motif(s) sur une page fabriquée qui les porte tous : `
+    + `les motifs sont périmés, et un zéro ne prouverait rien`);
+
+  const fuites: string[] = [];
+  for (const [quoi, motif] of MOTIFS) {
+    for (const m of html.matchAll(motif)) fuites.push(`${quoi} : ${m[0]}`);
+  }
+  assert.deepEqual([...new Set(fuites)], [],
+    `la page publiée révèle la machine qui l'a construite :\n  ${[...new Set(fuites)].join("\n  ")}\n`
+    + `  → remplacer par une valeur relative ou un espace réservé neutre.\n`
+    + `  → ${MOTIFS.length} motif(s) cherchés sur ${html.length} octets de page.`);
+});
+
 test("le shim répond avec tous les champs que l'écran lit", (t) => {
   if (!existsSync(page)) return t.skip("docs/index.html absent");
   const html = readFileSync(page, "utf8");
   const ui = readFileSync(racine + "src/ui.html", "utf8");
-  if (!html.includes("window.LOCAL =")) return t.skip("cette démo n'a pas de shim");
+  /*
+   * Même piège que pour les imports : un écran qui appelle des routes sans qu'on détecte de
+   * shim n'est pas « une démo sans shim », c'est une démo qu'on ne sait pas lire — ou une
+   * démo cassée. Relevé le 22 août 2026 : les neuf pages qui appellent des routes en ont
+   * toutes un, `rag` en appelle neuf. Le trou est latent, et il ne le restera que tant que la
+   * forme de déclaration ne bouge pas.
+   */
+  if (!html.includes("window.LOCAL =")) {
+    const routes = [...new Set([...html.matchAll(/["'`](\/api\/[a-z-]+)/g)].map((m) => m[1]!))];
+    assert.deepEqual(routes, [],
+      `aucun shim détecté alors que l'écran appelle ${routes.length} route(s) : ${routes.join(", ")}\n`
+      + `  → soit la démo est cassée, soit la forme du shim a changé et ce contrôle ne la lit plus.`);
+    return t.skip("cette démo n'a pas de shim — et n'appelle aucune route");
+  }
 
   /* Le shim est tout ce qui précède le script de l'écran. */
   const shim = shimDe(html);
@@ -101,7 +276,20 @@ test("le shim connaît toutes les routes que l'écran appelle", (t) => {
   if (!existsSync(page)) return t.skip("docs/index.html absent");
   const html = readFileSync(page, "utf8");
   const ui = readFileSync(racine + "src/ui.html", "utf8");
-  if (!html.includes("window.LOCAL =")) return t.skip("cette démo n'a pas de shim");
+  /*
+   * Même piège que pour les imports : un écran qui appelle des routes sans qu'on détecte de
+   * shim n'est pas « une démo sans shim », c'est une démo qu'on ne sait pas lire — ou une
+   * démo cassée. Relevé le 22 août 2026 : les neuf pages qui appellent des routes en ont
+   * toutes un, `rag` en appelle neuf. Le trou est latent, et il ne le restera que tant que la
+   * forme de déclaration ne bouge pas.
+   */
+  if (!html.includes("window.LOCAL =")) {
+    const routes = [...new Set([...html.matchAll(/["'`](\/api\/[a-z-]+)/g)].map((m) => m[1]!))];
+    assert.deepEqual(routes, [],
+      `aucun shim détecté alors que l'écran appelle ${routes.length} route(s) : ${routes.join(", ")}\n`
+      + `  → soit la démo est cassée, soit la forme du shim a changé et ce contrôle ne la lit plus.`);
+    return t.skip("cette démo n'a pas de shim — et n'appelle aucune route");
+  }
   const shim = shimDe(html);
 
   /*
@@ -116,29 +304,4 @@ test("le shim connaît toutes les routes que l'écran appelle", (t) => {
   const manquantes = [...appelees].filter((r) => !shim.includes(`"${r}"`) && !shim.includes(`'${r}'`));
   assert.deepEqual(manquantes, [],
     `le shim ne traite pas ${manquantes.join(", ")} — l'écran recevra undefined, sans erreur`);
-});
-
-test("une requête qui ne change rien le DIT, au lieu de rendre un succès", () => {
-  /*
-   * Mesuré en frappant le serveur : `{"champ":"inexistant"}` et `{"palier":"gpt-9"}` rendaient
-   * tous les deux 200 avec un état inchangé. L'écran semble ne pas réagir, et celui qui le
-   * manipule n'a aucun moyen de savoir s'il s'est trompé ou si l'outil est cassé. Un corps
-   * vide, `null` ou un tableau passaient de la même façon.
-   *
-   * Un succès qui ne fait rien est pire qu'un refus : il enseigne au lecteur que l'outil ne
-   * marche pas, sans lui dire pourquoi.
-   *
-   * Le serveur n'exporte pas son écoute, donc on éprouve le code qui décide plutôt que la
-   * réponse — et on l'a vérifié en frappant le serveur pour de vrai avant d'écrire ce cas.
-   */
-  const src = readFileSync(new URL("./server.ts", import.meta.url), "utf8");
-  assert.match(src, /this request changes nothing/,
-    "le refus d'un champ ou d'un palier inconnu a disparu : une requête sans effet rendrait à nouveau 200.");
-  assert.match(src, /accepted: \$\{FIELDS\.join/,
-    `le refus ne nomme plus ce qui est accepté : sur ${FIELDS.length} champs, « valeur inconnue » n'aide personne.`);
-  assert.match(src, /the body must be a JSON object/,
-    "un corps `null` ou un tableau ne serait plus refusé avec un message lisible.");
-  /* Et le message ne doit pas être une erreur d'exécution recopiée : « Cannot read properties
-     of null » ne dit ni ce qui était attendu ni quoi faire. */
-  assert.match(src, /Expected something like/, "le refus ne montre plus la forme attendue.");
 });

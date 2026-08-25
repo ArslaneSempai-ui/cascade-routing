@@ -1,3 +1,6 @@
+/* PARTAGÉ — la source de ce fichier est ~/Documents/identite ; les dépôts du portfolio
+   en portent une copie identique. Corrigez-le DANS identite, puis recopiez. Corriger une
+   copie sur place fait refuser le commit, et le refus arrive après le travail. */
 /*
  * LES RÈGLES DE FORME, TENUES PAR UNE MACHINE.
  *
@@ -13,11 +16,28 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync, existsSync, readdirSync } from "node:fs";
+import { readdirSync, readFileSync, existsSync, statSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 const racine = fileURLToPath(new URL("..", import.meta.url));
-const css = () => readFileSync(racine + "src/registre.css", "utf8");
+/*
+ * ─── LE SEUL FAUX VERT DE LA FAMILLE, ET C'ÉTAIT ICI ───
+ *
+ * Démontré le 22 août 2026 : en retirant `background: none` du corps de `.renvoi` et en le
+ * laissant dans un commentaire CSS au même endroit, **ce fichier passait au vert**. La règle
+ * de dessin n'était plus appliquée, et le contrôle qui existe pour la tenir disait qu'elle
+ * l'était.
+ *
+ * Les trois autres cas de cette famille trouvés la même nuit produisaient des faux rouges —
+ * gênants, mais visibles. Celui-ci était le seul à rendre vert sur du CSS qui ne fait plus ce
+ * qu'on lui demande, et c'est exactement l'encadré teinté que ces règles refusent qui serait
+ * revenu sans un mot.
+ *
+ * CSS n'a pas de commentaire de ligne : les retirer est complet, sans le risque que pose `//`
+ * ailleurs.
+ */
+const css = () => readFileSync(racine + "src/registre.css", "utf8")
+  .replace(/\/\*[\s\S]*?\*\//g, " ");
 const graphes = () => readFileSync(racine + "src/graphes.js", "utf8");
 
 /** Le corps d'une règle CSS, pour un sélecteur donné exactement. */
@@ -79,79 +99,144 @@ test("les couches partagées sont bien celles d'identite", (t) => {
    * oubliée dans un dépôt est un contrôle qui passe au vert sur un fichier que personne ne
    * regarde — c'est déjà arrivé avec la démo du RAG, deux versions en retard.
    */
-  const source = fileURLToPath(new URL("../../identite/", import.meta.url));
-  if (!existsSync(source + "registre.css")) return t.skip("!existsSync(source + 'registre.css') — ce cas n'a rien regardé, et il le dit."); // dépôt cloné seul : rien à comparer
-
   /*
-   * LA LISTE VIENT DU DISQUE, PAS D'ICI.
+   * ─── ÉLARGI le 21 août 2026 : deux fichiers sur quatorze ───
    *
-   * Elle a longtemps tenu en deux noms — `registre.css` et `graphes.js` — écrits à la main.
-   * Or ce dépôt porte QUINZE fichiers du même nom qu'identite, et les deux qui avaient
-   * réellement pourri, `capturer.mjs` et `verifier-ecran.mjs`, étaient précisément hors de la
-   * liste : 436 et 220 lignes de retard, sans qu'un seul contrôle s'en aperçoive. L'un
-   * comptait les figures d'un écran au lieu de les inspecter, et disait « vérifié » sur une
-   * page morte.
+   * Ce cas s'intitulait déjà « les couches partagées » et n'en comparait que deux :
+   * `registre.css` et `graphes.js`. Les douze autres — dont `capturer.mjs`,
+   * `verifier-ecran.mjs`, `interval.ts`, `cli.ts` — pouvaient diverger dans un dépôt sans que
+   * son `npm test` en dise un mot. `diffuser --check` l'aurait vu, mais lui ne tourne que
+   * depuis `identite`, et personne ne le lance depuis un dépôt.
    *
-   * Le mode de panne est asymétrique : un fichier retiré fait tomber la lecture, bruyamment.
-   * Un fichier AJOUTÉ ne fait rien — la liste cesse de couvrir, et le vert reste vert.
+   * C'est le motif de la journée, rencontré trois fois : le défaut n'est pas dans le fichier,
+   * il est dans le **périmètre du gardien**. Un contrôle dont le titre promet la couche et
+   * dont le corps regarde deux fichiers est un vert qui ne veut rien dire.
+   *
+   * La liste ne se code plus en dur : elle se déduit du disque — tout fichier de code présent
+   * des deux côtés est une copie de la couche, par définition. Ce qui reste déclaré, c'est
+   * l'exception, et elle porte sa raison et sa date.
    */
-  const DETACHES: Record<string, { pourquoi: string; depuis: string }> = {
-    "registre.test.ts": { pourquoi: "reprend le contrôle partagé et y ajoute celui-ci", depuis: "2026-08-24" },
-    "demo.test.ts": { pourquoi: "dérive les routes du src/ui.html de ce dépôt, pas d'un modèle commun", depuis: "2026-08-24" },
-    "ecran.test.ts": { pourquoi: "parse le script du ui.html de ce dépôt", depuis: "2026-08-24" },
-    "clone-neuf.mjs": { pourquoi: "la chaîne de vérification d'un clone est propre à ce dépôt", depuis: "2026-08-24" },
-  };
-
-  const communs = readdirSync(source)
-    .filter((f) => /\.(ts|js|mjs|css)$/.test(f) && existsSync(racine + "src/" + f));
-  assert.ok(communs.length >= 8,
-    `${communs.length} fichier(s) commun(s) trouvé(s) avec identite : la lecture a échoué, et ce `
-    + `test passerait au vert sans avoir rien comparé.`);
-
-  const divergents: string[] = [];
-  const exceptionsMortes: string[] = [];
-  for (const f of communs) {
-    const pareil = readFileSync(racine + "src/" + f, "utf8") === readFileSync(source + f, "utf8");
-    if (f in DETACHES) { if (pareil) exceptionsMortes.push(f); continue; }
-    if (!pareil) divergents.push(f);
+  /*
+   * OÙ CHERCHER LA SOURCE — parce qu'une seule adresse ne vaut que sur une machine.
+   *
+   * `../../identite/` n'est vrai que si le dépôt est posé JUSTE À CÔTÉ d'identite. Un clone
+   * dans /tmp, le clone d'un acheteur, une intégration continue : le cas s'ignore, et le
+   * contrôle qui garde les couches partagées ne tourne que dans un seul dossier d'une seule
+   * machine.
+   *
+   * Ce que ça a coûté, mesuré le 25 août 2026 : la copie de CE fichier dans `cascade` avait
+   * **53 lignes de retard** et il lui manquait un correctif de faux vert documenté ici même.
+   * Le contrôle qui aurait dû voir la dérive était exactement celui qui ne tournait pas —
+   * un gardien absent de l'endroit qu'il garde.
+   */
+  const source = [
+    process.env["IDENTITE"],
+    fileURLToPath(new URL("../../identite/", import.meta.url)),
+  ].filter((d): d is string => typeof d === "string" && d.length > 0)
+    .map((d) => (d.endsWith("/") ? d : d + "/"))
+    .find((d) => existsSync(d + "registre.css"));
+  /* Un `return` muet ici, et l'acheteur qui clone seul obtient un vert sur un cas qui n'a
+     rien comparé — le vert vide dans sa forme la plus pure : le contrôle passe parce qu'il
+     s'est arrêté avant de regarder. Un saut nommé est un résultat ; un saut muet est un
+     mensonge poli. */
+  if (!source) {
+    return t.skip("dépôt cloné seul — identite n'est pas là, aucune couche n'a été comparée.\n"
+      + "  Pour le faire tourner ici : IDENTITE=<chemin vers identite> npm test");
   }
 
-  assert.deepEqual(divergents, [],
-    `fichier(s) partagé(s) ayant divergé d'identite : ${divergents.join(", ")}\n`
-    + `  → recopier depuis identite plutôt que corriger sur place ; ou, si la divergence est\n`
-    + `    voulue, l'inscrire dans DETACHES avec sa raison et sa date.`);
-
-  /* UNE EXCEPTION QUI NE SERT PLUS EST UNE EXCEPTION QUI CACHE. Tant qu'elle est là, le
-     fichier n'est plus comparé — et le jour où il divergera pour de bon, rien ne le dira. */
-  assert.deepEqual(exceptionsMortes, [],
-    `exception(s) devenue(s) inutile(s) : ${exceptionsMortes.join(", ")} ne diverge(nt) plus.\n`
-    + `  → les retirer de DETACHES, sinon ces fichiers restent hors du contrôle pour rien.`);
+  /** Les gabarits : partagés d'origine, adaptés ensuite, donc divergents par construction. */
+  const ADAPTES: Record<string, string> = {
+    "baselines.ts": "chaque outil compare à la référence triviale de SON domaine (depuis le 2026-08-19)",
+  };
 
   /*
-   * ─── UN FICHIER PARTAGÉ DOIT LE DIRE LUI-MÊME ───
+   * UNE EXCEPTION DOIT POUVOIR DIRE QUAND ELLE A EXPIRÉ.
    *
-   * Le contrôle ci-dessus attrape la divergence, mais APRÈS coup. Deux sessions ont chacune
-   * corrigé un fichier partagé sur place le même jour, découvert au commit que le crochet
-   * refusait, et refait le travail dans `identite`. Rien dans les fichiers ne le disait, et
-   * la règle vivait dans la mémoire de qui l'avait déjà payée.
+   * `ADAPTES` sort un fichier du contrôle d'identité parce qu'il DIVERGE par construction.
+   * Le jour où il cesse de diverger, l'exception le garde hors du contrôle pour rien — et
+   * plus personne ne verra une dérive future sur ce fichier. Mesuré le 24 août 2026 :
+   * `baselines.ts` était devenu identique à la source dans deux dépôts sur trois.
    *
-   * Une règle qui vit dans une mémoire ne survit pas à la session suivante. Celle-ci vit
-   * maintenant sur la première ligne de chaque fichier concerné, là où on la lit AVANT
-   * d'écrire plutôt qu'après.
-   *
-   * Et le contrôle part de la liste lue au disque : un fichier partagé ajouté demain arrive
-   * avec l'obligation sans que personne y pense.
-   *
-   * LES DÉTACHÉS N'EN PORTENT PAS, et c'est le point de la liste. Poser la marque en bloc a
-   * écrasé les quatre versions divergentes de ce dépôt — dont ce fichier-ci — parce que la
-   * recopie ne lisait pas `DETACHES`. Git les a rendues intactes ; la leçon est que la liste
-   * des exceptions doit être lue par TOUT ce qui touche aux fichiers partagés, pas seulement
-   * par le contrôle qui les compare.
+   * On ne la retire pas automatiquement : tant qu'un seul dépôt diverge, elle sert. Mais si
+   * elle ne sert PLUS NULLE PART, elle tombe — une exclusion qu'on ne peut pas voir expirer
+   * survit à sa raison d'être, et c'est la forme la plus discrète du contrôle qui ne
+   * contrôle rien.
    */
-  const sansMarque = communs.filter((f) =>
-    !(f in DETACHES) && !readFileSync(source + f, "utf8").startsWith("/* PARTAGÉ"));
-  assert.deepEqual(sansMarque, [],
-    `${sansMarque.length} fichier(s) partagé(s) ne disent pas qu'ils le sont : ${sansMarque.join(", ")}.\n`
-    + "  → une session qui les ouvre corrigera la copie, et ne l'apprendra qu'au commit refusé.\n"
-    + "    Posez la marque « /* PARTAGÉ … */ » en première ligne, dans identite, puis recopiez.");
+  for (const [nom, pourquoi] of Object.entries(ADAPTES)) {
+    const ici = racine + "src/" + nom, la = source + nom;
+    if (!existsSync(ici) || !existsSync(la)) continue;
+    const identiques = readFileSync(ici, "utf8") === readFileSync(la, "utf8");
+    if (!identiques) continue;
+    /* Identique ICI : l'exception peut encore servir ailleurs. On ne tombe que si elle ne
+       sert nulle part, ce que seul un balayage des voisins peut dire. */
+    /*
+     * LES VOISINS SE CHERCHENT AUTOUR D'IDENTITE, PAS AUTOUR DU DÉPÔT.
+     *
+     * `racine + "../"` suppose que le dépôt est posé dans le dossier du portfolio. C'est vrai
+     * quand identite est son voisin, et faux dès qu'on passe par `IDENTITE=` — un clone dans
+     * /tmp a pour voisins d'autres clones de travail, tous identiques à la source, et le cas
+     * tombait en accusant une exception de ne plus rien protéger. **Un faux rouge, produit
+     * par la même hypothèse d'emplacement que le saut qu'on vient de retirer.**
+     *
+     * Le portfolio est le dossier qui CONTIENT identite, par construction. On part de là, et
+     * les deux dispositions donnent alors le même résultat.
+     */
+    const portfolio = source + "../";
+    const voisins = readdirSync(portfolio, { withFileTypes: true })
+      .filter((e) => e.isDirectory() && existsSync(portfolio + e.name + "/src/" + nom))
+      .map((e) => portfolio + e.name + "/src/" + nom);
+    const divergent = voisins.filter((v) => readFileSync(v, "utf8") !== readFileSync(la, "utf8"));
+    assert.ok(divergent.length > 0,
+      `${nom} est déclaré adapté — « ${pourquoi} » — et il est pourtant identique à la source `
+      + `dans les ${voisins.length} dépôt(s) qui le portent. L'exception ne protège plus rien `
+      + `et sort ce fichier du contrôle d'identité pour rien : la retirer d'ADAPTES.`);
+  }
+
+  const partages = readdirSync(source, { withFileTypes: true })
+    .filter((e) => e.isFile() && /\.(ts|mjs|js|css)$/.test(e.name) && !/\.test\.mjs$/.test(e.name))
+    .map((e) => e.name)
+    .filter((nom) => !(nom in ADAPTES) && existsSync(racine + "src/" + nom))
+    .sort();
+
+  /*
+   * Le témoin, avant le verdict. Une boucle sur une liste vide passe toujours, et rendrait ce
+   * cas vert dans un dépôt qui aurait perdu toute la couche.
+   */
+  assert.ok(partages.length >= 5,
+    `seulement ${partages.length} fichier(s) partagé(s) trouvé(s) entre identite/ et src/ : `
+    + `ce n'est pas un dépôt en ordre, c'est un relevé qui ne lit rien`);
+
+  const divergents = partages.filter(
+    (f) => readFileSync(racine + "src/" + f, "utf8") !== readFileSync(source + f, "utf8"));
+
+  /*
+   * LE MESSAGE DOIT DISTINGUER LES DEUX CAUSES, SINON IL ENVOIE LA MOITIÉ DE SES LECTEURS
+   * AU MAUVAIS REMÈDE.
+   *
+   * « Recopier plutôt que corriger sur place » est le bon conseil quand c'est le dépôt qui a
+   * dérivé. C'est le mauvais quand c'est `identite` qui a avancé et que la diffusion est en
+   * retard : recopier à la main ferait exactement ce que le message veut empêcher. Les deux
+   * situations se lisent pareil — un fichier qui diffère — et ne se réparent pas pareil.
+   *
+   * L'horodatage tranche : si la source est plus récente que la copie, c'est une diffusion
+   * en retard. Signalé le 23 août 2026 par une autre session, sur trois dépôts d'un coup.
+   */
+  const cause = (f: string) => {
+    try {
+      return statSync(source + f).mtimeMs > statSync(racine + "src/" + f).mtimeMs
+        ? "source plus récente" : "copie plus récente";
+    } catch { return "horodatage illisible"; }
+  };
+  const enRetard = divergents.filter((f) => cause(f) === "source plus récente");
+  assert.deepEqual(divergents, [],
+    `${divergents.map((f) => `${f} (${cause(f)})`).join(", ")} `
+    + `ont divergé d'identite sur ${partages.length} fichier(s) comparé(s). `
+    + (enRetard.length === divergents.length
+        ? "La SOURCE a avancé : lancer `node diffuser.mjs` depuis identite. "
+          + "Ne pas recopier à la main — ce serait la dérive locale que ce cas interdit."
+        : enRetard.length
+          ? `${enRetard.length} par diffusion en retard (\`node diffuser.mjs\`), `
+            + `${divergents.length - enRetard.length} par dérive locale (recopier, ne pas corriger sur place).`
+          : "La COPIE a avancé : c'est une dérive locale — recopier depuis identite "
+            + "plutôt que corriger ici, sinon la correction ne voyagera pas."));
 });
