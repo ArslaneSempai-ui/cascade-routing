@@ -77,7 +77,36 @@ fi
 # On ne devine pas ce qui est « engendré » : toute modification non indexée fait refuser, avec
 # la liste. Une liste de fichiers engendrés serait exactement la liste écrite à la main qui a
 # causé le problème.
-naipas=$(git diff --name-only)
+# AJOUT DU 25 AOÛT 2026 — deux commits VIDES sont passés ce jour-là : 0345143 (le mien) et
+# 86c514a (une session voisine), tous deux portant un message qui décrivait un correctif réel.
+# Le correctif du crochet que 0345143 prétendait porter n existe dans AUCUN commit du dépôt :
+# seul son message existe. Cinq reproductions ont échoué — je ne sais pas par quelle route git
+# les a acceptés. Cette garde ne dépend pas de la route : ce qui n emporte rien est refusé.
+#
+# Et git commit -- <chemins> n est PAS la parade au -A. Mesuré : il lit l ARBRE DE TRAVAIL et
+# non l index, et il VIDE l index des chemins nommés. Une version soigneusement indexée
+# disparaît sans un mot. La forme sûre est un worktree par session : l index y est à vous.
+emporte=$(git diff --cached --name-only)
+if [ -z "$emporte" ]; then
+  printf "\n  CE COMMIT NE PORTE AUCUN FICHIER.\n\n"
+  printf "    Git a accepté deux commits vides ce jour-là, avec des messages qui décrivaient\n"
+  printf "    des correctifs réels. Un message sans contenu se relit comme un fait accompli,\n"
+  printf "    et le correctif reste à faire sans que personne le sache.\n\n"
+  printf "  → git status   pour voir où est passé votre travail.\n"
+  printf "  → git add <vos fichiers>   puis recommencez.\n"
+  exit 1
+fi
+printf "\n  CE COMMIT EMPORTE :\n"
+printf "%s\n" "$emporte" | sed "s/^/    /"
+printf "\n"
+
+# La vérification ci-dessous ne regarde QUE les fichiers emportés. Sa version large refusait
+# tout commit tant qu un fichier — n importe lequel — était modifié : à six sessions, chacune
+# bloquait les cinq autres, et la sortie de secours était git reset, qui défait le travail.
+listeEmportes=$(mktemp)
+printf "%s\n" "$emporte" > "$listeEmportes"
+naipas=$(git diff --name-only | grep -F -x -f "$listeEmportes" || true)
+rm -f "$listeEmportes"
 if [ -n "$naipas" ]; then
   printf '\n  MODIFICATION NON INDEXÉE — le crochet contrôle le disque, git enregistrerait autre chose.\n\n'
   printf '%s\n' "$naipas" | sed 's/^/    /'
