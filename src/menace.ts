@@ -485,7 +485,24 @@ function balayerLHistorique(racine: string): ReleveHistorique {
     throw new Error(`git rev-list returned "${compte.stdout.trim()}": the history was not read, and its zero would be worthless.`);
   }
 
-  const patch = spawnSync("git", ["log", "-p", "--all", "--no-color"],
+  /*
+   * `-m` : SANS LUI, LES FUSIONS SONT INVISIBLES.
+   *
+   * `git log -p` n'affiche AUCUN diff pour un commit de fusion. Un secret introduit dans la
+   * résolution d'un conflit — le cas normal quand deux branches touchent le même fichier —
+   * n'apparaît donc nulle part, et le balayage publie son zéro sans l'avoir lu.
+   *
+   * Mesuré le 25 août 2026 par une session pair, sur un dépôt fabriqué avec le secret
+   * uniquement dans la résolution :
+   *
+   *     git log -p --all --no-color        → 0 occurrence   ← ce que faisait ce balayage
+   *     git log -p --all --no-color -m     → 2 occurrences
+   *
+   * Ce dépôt porte SEPT fusions. `-m` rend un diff par parent, donc davantage de texte et
+   * quelques trouvailles vues deux fois : la carte des trouvailles les dédoublonne déjà par
+   * forme, fichier et empreinte, et lire deux fois coûte moins cher que ne pas lire.
+   */
+  const patch = spawnSync("git", ["log", "-p", "-m", "--all", "--no-color"],
     { cwd: racine, encoding: "utf8", maxBuffer: 1024 * 1024 * 1024 });
   if (patch.error) throw new Error(`git log failed: ${patch.error.message}. The output is truncated; nothing is published.`);
   if (patch.status !== 0) throw new Error(`git log returned code ${patch.status}: nothing is published.`);

@@ -1,8 +1,8 @@
 {
-  "commits": 476,
+  "commits": 479,
   "temoins": 2,
-  "trouves": 21,
-  "declares": 11,
+  "trouves": 25,
+  "declares": 15,
   "reels": [
     {
       "forme": "clé AWS",
@@ -66,5 +66,5 @@
     }
   ],
   "date": "2026-08-25",
-  "commit": "cd33d44"
+  "commit": "c879695"
 }
