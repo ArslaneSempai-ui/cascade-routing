@@ -44,7 +44,8 @@
     "ocr": "node src/mesurer-ocr.ts",
     "licences": "node src/licences.ts",
     "poids": "node src/poids.ts",
-    "menace": "node src/menace.ts"
+    "menace": "node src/menace.ts",
+    "hostile": "node src/hostile.ts"
   },
   "dependencies": {
     "@huggingface/transformers": "^3.0.0"

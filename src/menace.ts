@@ -387,6 +387,11 @@ a broken scan produces too, and that is the most expensive mistake in this field
 | --- | --- | --- | --- |
 ${c.map(ligne).join("\n")}
 
+/* piege:ok prompt-sans-garde-fou — ce gabarit construit SECURITE.md, pas un prompt de
+   modèle. Le texte interpolé est le constat de nos propres contrôles, écrit par ce fichier,
+   et il n'est envoyé à aucun modèle. La règle cherche l'interpolation dans un gabarit qui
+   ressemble à une invite ; ici c'est de la prose Markdown, et une exemption écrite vaut
+   mieux qu'une heuristique élargie qui laisserait passer un vrai prompt. */
 ${nonTenus.length > 0 ? `## To fix\n\n${nonTenus.map((x) => `- **${x.nom}** — ${x.constat}`).join("\n")}\n` : ""}
 ## What these checks are worth
 
