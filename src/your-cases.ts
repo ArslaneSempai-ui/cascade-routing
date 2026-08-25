@@ -28,6 +28,7 @@
  */
 
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
+import { noter, direLesFormes, oublierLesFormes } from "./forme-rendue.ts";
 import { loadavg } from "node:os";
 import { isMain } from "./cli.ts";
 import { ouvrirJournal, issue } from "./journal.ts";
@@ -1043,7 +1044,9 @@ export async function mesurerVosCas(
           outcome: issue(got, c.truth[champ]!), ms: Number(ms.toFixed(3)),
           value: got, expected: c.truth[champ]!,
         });
-        if (correct(got, c.truth[champ]!)) bons++;
+        /* La forme est notée EN MÊME TEMPS que la justesse, sur le même appel : deux
+           parcours séparés diraient un jour deux choses différentes du même corpus. */
+        if (noter(palier, champ, got, c.truth[champ]!) === "juste") bons++;
         /* Noté faux, mais avec exactement les mêmes mots : c'est un désaccord de convention.
            On compte, on ne garde rien — le compte reste chez le client comme le reste. */
         else if (memesMots(got, c.truth[champ]!)) desordre++;
@@ -1520,6 +1523,9 @@ Nothing leaves your machine: the models are local and this path makes no network
    * LE DIRE, AVEC LE COMPTE. Une troncature qu'on ne rapporte pas produit un taux qui ne
    * porte pas sur ce que le client croit avoir mesuré — et il le citera.
    */
+  const formes = direLesFormes();
+  if (formes) console.log(`\n${formes}`);
+
   const bornes = bornesPosees();
   if (bornes.cas > 0) {
     console.log(`\n  ${bornes.cas} case(s) had their text cut to the first ${PLAFOND_TEXTE} characters`
