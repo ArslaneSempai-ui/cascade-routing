@@ -31,6 +31,7 @@ import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { loadavg } from "node:os";
 import { isMain } from "./cli.ts";
 import { ouvrirJournal, issue } from "./journal.ts";
+import { normaliserReponse } from "./tiers.ts";
 import { loadExtractors, loadClassifiers, loadGeneratifs, extract, correct, classerParmi, MODELES_LOCAUX, questionPour } from "./tiers.ts";
 import { ENCODEURS, GENERATIFS } from "./paliers.ts";
 import { rate, writeRate, cellulesDeTaux, distinguishable, CONFIANCE, ENOUGH } from "./interval.ts";
@@ -141,6 +142,157 @@ export function lireEchantillon(brut: string | undefined): number | undefined {
   return n;
 }
 
+/** Ce que le relevé garde d'un champ sous un palier. */
+export type EntreeDuReleve = {
+  bons: number; sur: number; ms: number;
+  /**
+   * Parmi les cas notés faux, ceux dont la réponse porte EXACTEMENT les mêmes mots que la
+   * vérité attendue, dans un autre ordre. Un désaccord de convention, pas une extraction
+   * ratée — et l'outil ne peut pas trancher lequel des deux ordres est le bon.
+   */
+  desordre?: number;
+};
+
+/**
+ * LES MÊMES MOTS DANS UN AUTRE ORDRE.
+ *
+ * Mesuré sur la liste SDN de l'OFAC : le nom attendu s'écrit « AL-ZOMOR, Abboud Abdul Latif
+ * Hassan » et l'outil rend l'ordre naturel. 25,7 % d'exactitude, qui se lit comme un modèle
+ * incapable de lire un nom, alors que **les mots trouvés sont les bons**. Nous ne pouvons pas
+ * décider quel ordre est le bon — c'est la convention du client — mais nous pouvons cesser de
+ * présenter un désaccord de convention comme une extraction ratée.
+ *
+ * Un seul mot ne compte pas : réordonné, il serait identique, donc déjà juste.
+ */
+export function memesMots(a: string, b: string): boolean {
+  const mots = (x: string) => normaliserReponse(x)
+    .split(/[^\p{L}\p{N}]+/u).filter(Boolean).sort();
+  const ma = mots(a), mb = mots(b);
+  return ma.length > 1 && ma.length === mb.length && ma.every((m, i) => m === mb[i]);
+}
+
+/** Ce qu'on sait d'un champ AVANT d'avoir chargé le moindre modèle. */
+export type PresenceChamp = {
+  champ: string;
+  /** Cas dont la vérité attendue se retrouve littéralement dans le texte source. */
+  litteral: number;
+  /**
+   * Cas où elle n'y est pas littéralement, mais où TOUS ses mots y sont.
+   *
+   * C'est la deuxième forme rencontrée sur l'OFAC, et elle n'appelle pas le même remède que
+   * la première : « AL-ZOMOR, Abboud Abdul Latif Hassan » n'est pas dans le texte, et
+   * pourtant chacun de ses mots y est. La valeur est là, écrite autrement. Confondre les
+   * deux ferait accuser un corpus sain d'être vide.
+   */
+  reordonne: number;
+  /** Cas où le client n'a rien mis : il n'y a pas de vérité à trouver. */
+  vides: number;
+  total: number;
+};
+
+/**
+ * LA VÉRITÉ ATTENDUE EST-ELLE SEULEMENT DANS LE TEXTE ?
+ *
+ * Mesuré sur l'OFAC : l'adresse attendue vient d'un fichier séparé et n'apparaît dans le
+ * texte que **40 fois sur 300**. Le 0,7 % obtenu ressemblait à un échec d'extraction ; c'était
+ * un corpus dans lequel la réponse n'est pas. Aucun palier ne peut extraire ce qui n'y est
+ * pas, et un client construira exactement ce corpus-là, parce que ses champs viennent de sa
+ * base et son texte de ses documents.
+ *
+ * Ça se mesure SANS MODÈLE, donc avant tout. Et ça se dit comme une BORNE INFÉRIEURE : la
+ * vérité peut être présente sous une autre forme — « 3 May 1990 » pour « 1990-05-03 » — que
+ * cette comparaison littérale ne voit pas. Un compte qui sous-estime se nomme, sinon il
+ * accuse un corpus sain.
+ */
+export function presenceDeLaVerite(cas: Cas[], champs: string[]): PresenceChamp[] {
+  const enMots = (x: string) => normaliserReponse(x).split(/[^\p{L}\p{N}]+/u).filter(Boolean);
+  return champs.map((champ) => {
+    let litteral = 0, reordonne = 0, vides = 0;
+    for (const c of cas) {
+      const attendu = normaliserReponse(c.truth[champ] ?? "");
+      if (attendu.length === 0) { vides++; continue; }
+      const texte = normaliserReponse(c.text);
+      if (texte.includes(attendu)) { litteral++; continue; }
+      const presents = new Set(enMots(texte));
+      const mots = enMots(attendu);
+      if (mots.length > 0 && mots.every((m) => presents.has(m))) reordonne++;
+    }
+    return { champ, litteral, reordonne, vides, total: cas.length };
+  });
+}
+
+/**
+ * La phrase à dire avant de mesurer, ou rien.
+ *
+ * Le seuil est la MOITIÉ des cas renseignés, et il est CHOISI : en dessous, la majorité de la
+ * note d'un champ se joue sur des dossiers où la réponse n'est pas dans le texte, et le taux
+ * mesure alors le corpus plutôt que le palier. Aucun chiffre n'est prédit : ce qui s'affiche
+ * est un compte et son dénominateur.
+ */
+export function direLaPresence(p: PresenceChamp[]): string | undefined {
+  const renseignes = (x: PresenceChamp) => x.total - x.vides;
+  const maigres = p.filter((x) => renseignes(x) > 0
+    && (x.litteral + x.reordonne) * 2 < renseignes(x));
+  const desordonnes = p.filter((x) => renseignes(x) > 0
+    && x.reordonne * 2 >= renseignes(x));
+  if (maigres.length === 0 && desordonnes.length === 0) return undefined;
+
+  const blocs: string[] = [];
+  if (maigres.length) {
+    blocs.push(`⚠ ${maigres.length} field(s) whose expected value is mostly NOT in the text `
+      + `you supplied:\n`
+      + maigres.map((x) => `    ${x.champ}: found in ${x.litteral + x.reordonne} of the `
+        + `${renseignes(x)} case(s) that have an expected value`
+        + (x.vides > 0 ? `, and ${x.vides} case(s) have none at all` : ``)).join("\n")
+      + `\n  No tier can extract what is not there; the rate below would read as a failed\n`
+      + `  extraction and would in fact be measuring your corpus.\n`
+      + `  This count is a LOWER bound: a value written another way — "3 May 1990" for\n`
+      + `  "1990-05-03" — is present without being found this way.`);
+  }
+  if (desordonnes.length) {
+    blocs.push(`⚠ ${desordonnes.length} field(s) whose expected value is in the text with its `
+      + `words in a different order:\n`
+      + desordonnes.map((x) => `    ${x.champ}: ${x.reordonne} of ${renseignes(x)} case(s), `
+        + `against ${x.litteral} found as written`).join("\n")
+      + `\n  The value is there, written another way — "SURNAME, Given" against the natural\n`
+      + `  order. That is your convention, and we cannot tell which one is right; but the\n`
+      + `  rate below will count these as failed extractions unless you supply the expected\n`
+      + `  value in the order your chain produces.`);
+  }
+  return blocs.join("\n\n");
+}
+
+/**
+ * Ce qu'il y a à dire APRÈS la mesure sur les désaccords de convention.
+ *
+ * L'annonce d'avant la mesure regarde la vérité attendue ; celle-ci regarde ce que les
+ * paliers ont réellement rendu. Les deux sont nécessaires : un champ peut être écrit dans
+ * l'ordre du client ET rendu dans un troisième ordre par un palier.
+ *
+ * Chaque ligne porte son dénominateur — les cas notés faux pour ce champ sous ce palier —
+ * parce qu'un « 12 » sans « sur combien » ne dit pas si c'est l'explication du taux ou une
+ * poignée de cas.
+ */
+export function direLesDesordres(
+  releve: Record<string, Record<string, EntreeDuReleve>>,
+): string | undefined {
+  const lignes: string[] = [];
+  for (const [champ, parPalier] of Object.entries(releve)) {
+    for (const [palier, r] of Object.entries(parPalier)) {
+      const faux = r.sur - r.bons;
+      if (!r.desordre || faux <= 0) continue;
+      lignes.push(`    ${champ} · ${palier}: ${r.desordre} of the ${faux} case(s) scored wrong`);
+    }
+  }
+  if (lignes.length === 0) return undefined;
+  return `⚠ Same words, different order — a convention disagreement, not a failed `
+    + `extraction:\n` + lignes.join("\n")
+    + `\n  The words found were yours; only the order differs, as in "SURNAME, Given" against\n`
+    + `  the natural order. We cannot tell which order is right — it is your convention —\n`
+    + `  but these cases are not the tier failing to read the document.\n`
+    + `  Supply the expected value in the order your chain produces, or accept both.`;
+}
+
 export function questionSure(champ: string, fournies?: Record<string, string>): string {
   const q = questionPour(champ, fournies);
   /* Une question fournie par le client ou l'une des nôtres part telle quelle : ni l'une ni
@@ -149,12 +301,35 @@ export function questionSure(champ: string, fournies?: Record<string, string>): 
   return q.provenance === "deduite" ? `What is the ${nomSur(champ)}?` : q.texte;
 }
 
-/** Un nom de colonne rendu inoffensif dans une cellule de tableau markdown. */
+/**
+ * Un nom de colonne rendu inoffensif dans une cellule de tableau markdown.
+ *
+ * LA BARRE ÉCHAPPÉE PAR UN BACKSLASH QUI S'ÉCHAPPAIT LUI-MÊME.
+ *
+ * `t.replace(/\|/g, "\\|")` seul suffit tant que l'entrée ne contient pas déjà de
+ * backslash. Dès qu'elle en contient un juste avant une barre, la sortie porte `\\|` — et
+ * en GFM `\\` est un backslash littéral, donc la barre redevient nue et **coupe la
+ * cellule**. Mesuré en comptant les cellules de la ligne rendue :
+ *
+ *     "a|b"    →  `a\|b`      4 cellules   (correct)
+ *     "a\|b"   →  `a\\|b`     5 CELLULES  (la ligne se décale)
+ *
+ * Signalé par une passe adversariale sur les alertes CodeQL, et **le témoin ne pouvait pas
+ * le voir** : il cherchait `[^\\]\|`, donc un backslash devant la barre le désarmait. Un
+ * motif est une affirmation, et celui-là affirmait la mauvaise chose.
+ *
+ * ON NE DOUBLE QUE LES BACKSLASHES QUI PRÉCÈDENT UNE BARRE, pas tous. Doubler tous les
+ * backslashes rétablit l'intégrité de la ligne, mais un nom de colonne comme `C:\Users\x`
+ * s'afficherait `C:\\Users\\x` dans le rapport du client — on aurait réparé la structure en
+ * abîmant ce qu'elle contient. Ici seul le backslash adjacent à une barre double, ce qui est
+ * inévitable : il faut un nombre pair devant `\|` pour que l'échappement tienne.
+ */
 export function cellule(v: string | number): string {
   const t = String(v);
-  /* Le `|` d'abord : c'est lui qui casse la structure. Les accents graves ensuite, sinon le
-     bloc de code qu'on ouvre se referme au milieu du nom. */
-  return "`" + t.replace(/\|/g, "\\|").replace(/`/g, "'") + "`";
+  /* La barre d'abord — avec les backslashes qui la précèdent — parce que c'est elle qui casse
+     la structure. Les accents graves ensuite, sinon le bloc de code se referme au milieu. */
+  return "`" + t.replace(/(\\*)\|/g, (_, dos: string) => dos + dos + "\\|")
+    .replace(/`/g, "'") + "`";
 }
 
 /** Le même nom, réduit à ce qui peut entrer dans une invite sans la réécrire. */
@@ -681,8 +856,8 @@ export async function mesurerVosCas(
      colonne — et ce choix s'affiche, parce qu'un taux obtenu sous une question déduite n'est
      pas comparable à celui du README. */
   questions?: Record<string, string>,
-): Promise<Record<string, Record<TierName, { bons: number; sur: number; ms: number }>>> {
-  const releve: Record<string, Record<TierName, { bons: number; sur: number; ms: number }>> = {};
+): Promise<Record<string, Record<TierName, EntreeDuReleve>>> {
+  const releve: Record<string, Record<TierName, EntreeDuReleve>> = {};
   const journal = journaliser ? ouvrirJournal("vos-cas", {
     quoi: "Vos cas, palier par palier — journal demandé explicitement avec --journal.",
     split: "vos-cas", cases: cas.length,
@@ -727,7 +902,7 @@ export async function mesurerVosCas(
     }
 
     for (const palier of paliers) {
-      let bons = 0;
+      let bons = 0, desordre = 0;
       const durees: number[] = [];
       /*
        * L'AVANCEMENT SE COMPTE, IL NE SE PRÉDIT PAS.
@@ -762,9 +937,15 @@ export async function mesurerVosCas(
           value: got, expected: c.truth[champ]!,
         });
         if (correct(got, c.truth[champ]!)) bons++;
+        /* Noté faux, mais avec exactement les mêmes mots : c'est un désaccord de convention.
+           On compte, on ne garde rien — le compte reste chez le client comme le reste. */
+        else if (memesMots(got, c.truth[champ]!)) desordre++;
       }
       durees.sort((a, b) => a - b);
-      releve[champ]![palier] = { bons, sur: cas.length, ms: durees[Math.floor(durees.length / 2)] ?? 0 };
+      releve[champ]![palier] = {
+        bons, sur: cas.length, ms: durees[Math.floor(durees.length / 2)] ?? 0,
+        ...(desordre > 0 ? { desordre } : {}),
+      };
     }
   }
   journal?.fermer();
@@ -1073,6 +1254,11 @@ Nothing leaves your machine: the models are local and this path makes no network
    * Découvrir au dossier quatre mille qu'une règle ne termine pas coûte tout ce qui précède.
    * Et une règle refusée doit être annoncée avant la mesure, pas expliquée après.
    */
+  /* Ce qui se sait sans modèle se dit avant de charger quoi que ce soit : un champ dont la
+     réponse n'est pas dans le texte ne mesure pas le palier, il mesure le corpus. */
+  const presence = direLaPresence(presenceDeLaVerite(cas, champs));
+  if (presence) console.log(`\n${presence}\n`);
+
   const regles = reglesBrutes
     ? await evaluerRegles(reglesBrutes, cas.map((c) => c.text))
     : undefined;
@@ -1199,6 +1385,9 @@ Nothing leaves your machine: the models are local and this path makes no network
       : `    → ${retenu.palier} is not measurably worse than ${tete.palier} and is `
         + `${(tete.ms / Math.max(retenu.ms, 0.01)).toFixed(0)}× faster. Take the cheaper one.\n`);
   }
+
+  const desordres = direLesDesordres(releve);
+  if (desordres) console.log(`\n${desordres}\n`);
 
   /* « Un fichier a-t-il été donné ? » et « une règle a-t-elle été mesurée ? » ne sont pas la
      même question, et c'est la seconde que le rapport prétend répondre. */

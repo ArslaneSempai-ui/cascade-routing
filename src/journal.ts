@@ -103,8 +103,8 @@ export function elaguer(dossier = DOSSIER, garde = GARDE_DERNIERS): number {
        a cessé de fonctionner, et les journaux s'accumuleront sans qu'une ligne le dise —
        jusqu'à ce que quelqu'un trouve trois cents fichiers et se demande depuis quand. */
     if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
-      process.stderr.write(`  ÉLAGAGE IMPOSSIBLE — ${dossier} : ${(e as Error).message}\n`
-        + `  Les journaux ne sont plus élagués ; ils vont s'accumuler en silence.\n`);
+      process.stderr.write(`  CANNOT PRUNE — ${dossier}: ${(e as Error).message}\n`
+        + `  Journals are no longer pruned; they will pile up silently.\n`);
     }
     return 0;
   }
@@ -147,11 +147,11 @@ export function elaguer(dossier = DOSSIER, garde = GARDE_DERNIERS): number {
     try { rmSync(join(dossier, f)); efface++; } catch { /* déjà parti, ou pris */ }
   }
   if (efface) {
-    console.warn(`  ${efface} journal(aux) élagué(s) dans ${dossier.split("/").slice(-2).join("/")} — `
-      + `les ${garde} derniers sont gardés.`);
+    console.warn(`  ${efface} journal(s) pruned in ${dossier.split("/").slice(-2).join("/")} — `
+      + `the last ${garde} are kept.`);
   }
   if (epargnes.length) {
-    console.warn(`  ${epargnes.length} épargné(s) parce qu'ils sont les derniers de leur genre : `
+    console.warn(`  ${epargnes.length} spared because they are the last of their kind: `
       + `${epargnes.map(genre).join(", ")}.`);
   }
   return efface;
@@ -426,8 +426,8 @@ export function latences(lots: readonly { conditions?: { machine?: { cpu: string
   const machines = new Set(lots.map((l) => l.conditions?.machine?.cpu ?? "inconnue"));
   if (machines.size > 1) {
     throw new Error(
-      `Refus de grouper des latences venues de ${machines.size} machines : ${[...machines].join(", ")}.\n`
-      + "  Une latence ne vaut que pour la machine qui l'a produite. Interrogez-les séparément.");
+      `Refusing to pool latencies from ${machines.size} machines: ${[...machines].join(", ")}.\n`
+      + "  A latency holds only for the machine that produced it. Ask them separately.");
   }
   const ms = lots.flatMap((l) => l.tentatives.map((t) => t.ms)).sort((a, b) => a - b);
   const q = (f: number) => ms.length ? ms[Math.min(ms.length - 1, Math.floor(f * ms.length))]! : null;

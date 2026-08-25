@@ -384,17 +384,55 @@ test("une ligne malformée est écartée et comptée, jamais incluse", () => {
  * ————————————————————————————————————————————————————————————————————————————————————
  */
 
+/**
+ * COMPTER LES CELLULES DE LA LIGNE RENDUE, PAS INSPECTER LE CARACTÈRE D'AVANT.
+ *
+ * Règle GFM : une ligne se coupe sur chaque `|` non échappé, un `\` échappe le caractère
+ * suivant, donc `\\` est un backslash littéral et ne protège pas la barre qui le suit.
+ */
+function cellulesDe(ligne: string): number {
+  let n = 1, i = 0;
+  while (i < ligne.length) {
+    if (ligne[i] === "\\") { i += 2; continue; }
+    if (ligne[i] === "|") n++;
+    i++;
+  }
+  return n;
+}
+
 test("une barre verticale dans un nom de colonne ne casse pas le tableau du client", async () => {
   const { cellule } = await import("./your-cases.ts");
 
-  const sortie = cellule("total|amount");
-  assert.ok(!/[^\\]\|/.test(sortie),
-    "un | non échappé coupe la cellule en deux : le tableau se décale et le lecteur voit\n"
-    + "  une valeur sous le mauvais en-tête.");
-  assert.match(sortie, /total\\\|amount/, "le nom reste lisible une fois échappé.");
+  /*
+   * LA PREMIÈRE VERSION DE CE CAS NE POUVAIT PAS VOIR LE DÉFAUT QU'IL EXISTE POUR ATTRAPER.
+   *
+   * Elle faisait `assert.ok(!/[^\\]\|/.test(sortie))` : elle regardait le caractère devant
+   * la barre. Sur `a\\|b` — ce que produisait `cellule("a\|b")` avant correction — ce
+   * caractère est un `\`, le motif ne mord pas, et le cas passait **pendant que la ligne
+   * portait une cellule de trop**. Un motif est une affirmation ; celui-là affirmait qu'un
+   * backslash devant une barre la protège, ce qui est faux dès qu'il est lui-même échappé.
+   *
+   * Ce qui se vérifie est donc ce qui compte pour le lecteur : le nombre de cellules.
+   */
+  const rendre = (nom: string) => `| ${cellule(nom)} | x |`;
+  const COLONNES = 2;
 
-  /* Témoin de non-vacuité : sans échappement, l'assertion ci-dessus échouerait. */
-  assert.ok(/[^\\]\|/.test("total|amount"), "le motif sait détecter un | nu.");
+  for (const nom of ["total|amount", "a\\|b", "a\\\\|b", "|", "\\|", "mine|evil"]) {
+    assert.equal(cellulesDe(rendre(nom)), COLONNES + 2,
+      `« ${nom} » rend ${cellulesDe(rendre(nom))} cellules au lieu de ${COLONNES + 2} : le `
+      + "tableau se décale et le lecteur voit une valeur sous le mauvais en-tête.");
+  }
+
+  /* Un backslash qui ne touche aucune barre n'est pas doublé : réparer la structure en
+     abîmant ce qu'elle contient ne serait pas une réparation. */
+  assert.equal(cellule("C:\\Users\\x"), "`C:\\Users\\x`");
+
+  /* Témoins de non-vacuité, dans les deux sens : le compteur sait voir une barre nue, et il
+     sait qu'un `\\` ne protège pas celle qui le suit. */
+  assert.equal(cellulesDe("| `a|b` | x |"), COLONNES + 3, "une barre nue ajoute une cellule.");
+  assert.equal(cellulesDe("| `a\\\\|b` | x |"), COLONNES + 3,
+    "et un backslash échappé laisse la barre nue — c'est exactement le défaut d'origine.");
+  assert.equal(cellulesDe("| `a\\|b` | x |"), COLONNES + 2, "tandis qu'un `\\|` protège.");
 });
 
 test("un accent grave ne referme pas le code du client", async () => {
@@ -850,4 +888,109 @@ test("les règles du client sont bornées, et évaluées avant qu'un modèle soi
   assert.ok(!/c\.text\.match\(regles/.test(src),
     "plus aucune évaluation de règle hors du fil borné : c'est par là qu'une évaluation\n"
     + "  qui ne rend pas la main entrait dans le temps par palier.");
+});
+
+
+/*
+ * ————————————————————————————————————————————————————————————————————————————————————
+ * CE QUE LE CLIENT APPELLE « LA BONNE RÉPONSE ».
+ *
+ * Une session pair a passé la liste SDN de l'OFAC dans l'outil, 300 cas. Deux des cinq
+ * champs ne mesuraient pas l'outil : l'adresse venait d'un fichier séparé et n'était dans
+ * le texte que 40 fois sur 300, et le nom attendu s'écrivait « AL-ZOMOR, Abboud Abdul
+ * Latif Hassan » là où l'outil rend l'ordre naturel. 0,7 % et 25,7 % — deux chiffres qui
+ * se lisent comme des échecs d'extraction et qui mesuraient un corpus.
+ *
+ * `measure:yours` demande une vérité de référence EN SUPPOSANT QUE LE CLIENT L'A. Ces deux
+ * annonces se calculent sans modèle, donc avant tout.
+ * ————————————————————————————————————————————————————————————————————————————————————
+ */
+
+test("la vérité attendue est cherchée dans le texte avant qu'un modèle soit chargé", async () => {
+  const { presenceDeLaVerite } = await import("./your-cases.ts");
+  const cas = [
+    { id: "1", text: "Abboud Al-Zomor, born 3 May 1990.", truth: { nom: "AL-ZOMOR, Abboud", naissance: "3 May 1990", adresse: "12 Rue des Acacias" } },
+    { id: "2", text: "Maria Garcia, born 1 June 1988.", truth: { nom: "GARCIA, Maria", naissance: "1 June 1988", adresse: "" } },
+  ] as never as Parameters<typeof presenceDeLaVerite>[0];
+
+  const p = presenceDeLaVerite(cas, ["naissance", "nom", "adresse"]);
+  const par = Object.fromEntries(p.map((x) => [x.champ, x]));
+
+  assert.equal(par["naissance"]!.litteral, 2, "écrite telle quelle dans le texte.");
+  assert.equal(par["naissance"]!.reordonne, 0);
+
+  assert.equal(par["nom"]!.litteral, 0, "« AL-ZOMOR, Abboud » n'est pas dans le texte…");
+  assert.equal(par["nom"]!.reordonne, 2, "…mais tous ses mots y sont : elle est là, écrite autrement.");
+
+  assert.equal(par["adresse"]!.litteral, 0, "celle-là n'y est vraiment pas.");
+  assert.equal(par["adresse"]!.reordonne, 0);
+  assert.equal(par["adresse"]!.vides, 1, "et un cas n'a pas de valeur attendue du tout.");
+});
+
+test("un champ absent du texte et un champ réordonné n'appellent pas le même avertissement", async () => {
+  const { direLaPresence } = await import("./your-cases.ts");
+
+  const rien = direLaPresence([{ champ: "adresse", litteral: 0, reordonne: 0, vides: 0, total: 300 }])!;
+  assert.match(rien, /found in 0 of the 300 case\(s\)/, "le compte porte son dénominateur.");
+  assert.match(rien, /No tier can extract what is not there/);
+  assert.match(rien, /LOWER bound/,
+    "une comparaison littérale sous-estime : « 3 May 1990 » pour « 1990-05-03 » est présent\n"
+    + "  sans être trouvé ainsi. Un compte qui sous-estime se nomme, sinon il accuse un\n"
+    + "  corpus sain.");
+
+  const ordre = direLaPresence([{ champ: "nom", litteral: 0, reordonne: 300, vides: 0, total: 300 }])!;
+  assert.match(ordre, /words in a different order/);
+  assert.ok(!/No tier can extract what is not there/.test(ordre),
+    "la valeur EST là : dire au client qu'elle manque l'enverrait refaire son corpus pour\n"
+    + "  rien. Les deux formes n'ont pas le même remède.");
+
+  assert.equal(direLaPresence([{ champ: "naissance", litteral: 300, reordonne: 0, vides: 0, total: 300 }]),
+    undefined, "témoin positif : rien à dire sur un champ dont la réponse est là.");
+});
+
+test("les mêmes mots dans un autre ordre ne sont pas une extraction ratée", async () => {
+  const { memesMots } = await import("./your-cases.ts");
+
+  assert.equal(memesMots("Abboud Abdul Latif Hassan Al-Zomor", "AL-ZOMOR, Abboud Abdul Latif Hassan"), true);
+  assert.equal(memesMots("Maria Garcia", "Garcia Maria"), true);
+  assert.equal(memesMots("Maria Garcia", "Maria Lopez"), false, "un mot différent reste faux.");
+  assert.equal(memesMots("Maria Garcia", "Maria"), false, "un mot en moins reste faux.");
+  assert.equal(memesMots("Tunis", "Tunis"), false,
+    "un seul mot réordonné est le même mot : ce cas serait déjà juste, et le compter ici\n"
+    + "  gonflerait l'avertissement avec des cas qui n'ont rien à voir.");
+});
+
+test("le compte des désordres porte son dénominateur", async () => {
+  const { direLesDesordres } = await import("./your-cases.ts");
+
+  const phrase = direLesDesordres({
+    nom: { small: { bons: 1, sur: 12, ms: 10, desordre: 11 } },
+    naissance: { small: { bons: 12, sur: 12, ms: 10 } },
+  })!;
+  assert.match(phrase, /nom · small: 11 of the 11 case\(s\) scored wrong/,
+    "« 11 » sans « sur combien » ne dit pas si c'est l'explication du taux ou une poignée.");
+  assert.ok(!/naissance/.test(phrase), "un champ sans désordre n'apparaît pas.");
+
+  assert.equal(direLesDesordres({ nom: { small: { bons: 12, sur: 12, ms: 10 } } }), undefined,
+    "témoin positif : rien à dire quand tout est juste.");
+});
+
+test("les deux annonces sont branchées, l'une avant la mesure et l'autre après", () => {
+  /*
+   * Sixième fois : les cas ci-dessus éprouvent les fonctions. Celui-ci regarde les points
+   * d'appel — c'est là que la première annonce doit précéder le chargement des modèles, et
+   * que le désordre doit être compté pendant la notation.
+   */
+  const src = readFileSync(fileURLToPath(new URL("./your-cases.ts", import.meta.url)), "utf8");
+
+  const annonce = src.indexOf("direLaPresence(presenceDeLaVerite(cas, champs))");
+  const mesure = src.indexOf("await mesurerVosCas(");
+  assert.ok(annonce > 0 && annonce < mesure,
+    "ce qui se sait sans modèle se dit avant d'en charger un : sinon le client attend la\n"
+    + "  mesure entière pour apprendre qu'elle portait sur son corpus.");
+
+  assert.match(src, /else if \(memesMots\(got, c\.truth\[champ\]!\)\) desordre\+\+;/,
+    "le désordre se compte pendant la notation, sur les cas notés FAUX seulement.");
+  assert.match(src, /const desordres = direLesDesordres\(releve\);/,
+    "et il ressort, sinon il est compté pour personne.");
 });

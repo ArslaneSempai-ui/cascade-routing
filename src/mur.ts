@@ -64,7 +64,7 @@ if (isMain(import.meta)) {
 
   refuserDrapeauxInconnus(["--plafond"]);
   const reel = readProfiles();
-  if (!reel) { console.error("aucun relevé"); process.exit(1); }
+  if (!reel) { console.error("no measurement record"); process.exit(1); }
   const plafondMs = Number(process.argv.find((a) => a.startsWith("--plafond="))?.split("=")[1] ?? 60_000);
 
   console.log(`\nSolver wall — two enumerations, constant memory. Ceiling ${plafondMs / 1000} s per point.\n`);

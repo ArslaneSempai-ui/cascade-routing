@@ -409,7 +409,7 @@ test("des latences de deux machines sont refusées, pas moyennées", () => {
   assert.equal(seule.machine, "Apple M4 Pro", "la machine est nommée dans le résultat, pas seulement supposée");
 
   assert.throws(() => latences([lot("Apple M4 Pro", [10]), lot("Apple M1 Pro", [40])]),
-    /Refus de grouper des latences venues de 2 machines/,
+    /Refusing to pool latencies from 2 machines/,
     "deux machines ont été moyennées au lieu d'être refusées.");
 });
 

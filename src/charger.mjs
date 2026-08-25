@@ -60,8 +60,8 @@ if (estLancéDirectement()) {
   const secondes = Number(process.argv[3] ?? 0);
 
   if (!Number.isInteger(boucles) || boucles < 1) {
-    console.error("usage : node src/charger.mjs <boucles> [secondes]");
-    console.error(`  cette machine a ${availableParallelism()} cœurs disponibles`);
+    console.error("usage: node src/charger.mjs <loops> [seconds]");
+    console.error(`  this machine has ${availableParallelism()} core(s) available`);
     process.exit(1);
   }
 
@@ -73,7 +73,7 @@ if (estLancéDirectement()) {
   process.on("SIGTERM", arreter);
   if (secondes > 0) setTimeout(arreter, secondes * 1000);
 
-  console.log(`${boucles} boucle(s) sur ${availableParallelism()} cœurs — charge avant : ${loadavg()[0].toFixed(2)}`);
-  setInterval(() => console.log(`  charge : ${loadavg()[0].toFixed(2)}`), 30_000).unref?.();
+  console.log(`${boucles} loop(s) on ${availableParallelism()} core(s) — load before: ${loadavg()[0].toFixed(2)}`);
+  setInterval(() => console.log(`  load: ${loadavg()[0].toFixed(2)}`), 30_000).unref?.();
 
 }
