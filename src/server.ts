@@ -387,9 +387,9 @@ const serveur = createServer(async (req, res) => {
       const avecJeton = brut.replace(/<script type="module">/g, `<script type="module" nonce="${jeton}">`);
       if (avecJeton === brut && /<script/.test(brut)) {
         throw new Error(
-          "ui.html porte un <script> que le jeton n'a pas su marquer : la balise a changé de "
-          + "forme. Sans jeton, la politique de contenu refuse le script et la page s'affiche "
-          + "vide — corrigez l'insertion plutôt que d'affaiblir la politique.");
+          "ui.html holds a <script> the nonce could not mark: the tag changed shape. Without "
+          + "its nonce the content policy refuses the script and the page renders EMPTY, with "
+          + "no error anywhere. Fix the insertion rather than weakening the policy.");
       }
       res.end(avecJeton);
       return;
