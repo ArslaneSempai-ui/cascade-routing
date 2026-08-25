@@ -367,6 +367,18 @@ export function controles(racine: string): Controle[] {
   return out;
 }
 
+/* piege:ok prompt-sans-garde-fou — ce gabarit construit SECURITE.md, pas un prompt de
+   modèle. Le texte interpolé est le constat de nos propres contrôles, écrit par ce fichier,
+   et il n'est envoyé à aucun modèle. La règle cherche l'interpolation dans un gabarit qui
+   ressemble à une invite ; ici c'est de la prose Markdown, et une exemption écrite vaut
+   mieux qu'une heuristique élargie qui laisserait passer un vrai prompt. */
+/*
+ * L'exemption ci-dessus était posée DANS le gabarit, donc son texte partait dans SECURITE.md
+ * et le document ne correspondait plus au code — la suite tombait avant le premier cas, dans
+ * tout arbre, pour toute session. Un commentaire à l'intérieur d'un gabarit n'est pas un
+ * commentaire : c'est du contenu. Même famille que l'accent grave dans un gabarit, payée trois
+ * fois le 22 août 2026.
+ */
 export function document(c: Controle[], secretsHistorique: ReleveHistorique | null): string {
   const tenus = c.filter((x) => x.verdict === "tenu").length;
   const nonTenus = c.filter((x) => x.verdict === "non tenu");
@@ -387,11 +399,6 @@ a broken scan produces too, and that is the most expensive mistake in this field
 | --- | --- | --- | --- |
 ${c.map(ligne).join("\n")}
 
-/* piege:ok prompt-sans-garde-fou — ce gabarit construit SECURITE.md, pas un prompt de
-   modèle. Le texte interpolé est le constat de nos propres contrôles, écrit par ce fichier,
-   et il n'est envoyé à aucun modèle. La règle cherche l'interpolation dans un gabarit qui
-   ressemble à une invite ; ici c'est de la prose Markdown, et une exemption écrite vaut
-   mieux qu'une heuristique élargie qui laisserait passer un vrai prompt. */
 ${nonTenus.length > 0 ? `## To fix\n\n${nonTenus.map((x) => `- **${x.nom}** — ${x.constat}`).join("\n")}\n` : ""}
 ## What these checks are worth
 
