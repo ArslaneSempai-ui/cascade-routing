@@ -10,7 +10,7 @@
     "measure": "node src/measure.ts",
     "optimise": "node src/optimise.ts",
     "typage": "tsc --noEmit",
-    "test": "tsc --noEmit && node src/readme.ts --check && node src/landing.ts --check && node src/dossier.ts --check && node src/sonde.ts --check && node src/licences.ts --check && node src/menace.ts --check && node --test src/*.test.ts",
+    "test": "tsc --noEmit && node src/readme.ts --check && node src/landing.ts --check && node src/dossier.ts --check && node src/sonde.ts --check && node src/licences.ts --check && node src/menace.ts --check && node --test src/*.test.ts src/*.test.mjs",
     "failures": "node src/failures.ts",
     "figures": "node src/readme.ts && node src/landing.ts",
     "landing": "node src/landing.ts",

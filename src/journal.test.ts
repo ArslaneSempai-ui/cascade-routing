@@ -943,7 +943,14 @@ test("aucune sortie française sur les commandes déjà rendues à l'acheteur", 
    * issu d'une sélection porte le compte de ce qu'il écarte.
    */
   const dossier = fileURLToPath(new URL(".", import.meta.url));
-  /** Les commandes dont la sortie a été rendue à l'acheteur, et qui ne doivent plus régresser. */
+  /*
+   * liste-figee: HISTORIQUE, et c'est ce qui la rend infalsifiable. Ce sont les commandes
+   * dont la sortie a effectivement été montrée à un acheteur — un fait daté, pas un état du
+   * disque. La déduire reviendrait à balayer toutes les commandes du dépôt, donc à inclure
+   * celles que personne n'a jamais montrées, et le contrôle cesserait de dire ce qu'il dit :
+   * « ceci a été vu, donc ceci ne régresse plus ». Elle ne s'allonge que lorsqu'une commande
+   * de plus est réellement rendue.
+   */
   const RENDUES = ["premiere-reponse.mjs", "verifier-rapport.mjs", "your-cases.ts", "server.ts",
     "intake.ts", "licences.ts", "menace.ts", "egress.ts", "entree.ts", "measure.ts", "signal.ts", "contrainte.ts", "diff.ts", "tentatives.ts", "mesurer-ocr.ts", "clone-neuf.mjs", "sensibilite-prompt.ts", "fuite.ts"];
   /*

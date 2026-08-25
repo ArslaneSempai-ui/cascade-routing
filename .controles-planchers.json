@@ -16,7 +16,7 @@
   "couverture": {
     "lignes": 66.07,
     "branches": 80.98,
-    "fonctions": 65.85,
+    "fonctions": 66.98,
     "mesureLe": "2026-08-25",
     "comment": "node --test --experimental-test-coverage src/*.test.ts, ligne « all files »"
   },

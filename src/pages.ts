@@ -14,6 +14,17 @@
  */
 
 import { readFileSync, writeFileSync, mkdirSync, cpSync, readdirSync, rmSync, existsSync } from "node:fs";
+import { createHash } from "node:crypto";
+
+/**
+ * LES SOURCES QUI PRODUISENT LA PAGE, déclarées ici parce que c'est ici qu'on les lit.
+ *
+ * La liste vivait dans un fichier de cas, à côté du contrôle qui l'employait — donc à un
+ * endroit où rien ne la confrontait à la construction réelle. Une source ajoutée à la
+ * construction n'y serait jamais apparue, et le contrôle aurait continué de rendre vert sur
+ * une liste incomplète.
+ */
+export const PRODUISENT_LA_PAGE = ["ui.html", "gabarit.html", "pages.ts", "registre.css", "graphes.js"] as const;
 import { fileURLToPath } from "node:url";
 import { isMain } from "./cli.ts";
 import { readProfiles } from "./measure.ts";
@@ -187,6 +198,34 @@ export function construire(): void {
   }
   const inutiles = emis.filter((n) => !atteints.has(n));
   for (const n of inutiles) rmSync(`${docs}/js/${n}`);
+
+  /*
+   * ─── L'EMPREINTE DE CHAQUE SOURCE, PARCE QU'UNE DATE MESURE LE SYSTÈME DE FICHIERS ───
+   *
+   * Le contrôle de fraîcheur comparait les dates de modification. Il tombait sur CENT POUR
+   * CENT des clones neufs, et de façon déterministe : `git clone` écrit `docs/` avant `src/`,
+   * si bien que chaque source paraît plus récente que le module publié — de neuf à dix-huit
+   * MILLISECONDES, mesuré le 25 août 2026 sur deux clones. Le premier `npm test` d'un acheteur
+   * affichait donc six modules « périmés » alors que les fichiers réellement servis étaient
+   * identiques au bit près à leurs sources.
+   *
+   * Une date répond à « lequel a été écrit en dernier », qui est une question sur la machine.
+   * La question posée est « ce qui est publié correspond-il aux sources », qui est une question
+   * sur le contenu. On enregistre donc l'empreinte de chaque source au moment de construire ;
+   * un contrôle la recalcule et compare. Aucune horloge, aucun ordre d'écriture, aucun fuseau.
+   */
+  const empreintes: Record<string, string> = {};
+  for (const f of [...PRODUISENT_LA_PAGE]) {
+    const src = root + "src/" + f;
+    if (existsSync(src)) empreintes[f] = createHash("sha256").update(readFileSync(src)).digest("hex");
+  }
+  for (const n of atteints) {
+    const src = root + "src/" + n.replace(/\.js$/, ".ts");
+    if (existsSync(src)) empreintes["js/" + n] = createHash("sha256").update(readFileSync(src)).digest("hex");
+  }
+  writeFileSync(docs + "/.sources.json", JSON.stringify(
+    { quoi: "sha256 of each SOURCE at build time. A freshness check compares these to the sources on disk; a modification date would compare the machine instead.", empreintes },
+    null, 2) + "\n");
   console.log(`docs/ built — ${atteints.size} module(s) published`
     + (inutiles.length ? `, ${inutiles.length} dropped: ${inutiles.join(", ")}` : ""));
 }

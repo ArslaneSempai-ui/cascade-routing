@@ -174,7 +174,18 @@ test("la liste des fichiers vient du disque, pas d'une énumération écrite à 
   /* Les chemins sont relatifs à la racine du cache et écrits avec des barres obliques : un
      manifeste écrit ici s'importe ailleurs, et l'export d'un poste Windows doit s'ouvrir sur
      un serveur Linux. */
-  for (const f of fichiersSous(source, join(M.depot, M.revision))) {
+  /*
+   * LE BALAYAGE DOIT PROUVER QU'IL A TROUVÉ QUELQUE CHOSE AVANT QUE SES ASSERTIONS COMPTENT.
+   *
+   * `for (const f of ...)` sur une liste vide n'exécute rien et le cas passe. Un chemin qui
+   * cesse de correspondre — une révision qui change, un dossier renommé — rendrait donc un
+   * vert identique à celui d'un dépôt sain. Un zéro non prouvé se lit comme un succès.
+   */
+  const balayes = fichiersSous(source, join(M.depot, M.revision));
+  assert.ok(balayes.length >= 4,
+    `${balayes.length} fichier(s) balayé(s) sous ${M.depot}/${M.revision} : le chemin ne `
+    + "correspond plus, et les assertions qui suivent ne s'exécuteraient sur rien.");
+  for (const f of balayes) {
     assert.ok(f.startsWith(M.depot + "/" + M.revision + "/"), `${f} ne part pas de la racine du cache`);
     assert.doesNotMatch(f, /\\/, "aucune barre inverse ne part dans un manifeste");
     assert.equal(f.includes(source), false, "aucun chemin absolu de la machine d'export");

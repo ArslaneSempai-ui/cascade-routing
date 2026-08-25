@@ -38,9 +38,14 @@ in any file.
 
 ## Secrets in the history
 
-**0 undeclared secrets** across 211 commits — swept on 2026-08-24, sealed at `287c538`.
+**0 undeclared secrets in the published history** across 468 commits — swept on 2026-08-25, sealed at `e678e05`.
 
-The sweep found 11 matches in total, of which 11 are declared in
+The sweep reads `--all`, which on the author's machine also covers backup branches and
+the `refs/original/` a history rewrite leaves behind. 10 matches sit there and **are not in
+what you cloned** — reachability from `HEAD` is checked per match rather than assumed. They are
+named rather than dropped, because a ref nobody pushes today can be pushed tomorrow.
+
+The sweep found 21 matches in total, of which 11 are declared in
 `secrets-declares.json`: those are the decoys planted in our own test cases, which exist to
 prove the detector still detects. A figure drawn from a selection carries the count of what it
 excludes, and every exclusion is named with its reason. Witnesses recovered:

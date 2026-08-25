@@ -2047,6 +2047,11 @@ test("la clé du cache suit la fermeture des imports, pas une liste figée", () 
     + "et la clé doit en dépendre.");
   assert.ok(atteints.length > 3,
     `la fermeture n'atteint que ${atteints.length} module(s) : on est revenu à une liste figée.`);
+  /* liste-figee: ces trois-là ne sont pas un échantillon, ce sont les modules dont
+     l'atteignabilité EST la propriété — le corpus, les paliers, la galerie d'échecs. Les
+     déduire du disque reviendrait à demander « la fermeture atteint-elle ce qu'elle
+     atteint », qui est vrai par construction et ne garde rien. Le compte large est vérifié
+     juste au-dessus ; ceci nomme les trois qui doivent y être. */
   for (const attendu of ["failures.ts", "tiers.ts", "corpus.ts"]) {
     assert.ok(atteints.includes(attendu), `${attendu} n'est plus atteint depuis failures.ts.`);
   }
@@ -3548,6 +3553,9 @@ test("tout appelant Node de l'optimiseur pose la table figée", () => {
   const dossier = fileURLToPath(new URL(".", import.meta.url));
   const appelants = readdirSync(dossier)
     .filter((n) => n.endsWith(".ts") && !n.endsWith(".test.ts")
+      /* liste-figee: le module examiné lui-même et les deux qui l'engendrent. Ce ne sont
+         pas des appelants au sens du cas — les inclure ferait que le module se compte comme
+         son propre appelant, et le contrôle passerait sans qu'aucun vrai appelant existe. */
       && !["optimise.ts", "figer.ts", "derivees.ts"].includes(n))
     .map((n) => ({ n, src: readFileSync(join(dossier, n), "utf8") }))
     /* Un import de TYPE ne fait rien tourner : seuls les appelants de valeur comptent. */

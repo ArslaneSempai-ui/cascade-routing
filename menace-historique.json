@@ -1,9 +1,70 @@
 {
-  "commits": 211,
+  "commits": 468,
   "temoins": 2,
-  "trouves": 11,
+  "trouves": 21,
   "declares": 11,
-  "reels": [],
-  "date": "2026-08-24",
-  "commit": "287c538"
+  "reels": [
+    {
+      "forme": "clé AWS",
+      "fichier": ".stryker-tmp/sandbox-mPFFL7/src/menace.test.ts",
+      "empreinte": "1a5d44a2dca19669",
+      "publie": false
+    },
+    {
+      "forme": "clé AWS",
+      "fichier": ".stryker-tmp/sandbox-mPFFL7/src/menace.ts",
+      "empreinte": "1a5d44a2dca19669",
+      "publie": false
+    },
+    {
+      "forme": "clé Ed25519 sans en-tête",
+      "fichier": ".stryker-tmp/sandbox-mPFFL7/src/menace.ts",
+      "empreinte": "dbff404b96254d11",
+      "publie": false
+    },
+    {
+      "forme": "clé privée",
+      "fichier": ".stryker-tmp/sandbox-mPFFL7/src/menace.ts",
+      "empreinte": "8bcac7908eb95041",
+      "publie": false
+    },
+    {
+      "forme": "clé RSA sans en-tête",
+      "fichier": ".stryker-tmp/sandbox-mPFFL7/src/menace.ts",
+      "empreinte": "c4e48f9d56247540",
+      "publie": false
+    },
+    {
+      "forme": "clé X25519 sans en-tête",
+      "fichier": ".stryker-tmp/sandbox-mPFFL7/src/menace.ts",
+      "empreinte": "bdc7b833610505c1",
+      "publie": false
+    },
+    {
+      "forme": "identifiants dans une URL",
+      "fichier": ".stryker-tmp/sandbox-mPFFL7/src/menace.ts",
+      "empreinte": "35db5f7a8be30c3d",
+      "publie": false
+    },
+    {
+      "forme": "jeton Hugging Face",
+      "fichier": ".stryker-tmp/sandbox-mPFFL7/src/menace.ts",
+      "empreinte": "1a33b3b0e7c790ea",
+      "publie": false
+    },
+    {
+      "forme": "jeton Slack étendu",
+      "fichier": ".stryker-tmp/sandbox-mPFFL7/src/menace.ts",
+      "empreinte": "76209452971aa9b3",
+      "publie": false
+    },
+    {
+      "forme": "jeton Stripe",
+      "fichier": ".stryker-tmp/sandbox-mPFFL7/src/menace.ts",
+      "empreinte": "12c42dadef41baae",
+      "publie": false
+    }
+  ],
+  "date": "2026-08-25",
+  "commit": "e678e05"
 }

@@ -675,6 +675,19 @@ const commandes = (() => {
        chargé et la suite tombe de 103 s à 22 s. Quand la clé diffère, l'outil recalcule et
        le dit — et c'est là qu'il télécharge. Le libellé porte cette borne : une promesse
        sans sa condition est la même faute qu'avant, écrite dans l'autre sens. */
+    /*
+     * `npm install` N'APPARAISSAIT NULLE PART DANS 781 LIGNES, et le tableau disait
+     * « start here » sur la ligne suivante.
+     *
+     * Mesuré le 25 août 2026 sur un clone du dépôt publié : la toute première commande d'un
+     * acheteur rend `sh: tsc: command not found`, code 127, en 0,2 seconde. Elle échoue sur le
+     * nom d'un outil dont il n'a jamais entendu parler, avant d'avoir vu un seul chiffre.
+     *
+     * Elle est ici plutôt que dans une phrase au-dessus parce que c'est CE tableau qu'on lit :
+     * une instruction d'installation qui vit ailleurs que là où commence le lecteur n'existe
+     * pas. La ligne est engendrée comme les autres, donc elle ne peut pas se perdre à la
+     * prochaine régénération.
+     */
     ["test", "types, figures and the suite — start here; downloads nothing while the cached failure gallery matches the code"],
     /*
      * CE CHIFFRE ÉTAIT TAPÉ À LA MAIN, ET IL SE CACHAIT DE LA GARDE QUI L'INTERDIT.
@@ -731,7 +744,24 @@ const commandes = (() => {
   ];
   const classees = new Set(ordre.map(([n]) => n));
   const oubliees = Object.keys(pkg.scripts).filter((n) => !classees.has(n) && n !== "typage");
-  const lignes = ordre.filter(([n]) => n in pkg.scripts).map(([n, quoi]) => [`\`npm run ${n}\``, quoi]);
+  /*
+   * `npm install` EN PREMIÈRE LIGNE, ET IL N'EST PAS UN SCRIPT.
+   *
+   * Il n'apparaissait nulle part dans les 781 lignes de cette page, et la ligne suivante disait
+   * « start here ». Mesuré le 25 août 2026 sur un clone du dépôt publié : la toute première
+   * commande d'un acheteur rend `sh: tsc: command not found`, code 127, en 0,2 seconde. Elle
+   * échoue sur le nom d'un outil dont il n'a jamais entendu parler, avant le moindre chiffre.
+   *
+   * Il est posé ICI, dans le tableau, parce que c'est ce tableau qu'on lit : une instruction
+   * d'installation qui vit ailleurs que là où le lecteur commence n'existe pas. Et il est en
+   * dur plutôt que déduit de `package.json`, parce qu'il n'y est pas — le contrôle des
+   * commandes non classées ne le réclamera donc jamais.
+   */
+  const lignes = [
+    ["`npm install`", "install the dependencies — nothing below runs without it, and it is the "
+      + "only command here that needs the network"] as [string, string],
+    ...ordre.filter(([n]) => n in pkg.scripts).map(([n, quoi]) => [`\`npm run ${n}\``, quoi] as [string, string]),
+  ];
   const manquantes = ordre.filter(([n]) => !(n in pkg.scripts)).map(([n]) => n);
   let note = "";
   if (oubliees.length) {

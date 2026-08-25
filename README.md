@@ -25,6 +25,7 @@ what that pass actually cost is stated below, read from the relevé rather than 
 <!-- figures:commandes -->
 | Command | What it does, in the order that makes sense |
 |---|---|
+| `npm install` | install the dependencies — nothing below runs without it, and it is the only command here that needs the network |
 | `npm run test` | types, figures and the suite — start here; downloads nothing while the cached failure gallery matches the code |
 | `npm run measure` | measure the encoder tiers and freeze the profile (at least 1.23 GB downloaded on the first run — `npm run poids` lists each one) |
 | `npm run sceller` | seal a profile: the fingerprint that makes a silently edited measurement fail loudly |
@@ -130,7 +131,7 @@ several scripts chain shell commands, which hold under Git Bash and not under `c
 <!-- /figures:documents -->
 
 <!-- figures:tests -->
-**309 tests** across 22 files, counted from the sources rather than typed here.
+**313 tests** across 22 files, counted from the sources rather than typed here.
 <!-- /figures:tests -->
 
 Everything runs locally. No API key, nothing leaves the machine, and anyone who clones this

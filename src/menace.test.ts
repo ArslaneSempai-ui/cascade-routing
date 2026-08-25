@@ -52,7 +52,7 @@ test("le relevé d'historique est scellé sur un commit atteignable", (t) => {
   if (!existsSync(f)) return t.skip("!existsSync(f) — ce cas n'a rien regardé, et il le dit.");   // pas encore balayé : `npm run menace -- --historique`
   const r = JSON.parse(readFileSync(f, "utf8")) as {
     commits: number; trouves: number; declares: number; temoins: number; commit: string; date: string;
-    reels: Array<{ forme: string; fichier: string; empreinte: string }>;
+    reels: Array<{ forme: string; fichier: string; empreinte: string; publie?: boolean }>;
   };
   assert.equal(r.temoins, 2,
     "le balayage de l'historique n'a pas retrouvé ses deux témoins : son zéro ne vaut rien.");
@@ -64,8 +64,26 @@ test("le relevé d'historique est scellé sur un commit atteignable", (t) => {
    * chiffre que sa propre liste contredit — le rouge vide, où le nombre et le verdict ne
    * viennent pas de la même source.
    */
-  assert.deepEqual(r.reels, [],
-    "des chaînes de forme secrète sont dans l'historique sans être déclarées.");
+  /*
+   * SEULES LES TROUVAILLES PUBLIÉES FONT ÉCHOUER, et la distinction n'est pas une indulgence.
+   *
+   * `git log --all` balaie aussi les branches de sauvegarde et le `refs/original/` qu'une
+   * réécriture laisse derrière elle. Le 25 août 2026, dix formes de secret y dormaient — un
+   * bac à sable Stryker commité par erreur puis retiré de `main`. Ce que l'acheteur clone n'en
+   * contient aucune, mesuré par accessibilité depuis HEAD, trouvaille par trouvaille.
+   *
+   * Faire échouer sur ces dix aurait rendu la suite rouge en permanence pour une propriété
+   * qu'aucune correction du code ne peut lever — et un rouge qu'on ne peut pas lever se fait
+   * désactiver. Elles restent nommées dans SECURITE.md, parce qu'une référence que personne ne
+   * pousse aujourd'hui peut l'être demain.
+   */
+  const publiees = r.reels.filter((t) => t.publie);
+  assert.deepEqual(publiees, [],
+    "des chaînes de forme secrète sont dans l'historique PUBLIÉ sans être déclarées.");
+  assert.ok(r.reels.every((t) => typeof t.publie === "boolean"),
+    "une trouvaille sans champ `publie` : le relevé vient d'une version qui ne distinguait pas\n"
+    + "  le publié du local, et ce cas passerait en ne regardant rien. Relancer\n"
+    + "  `npm run menace -- --historique`.");
   assert.equal(r.trouves - r.declares, r.reels.length,
     `le relevé annonce ${r.trouves} trouvailles dont ${r.declares} déclarées, mais énumère ${r.reels.length} non déclarée(s).`);
   assert.ok(r.declares > 0,
@@ -73,10 +91,22 @@ test("le relevé d'historique est scellé sur un commit atteignable", (t) => {
     + "  donc le détecteur ne détecte plus, donc ce zéro ne vaut rien.");
   /* UN RELEVÉ SCELLÉ SUR UNE BRANCHE ABANDONNÉE RASSURE SUR UN DÉPÔT QUI N'EXISTE PLUS.
      On vérifie que le commit est réellement dans l'historique d'où l'on parle. */
-  const vu = spawnSync("git", ["cat-file", "-e", `${r.commit}^{commit}`], { cwd: racine });
+  /*
+   * ACCESSIBILITÉ, PAS EXISTENCE — et c'est toute la différence.
+   *
+   * `cat-file -e` répond « oui » sur un objet ORPHELIN. Après une réécriture d'historique, le
+   * dépôt local garde les anciens objets : ce cas passait donc au vert sur une empreinte
+   * qu'aucun clone ne pouvait retrouver. Mesuré le 25 août 2026 sur un clone du dépôt publié :
+   * `git cat-file -t 287c538` → `fatal: Not a valid object name`, alors qu'en local il
+   * répondait `commit`. **Le dépôt d'origine est le seul endroit d'où ce défaut est
+   * invisible**, et c'est celui depuis lequel on le contrôlait.
+   */
+  const vu = spawnSync("git", ["merge-base", "--is-ancestor", r.commit, "HEAD"], { cwd: racine });
   if (vu.error) return;   // pas de git sous la main : on ne conclut pas
   assert.equal(vu.status, 0,
-    `le relevé de sécurité est scellé sous « ${r.commit} », qui n'est pas dans ce dépôt.`);
+    `le relevé de sécurité est scellé sous « ${r.commit} », qui n'est pas ATTEIGNABLE depuis HEAD.\n`
+    + "  Un clone ne le contiendra pas, donc l'acheteur ne peut pas rejouer le balayage.\n"
+    + "  Attention : `git cat-file` répondrait « oui » ici, sur un objet orphelin.");
 });
 
 test("un secret planté dans une source suivie est trouvé", () => {

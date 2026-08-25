@@ -1,0 +1,15 @@
+{
+  "quoi": "sha256 of each SOURCE at build time. A freshness check compares these to the sources on disk; a modification date would compare the machine instead.",
+  "empreintes": {
+    "ui.html": "324b9b5e4035fa727c8f7bdc37cc030431238ca5404768a2f2901612102a18e7",
+    "pages.ts": "4342cb6e38813e9f8e5b927319036ddcb07e031cd43d71502f479db15dd58f82",
+    "registre.css": "6087e80c219587f0214b4c541c765f4da49f2b7d06e681722b7b261b1b460b23",
+    "graphes.js": "30289a472b0a90e27d79f65e903cd4e890c31d7784a81471f558df934d526f05",
+    "js/corpus.js": "bd1419fd6379045538b2e90ef558e6461fbb062d68e453246a85737d0752657c",
+    "js/paliers.js": "e1b82e9b7c65001650493a19e328ad7982178f276e4e0252e2ad73f36855763e",
+    "js/optimise.js": "ce4fcb59a89f77a8946da0f6ec7a6351f718e8104b0bf0f675dd545eff79202f",
+    "js/cli.js": "40e591be32f0399947168f9d702f7686d1dfb5ace84cef47aa7d4ace6e5c69f6",
+    "js/assumptions.js": "039546dd24d88b8aba1b1ef4163aae2c588f0d4fc3c46438a6d9f000faedd43a",
+    "js/interval.js": "141860dab0a6b393362f3bcc015c7101fe11ccb8eae2e1e5efa9f0045a9589fb"
+  }
+}
