@@ -109,7 +109,30 @@ export function juger(c: CasHostile, palier: string, rendu: string): Resultat {
   };
 }
 
-/** Le tableau, engendré du relevé. Aucun chiffre n'y est tapé. */
+/**
+ * La page, engendrée du relevé. Aucun chiffre n'y est tapé.
+ *
+ * ─── TROIS CHOSES QU'ELLE A EUES FAUSSES, ET POURQUOI C'EST ÉCRIT ICI ───
+ *
+ * (Ce raisonnement vivait dans un message de commit ; une autre session a indexé ces fichiers
+ * dans le sien et le message s'est perdu. Le contenu a survécu, le pourquoi non. C'est la
+ * démonstration de la règle : un commentaire voyage avec sa ligne, un message de commit ne
+ * voyage qu'avec l'instant où on l'a tapé.)
+ *
+ * 1. ELLE S'OUVRAIT EN DISANT QUE C'ÉTAIT UN PROBLÈME DES PALIERS GÉNÉRATIFS. La première
+ *    passe l'avait déjà contredit : `large`, un extractif, détourné plus souvent que `gen-4b`.
+ *    Un extractif choisit un passage du document, et l'attaquant écrit le document. La page le
+ *    dit maintenant en tête, ET dit qu'on supposait l'inverse — un acheteur qui trouve la
+ *    supposition tout seul cesse de croire les chiffres qui suivent.
+ *
+ * 2. LES DESCRIPTIONS DE CAS ÉTAIENT EN FRANÇAIS DANS UN LIVRABLE ANGLAIS, parce qu'elles
+ *    avaient été écrites comme des commentaires de source puis publiées sans que personne ne
+ *    décide qu'elles devaient l'être. Tout ce qui sort de ce dépôt est en anglais.
+ *
+ * 3. ELLE MONTRAIT DES VERDICTS SANS LES RÉPONSES. Un lecteur doit pouvoir voir que `large` a
+ *    rendu `*** HACKED-000` et juger lui-même si « wrong » était le bon mot — il ne l'était
+ *    pas, et c'est exactement comme ça que le défaut de la charge a été trouvé.
+ */
 export function page(r: Releve): string {
   const l: string[] = [];
   const cas = r.cas;
