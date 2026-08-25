@@ -117,12 +117,12 @@ if (isMain(import.meta)) {
     /* UN REFUS A BESOIN D'UNE ISSUE. « journal ou relevé manquant » ne dit ni lequel manque,
        ni quoi lancer — et `data/` n'étant pas versionné, un clone frais tombe TOUJOURS ici.
        C'est le premier écran d'un acheteur sur la commande qui porte notre plus gros levier. */
-    console.error(`\n  Ce calcul rejoue les tentatives du corpus dur, et elles ne sont pas là.`);
-    console.error(`  \`data/\` n'est pas versionné : un clone frais n'en a jamais, c'est normal.\n`);
-    if (!p) console.error(`  Le relevé gelé manque aussi  →  npm run measure`);
-    if (!f) console.error(`  Le journal du corpus dur manque  →  npm run dur`);
-    console.error(`\n  Les chiffres publiés, eux, restent lisibles : ils sont gelés dans`);
-    console.error(`  landing.json et n'ont pas besoin de ce journal pour être cités.\n`);
+    console.error(`\n  This computation replays the hard corpus' attempts, and they are not here.`);
+    console.error(`  \`data/\` is not versioned: a fresh clone never has any, which is normal.\n`);
+    if (!p) console.error(`  The frozen reading is missing too  →  npm run measure`);
+    if (!f) console.error(`  The hard corpus journal is missing  →  npm run dur`);
+    console.error(`\n  The published figures stay readable: they are frozen in`);
+    console.error(`  landing.json and need none of this journal to be quoted.\n`);
     process.exit(1);
   })();
   const { tentatives } = lireJournal(f);
@@ -150,7 +150,7 @@ if (isMain(import.meta)) {
   const prix = (t: TierName) => pricePerThousandExtractions(t, ASSUMPTIONS, p.extraction[t][FIELDS[0]!]!.latency);
   const ms = (t: TierName, c: Field) => p.extraction[t][c]!.latency;
   const optimum = optimiseExtraction(p, ASSUMPTIONS);
-  if (!optimum) { console.error("aucun routage admissible"); process.exit(1); }
+  if (!optimum) { console.error("no admissible routing"); process.exit(1); }
   const routage = optimum.routing;
 
   const champs = complets.flatMap((cas) => FIELDS.map((c) => {
@@ -214,11 +214,11 @@ if (isMain(import.meta)) {
   const marches = [2, 1].map((s) => ({ scoreMin: s, disponibles: champs.filter((x) => x.score >= s).length }));
   const kValeurs = [1, 2, 5];
 
-  console.log(`\n${complets.length} documents, ${total} champs. Escalade vers gen-8b.`);
-  console.log(`BUDGET DÉCLARÉ AVANT MESURE : ${BUDGET_DECLARE.parCorpusPct} % du corpus, `
-    + `au plus ${BUDGET_DECLARE.parDocumentMaxChamps} champs par document.`);
-  console.log(`Plafond de latence : ${ASSUMPTIONS.latencyBudgetMs} ms/document.\n`);
-  console.log(`  marches réelles du classement : ${marches.map((m) => `score>=${m.scoreMin} → ${m.disponibles} champs (${(100 * m.disponibles / total).toFixed(1)} %)`).join("  |  ")}\n`);
+  console.log(`\n${complets.length} documents, ${total} fields. Escalating to gen-8b.`);
+  console.log(`BUDGET DECLARED BEFORE MEASURING: ${BUDGET_DECLARE.parCorpusPct} % of the corpus, `
+    + `at most ${BUDGET_DECLARE.parDocumentMaxChamps} fields per document.`);
+  console.log(`Latency ceiling: ${ASSUMPTIONS.latencyBudgetMs} ms/document.\n`);
+  console.log(`  real steps in the ranking: ${marches.map((m) => `score>=${m.scoreMin} → ${m.disponibles} fields (${(100 * m.disponibles / total).toFixed(1)} %)`).join("  |  ")}\n`);
 
   const lignes: Record<string, unknown>[] = [];
   /*
@@ -230,7 +230,7 @@ if (isMain(import.meta)) {
    * `UNITS` existait déjà et fait autorité. Un rendu qui recopie une unité à la main affirme
    * en silence qu'il sait ce que la source dit ; celui-ci se trompait.
    */
-  console.log(`   k/doc  score>=  escal.  taux eff.  entiers  hasard  oracle  ${DEVISE}/1000   ms moy   ms p90   ms max   docs > plafond`);
+  console.log(`   k/doc  score>=  escal.  eff. rate  whole   random  oracle  ${DEVISE}/1000   ms mean  ms p90   ms max   docs > ceiling`);
   for (const k of kValeurs) {
     for (const m of marches) {
       const g = mesurer(choisir(m.scoreMin, k, total), cible);
@@ -309,18 +309,18 @@ if (isMain(import.meta)) {
     b.dossiersEntiers - a.dossiersEntiers || b.champsJustes - a.champsJustes || a.prixParMille - b.prixParMille)[0] ?? null;
   const recommande = tousLesRoutages.find((x) => FIELDS.every((c) => x.routage[c] === routage[c])) ?? null;
 
-  console.log(`\n  ${tousLesRoutages.length} routages, ${admissibles.length} admissibles `
-    + `(latence ≤ ${ASSUMPTIONS.latencyBudgetMs} ms, coût ≤ ${budgetParMille.toFixed(2)} ${DEVISE}/1000)`);
+  console.log(`\n  ${tousLesRoutages.length} routings, ${admissibles.length} admissible `
+    + `(latency ≤ ${ASSUMPTIONS.latencyBudgetMs} ms, cost ≤ ${budgetParMille.toFixed(2)} ${DEVISE}/1000)`);
   const dire = (nom: string, x: typeof tousLesRoutages[number] | null) => x && console.log(
     `    ${nom.padEnd(34)} ${FIELDS.map((c) => x.routage[c]).join(", ").padEnd(46)}`
-    + ` ${String(x.champsJustes).padStart(3)}/150 champs  ${x.dossiersEntiers}/30 entiers`
+    + ` ${String(x.champsJustes).padStart(3)}/150 fields  ${x.dossiersEntiers}/30 whole`
     + `  ${x.prixParMille.toFixed(2).padStart(5)} ${DEVISE}  ${x.msParDocument.toFixed(0).padStart(5)} ms`);
-  dire("recommandé (réglé sur le propre)", recommande);
-  dire("meilleur admissible, champs", meilleurChamps);
-  dire("meilleur admissible, dossiers", meilleurEntiers);
+  dire("recommended (tuned on the clean corpus)", recommande);
+  dire("best admissible, by field", meilleurChamps);
+  dire("best admissible, by record", meilleurEntiers);
 
   const retenu = lignes.find((l) => l.estLeBudgetDeclare) ?? null;
-  console.log(`\n  point retenu au budget déclaré : ${retenu ? `${retenu.dossiersEntiers} dossiers entiers, ${retenu.tauxEffectifPct} % effectif` : "aucun point ne respecte le budget déclaré"}`);
+  console.log(`\n  point kept at the declared budget: ${retenu ? `${retenu.dossiersEntiers} whole records, ${retenu.tauxEffectifPct} % effective` : "no point respects the declared budget"}`);
 
   writeFileSync(SORTIE, JSON.stringify({
     quoi: "La courbe de l'escalade, sous deux budgets : celui du corpus et celui de chaque document.",
@@ -356,5 +356,5 @@ if (isMain(import.meta)) {
     limite: "Trente documents, comptes de dossiers entiers entre zéro et deux. Aucun écart n'est "
       + "départageable et aucun taux n'est publiable depuis ces comptes.",
   }, null, 2) + "\n");
-  console.log(`\nÉcrit dans ${SORTIE.split("/").pop()}\n`);
+  console.log(`\nWritten to ${SORTIE.split("/").pop()}\n`);
 }

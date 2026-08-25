@@ -138,7 +138,7 @@ test("rules cost nothing, a human costs the most, a local tier is billed by the 
   );
 
   assert.throws(() => pricePerThousandExtractions("gen-4b", ASSUMPTIONS),
-    /temps machine/,
+    /machine time/,
     "un palier local sans sa latence doit lever, pas être facturé gratuitement");
 });
 
@@ -4378,7 +4378,7 @@ test("un /api/tags en panne fait refuser, il ne se lit pas « aucun modèle »",
     assert.match(sortie, /REFUS/,
       "un /api/tags en panne laisse la passe continuer : la garde des empreintes compare le vide au vide,\n"
       + "  et la sentinelle de dérive vendue au palier le plus cher ne repose sur rien.");
-    assert.match(sortie, /a répondu 500/,
+    assert.match(sortie, /answered 500/,
       "le refus ne dit pas ce qui s'est passé : un message qui ne nomme pas le code de réponse\n"
       + "  envoie chercher la panne du mauvais côté.");
   } finally {

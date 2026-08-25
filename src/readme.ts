@@ -946,7 +946,7 @@ const finding = (() => {
 const lecture = (() => {
   const chemin = fileURLToPath(new URL("../ocr.json", import.meta.url));
   if (!existsSync(chemin)) {
-    throw new Error("ocr.json est absent — ce bloc publie une mesure. Lancez : npm run ocr");
+    throw new Error("ocr.json is missing — this block publishes a measurement. Run: npm run ocr");
   }
   const r = JSON.parse(readFileSync(chemin, "utf8"));
 
@@ -1060,7 +1060,7 @@ const chaines = (() => {
 const expositionBloc = (() => {
   const chemin = fileURLToPath(new URL("../exposition.json", import.meta.url));
   if (!existsSync(chemin)) {
-    throw new Error("exposition.json est absent. Ce relevé est livré avec le dépôt : restaurez-le avec « git checkout exposition.json ». Il est produit par un composant qui n'est pas dans ce dépôt.");
+    throw new Error("exposition.json is missing. This reading ships with the repository: restore it with `git checkout exposition.json`. It is produced by a component that is not in this repository.");
   }
   const r = JSON.parse(readFileSync(chemin, "utf8")) as {
     publie: Record<string, string>;
@@ -1115,7 +1115,7 @@ const expositionBloc = (() => {
 const documentBloc = (() => {
   const chemin = fileURLToPath(new URL("../document.json", import.meta.url));
   if (!existsSync(chemin)) {
-    throw new Error("document.json est absent. Ce relevé est livré avec le dépôt : restaurez-le avec « git checkout document.json ». Il est produit par un composant qui n'est pas dans ce dépôt.");
+    throw new Error("document.json is missing. This reading ships with the repository: restore it with `git checkout document.json`. It is produced by a component that is not in this repository.");
   }
   const d = JSON.parse(readFileSync(chemin, "utf8")) as {
     publie: { routing: Record<string, string>; complets: number; n: number; cost: number };
@@ -1319,7 +1319,7 @@ const tests = (() => {
   const fichiers = readdirSync(dossier).filter((n: string) => n.endsWith(".test.ts"));
   const n = fichiers.reduce((a: number, f: string) =>
     a + (readFileSync(join(dossier, f), "utf8").match(/^test\(/gm) ?? []).length, 0);
-  if (n < 20) throw new Error(`${n} tests comptés dans ${fichiers.length} fichier(s) : la lecture a échoué.`);
+  if (n < 20) throw new Error(`${n} tests counted across ${fichiers.length} file(s): the reading failed.`);
   return `**${n} tests** across ${fichiers.length} files, counted from the sources rather than typed here.`;
 })();
 
@@ -1356,7 +1356,7 @@ const documents = (() => {
   };
   const presents = readdirSync(racine).filter((n) => n in decrit).sort();
   if (presents.length === 0) {
-    throw new Error("aucun document livré n'a été trouvé à la racine : la lecture a échoué, et ce bloc annoncerait une absence qui n'existe pas.");
+    throw new Error("no shipped document was found at the root: the reading failed, and this block would announce an absence that does not exist.");
   }
   const manquants = Object.keys(decrit).filter((n) => !presents.includes(n));
   const lignes = presents.map((n) => `| [\`${n}\`](${n}) | ${decrit[n]} |`);

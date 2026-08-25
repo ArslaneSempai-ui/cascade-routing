@@ -102,7 +102,7 @@ if (isMain(import.meta)) {
     }
     const groupe = pairedVerdict(G, P);
     verdicts[f] = { parChamp, groupe: { gen4bWins: G, gen8bWins: P, decidable: groupe.decidable } };
-    console.log(`\n  ${f} — groupé : gen-4b gagne ${G}, gen-8b gagne ${P} — ${groupe.decidable ? "DECIDED" : "within the noise"}`);
+    console.log(`\n  ${f} — pooled: gen-4b wins ${G}, gen-8b wins ${P} — ${groupe.decidable ? "DECIDED" : "within the noise"}`);
     console.log(`    fields decided: ${parChamp.filter((x) => x.decidable).map((x) => x.field).join(", ") || "none"}`);
   }
 

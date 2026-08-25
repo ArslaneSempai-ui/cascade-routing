@@ -1151,7 +1151,7 @@ function verifierCoherence(vue: Record<string, unknown>): void {
   if (routing === null || spread === null) return;
   if (Math.round(spread.median) !== Math.round(routing.latencyMsPerDocument)) {
     throw new Error(
-      `landing.json serait incohérent : latencySpread.routed.median = ${spread.median} ms, `
+      `landing.json would be inconsistent: latencySpread.routed.median = ${spread.median} ms, `
       + `mais routing.latencyMsPerDocument = ${routing.latencyMsPerDocument} ms.\n`
       + `  → les deux somment les mêmes cinq champs du même relevé ; une divergence veut dire `
       + `qu'un des deux calculs est faux, et aucun des deux ne doit être publié.`);
@@ -1199,21 +1199,21 @@ function verifierSeuils(p: Profiles, vue: Record<string, unknown>): void {
     const au_dessus = routageA(s.breaksAt * (1 + MARGE));
     const change = au_dessus !== null && FIELDS.some((c) => au_dessus.routing[c] !== base.routing[c]);
     if (!change) {
-      throw new Error(`seuil faux pour ${cle} : au-dessus de ${s.breaksAt} le routage ne change pas.\n`
-        + `  → un seuil qui n'annonce aucune bascule ne devrait pas être publié.`);
+      throw new Error(`wrong threshold for ${cle}: above ${s.breaksAt} the routing does not change.\n`
+        + `  → a threshold that announces no switch should not be published.`);
     }
 
     const au_dessous = routageA(s.breaksAt * (1 - MARGE));
     const intact = au_dessous !== null && FIELDS.every((c) => au_dessous.routing[c] === base.routing[c]);
     if (!intact) {
-      throw new Error(`seuil faux pour ${cle} : le routage a déjà changé avant ${s.breaksAt}.\n`
-        + `  → le seuil n'encadre pas la bascule, donc il annonce une marge qui n'existe pas.`);
+      throw new Error(`wrong threshold for ${cle}: the routing had already changed before ${s.breaksAt}.\n`
+        + `  → the threshold does not bracket the switch, so it announces a margin that does not exist.`);
     }
 
     for (const m of s.moves) {
       if (au_dessus.routing[m.field] !== m.to || base.routing[m.field] !== m.from) {
-        throw new Error(`seuil faux pour ${cle} : il annonce ${m.field} ${m.from}→${m.to}, `
-          + `mais la bascule donne ${base.routing[m.field]}→${au_dessus.routing[m.field]}.`);
+        throw new Error(`wrong threshold for ${cle}: it announces ${m.field} ${m.from}→${m.to}, `
+          + `but the switch gives ${base.routing[m.field]}→${au_dessus.routing[m.field]}.`);
       }
     }
   }
@@ -1234,7 +1234,7 @@ if (isMain(import.meta)) {
   const p = readProfiles();
 
   if (!p) {
-    console.error("aucun relevé dans data/profiles.json — lancer `npm run measure` d'abord.");
+    console.error("no reading in data/profiles.json — run `npm run measure` d'abord.");
     process.exit(1);
   }
 
@@ -1272,7 +1272,7 @@ if (isMain(import.meta)) {
         abstention: abstentionDepuisJournal(p, optimum0),
       },
     }, null, 2) + "\n");
-    console.log(`Figé depuis ${dernier?.split("/").pop() ?? "aucun journal"} dans ${FIGE.split("/").pop()}`);
+    console.log(`Frozen from ${dernier?.split("/").pop() ?? "no journal"} into ${FIGE.split("/").pop()}`);
     process.exit(0);
   }
 
@@ -1295,7 +1295,7 @@ if (isMain(import.meta)) {
   if (actuel === attendu) {
     console.log("landing.json is up to date.");
   } else if (check) {
-    console.error("landing.json ne correspond plus au relevé gelé.");
+    console.error("landing.json no longer matches the frozen reading.");
     console.error(actuel === null
       ? "  - le fichier n'existe pas encore"
       : "  - son contenu diverge de ce que le code produit");

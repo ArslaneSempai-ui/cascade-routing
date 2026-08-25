@@ -635,7 +635,7 @@ async function ollama(tier: TierName, prompt: string, schema: unknown): Promise<
       `Pour celle-ci : \`brew install ollama\`, \`ollama serve\`, puis ` +
       `${Object.values(MODELES_LOCAUX).map((x) => `\`ollama pull ${x.tag}\``).join(", ")}.`);
   }
-  if (!r.ok) throw new Error(`Ollama a répondu ${r.status} pour ${m.tag}`);
+  if (!r.ok) throw new Error(`Ollama answered ${r.status} for ${m.tag}`);
   const j: any = await r.json();
   try { return JSON.parse(String(j.response ?? "{}")); } catch { return {}; }
 }
@@ -697,9 +697,9 @@ async function tailles(): Promise<Map<string, { octets: number; digest: string }
     const r = await fetch(`${OLLAMA}/api/tags`, { signal: AbortSignal.timeout(10_000) });
     if (!r.ok) {
       throw new Error(
-        `${OLLAMA}/api/tags a répondu ${r.status}. Ce n'est pas « aucun modèle installé » :\n`
-        + "  un service qui refuse de répondre ne dit rien des modèles, et le traiter comme un\n"
-        + "  silence ferait passer la garde des empreintes au vert sans avoir rien comparé.");
+        `${OLLAMA}/api/tags answered ${r.status}. That is not "no model installed":\n`
+        + "  a service refusing to answer says nothing about the models, and treating it as a\n"
+        + "  silence would turn the digest guard green without it having compared anything.");
     }
     const j = await r.json() as { models?: { name: string; size: number; digest?: string }[] };
     return new Map((j.models ?? []).map((m) =>
@@ -768,7 +768,7 @@ export async function loadGeneratifs(): Promise<{ demandes: string[]; residents:
   const ecarts = digestsQuiDivergent(t);
   if (ecarts.length) {
     throw new Error(
-      `${ecarts.length} modèle(s) installé(s) ne sont pas ceux qui ont été mesurés :\n`
+      `${ecarts.length} installed model(s) are not the ones that were measured:\n`
       + ecarts.map((e) => `  ${e.tag} — déclaré ${e.declare}, installé ${e.installe}`).join("\n")
       + `\n  Un « ollama pull » change tous les résultats génératifs sans modifier un seul\n`
       + `  fichier de ce dépôt. Remesurez, ou mettez MODELES_LOCAUX à jour en sachant que\n`

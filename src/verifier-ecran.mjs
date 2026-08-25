@@ -304,7 +304,7 @@ export function modulesEnRetard(racineDepot) {
     for (const m of src.matchAll(/(?:readFileSync|cpSync)\(\s*root \+ "([^"]+)"/g)) sources.add(m[1]);
     if (sources.size < 2) {
       throw new Error(
-        `dérivation des sources de la page cassée : ${sources.size} chemin(s) extrait(s) de `
+        `page source derivation is broken: ${sources.size} path(s) extracted from `
         + "src/pages.ts.\n\n"
         + "  Elle cherche `readFileSync(root + \"…\")` et `cpSync(root + \"…\")`. Si ce fichier a\n"
         + "  changé de façon de lire, corrigez l'extraction — ne la laissez pas rendre une liste\n"
@@ -359,10 +359,10 @@ if (!existsSync(docs + "/index.html")) {
 const enRetard = modulesEnRetard(racine);
 if (enRetard.length) {
   console.error(
-    `${enRetard.length} module(s) publié(s) plus vieux que leur source : ${enRetard.join(", ")}.\n\n`
-    + "  La page construite n'est pas celle du code d'aujourd'hui. La vérifier reviendrait à\n"
-    + "  approuver la construction précédente, et à le dire avec les mots de celle-ci.\n\n"
-    + "  Lancez `npm run pages`, qui reconstruit puis vérifie.");
+    `${enRetard.length} published module(s) older than their source: ${enRetard.join(", ")}.\n\n`
+    + "  The built page is not the one from today's code. Verifying it would mean approving\n"
+    + "  the previous build, and saying so in this one's words.\n\n"
+    + "  Run `npm run pages`, which rebuilds and then verifies.");
   process.exit(1);
 }
 
@@ -406,7 +406,7 @@ writeFileSync(temp + "jeton.txt", JETON);
 /* On ramasse les orphelins d'exécutions tuées avant d'ouvrir le nôtre. */
 const orphelins = ramasserOrphelins();
 if (orphelins.fermes.length) {
-  console.error(`${orphelins.fermes.length} serveur(s) orphelin(s) fermé(s) — `
+  console.error(`${orphelins.fermes.length} orphan server(s) closed — `
     + orphelins.fermes.map((e) => `${e.outil}:${e.port}`).join(", "));
 }
 
@@ -436,7 +436,7 @@ for (let essai = 0; essai < 20 && !serveur; essai++) {
   } else candidat.kill();
 }
 if (!serveur) {
-  console.error("aucun port libre trouvé en vingt essais — une autre vérification tourne-t-elle ?");
+  console.error("no free port found in twenty attempts — is another verification running?");
   process.exit(1);
 }
 try {
@@ -556,7 +556,7 @@ try {
     for (const s of soucis) console.error(`  ${s}`);
     process.exitCode = 1;
   } else {
-    console.log(`écran vérifié — ${figures} figure(s) rendues, ${auditees} inspectée(s)`);
+    console.log(`screen verified — ${figures} figure(s) rendered, ${auditees} inspected`);
   }
 } finally {
   serveur.kill();

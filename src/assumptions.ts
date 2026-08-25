@@ -213,10 +213,10 @@ export function symboleDe(unite: string): string {
   const s = table[code];
   if (!s) {
     throw new Error(
-      `aucun symbole connu pour la devise « ${code} » (unite « ${unite} »).\n\n`
-      + "  Ajoutez-le dans symboleDe(), dans assumptions.ts. Ne le tapez pas au site de rendu :\n"
-      + "  c'est comme ça que ce dépôt s'est mis à publier le même chiffre en euros et en\n"
-      + "  dollars selon la page qu'on lisait.");
+      `no symbol known for currency "${code}" (unit "${unite}").\n\n`
+      + "  Add it to symboleDe(), in assumptions.ts. Do not type it at the rendering site:\n"
+      + "  that is how this repository came to publish the same figure in euros and in\n"
+      + "  dollars depending on which page you read.");
   }
   return s;
 }
@@ -267,7 +267,7 @@ export function pricePerThousandExtractions(tier: TierName, h: Assumptions, late
   if (tier === "large") return h.pricePerThousandLarge;
   if (estGeneratif(tier)) {
     if (latenceMesuree === undefined) {
-      throw new Error(`le palier ${tier} se facture au temps machine : sa latence mesurée est requise`);
+      throw new Error(`tier ${tier} is priced by machine time: its measured latency is required`);
     }
     return (latenceMesuree / 3_600_000) * h.machineHourlyCost * 1000;
   }

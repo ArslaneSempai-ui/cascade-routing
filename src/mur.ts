@@ -67,7 +67,7 @@ if (isMain(import.meta)) {
   if (!reel) { console.error("aucun relevé"); process.exit(1); }
   const plafondMs = Number(process.argv.find((a) => a.startsWith("--plafond="))?.split("=")[1] ?? 60_000);
 
-  console.log(`\nMur du solveur — deux énumérations, mémoire constante. Plafond ${plafondMs / 1000} s par point.\n`);
+  console.log(`\nSolver wall — two enumerations, constant memory. Ceiling ${plafondMs / 1000} s per point.\n`);
   console.log("   T\\F " + [4, 5, 6, 7, 8].map((f) => String(f).padStart(11)).join(""));
 
   const grille: { paliers: number; champs: number; affectations: number; ms: number | null }[] = [];
@@ -117,5 +117,5 @@ if (isMain(import.meta)) {
       + "refiltrer. À sept paliers et huit champs, tas de quatre gigaoctets épuisé : arrêt, pas "
       + "ralentissement.",
   }, null, 2) + "\n");
-  console.log(`\nÉcrit dans ${SORTIE.split("/").pop()}\n`);
+  console.log(`\nWritten to ${SORTIE.split("/").pop()}\n`);
 }
