@@ -8,6 +8,7 @@
  */
 
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import { randomBytes } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { FIELDS } from "./corpus.ts";
 import { TIERS, type TierName } from "./paliers.ts";
@@ -291,7 +292,64 @@ export function sansChemins(texte: string): string {
     .replace(/[^\s"')]*node_modules\/[^\s"')]*/g, "<file>");
 }
 
+/**
+ * LES EN-TÊTES QUE TOUT QUESTIONNAIRE DE SÉCURITÉ RÉCLAME, ET CE QU'ILS VALENT ICI.
+ *
+ * Mesuré le 25 août 2026 : ZÉRO en-tête de sécurité sur toute réponse. Trouvé par un balayage,
+ * et c'est le seul de ses quatre signalements sur ce fichier qui ait résisté à la mesure — la
+ * garde d'origine refuse bien une page étrangère (403, éprouvé), la route la plus chère coûte
+ * une dizaine de millisecondes de travail réel, et le compteur partagé sur la boucle locale
+ * est déjà écrit plus haut comme inhérent.
+ *
+ * Ce qu'ils protègent VRAIMENT dans un outil local, sans le survendre : la page charge son
+ * propre script et sa propre feuille, jamais rien d'externe. Une politique stricte transforme
+ * donc une injection future en refus du navigateur, au lieu d'une exécution. C'est une
+ * seconde barrière derrière l'échappement, pas une excuse pour l'affaiblir.
+ *
+ * `strict-transport-security` est VOLONTAIREMENT ABSENT : il ne s'applique qu'en HTTPS, et le
+ * poser sur `localhost` en clair épinglerait le HTTPS pour tout ce que le navigateur sert
+ * depuis cette origine — on casserait la machine du client pour un en-tête décoratif. Un
+ * en-tête posé parce qu'il figure sur une liste, sans que sa condition soit remplie, est du
+ * théâtre : il rassure l'auditeur et coûte à l'utilisateur.
+ */
+/*
+ * ET LE JETON, PARCE QUE `script-src 'self'` A CASSÉ LA PAGE EN SILENCE.
+ *
+ * `ui.html` porte son programme dans un `<script type="module">` EN LIGNE. `'self'` autorise
+ * les fichiers servis par cette origine et refuse le code écrit dans la page : mesuré dans un
+ * vrai navigateur le 25 août 2026, la page passait de 2 figures, 1 SVG, 2 boutons et 35
+ * cellules à **zéro partout**. Le titre s'affichait toujours, et l'outil de console n'a
+ * rapporté AUCUNE erreur — un en-tête de sécurité qui détruit le produit sans un mot.
+ *
+ * Deux sorties possibles, et la mauvaise est tentante : `'unsafe-inline'` rétablit la page et
+ * retire tout l'intérêt de la politique. Un jeton la rétablit en la gardant stricte — il est
+ * tiré au hasard À CHAQUE RÉPONSE, donc une injection future ne peut pas le deviner.
+ *
+ * Ce que ça garde : la page charge son script et sa feuille, jamais rien d'externe, et le
+ * code qu'une injection écrirait n'a pas le jeton. C'est une seconde barrière derrière
+ * l'échappement, pas une excuse pour l'affaiblir.
+ */
+export const politiqueDeContenu = (jeton: string): string =>
+  "default-src 'none'; "
+  + `script-src 'self' 'nonce-${jeton}'; `
+  + "style-src 'self'; img-src 'self' data:; "
+  + "connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
+
+export const ENTETES_DE_SECURITE: Record<string, string> = {
+  "x-content-type-options": "nosniff",
+  "x-frame-options": "DENY",
+  "referrer-policy": "no-referrer",
+  /* Aucune de ces trois capacités n'est employée ; les refuser coûte zéro et retire trois
+     questions du questionnaire d'un acheteur. */
+  "permissions-policy": "camera=(), microphone=(), geolocation=()",
+};
+
 const serveur = createServer(async (req, res) => {
+  /* AVANT tout, y compris avant le 429 : une réponse d'erreur est une réponse, et c'est
+     souvent celle qu'un attaquant sait provoquer. */
+  for (const [nom, valeur] of Object.entries(ENTETES_DE_SECURITE)) res.setHeader(nom, valeur);
+  const jeton = randomBytes(16).toString("base64");
+  res.setHeader("content-security-policy", politiqueDeContenu(jeton));
   const url = new URL(req.url ?? "/", `http://localhost:${PORT}`);
   const adresse = req.socket.remoteAddress ?? "inconnue";
   const restantes = compter(adresse);
@@ -322,7 +380,18 @@ const serveur = createServer(async (req, res) => {
     }
     if (url.pathname === "/") {
       res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" });
-      res.end(readFileSync(fileURLToPath(new URL("./ui.html", import.meta.url)), "utf8"));
+      /* Le jeton se pose sur le script EN LIGNE. `assert` plutôt que remplacement silencieux :
+         si la balise change de forme, la page part sans jeton, se fait refuser par sa propre
+         politique, et n'affiche RIEN — un échec qu'il vaut mieux voir ici qu'à l'écran. */
+      const brut = readFileSync(fileURLToPath(new URL("./ui.html", import.meta.url)), "utf8");
+      const avecJeton = brut.replace(/<script type="module">/g, `<script type="module" nonce="${jeton}">`);
+      if (avecJeton === brut && /<script/.test(brut)) {
+        throw new Error(
+          "ui.html porte un <script> que le jeton n'a pas su marquer : la balise a changé de "
+          + "forme. Sans jeton, la politique de contenu refuse le script et la page s'affiche "
+          + "vide — corrigez l'insertion plutôt que d'affaiblir la politique.");
+      }
+      res.end(avecJeton);
       return;
     }
     for (const [chemin, type] of [["/graphes.js", "text/javascript"], ["/registre.css", "text/css"]] as const) {

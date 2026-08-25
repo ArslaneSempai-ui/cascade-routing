@@ -77,3 +77,64 @@ test("chaque route POST refuse un corps au-delà de la borne", { timeout: 120_00
     serveur.kill();
   }
 });
+
+test("la politique de contenu est stricte ET la page reste exécutable", { timeout: 120_000 }, async () => {
+  /*
+   * ─── L'EN-TÊTE DE SÉCURITÉ QUI A DÉTRUIT LE PRODUIT EN SILENCE ───
+   *
+   * Le 25 août 2026, `script-src 'self'` a été posé sur toutes les réponses. `ui.html` porte
+   * son programme dans un `<script type="module">` EN LIGNE, que `'self'` refuse. Mesuré dans
+   * un vrai navigateur : la page passait de 2 figures, 1 SVG, 2 boutons et 35 cellules à ZÉRO
+   * PARTOUT. Le titre s'affichait encore, et l'outil de console n'a rapporté AUCUNE erreur.
+   *
+   * Aucun contrôle du dépôt ne l'a vu — ils lisent des fichiers, ils n'exécutent pas la page.
+   * Ce cas ferme l'écart sans navigateur, en éprouvant l'INVARIANT qui a cassé : chaque script
+   * en ligne de la page servie porte un jeton, et ce jeton est celui de l'en-tête.
+   *
+   * Les deux sens comptent. Une politique laxiste (`unsafe-inline`) rétablirait la page et
+   * viderait la protection : elle est refusée ici aussi. On ne peut donc pas faire passer ce
+   * cas en affaiblissant la politique — la seule sortie est un jeton correct.
+   */
+  const port = 4830 + Math.floor(Number(process.env.NODE_UNIQUE_ID ?? 0));
+  const base = `http://127.0.0.1:${port}`;
+  const serveur = spawn("node", [fileURLToPath(new URL("./server.ts", import.meta.url))],
+    { env: { ...process.env, PORT: String(port) }, stdio: "ignore" });
+  const dors = (ms: number) => new Promise((r) => setTimeout(r, ms));
+  try {
+    for (let i = 0; i < 80; i++) { try { await fetch(base + "/api/etat"); break; } catch { await dors(250); } }
+
+    const r = await fetch(base + "/");
+    const csp = r.headers.get("content-security-policy");
+    assert.ok(csp, "aucune politique de contenu sur la page : l'en-tête a disparu.");
+
+    /* Une politique qui s'autorise l'inline ne protège de rien — c'est la sortie facile. */
+    assert.doesNotMatch(csp, /unsafe-inline|unsafe-eval/,
+      `la politique s'est ouverte : « ${csp} ». Un script en ligne refusé se règle par un jeton, `
+      + "pas en autorisant tout code écrit dans la page.");
+    assert.match(csp, /script-src[^;]*'nonce-/,
+      `la politique n'accorde aucun jeton : « ${csp} ». Le script en ligne de ui.html sera refusé `
+      + "et la page s'affichera VIDE, sans erreur visible.");
+
+    const jeton = csp.match(/'nonce-([^']+)'/)?.[1];
+    assert.ok(jeton, "jeton illisible dans la politique");
+
+    const html = await r.text();
+    const enLigne = [...html.matchAll(/<script(?![^>]*\bsrc=)([^>]*)>/g)];
+    assert.ok(enLigne.length > 0,
+      "aucun script en ligne trouvé dans la page servie : ce cas n'examine plus rien, et un "
+      + "vert rendu ici ne dirait rien. La page a-t-elle changé de forme ?");
+    const sansJeton = enLigne.filter((m) => !m[1]!.includes(`nonce="${jeton}"`)).length;
+    assert.equal(sansJeton, 0,
+      `${sansJeton} script(s) en ligne sur ${enLigne.length} ne portent pas le jeton de l'en-tête. `
+      + "Le navigateur les refusera et la page sera vide — mesuré : 2 figures et 35 cellules "
+      + "tombent à zéro, sans une erreur de console.");
+
+    /* CONTRE-ÉPREUVE DU JETON LUI-MÊME : deux réponses ne doivent pas porter le même, sinon
+       une injection qui a lu la page une fois connaît le jeton de la suivante. */
+    const csp2 = (await fetch(base + "/")).headers.get("content-security-policy");
+    assert.notEqual(csp2?.match(/'nonce-([^']+)'/)?.[1], jeton,
+      "le jeton est constant d'une réponse à l'autre : il se devine, donc il ne protège plus.");
+  } finally {
+    serveur.kill();
+  }
+});
