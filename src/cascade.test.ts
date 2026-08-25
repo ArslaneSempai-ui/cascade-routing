@@ -4593,6 +4593,12 @@ test("tout ce qui peut ouvrir une connexion est déclaré, et le compte n'est pa
     "contrainte.ts": "le même hôte génératif, pour mesurer ce que coûte la contrainte de sortie",
     "benchmark.ts": "le téléchargement d'un jeu public étiqueté, une fois — c'est une entrée "
       + "qui descend, jamais une donnée du client qui monte",
+    "capturer.mjs": "un `curl` vers 127.0.0.1 uniquement, pour établir que le serveur de "
+      + "capture qui répond est BIEN LE NÔTRE : il doit rendre le contenu d'un jeton tiré au "
+      + "hasard et écrit dans le dossier servi. Rien ne sort de la machine, et c'est la garde "
+      + "qui empêche de publier la capture d'un autre processus. Elle était invisible ici "
+      + "jusqu'au 26 août 2026 parce que l'appel passait par `bash -c` : la recherche ne le "
+      + "voyait pas, et une connexion non déclarée vivait dans l'inventaire depuis toujours",
   };
 
   const APPEL = /\bfetch\s*\(|execFileSync\(\s*["']curl["']|spawn\(\s*["']curl["']|https?\.request\s*\(|new WebSocket\s*\(/;
