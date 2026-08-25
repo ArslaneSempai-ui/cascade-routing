@@ -1575,12 +1575,21 @@ test("les règles gratuites ne recopient pas le vocabulaire du générateur", as
   const auxRegles = liste(tiers, /const (?:country|pays) = \[/);
   const auGenerateur = liste(corpus, /const COUNTRIES = \[/);
 
-  /* LE DÉNOMINATEUR : si l'une des deux lectures échoue, ce cas ne compare rien et le dirait
-     en passant. On refuse plutôt. */
-  assert.ok(auxRegles && auxRegles.length >= 3,
-    "la liste de pays des règles n'a pas été lue : ce cas ne compare rien.");
+  /*
+   * PLUS DE LISTE DANS LA RÈGLE EST LE BON ÉTAT, PAS UNE PANNE DE LECTURE.
+   *
+   * Ce cas exigeait de trouver une liste de pays dans `tiers.ts` — et il est tombé le jour où
+   * la règle a cessé d'en avoir une, c'est-à-dire le jour où le défaut a été corrigé. Une
+   * garde qui échoue quand le défaut disparaît est une garde qui décrit une version du code
+   * plutôt qu'une propriété.
+   *
+   * Ce qui doit rester impossible : que la règle réénumère le vocabulaire du générateur. Une
+   * règle sans liste satisfait ça mieux que n'importe quel recouvrement partiel.
+   */
   assert.ok(auGenerateur && auGenerateur.length >= 3,
-    "la liste de pays du générateur n'a pas été lue : ce cas ne compare rien.");
+    "la liste de pays du générateur n'a pas été lue : ce cas ne compare rien, et son silence\n"
+    + "  ressemblerait à une absence de recouvrement.");
+  if (!auxRegles || auxRegles.length === 0) return;   /* la règle n'énumère plus : c'est la cible */
 
   const communs = auxRegles!.filter((p) => auGenerateur!.includes(p));
   const recouvrement = communs.length / auxRegles!.length;

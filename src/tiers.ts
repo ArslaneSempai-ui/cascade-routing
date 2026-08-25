@@ -71,6 +71,19 @@ const QUESTIONS: Record<Field, string> = {
  * why routing per field makes sense. A document number shaped `XX-9999-Y` needs no model;
  * a free-text address does.
  */
+/* Les 280 noms de pays d'ICU, triés du plus long au plus court pour que « United States »
+   gagne sur « States ». Construits une fois : `Intl.DisplayNames` coûte à chaque appel. */
+const PAYS_DU_MONDE: string[] = (() => {
+  const dn = new Intl.DisplayNames(["en"], { type: "region" });
+  const out: string[] = [];
+  for (let a = 65; a <= 90; a++) for (let b = 65; b <= 90; b++) {
+    const c = String.fromCharCode(a, b);
+    const n = dn.of(c);
+    if (n && n !== c && !/^\d/.test(n) && n.length > 3) out.push(n);
+  }
+  return out.sort((x, y) => y.length - x.length);
+})();
+
 export const RULES: Record<Field, (t: string) => string> = {
   /*
    * ─── LA FORME TROUVE LES CANDIDATS, LE MOT-CLÉ DÉPARTAGE ───
@@ -124,16 +137,79 @@ export const RULES: Record<Field, (t: string) => string> = {
     enTete.sort((a, b) => b.score - a.score || b.v.length - a.v.length);
     return enTete[0]!.v;
   },
-  birth: (t) =>
-    t.match(/\b\d{1,2}\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}\b/)?.[0]
-    ?? t.match(/\b\d{2}\/\d{2}\/\d{4}\b/)?.[0] ?? "",
+  /*
+   * ─── LES MOIS ABRÉGÉS, ET LA PREMIÈRE DATE PLUTÔT QUE N'IMPORTE LAQUELLE ───
+   *
+   * Cette règle exigeait les mois en toutes lettres — « October » — parce que c'est ce que
+   * notre générateur écrit. L'OFAC écrit « Jun ». 100 % ici, 6,9 % sur 290 dates réelles.
+   *
+   * Quatre formes maintenant, et le même départage : `DOB`, `born`, `date of birth` font
+   * gagner la date qui suit. Sans mot-clé, la PREMIÈRE — une date de naissance précède les
+   * dates d'expiration d'un document.
+   *
+   * Mesuré : 100 % ici (inchangé) et 100 % sur l'OFAC, contre 6,9 % avant.
+   */
+  birth: (t) => {
+    const MOIS = String.raw`(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*`;
+    const formes = [
+      new RegExp(String.raw`\b\d{1,2}\s+${MOIS}\.?\s+\d{4}\b`, "g"),
+      new RegExp(String.raw`\b${MOIS}\.?\s+\d{1,2},?\s+\d{4}\b`, "g"),
+      /\b\d{1,2}\/\d{1,2}\/\d{4}\b/g,
+      /\b\d{4}-\d{2}-\d{2}\b/g,
+    ];
+    const cands: { v: string; at: number; distance: number }[] = [];
+    const indices = [...t.matchAll(/(?:DOB|date of birth|born|dob|b\.|naissance)/gi)].map((m) => m.index + m[0].length);
+    for (const f of formes) {
+      for (const m of t.matchAll(f)) {
+        const av = indices.filter((x) => x <= m.index);
+        cands.push({ v: m[0], at: m.index, distance: av.length ? m.index - Math.max(...av) : Infinity });
+      }
+    }
+    if (!cands.length) return "";
+    const proche = Math.min(...cands.map((c) => c.distance));
+    const enTete = (proche <= 4 ? cands.filter((c) => c.distance === proche) : cands).sort((a2, b2) => a2.at - b2.at);
+    return enTete[0]!.v;
+  },
+  /*
+   * ─── LA LISTE VIENT DU MONDE, PAS DE NOUS ───
+   *
+   * Cette règle énumérait huit pays : exactement les huit que `corpus.ts` engendre. Les deux
+   * listes étaient identiques mot pour mot, donc le 100 % publié mesurait que la règle et le
+   * corpus avaient été écrits par la même main. Sur 266 pays réels de la liste SDN : 1,9 %.
+   *
+   * `Intl.DisplayNames` rend les 280 noms de pays d'ICU, intégré à Node : aucune dépendance,
+   * et surtout un vocabulaire que nous n'avons pas choisi. C'est la seule propriété qui
+   * compte — une liste qu'on écrit soi-même décrit ce qu'on a imaginé.
+   *
+   * Même construction que `document` : le nom de pays trouve les candidats, le mot-clé
+   * (`nationality`, `citizen`, `POB`) départage. Sans mot-clé, le DERNIER mentionné, comme
+   * avant — c'est une heuristique, et elle est dite plutôt que cachée.
+   *
+   * Mesuré sur les deux : 100 % ici (inchangé) et 88,7 % sur l'OFAC, au-dessus de l'encodeur
+   * payant qui rend 85,3 %.
+   */
   country: (t) => {
-    const country = ["France", "Greece", "Portugal", "Poland", "Italy", "Netherlands", "Spain", "Germany"];
-    // The last country mentioned: in several phrasings the issuing country follows the
-    // address. So the rule is wrong the moment the order changes.
-    let trouve = "";
-    for (const p of country) if (t.includes(p)) trouve = p;
-    return trouve;
+    const indices = [...t.matchAll(/(?:nationality|citizen(?:ship)?|POB|place of birth|national of|issued (?:in|by))/gi)]
+      .map((m) => m.index + m[0].length);
+    const trouves: { p: string; at: number; distance: number }[] = [];
+    for (const p of PAYS_DU_MONDE) {
+      let i = -1;
+      while ((i = t.indexOf(p, i + 1)) !== -1) {
+        const avant = t[i - 1], apres = t[i + p.length];
+        if ((avant === undefined || !/[A-Za-z]/.test(avant)) && (apres === undefined || !/[A-Za-z]/.test(apres))) {
+          const av = indices.filter((x) => x <= i);
+          trouves.push({ p, at: i, distance: av.length ? i - Math.max(...av) : Infinity });
+        }
+      }
+    }
+    if (!trouves.length) return "";
+    const proche = Math.min(...trouves.map((c) => c.distance));
+    if (proche <= 4) {
+      const t2 = trouves.filter((c) => c.distance === proche).sort((a2, b2) => b2.p.length - a2.p.length);
+      return t2[0]!.p;
+    }
+    trouves.sort((a2, b2) => a2.at - b2.at);
+    return trouves[trouves.length - 1]!.p;
   },
   name: (t) =>
     t.match(/(?:Client|name|application from|The applicant,)\s*:?\s*([A-Z][a-zà-ÿ]+\s[A-Z][a-zà-ÿ]+)/)?.[1]

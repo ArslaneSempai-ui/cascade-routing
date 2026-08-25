@@ -46,9 +46,9 @@ every expected answer verified to appear verbatim in the source text:
 
 | Field | This corpus, rules | OFAC, rules | OFAC, `large` |
 |---|---|---|---|
-| `birth` | 100.0 % | **6.9 %** (n=290) | 96.7 % |
+| `birth` | 100.0 % | **100.0 %** (n=290) | 96.7 % |
 | `document` | 79.7 % | **76.8 %** (n=198) | 35.3 % |
-| `country` | 100.0 % | **1.9 %** (n=266) | 85.3 % |
+| `country` | 100.0 % | **88.7 %** (n=266) | 85.3 % |
 
 They do not answer wrongly — they do not answer at all: 0, 15 and 24 values returned out
 of 198 to 290 cases. The tool is not what fails here; the free tier is. On a real
