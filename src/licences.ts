@@ -284,7 +284,11 @@ function principal() {
     const differe = (f: string, attendu: string) => !existsSync(f) || readFileSync(f, "utf8") !== attendu;
     const perimes = [["LICENCES.md", md], ["sbom.json", bom]].filter(([f, a]) => differe(f, a)).map(([f]) => f);
     if (perimes.length > 0) {
-      console.error(`${perimes.join(" and ")} no longer matches the installed tree.\n\nRun: npm run licences`);
+      console.error(/* « matches » ou « match » selon le nombre de fichiers cités : la phrase se lit sur la
+       première sortie qu'un acheteur voit après un clone, et un accord fautif y coûte plus
+       cher qu'ailleurs. */
+      `${perimes.join(" and ")} ${perimes.length > 1 ? "no longer match" : "no longer matches"} `
+      + `the installed tree.\n\nRun: npm run licences`);
       process.exit(1);
     }
     console.log(`LICENCES.md and sbom.json are up to date (${paquets.length} packages, ${temoins().length === 0 ? "witnesses green" : "WITNESSES BROKEN"}).`);
