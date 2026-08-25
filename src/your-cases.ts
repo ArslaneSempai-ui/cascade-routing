@@ -75,6 +75,16 @@ export type Lecture = {
   ecartees: { ligne: number; champs: number }[];
   /** Lignes plus COURTES : gardées, cellules manquantes vides — mais comptées et annoncées. */
   courtes: { ligne: number; champs: number }[];
+  /**
+   * Cellules démesurées : gardées, mais nommées avec la cause la plus probable.
+   *
+   * Une valeur de champ ne fait pas un mégaoctet. Quand une cellule en fait un, c'est presque
+   * toujours un guillemet ouvert quelque part et refermé beaucoup plus loin, qui a avalé des
+   * milliers de lignes. On ne refuse pas — un texte de document peut légitimement être long,
+   * et un refus casserait des données valides — mais on le dit, parce que le lecteur verrait
+   * sinon un fichier de dix mille lignes se lire comme trois.
+   */
+  demesurees: { ligne: number; octets: number; ouvertureLigne: number }[];
   lecture: { colTexte: number; colId: number; noms: string[] };
 };
 
@@ -344,26 +354,66 @@ export function nomSur(champ: string): string {
 
 export function lireCsv(texte: string): Lecture {
   const lignes: string[][] = [];
-  let ligne: string[] = [], cellule = "", guillemets = false;
+  let ligne: string[] = [], guillemets = false;
   /* Où la guillemet encore ouverte a été ouverte. Sans elle, le refus dirait « quelque part
      dans votre fichier », ce qui est inutilisable sur cinq mille lignes. */
   let ouvertureLigne = 0, numeroDeLigne = 1;
+
+  /*
+   * ─── LA CELLULE SE CONSTRUIT PAR TRANCHES, PAS CARACTÈRE PAR CARACTÈRE ───
+   *
+   * `cellule += c` dans cette boucle coûtait DEUX MILLE CINQ CENTS FOIS la taille du fichier
+   * quand une seule cellule est longue. Mesuré le 25 août 2026, à octets égaux :
+   *
+   *     1 Mo réparti sur 22 310 lignes   →  pic  147 Mo, 0,3 s
+   *     1 Mo dans UNE seule cellule      →  pic 2457 Mo, 6,8 s
+   *    20 Mo dans une seule cellule      →  pic 4370 Mo, 63 s, puis SIGABRT
+   *
+   * C'est la FORME du fichier qui coûte, pas sa taille — et le déclencheur le plus probable
+   * n'est pas malveillant : un guillemet ouvert puis refermé beaucoup plus loin avale des
+   * milliers de lignes dans une cellule. Un export mal formé suffit. Le cas du guillemet
+   * JAMAIS refermé était déjà refusé ; celui refermé trop tard n'avait rien pour l'arrêter.
+   *
+   * On ne recopie donc plus caractère par caractère : on retient l'indice de départ et l'on
+   * découpe le texte d'origine quand la cellule se termine. Les morceaux n'existent que pour
+   * les guillemets doublés, qui sont rares.
+   */
+  let debut = 0;
+  let morceaux: string[] | null = null;
+  const demesurees: { ligne: number; octets: number; ouvertureLigne: number }[] = [];
+  const DEMESUREE = 1_000_000;
+  const fermer = (fin: number): string => {
+    const queue = texte.slice(debut, fin);
+    const v = morceaux === null ? queue : (morceaux.push(queue), morceaux.join(""));
+    morceaux = null;
+    if (v.length >= DEMESUREE) demesurees.push({ ligne: numeroDeLigne, octets: v.length, ouvertureLigne });
+    return v;
+  };
+
   for (let i = 0; i < texte.length; i++) {
     const c = texte[i]!;
     if (guillemets) {
-      if (c === '"' && texte[i + 1] === '"') { cellule += '"'; i++; }
-      else if (c === '"') guillemets = false;
-      else { if (c === "\n") numeroDeLigne++; cellule += c; }
-    } else if (c === '"') { guillemets = true; ouvertureLigne = numeroDeLigne; }
-    else if (c === ",") { ligne.push(cellule); cellule = ""; }
+      if (c === '"' && texte[i + 1] === '"') {
+        (morceaux ??= []).push(texte.slice(debut, i + 1));   /* garde UNE des deux guillemets */
+        i++; debut = i + 1;
+      } else if (c === '"') {
+        (morceaux ??= []).push(texte.slice(debut, i));
+        guillemets = false; debut = i + 1;
+      } else if (c === "\n") numeroDeLigne++;
+    } else if (c === '"') {
+      (morceaux ??= []).push(texte.slice(debut, i));
+      guillemets = true; ouvertureLigne = numeroDeLigne; debut = i + 1;
+    } else if (c === ",") { ligne.push(fermer(i)); debut = i + 1; }
     else if (c === "\n" || c === "\r") {
+      ligne.push(fermer(i));
       if (c === "\r" && texte[i + 1] === "\n") i++;
+      debut = i + 1;
       numeroDeLigne++;
-      ligne.push(cellule); cellule = "";
       if (ligne.some((x) => x.trim() !== "")) lignes.push(ligne);
       ligne = [];
-    } else cellule += c;
+    }
   }
+  const cellule = fermer(texte.length);
   if (guillemets) {
     throw new Error(
       `Line ${ouvertureLigne} of your CSV opens a quote that is never closed.\n`
@@ -495,7 +545,7 @@ export function lireCsv(texte: string): Lecture {
     });
   });
 
-  return { champs, cas, ecartees, courtes, lecture: { colTexte, colId, noms } };
+  return { champs, cas, ecartees, courtes, demesurees, lecture: { colTexte, colId, noms } };
 }
 
 /** Des règles fournies par le lecteur, en expressions régulières nommées par champ. */
@@ -1037,7 +1087,7 @@ Nothing leaves your machine: the models are local and this path makes no network
    */
   const echantillonBrut = arg("sample");
   const echantillon = lireEchantillon(echantillonBrut);
-  let { champs, cas, ecartees, courtes, lecture } = lireCsv(readFileSync(fichier, "utf8"));
+  let { champs, cas, ecartees, courtes, demesurees, lecture } = lireCsv(readFileSync(fichier, "utf8"));
 
   /*
    * UN CORPUS VIDE NE PRODUIT PAS UN DOCUMENT QUI RESSEMBLE À UN AUDIT.
@@ -1166,6 +1216,21 @@ Nothing leaves your machine: the models are local and this path makes no network
    * comme une erreur de l'outil : l'export cassé du client dégradait le taux qu'on lui
    * montrait, et il n'aurait jamais su pourquoi.
    */
+  if (demesurees.length > 0) {
+    /*
+     * On NOMME la cause la plus probable au lieu de laisser le lecteur découvrir seul que son
+     * fichier de dix mille lignes s'est lu comme trois. Une valeur de champ ne fait pas un
+     * mégaoctet ; un guillemet ouvert et refermé mille lignes plus loin, si. On n'interdit
+     * pas — un texte de document peut légitimement être long, et refuser casserait des
+     * données valides — mais un silence ici coûterait au client une mesure entière.
+     */
+    const d = demesurees[0]!;
+    console.log(`  ${demesurees.length} cell(s) are over 1 MB — the largest is ${(d.octets / 1e6).toFixed(1)} MB, `
+      + `ending at line ${d.ligne}.`);
+    console.log(`  A field value is not a megabyte. The usual cause is a quote opened at line `
+      + `${d.ouvertureLigne} and closed much later, which swallows every line in between into one `
+      + `cell. If your export is meant to hold long text, this is fine and nothing was dropped.`);
+  }
   if (courtes.length > 0) {
     console.log(`  ${courtes.length} row(s) have fewer cells than the ${lecture.noms.length} `
       + `columns named in the header — line ${courtes.slice(0, 5).map((c) => c.ligne).join(", ")}`

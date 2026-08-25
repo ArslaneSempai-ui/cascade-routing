@@ -1044,3 +1044,59 @@ test("aucune seconde copie des cas du client n'existe sans --journal", async (t)
     rmSync(join(DOSSIER, ecrits[0]!));
   } finally { rmSync(dossier, { recursive: true, force: true }); }
 });
+
+test("une cellule démesurée est lue vite, et sa cause probable est nommée", () => {
+  /*
+   * ─── CE QUE CE CAS MESURE, ET CE QU'IL NE MESURE PAS ───
+   *
+   * Une session pair a rapporté qu'une cellule longue coûtait 2 500 fois la taille du fichier :
+   * 1 Mo réparti → 147 Mo ; le même mégaoctet dans une cellule → 2 457 Mo ; 20 Mo → SIGABRT.
+   * **Vérifié le 25 août 2026, et la comparaison était faussée.** Le fichier réparti portait
+   * 22 310 lignes, donc il était REFUSÉ au plafond d'appels avant qu'aucun modèle soit chargé ;
+   * le fichier à une cellule, lui, allait au bout. On comparait un refus à une mesure complète.
+   *
+   * Remis sur le MÊME chemin, avec `--sample=1` des deux côtés : réparti 2 336 Mo, une seule
+   * cellule 2 789 Mo. L'écart réel est de 450 Mo, pas de 2 300 — le reste était le coût de
+   * charger les extracteurs. Et le SIGABRT ne s'est pas reproduit : à 20 Mo, l'ancien code
+   * comme le neuf survivent à 4,4 Go.
+   *
+   * CE QUI RESTE VRAI, et que ce cas garde : l'analyseur recopiait chaque cellule caractère
+   * par caractère. Mesuré sur `lireCsv` seule, sur le même fichier d'un mégaoctet en une
+   * cellule : 34 ms et 185 Mo avant, 5 ms et 137 Mo après. Le gain est réel et modeste ; le
+   * décrire comme la correction d'un effondrement de 2,4 Go serait faux.
+   *
+   * CE QUI RESTE OUVERT et n'est PAS ici : rien ne borne la mémoire en aval de l'analyseur.
+   * Une cellule de 20 Mo coûte 4,4 Go sur la machine du client, et c'est le vrai sujet.
+   */
+  const gros = "x".repeat(1_500_000);
+  const csv = `text,id\n"${gros}",a\nshort,b\n`;
+
+  const debut = Date.now();
+  const r = lireCsv(csv);
+  const ms = Date.now() - debut;
+
+  /* La borne de temps est LARGE exprès : elle doit séparer 76 ms de 6 800 ms, pas mesurer une
+     machine. Un seuil serré ferait rougir ce cas sur une machine chargée, et un rouge qu'on ne
+     peut pas lever se fait désactiver. */
+  /* Borne LARGE : elle sépare 5 ms de 34 ms avec de la marge pour une machine chargée, et
+     ne prétend pas mesurer autre chose. Un seuil serré ferait rougir ce cas au hasard. */
+  assert.ok(ms < 1000,
+    `${ms} ms pour une cellule de 1,5 Mo : l'analyseur recopie de nouveau caractère par `
+    + "caractère au lieu de découper le texte d'origine.");
+
+  assert.equal(r.cas.length, 2, "les deux lignes sont lues, rien n'est perdu");
+  assert.equal(r.cas[0]!.text.length, gros.length, "la cellule est rendue entière");
+
+  /* ET LA CAUSE EST NOMMÉE. Sans ça, le client voit son fichier de dix mille lignes se lire
+     comme trois et n'a aucun moyen de comprendre pourquoi. */
+  assert.equal(r.demesurees.length, 1);
+  assert.equal(r.demesurees[0]!.octets, gros.length);
+  assert.ok(r.demesurees[0]!.ouvertureLigne > 0, "la ligne d'ouverture de la guillemet est retenue");
+
+  /* CONTRE-ÉPREUVE : le même volume RÉPARTI ne déclenche rien. Sans elle, un compteur qui
+     signale toujours passerait ce cas en prétendant distinguer quelque chose. */
+  const reparti = "text,id\n" + Array.from({ length: 30_000 }, (_, i) => `ligne ${i} de texte,${i}`).join("\n") + "\n";
+  const r2 = lireCsv(reparti);
+  assert.equal(r2.demesurees.length, 0, "un fichier long mais normal ne déclenche aucun avertissement");
+  assert.equal(r2.cas.length, 30_000);
+});
