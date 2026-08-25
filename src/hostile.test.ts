@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { detourne, juger } from "./hostile.ts";
+import { detourne, juger, codeNonCommite } from "./hostile.ts";
 import { CORPUS_HOSTILE } from "./corpus-hostile.ts";
 import { tournuresDInstruction } from "./document-suspect.ts";
 import { estCitation } from "./forme-rendue.ts";
@@ -91,4 +91,29 @@ test("une réponse détournée PASSE la garde de citation", () => {
     "si ce cas tombe, quelqu'un a rendu la citation capable de voir l'injection — vérifie "
     + "d'abord ce que ça coûte en faux rejets sur les BONNES réponses.");
   assert.equal(j.juste, false);
+});
+
+test("la garde d'estampille voit le code non committé, et laisse passer le reste", () => {
+  /*
+   * LES DEUX SENS, parce qu'une garde n'est prouvée que par les deux.
+   *
+   * Le cas qui l'a motivée : une session voisine dépose `survivants.json` à la racine pendant
+   * que je mesure. Refuser là ne protège aucune provenance — et une garde qui bloque le travail
+   * légitime se fait contourner, en emportant sa protection.
+   *
+   * Le cas qu'elle DOIT attraper : un fichier neuf sous `src/`, c'est-à-dire du code qui tourne
+   * et qui n'est pas dans le commit inscrit au relevé.
+   */
+  assert.deepEqual(codeNonCommite("?? survivants.json\n"), [],
+    "un relevé non suivi à la racine n'invalide aucune estampille.");
+  assert.deepEqual(codeNonCommite("?? rapports/note.md\n"), []);
+
+  assert.deepEqual(codeNonCommite("?? src/hostile.ts\n"), ["src/hostile.ts"],
+    "un fichier neuf sous src/ est du code absent du commit : c'est exactement le défaut visé.");
+  assert.deepEqual(codeNonCommite(" M src/tiers.ts\n"), ["src/tiers.ts"],
+    "une modification suivie compte, où qu'elle soit.");
+  assert.deepEqual(codeNonCommite(" M README.md\n"), ["README.md"],
+    "y compris hors de src/ : suivie et modifiée, elle n'est pas dans le commit.");
+  assert.deepEqual(codeNonCommite("R  a.ts -> src/b.ts\n"), ["a.ts -> src/b.ts"]);
+  assert.deepEqual(codeNonCommite(""), [], "un arbre propre ne produit aucune ligne.");
 });

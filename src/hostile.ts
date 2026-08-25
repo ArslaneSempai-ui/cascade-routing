@@ -66,6 +66,32 @@ export type Releve = {
  * l'égalité exacte le compterait comme un échec ordinaire du modèle. On préfère un chiffre
  * qui surestime le risque à un chiffre qui l'endort.
  */
+/**
+ * CE QUI REND L'ESTAMPILLE FAUSSE, ET CE QUI NE LA REND PAS FAUSSE.
+ *
+ * La garde existe pour une seule raison : que le commit inscrit dans le relevé contienne
+ * vraiment le code qui a produit les chiffres. Ce qui la met en défaut, c'est donc du CODE
+ * absent du commit — une modification suivie, ou un fichier neuf sous `src/` que personne n'a
+ * encore committé.
+ *
+ * Ce qui ne la met PAS en défaut : un fichier non suivi à la racine. Plusieurs sessions
+ * travaillent dans ce dépôt et y déposent des relevés intermédiaires ; refuser de mesurer
+ * parce qu'une collègue a laissé un JSON à la racine ne protège aucune provenance, et une
+ * garde qui bloque le travail légitime finit contournée — en emportant sa protection.
+ *
+ * Le tri se fait sur le CHEMIN, pas sur le statut : un fichier neuf sous `src/` est du code
+ * qui tourne et qui n'est pas dans le commit. C'est exactement le cas que la garde vise.
+ */
+export function codeNonCommite(porcelain: string): string[] {
+  return porcelain.split("\n").map((l) => l.trimEnd()).filter((l) => l.length > 0)
+    .filter((l) => {
+      const chemin = l.slice(3).split(" -> ").pop()!;
+      if (l.startsWith("??")) return chemin.startsWith("src/");
+      return true;
+    })
+    .map((l) => l.slice(3));
+}
+
 export function detourne(rendu: string, charge: string | null): boolean {
   if (charge === null) return false;
   const v = normaliserReponse(charge);
@@ -182,13 +208,18 @@ async function principal(): Promise<void> {
     return;
   }
 
+  const racine = fileURLToPath(new URL("..", import.meta.url));
   const commit = execFileSync("git", ["rev-parse", "--short", "HEAD"],
-    { cwd: fileURLToPath(new URL("..", import.meta.url)), encoding: "utf8" }).trim();
-  const sale = execFileSync("git", ["status", "--porcelain"],
-    { cwd: fileURLToPath(new URL("..", import.meta.url)), encoding: "utf8" }).trim().length > 0;
+    { cwd: racine, encoding: "utf8" }).trim();
+  const sale = codeNonCommite(execFileSync("git", ["status", "--porcelain"],
+    { cwd: racine, encoding: "utf8" })).length > 0;
   if (sale) {
-    console.error("\n  Arbre modifié : commite avant de mesurer. Un relevé estampillé d'un commit");
-    console.error("  qui ne contient pas le code mesuré est une fausse provenance, et elle se cite.\n");
+    const quoi = codeNonCommite(execFileSync("git", ["status", "--porcelain"],
+      { cwd: racine, encoding: "utf8" }));
+    console.error("\n  Du code n'est pas dans le commit — commite avant de mesurer :");
+    for (const f of quoi.slice(0, 8)) console.error(`    ${f}`);
+    console.error("\n  Un relevé estampillé d'un commit qui ne contient pas le code mesuré porte");
+    console.error("  une fausse provenance, et une fausse provenance se cite.\n");
     process.exit(1);
   }
 
