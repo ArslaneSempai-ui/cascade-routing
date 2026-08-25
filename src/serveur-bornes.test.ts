@@ -1,9 +1,13 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { createServer } from "node:http";
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import type { AddressInfo } from "node:net";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { PLAFOND_CORPS } from "./server.ts";
+import { creerEcouteur, PLAFOND_CORPS } from "./server.ts";
 
 /*
  * TOUTE ROUTE POST PORTE LA BORNE DE CORPS — ET LA LISTE VIENT DU ROUTEUR.
@@ -137,4 +141,83 @@ test("la politique de contenu est stricte ET la page reste exécutable", { timeo
   } finally {
     serveur.kill();
   }
+});
+
+/*
+ * ─── LA GARDE QUI REFUSE UNE PAGE DONT LE SCRIPT EN LIGNE N'A PAS PU ÊTRE MARQUÉ ───
+ *
+ * Le cas ci-dessus tient le sens « la vraie page part bien marquée ». Il ne dit RIEN de
+ * l'autre sens : ce qui arrive quand la balise change de forme. Et rien ne pouvait le dire,
+ * parce que le chemin de la page était calculé depuis `import.meta.url` — le seul moyen de
+ * servir une page d'une autre forme aurait été de réécrire le `src/ui.html` du dépôt vivant,
+ * que cinq fichiers lisent dans des processus PARALLÈLES. `creerEcouteur(chemin)` prend donc
+ * le chemin en paramètre, avec la production pour valeur par défaut.
+ *
+ * On frappe la ROUTE, pas une fonction en isolation : c'est le point d'appel qui portait les
+ * deux défauts mesurés le 26 août 2026 — l'ordre du `writeHead`, et une condition trop large.
+ */
+async function servir(page: string): Promise<{ fermer: () => void; url: string }> {
+  const f = join(mkdtempSync(join(tmpdir(), "cascade-ui-")), "ui.html");
+  writeFileSync(f, page);
+  const s = createServer(creerEcouteur(f));
+  await new Promise<void>((r) => s.listen(0, "127.0.0.1", () => r()));
+  return { fermer: () => s.close(), url: `http://127.0.0.1:${(s.address() as AddressInfo).port}/` };
+}
+
+test("une balise en ligne que le jeton ne marque pas refuse la page, et le DIT",
+  /* LA BORNE DE TEMPS EST DE LA MESURE, PAS DE LA PRUDENCE. Le défaut de l'ordre réintroduit
+     à la main le 26 août 2026 : la réponse ne partait JAMAIS, et sans borne le fichier restait
+     suspendu — j'ai dû le tuer après 133 s. Un rouge qui pend se lit comme une machine lente,
+     pas comme une garde qui a parlé. */
+  { timeout: 30_000 }, async () => {
+  /* `defer` suffit : la balise n'est plus littéralement `<script type="module">`, donc le
+     remplacement la manque, donc elle partirait NUE sous une politique qui la refuse. */
+  const { fermer, url } = await servir(
+    '<!doctype html><title>x</title><script type="module" defer>1</script>');
+  try {
+    const r = await fetch(url);
+    assert.equal(r.status, 400,
+      `une page dont le script en ligne n'a pas pu être marqué rend ${r.status}. Elle doit être `
+      + "REFUSÉE : servie telle quelle, le navigateur rejette le script et l'écran est vide, "
+      + "sans une erreur de console.");
+    const { erreur } = await r.json() as { erreur: string };
+    /*
+     * L'ASSERTION PORTE SUR LE MESSAGE, ET C'EST ELLE QUI A FORCÉ LA RÉPARATION.
+     *
+     * Mesuré le 26 août 2026 : la garde partait bien, et son texte n'atteignait PERSONNE.
+     * `res.writeHead(200, …)` précédait le contrôle, donc le `catch` du routeur rappelait
+     * `writeHead` sur une réponse déjà engagée → `ERR_HTTP_HEADERS_SENT` levé dans le
+     * gestionnaire d'erreur, hors de toute capture. Côté client : « Empty reply from server »,
+     * aucun statut, aucun texte ; puis `GET /api/etat` → 000, SERVEUR MORT. Un cas qui se
+     * serait contenté d'exiger « ça jette » serait resté vert sur ce défaut-là.
+     */
+    assert.match(erreur, /inline <script> the nonce could not mark/,
+      `le refus ne nomme pas la cause : « ${erreur} ». Sans elle, celui qui touche à ui.html ne `
+      + "sait pas que c'est la forme de sa balise qui a vidé la page.");
+    assert.match(erreur, /rather than weakening the policy/,
+      `le refus ne ferme pas la sortie facile : « ${erreur} ». Le réflexe devant un script `
+      + "refusé est d'ajouter 'unsafe-inline', qui vide la politique de tout intérêt.");
+  } finally { fermer(); }
+});
+
+test("un script EXTERNE de même origine n'est pas un script nu", { timeout: 30_000 }, async () => {
+  /*
+   * CONTRE-ÉPREUVE DE LA CONDITION, ET ELLE A ÉTÉ ROUGE.
+   *
+   * La condition d'origine — « le remplacement n'a rien changé » — disait autre chose que
+   * « un script en ligne est resté nu ». Mesuré le 26 août 2026 sur cette page exacte :
+   * refus, « Empty reply from server », serveur mort. Or sortir le script en ligne dans un
+   * fichier est le durcissement qu'on RECOMMANDE, et `script-src 'self'` l'autorise
+   * pleinement. Sans ce cas, la réparation de la condition se reperdrait au premier
+   * remaniement qui la trouverait « plus simple » écrite comme avant.
+   */
+  const { fermer, url } = await servir(
+    '<!doctype html><title>x</title><script type="module" src="/graphes.js"></script>');
+  try {
+    const r = await fetch(url);
+    assert.equal(r.status, 200,
+      `une page dont le seul script est externe et de même origine est refusée (${r.status}). `
+      + "La garde lit l'effet du remplacement au lieu de l'invariant, qui est : aucun script EN "
+      + "LIGNE ne reste nu.");
+  } finally { fermer(); }
 });

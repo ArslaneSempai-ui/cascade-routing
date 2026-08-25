@@ -344,7 +344,23 @@ export const ENTETES_DE_SECURITE: Record<string, string> = {
   "permissions-policy": "camera=(), microphone=(), geolocation=()",
 };
 
-const serveur = createServer(async (req, res) => {
+/*
+ * LE CHEMIN DE LA PAGE EST UN PARAMÈTRE, POUR LA RAISON ÉCRITE DANS `readProfiles`.
+ *
+ * La garde qui refuse une page dont le script en ligne n'a pas pu être marqué ne peut se
+ * déclencher qu'en servant une page d'une AUTRE FORME. Le chemin étant calculé depuis
+ * `import.meta.url`, le seul déclenchement possible aurait été de réécrire le `src/ui.html`
+ * du dépôt VIVANT — que cinq fichiers lisent dans des processus PARALLÈLES sous `node --test`.
+ * Résultat : on pouvait retirer le `throw` sans qu'un seul cas bouge.
+ *
+ * La valeur par défaut EST la production : `creerEcouteur()` sans argument sert la vraie page,
+ * donc le point d'appel réel reste éprouvé — c'est ce que fait le cas « la politique de contenu
+ * est stricte ET la page reste exécutable », qui lance le vrai processus. Seuls les témoins de
+ * la forme de la balise passent un bac à sable.
+ */
+const CHEMIN_UI = fileURLToPath(new URL("./ui.html", import.meta.url));
+
+async function ecouteur(req: IncomingMessage, res: ServerResponse, cheminUi: string): Promise<void> {
   /* AVANT tout, y compris avant le 429 : une réponse d'erreur est une réponse, et c'est
      souvent celle qu'un attaquant sait provoquer. */
   for (const [nom, valeur] of Object.entries(ENTETES_DE_SECURITE)) res.setHeader(nom, valeur);
@@ -379,18 +395,39 @@ const serveur = createServer(async (req, res) => {
       }
     }
     if (url.pathname === "/") {
-      res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" });
-      /* Le jeton se pose sur le script EN LIGNE. `assert` plutôt que remplacement silencieux :
-         si la balise change de forme, la page part sans jeton, se fait refuser par sa propre
-         politique, et n'affiche RIEN — un échec qu'il vaut mieux voir ici qu'à l'écran. */
-      const brut = readFileSync(fileURLToPath(new URL("./ui.html", import.meta.url)), "utf8");
+      /*
+       * Le jeton se pose sur le script EN LIGNE. On REFUSE plutôt que de remplacer en silence :
+       * si la balise change de forme, la page part sans jeton, se fait refuser par sa propre
+       * politique, et n'affiche RIEN — un échec qu'il vaut mieux voir ici qu'à l'écran.
+       *
+       * ON LIT ET ON MARQUE AVANT D'ENGAGER LA RÉPONSE. Le `writeHead(200)` précédait ce
+       * contrôle : le `throw` partait bien, mais le `catch` rappelait `writeHead` sur une
+       * réponse déjà engagée → `ERR_HTTP_HEADERS_SENT` levé DANS le gestionnaire d'erreur,
+       * hors de toute capture. Mesuré le 26 août 2026, page mutée : le client recevait
+       * « Empty reply from server » — pas une ligne de statut, aucun 400, aucun texte — et le
+       * PROCESSUS S'ARRÊTAIT, la requête suivante rendant 000. Les quatre phrases écrites
+       * ci-dessous n'atteignaient donc personne ; ce que l'exploitant obtenait était une pile.
+       *
+       * ET LA CONDITION PORTE SUR L'INVARIANT, PAS SUR L'EFFET DU REMPLACEMENT.
+       * « le replace n'a rien changé » disait autre chose que « un script en ligne est resté
+       * nu » : elle refusait aussi une page dont le seul script est EXTERNE. Mesuré avec
+       * `<script type="module" src="/graphes.js">` : même origine, pleinement autorisé par
+       * `script-src 'self'`, et pourtant même refus, même serveur mort. Sortir le script en
+       * ligne dans un fichier est précisément le durcissement qu'on recommande, et la garde le
+       * cassait. Le motif est celui du témoin de serveur-bornes.test.ts, volontairement : le
+       * contrôle et son témoin lisent la page servie de la même façon.
+       */
+      const brut = readFileSync(cheminUi, "utf8");
       const avecJeton = brut.replace(/<script type="module">/g, `<script type="module" nonce="${jeton}">`);
-      if (avecJeton === brut && /<script/.test(brut)) {
+      const nus = [...avecJeton.matchAll(/<script(?![^>]*\bsrc=)([^>]*)>/g)]
+        .filter((m) => !m[1]!.includes(`nonce="${jeton}"`));
+      if (nus.length > 0) {
         throw new Error(
-          "ui.html holds a <script> the nonce could not mark: the tag changed shape. Without "
-          + "its nonce the content policy refuses the script and the page renders EMPTY, with "
-          + "no error anywhere. Fix the insertion rather than weakening the policy.");
+          `ui.html holds ${nus.length} inline <script> the nonce could not mark: the tag changed `
+          + "shape. Without its nonce the content policy refuses the script and the page renders "
+          + "EMPTY, with no error anywhere. Fix the insertion rather than weakening the policy.");
       }
+      res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" });
       res.end(avecJeton);
       return;
     }
@@ -473,7 +510,13 @@ const serveur = createServer(async (req, res) => {
   } catch (e) {
     json(res, { erreur: sansChemins(String((e as Error).message ?? e)) }, 400);
   }
-});
+}
+
+/** L'écouteur du serveur. Sans argument, il sert la vraie page — voir le commentaire ci-dessus. */
+export const creerEcouteur = (cheminUi: string = CHEMIN_UI) =>
+  (req: IncomingMessage, res: ServerResponse): Promise<void> => ecouteur(req, res, cheminUi);
+
+const serveur = createServer(creerEcouteur());
 
 /*
  * On écoute la boucle locale, pas toutes les interfaces : `listen(PORT)` seul rend l'outil

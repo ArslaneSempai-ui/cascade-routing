@@ -39,7 +39,7 @@ import { memoireDisponibleMo, etatMachine as etatMachineInterne,
 import { ASSUMPTIONS, UNITS, BOUNDS, pricePerThousandExtractions, accuracy } from "./assumptions.ts";
 import { wilson, rate, writeRate, distinguishable, precision, ENOUGH as ENOUGH_CAS } from "./interval.ts";
 import { PLAUSIBLE, bands, ETIQUETTE, advise } from "./sensitivity.ts";
-import { litLeTexte } from "./mesurer-ocr.ts";
+import { litLeTexte, mesurer, CHROME } from "./mesurer-ocr.ts";
 import { inclinaison, texte as texteDesBlocs, lire, ceQuiManque } from "./ocr.ts";
 
 /* ── the split, which is the whole reason the measurement means anything ── */
@@ -3537,6 +3537,223 @@ test("un palier qui ne lit pas le document est écarté, et il est détecté par
   assert.equal(await litLeTexte("rules", temoins), true,
     "`rules` extrait par motifs dans le texte : brouillé, il doit se tromper. S'il passe pour "
     + "aveugle, la garde écarte des paliers valides et la mesure ne portera plus sur rien.");
+});
+
+/*
+ * LES CINQ REFUS DE LA PASSE DE MESURE, dont aucun n'avait jamais été lu.
+ *
+ * Rien n'appelait `mesurer` : la passe ne tourne qu'à la main, et ses refus étaient du code que
+ * personne n'avait vu s'exécuter. Trois d'entre eux interrogent la machine — l'étage de lecture,
+ * le moteur de rendu, l'état de git — et sur la machine qui mesure les trois conditions sont
+ * fausses. On ne désinstalle pas Chrome pour lire un message.
+ *
+ * Ils sont devenus atteignables par un troisième paramètre optionnel, `EntreesDeLaPasse`, dont
+ * chaque entrée vaut par défaut ce qu'elle valait avant : `npm run ocr` n'a pas changé d'un mot.
+ *
+ * CHAQUE CAS A DEUX MOITIÉS. Le refus part quand il doit, ET il laisse passer quand il doit. Sans
+ * la seconde, un `throw` inconditionnel passerait la première et plus aucune machine ne pourrait
+ * mesurer — sans que rien ne le signale, puisque rien ici ne lançait cette passe.
+ */
+
+/* Un chemin qui existe sur n'importe quelle machine : ce fichier-ci. Il sert de moteur de rendu
+   PRÉSENT là où le cas doit dépasser la garde de Chrome sans dépendre de Chrome. */
+const CHEMIN_QUI_EXISTE = fileURLToPath(import.meta.url);
+
+/* Une passe qui traverse les trois refus d'entrée et s'arrête au corpus : rien ne manque, le
+   moteur est là, l'arbre est propre. Avec zéro document elle refuse AVANT le premier rendu et
+   avant le chargement des modèles — c'est la preuve, à quelques millisecondes, qu'on a bien
+   dépassé la garde qu'on éprouve, et non qu'elle s'est tue par accident. */
+const PASSE_QUI_VA_AU_CORPUS = {
+  sonde: () => null,
+  chrome: CHEMIN_QUI_EXISTE,
+  arbre: () => ({ commit: "temoin0", sale: false }),
+  argv: [] as string[],
+};
+
+test("l'étage de lecture manquant arrête la passe, et sa raison arrive intacte", async () => {
+  const raison = "`swiftc` est introuvable : il vient avec les outils de ligne de commande de "
+    + "Xcode (`xcode-select --install`).";
+
+  /* L'ASSERTION PORTE SUR LE MESSAGE, PAS SUR LE FAIT DE JETER. Ce que cette garde vaut, c'est
+     que le diagnostic de `ceQuiManque` arrive TEL QUEL à celui qui lance la mesure : il nomme la
+     plateforme, ou la commande qui installe ce qui manque. Réécrit en « OCR unavailable », il
+     l'envoie chercher au mauvais endroit — et, sans la garde, ce serait un « command failed »
+     après 120 rendus Chrome. */
+  await assert.rejects(
+    () => mesurer(2, ["rules"], { ...PASSE_QUI_VA_AU_CORPUS, sonde: () => raison }),
+    (e: Error) => {
+      assert.equal(e.message, raison,
+        "le refus ne reprend plus mot pour mot ce que la sonde a dit : le lecteur apprend qu'il "
+        + "manque quelque chose, pas QUOI installer, et la garde perd tout ce qui la rendait utile.");
+      return true;
+    });
+
+  /* CONTRE-ÉPREUVE — sonde silencieuse, la garde doit LAISSER PASSER. Le refus attendu vient
+     alors d'ailleurs, du corpus vide, ce qui prouve qu'on a dépassé cette ligne-ci. */
+  await assert.rejects(
+    () => mesurer(0, ["rules"], PASSE_QUI_VA_AU_CORPUS), /No documents to measure on/,
+    "la garde de l'étage de lecture refuse alors que la sonde ne signale rien : plus une seule "
+    + "machine ne peut mesurer, y compris celles qui ont tout ce qu'il faut.");
+});
+
+test("sans le moteur de rendu, la mesure refuse au lieu de mesurer le vide", async () => {
+  const dossier = mkdtempSync(join(tmpdir(), "chrome-"));
+  try {
+    const nullePart = join(dossier, "Google Chrome");
+
+    await assert.rejects(
+      () => mesurer(2, ["rules"], { ...PASSE_QUI_VA_AU_CORPUS, chrome: nullePart }),
+      (e: Error) => {
+        /* LE MESSAGE DIT LE RÔLE, pas seulement le nom. « Chrome not found » se lit comme une
+           dépendance optionnelle qu'on contourne ; ce qui doit arriver au lecteur, c'est que sans
+           lui il n'y a AUCUNE IMAGE — c'est ça qui l'empêche de commenter la garde. */
+        assert.match(e.message, /RENDERS the documents as images/,
+          "le refus ne dit plus à quoi Chrome sert ici : il se lit comme une dépendance qu'on "
+          + "peut contourner, alors qu'il n'y a sans elle aucune image à lire.");
+        assert.match(e.message, /this measurement has no object/,
+          "le refus ne dit plus que la mesure est SANS OBJET : il devient une panne d'outil parmi "
+          + "d'autres, et quelqu'un le neutralisera pour « faire tourner quand même ».");
+        return true;
+      });
+
+    /* CONTRE-ÉPREUVE — un chemin qui EXISTE doit passer. Sans elle, un `existsSync` inversé, ou
+       un refus inconditionnel, passerait les deux assertions ci-dessus. */
+    await assert.rejects(
+      () => mesurer(0, ["rules"], PASSE_QUI_VA_AU_CORPUS), /No documents to measure on/,
+      "la garde refuse un moteur de rendu pourtant présent : plus aucune machine ne peut mesurer.");
+  } finally {
+    rmSync(dossier, { recursive: true, force: true });
+  }
+});
+
+test("un arbre modifié arrête la mesure, et le refus porte son issue", async () => {
+  const sale = () => ({ commit: "abc1234", sale: true });
+
+  /* UN REFUS A BESOIN D'UNE ISSUE, sinon c'est la garde qu'on commente. Les deux moitiés
+     s'éprouvent ici : le message NOMME le drapeau, et le drapeau MARCHE. */
+  await assert.rejects(
+    () => mesurer(2, ["rules"], { ...PASSE_QUI_VA_AU_CORPUS, arbre: sale }),
+    (e: Error) => {
+      assert.match(e.message, /--arbre-modifie/,
+        "le refus n'offre plus d'issue nommée : le prochain qui a besoin de mesurer sur un arbre "
+        + "sale supprimera la garde, et plus rien ne verra passer un relevé irreproductible.");
+      assert.match(e.message, /sale: true/,
+        "le refus ne prévient plus de ce que l'issue coûte — le relevé portera « sale: true » — "
+        + "et une issue confortable devient l'habitude au lieu de rester l'exception.");
+      return true;
+    });
+
+  /* L'ISSUE EXISTE VRAIMENT. Avec le drapeau on dépasse la garde, et le refus suivant vient du
+     corpus vide. Sans cette moitié le message pourrait promettre un drapeau mort, ce qui est la
+     pire forme du refus : celle qu'on finit par retirer du code. */
+  await assert.rejects(
+    () => mesurer(0, ["rules"], { ...PASSE_QUI_VA_AU_CORPUS, arbre: sale, argv: ["--arbre-modifie"] }),
+    /No documents to measure on/,
+    "`--arbre-modifie` ne débloque plus rien : le refus promet une issue qui n'existe pas.");
+
+  /* CONTRE-ÉPREUVE — arbre propre, aucun refus de ce côté. */
+  await assert.rejects(
+    () => mesurer(0, ["rules"], PASSE_QUI_VA_AU_CORPUS), /No documents to measure on/,
+    "la garde refuse un arbre propre : plus personne ne peut mesurer sans drapeau d'exception.");
+});
+
+test("un corpus vide se refuse pour ce qu'il est, et non comme une cécité des paliers", async () => {
+  /*
+   * LE DIAGNOSTIC DÉSIGNAIT LE MAUVAIS ENDROIT. Sur zéro document la boucle de `litLeTexte` ne
+   * tourne pas et la fonction rend `false` pour TOUT LE MONDE : la sélection ne gardait personne
+   * et la passe accusait les paliers d'une cécité qu'ils n'ont pas. Mesuré avant la correction :
+   * `mesurer(0, ["rules"])` jetait « None of the 1 tiers … reads the text it is given » — sur
+   * `rules`, qui lit. On serait allé corriger un palier pour une faute qui est dans l'appel.
+   */
+  await assert.rejects(
+    () => mesurer(0, ["rules"], PASSE_QUI_VA_AU_CORPUS),
+    (e: Error) => {
+      assert.match(e.message, /empty corpus/,
+        "un corpus vide ne se nomme plus : le refus ne dit pas que c'est le nombre de documents "
+        + "demandé qui est en cause, et on ira chercher ailleurs.");
+      assert.doesNotMatch(e.message, /reads the text it is given/,
+        "un corpus vide se rapporte encore comme « aucun palier ne lit » : le diagnostic accuse "
+        + "les paliers alors que la cause est le nombre de cas demandé, et on les corrigera pour rien.");
+      return true;
+    });
+
+  /* SA CONTRE-ÉPREUVE EST LE CAS SUIVANT, et elle n'est pas ici parce qu'elle coûte plus cher :
+     dépasser ce refus mène droit à l'ouverture des extracteurs, donc à des poids qui peuvent
+     manquer. Le cas suivant demande DEUX documents, les traverse, et échoue plus loin — un refus
+     inconditionnel sur le corpus se lirait dans son message. */
+});
+
+test("aucun palier ne lit le document : la mesure refuse au lieu de publier des zéros", async (t) => {
+  /* La sélection appelle `extract` sur chaque palier demandé, donc la passe ouvre les extracteurs
+     avant d'y arriver. Poids absents ou coupés, ce cas tomberait pour une raison étrangère. */
+  if (!poidsEnCache()) return t.skip(diagnosticDesPoids() ?? "les poids d'encodeur ne sont pas utilisables.");
+
+  /* TÉMOIN — `human` rend la vérité terrain sans jamais regarder le document. Dégrader l'image ne
+     peut pas le faire baisser : son coût serait 0,0 point quel que soit l'état du scan. C'est la
+     forme la plus pure du vert vide — la mesure passe parce que l'instrument ne regarde pas. */
+  await assert.rejects(
+    () => mesurer(2, ["human"], PASSE_QUI_VA_AU_CORPUS),
+    (e: Error) => {
+      assert.match(e.message, /reads the text it is given/,
+        "la passe accepte de mesurer avec des paliers qui ne lisent pas : elle publiera un coût "
+        + "de 0,0 point comme une mesure, alors que l'instrument est aveugle.");
+      /* LE COMPTE VIENT DE CE QU'ON A DEMANDÉ, pas de ce qui reste. Pris sur les paliers gardés
+         — toujours vides ici — il annoncerait « None of the 0 » et n'apprendrait plus à personne
+         combien de paliers ont été écartés. */
+      assert.doesNotMatch(e.message, /None of the 0 tiers/,
+        "le refus compte les paliers RESTANTS et non ceux DEMANDÉS : il annonce toujours zéro et "
+        + "n'apprend plus combien de paliers ont été écartés.");
+      assert.match(e.message, /None of the 1 tiers/,
+        "le refus ne dit plus combien de paliers avaient été demandés : le lecteur ne peut plus "
+        + "savoir si la passe en a écarté un ou dix.");
+      assert.match(e.message, /nothing to degrade, so nothing to measure/,
+        "le refus ne dit plus POURQUOI il refuse : il se lit comme une panne de configuration et "
+        + "sera contourné en rajoutant un palier au hasard.");
+      /* ET C'EST LA CONTRE-ÉPREUVE DU REFUS DU CORPUS. Deux documents ont traversé la garde du
+         corpus vide pour arriver jusqu'ici : un refus inconditionnel là-haut se lirait dans ce
+         message-ci, qui ne serait plus celui de la sélection. */
+      assert.doesNotMatch(e.message, /empty corpus/,
+        "un corpus de deux documents se fait refuser comme vide : la garde du corpus arrête tout, "
+        + "et plus aucune passe ne démarre quel que soit le nombre de cas demandé.");
+      return true;
+    });
+});
+
+test("un palier qui lit vraiment traverse la sélection, et la passe va jusqu'au bout", async (t) => {
+  /*
+   * LA CONTRE-ÉPREUVE DE LA SÉLECTION, AU POINT D'APPEL. Une garde qui écarterait TOUT le monde
+   * passerait le cas ci-dessus sans qu'un seul chiffre soit mesurable ensuite — et rien ne le
+   * dirait, puisque cette passe ne tourne qu'à la main.
+   *
+   * Ce cas rend, convertit et lit pour de vrai : c'est la seule chose ici qui traverse toute la
+   * chaîne. UN document, mesuré à 4,3 s sur la machine de mesure ; la passe publiée en fait 120.
+   */
+  const manque = ceQuiManque();
+  if (manque) return t.skip("manque — ce cas n'a rien regardé, et il le dit.");
+  if (!existsSync(CHROME)) return t.skip("!existsSync(CHROME) — ce cas n'a rien regardé, et il le dit.");
+  if (!poidsEnCache()) return t.skip(diagnosticDesPoids() ?? "les poids d'encodeur ne sont pas utilisables.");
+
+  /* Seules l'arbre et les arguments sont remplacés : un arbre sale ferait échouer AILLEURS et le
+     rouge accuserait la mauvaise garde. La sonde et le moteur de rendu sont les vrais. */
+  const r = await mesurer(1, ["rules"], { arbre: () => ({ commit: "temoin", sale: false }), argv: [] });
+
+  assert.deepEqual(r.paliersEcartes, [],
+    "`rules` extrait par motifs DANS le texte et se fait pourtant écarter comme aveugle : la "
+    + "garde retire des paliers valides, et la mesure finira par ne plus porter sur rien.");
+  assert.equal(r.paliers.length, 1,
+    `${r.paliers.length} palier(s) mesuré(s) pour un seul demandé : la sélection ne rend plus ce `
+    + `qu'on lui a donné, et le relevé porterait des lignes qui n'ont pas été demandées.`);
+  assert.equal(r.documents, 1,
+    `le relevé annonce ${r.documents} document(s) pour un seul demandé : le nombre publié ne `
+    + `vient plus du corpus réellement parcouru.`);
+
+  /* LA CHAÎNE A VRAIMENT LU. Sans ce contrôle, un lecteur qui rendrait du vide laisserait passer
+     les assertions ci-dessus et l'écart mesuré ne serait plus le coût de l'étage de lecture mais
+     celui d'une panne. Le seuil est un PLANCHER large : mesuré 100 % des mots sur ce document. */
+  assert.ok(r.fideliteDeLaTranscription.taux > 0.5,
+    `la transcription ne retrouve que ${(r.fideliteDeLaTranscription.taux * 100).toFixed(0)} % `
+    + `des ${r.fideliteDeLaTranscription.n} mots du document : ce n'est plus la page qui est lue, `
+    + `et l'écart publié mesurerait une panne, pas le coût de l'étage.`);
 });
 
 test("le coût de l'étage de lecture est publié avec ce qu'il ne couvre pas", (t) => {

@@ -1,0 +1,236 @@
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { spawn } from "node:child_process";
+import { mkdtempSync, mkdirSync, copyFileSync, writeFileSync, chmodSync, existsSync, rmSync, realpathSync, readFileSync } from "node:fs";
+import { join, dirname } from "node:path";
+import { tmpdir } from "node:os";
+import { fileURLToPath } from "node:url";
+
+/*
+ * LA GARDE QUI EMPÊCHE « rien vu » DE SE FAIRE PASSER POUR « rien ».
+ *
+ * `egress.ts` porte la phrase la plus vendable du dépôt — « nothing leaves the machine ». Il
+ * l'établit en échantillonnant `lsof`. Quand `lsof` manque, les trois échecs rendaient le même
+ * tableau vide et le relevé publiait « no connection observed for the whole pass » APRÈS
+ * N'AVOIR RIEN REGARDÉ. Une absence d'observation ne se distinguait plus d'une observation
+ * d'absence, et c'est précisément la confusion qu'un audit se fait payer pour éviter.
+ *
+ * ─── Pourquoi ce témoin passe par un sous-processus ───
+ *
+ * `connexions()` n'est pas exportée, et son seul appelant est le `setInterval` du bloc
+ * `isMain`. Éprouver `verdictDeLsof({ code: "ENOENT" }) === "absent"` ne fermerait PAS ce
+ * site : la décision et sa conséquence sont deux lignes différentes, et rien ne dirait que le
+ * refus remonte jusqu'à la sortie de la commande au lieu d'être avalé par le minuteur. Le
+ * témoin traverse la couture, donc il lance la commande.
+ *
+ * ─── Pourquoi une COPIE de egress.ts, et pas celui du dépôt ───
+ *
+ * `FICHIER` est dérivé de `import.meta.url` : lancer le `src/egress.ts` du dépôt écraserait
+ * `egress.json` — le relevé publié — dès que la garde tombe, car le mutant va jusqu'au bout et
+ * ÉCRIT. Un témoin ne doit pas abîmer la preuve qu'il garde.
+ */
+
+/** Le dossier de `src/`, d'où l'on copie la commande et ce qu'elle importe. */
+const source = new URL(".", import.meta.url);
+
+type Bac = { tmp: string; env: NodeJS.ProcessEnv; script: string; observee: string; releve: string };
+
+/**
+ * Ce que le bac doit porter — DÉRIVÉ de `egress.ts`, jamais récité.
+ *
+ * Écrire « egress.ts, cli.ts » à la main casse par le côté silencieux, celui qui coûte : le
+ * jour où `egress.ts` importe un deuxième module du dépôt, la copie ne l'emporte pas, la
+ * commande meurt sur un import introuvable, et les cas d'en dessous accusent la garde pour
+ * une raison qui n'a rien à voir avec elle. La source qui détermine cette liste est le fichier
+ * lui-même ; on l'y lit, et on refuse de conclure si la lecture rend moins que ce qu'on sait
+ * y être — une dérivation qui rend zéro se lit sinon comme un fichier sans dépendance.
+ */
+function aCopier(): string[] {
+  const texte = readFileSync(fileURLToPath(new URL("egress.ts", source)), "utf8");
+  const internes = [...texte.matchAll(/from\s+"\.\/([^"]+)"/g)].map((m) => m[1]!);
+  if (internes.length === 0) {
+    throw new Error(
+      "aucun import relatif lu dans egress.ts : la dérivation ne marche plus, et un bac\n"
+      + "  incomplet ferait tomber ces cas sur un module introuvable — ce qui se lit comme une\n"
+      + "  garde cassée alors que la garde n'a rien fait.");
+  }
+  return ["egress.ts", ...internes];
+}
+
+/**
+ * Un bac à sable qui porte une copie de la commande, un `lsof` à nous, et rien d'autre.
+ *
+ * Le `PATH` ne contient QUE notre `bin` et le dossier de `node` : `egress.ts` fait
+ * `spawn("node", …)`, donc `node` doit s'y trouver, mais aucun `lsof` du système ne doit
+ * pouvoir répondre à la place du nôtre.
+ *
+ * `corpsDeLsof` reçoit le chemin ABSOLU du faux `lsof`. Un script qui voudrait se désigner
+ * lui-même par `$0` dépendrait de ce que l'appelant passe en `argv[0]`, ce qui n'est pas à
+ * nous ; le chemin, lui, est connu ici et ne peut pas se tromper de fichier.
+ */
+function bacASable(corpsDeLsof: (chemin: string) => string): Bac {
+  /*
+   * `realpathSync` N'EST PAS UNE COQUETTERIE.
+   *
+   * Sur macOS `tmpdir()` rend `/var/folders/…`, qui est un lien vers `/private/var/folders/…`.
+   * `isMain()` compare `import.meta.filename` — résolu — à `argv[1]` — littéral : sans cette
+   * résolution le bloc principal de `egress.ts` ne s'exécute pas du tout, la commande sort en 0
+   * sans un mot, et tous les cas de ce fichier échouent en accusant la garde. Mesuré.
+   */
+  const tmp = realpathSync(mkdtempSync(join(tmpdir(), "egress-")));
+  mkdirSync(join(tmp, "src"));
+  for (const f of aCopier()) {
+    copyFileSync(fileURLToPath(new URL(f, source)), join(tmp, "src", f));
+  }
+  /* La commande observée : elle ne fait rien, assez longtemps pour dépasser le plancher de
+     relevés. Sans ça, la version gardée et la version mutante sortiraient TOUTES DEUX en 1
+     sur « passe trop courte », et ni le relevé écrit ni le code de sortie ne diraient plus
+     la différence qui compte. */
+  const observee = join(tmp, "dort.mjs");
+  writeFileSync(observee, "setTimeout(() => {}, 700);\n");
+
+  const bin = join(tmp, "bin");
+  mkdirSync(bin);
+  const lsof = join(bin, "lsof");
+  writeFileSync(lsof, corpsDeLsof(lsof));
+  chmodSync(lsof, 0o755);
+
+  return {
+    tmp,
+    env: { PATH: `${bin}:${dirname(process.execPath)}` },
+    script: join(tmp, "src", "egress.ts"),
+    observee,
+    /* `FICHIER` vaut `../egress.json` depuis `src/` : le relevé atterrit à la racine du bac. */
+    releve: join(tmp, "egress.json"),
+  };
+}
+
+/** Lance la commande copiée et rend ce qu'un appelant peut en voir : son code et son stderr. */
+async function passe(b: Bac): Promise<{ code: number; err: string }> {
+  const p = spawn(process.execPath, [b.script, "--every=20", b.observee],
+    { env: b.env, stdio: ["ignore", "ignore", "pipe"] });
+  let err = "";
+  p.stderr!.setEncoding("utf8");
+  p.stderr!.on("data", (d: string) => { err += d; });
+  const code: number = await new Promise((r) => p.on("exit", (c) => r(c ?? 0)));
+  return { code, err };
+}
+
+test("`lsof` qui disparaît EN COURS DE PASSE : la commande refuse de conclure au lieu de publier « rien vu »", async () => {
+  /*
+   * UN `lsof` PRÉSENT AU DÉMARRAGE, ET SEULEMENT AU DÉMARRAGE.
+   *
+   * `lsofRepond()` s'exécute AVANT le spawn de la commande observée : un `PATH` sans `lsof`
+   * dès le départ sort sur un AUTRE message et n'atteint jamais la ligne gardée. La garde de
+   * `connexions()` couvre la fenêtre d'après — celle où l'outil a déjà laissé partir le trafic
+   * qu'il prétendait observer. C'est cette fenêtre-là qu'on reproduit.
+   *
+   * ET ELLE SE REPRODUIT SANS COURSE. Effacer le binaire depuis l'extérieur pendant la passe
+   * est une course, et elle a été perdue une fois sur six lancements le 26 août 2026 :
+   * `posix_spawn` résout le chemin PUIS échoue à l'exec, ce qui rend `status: 127` — donc
+   * « inattendu », donc l'AUTRE refus, une ligne plus bas. Ce cas serait vert la plupart du temps et rouge sans raison le reste, ce
+   * qui est pire qu'absent. Ici `lsof` s'efface LUI-MÊME en sortant : la disparition tombe
+   * forcément ENTRE deux relevés, puisque `execFileSync` est synchrone et que les rappels du
+   * minuteur ne se chevauchent pas. Huit lancements sur huit ont atteint la ligne visée, le
+   * 26 août 2026, contre cinq sur six pour la version qui effaçait le binaire de l'extérieur.
+   *
+   * `/bin/rm` en chemin absolu : le `PATH` du bac ne porte pas `rm`, et un `rm` introuvable
+   * laisserait le faux `lsof` en place — le témoin passerait au vert sans avoir rien éprouvé.
+   */
+  const b = bacASable((chemin) => `#!/bin/sh\n/bin/rm -f '${chemin}'\nexit 0\n`);
+  try {
+    const { code, err } = await passe(b);
+
+    /*
+     * L'ASSERTION PORTE SUR LE MESSAGE, PAS SUR LE CODE DE SORTIE.
+     *
+     * Le refus voisin — `lsof` a répondu autre chose que 1 — sort lui aussi en 1. N'asserter
+     * que le code laisserait passer un témoin qui atteint la mauvaise ligne et croit avoir
+     * fermé celle-ci.
+     */
+    assert.match(err, /`lsof` is not on this machine, so NOTHING was observed/,
+      "`lsof` a disparu pendant la passe et la commande n'a rien dit : elle publie « aucune\n"
+      + "  connexion » après n'avoir RIEN pu regarder. Une absence d'observation ne se distingue\n"
+      + "  plus d'une observation d'absence, et c'est la seule chose que ce fichier existe pour\n"
+      + "  empêcher.");
+    assert.match(err, /two different sentences/,
+      "le refus ne dit plus POURQUOI il refuse : sans cette phrase, le lecteur croit à une\n"
+      + "  panne d'outil et relance jusqu'à obtenir un vert.");
+    assert.match(err, /apt install lsof/,
+      "le refus n'offre plus d'issue : un refus sans issue finit commenté.");
+
+    /*
+     * ET LE RELEVÉ NE DOIT PAS EXISTER.
+     *
+     * Mesuré sans la garde : la passe va au bout, dépasse le plancher, sort en 0 et écrit
+     * « no connection observed for the whole pass ». C'est ce fichier-là le mensonge, pas le
+     * refus — il est daté, versionné, et c'est lui qu'un acheteur cite.
+     */
+    assert.equal(existsSync(b.releve), false,
+      "un relevé a été écrit alors que rien n'a été observé : le fichier publié affirme\n"
+      + "  l'absence de trafic sur la foi d'un outil qui n'a jamais répondu.");
+    assert.notEqual(code, 0,
+      "la commande sort en 0 après n'avoir rien observé : la chaîne d'intégration la croira.");
+  } finally {
+    rmSync(b.tmp, { recursive: true, force: true });
+  }
+});
+
+test("`lsof` qui répond pendant toute la passe : la commande CONCLUT, elle ne refuse pas", async () => {
+  /*
+   * LE TÉMOIN NÉGATIF, sans quoi le vert d'à côté ne dit pas que la garde est du bon côté.
+   *
+   * Une garde qui refuserait AUSSI l'usage normal serait retirée, pas corrigée — et le cas
+   * précédent, lui, resterait vert. `exit 1` est la réponse de `lsof` pour un processus sans
+   * socket ouverte : c'est le cas nominal, et là le vide EST la mesure.
+   */
+  const b = bacASable(() => `#!/bin/sh\nexit 1\n`);
+  try {
+    const { code, err } = await passe(b);
+    assert.doesNotMatch(err, /NOTHING was observed/,
+      "avec un `lsof` qui répond, la commande refuse quand même : la garde interdit l'usage\n"
+      + "  normal, donc elle sera retirée, et avec elle la seule chose qui tient la promesse.");
+    assert.equal(code, 0, `la passe nominale sort en ${code} au lieu de 0. stderr :\n${err}`);
+    assert.equal(existsSync(b.releve), true,
+      "la passe nominale n'écrit plus de relevé : la promesse « rien ne sort » redevient une\n"
+      + "  affirmation, puisque rien de publiable ne l'établit.");
+  } finally {
+    rmSync(b.tmp, { recursive: true, force: true });
+  }
+});
+
+test("`lsof` qui répond n'importe quoi : la commande refuse aussi, et dit quel code elle a reçu", async () => {
+  /*
+   * LE REFUS VOISIN, ET IL N'EST PAS LE MÊME.
+   *
+   * `lsof` sort en 1 quand le processus n'a aucune socket : c'est le cas nominal. Tout autre
+   * code — permission refusée, binaire cassé, `posix_spawn` qui résout le chemin puis échoue
+   * à l'exec et rend 127 — veut dire que L'OBSERVATION N'A PAS EU LIEU. Ce cas-là rendait lui
+   * aussi un tableau vide, et le relevé publiait « aucune connexion » sur cette base.
+   *
+   * Il a son propre témoin parce qu'il a sa propre ligne : rendre la première garde muette
+   * laisse celle-ci intacte, et l'inverse est vrai aussi. Un seul cas pour les deux dirait
+   * « l'une des deux tient » — ce qui n'est pas ce qu'on veut savoir.
+   *
+   * Le message DOIT porter le code reçu : sans lui le lecteur ne peut pas distinguer un `lsof`
+   * restreint par la politique de sécurité de sa machine d'un `lsof` cassé, et les deux
+   * demandent des gestes différents.
+   */
+  const b = bacASable(() => `#!/bin/sh\nexit 3\n`);
+  try {
+    const { code, err } = await passe(b);
+    assert.match(err, /`lsof` failed with code 3/,
+      "`lsof` a répondu un code qui n'est PAS celui d'un processus sans socket, et la commande\n"
+      + "  a pris ça pour « aucune connexion ». Elle publie l'absence de trafic sans avoir\n"
+      + "  regardé — et le code reçu, seul indice de ce qui a empêché l'observation, est perdu.");
+    assert.match(err, /without having looked/,
+      "le refus ne dit plus ce qu'il évite : sans cette phrase il se lit comme un caprice, et\n"
+      + "  un refus qui se lit comme un caprice se retire.");
+    assert.equal(existsSync(b.releve), false,
+      "un relevé a été écrit alors que `lsof` n'a jamais observé quoi que ce soit.");
+    assert.notEqual(code, 0,
+      "la commande sort en 0 après une observation qui n'a pas eu lieu.");
+  } finally {
+    rmSync(b.tmp, { recursive: true, force: true });
+  }
+});

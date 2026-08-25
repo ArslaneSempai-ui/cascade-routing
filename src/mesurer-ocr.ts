@@ -32,7 +32,10 @@ import { rate, writeRate, distinguishable } from "./interval.ts";
 import type { TierName } from "./paliers.ts";
 
 const SORTIE = fileURLToPath(new URL("../ocr.json", import.meta.url));
-const CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
+/* EXPORTÉ POUR QU'IL N'Y AIT QU'UNE SEULE VÉRITÉ. Un cas qui doit se sauter faute de moteur de
+   rendu a besoin de ce chemin ; recopié dans un test, il devient une seconde source qui vieillira
+   sans que rien ne le signale. */
+export const CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 
 /**
  * Rendre un document en image, comme un scanner l'aurait produit.
@@ -40,7 +43,7 @@ const CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
  * Police à chasse fixe et fond blanc : c'est le cas le plus favorable, et c'est voulu — on
  * cherche le PLANCHER du coût de l'étage, pas sa valeur sur une photographie de téléphone.
  */
-function rendre(doc: ClientFile, dossier: string): string {
+function rendre(doc: ClientFile, dossier: string, chrome: string = CHROME): string {
   const html = join(dossier, `${doc.id}.html`);
   const png = join(dossier, `${doc.id}.png`);
   const jpg = join(dossier, `${doc.id}.jpg`);
@@ -48,7 +51,7 @@ function rendre(doc: ClientFile, dossier: string): string {
     + `body{width:820px;margin:0;padding:48px 56px;font-family:"Courier New",monospace;`
     + `font-size:16px;line-height:1.7;background:#fff;color:#111;white-space:pre-wrap}</style>`
     + doc.text.replace(/&/g, "&amp;").replace(/</g, "&lt;"));
-  execFileSync(CHROME, ["--headless", "--disable-gpu", `--screenshot=${png}`,
+  execFileSync(chrome, ["--headless", "--disable-gpu", `--screenshot=${png}`,
     "--window-size=900,460", "--hide-scrollbars", html], { stdio: ["ignore", "ignore", "ignore"] });
   execFileSync("sips", ["-s", "format", "jpeg", png, "--out", jpg], { stdio: ["ignore", "ignore", "ignore"] });
   return jpg;
@@ -77,10 +80,55 @@ export async function litLeTexte(t: TierName, temoins: ClientFile[]): Promise<bo
   return false;
 }
 
-export async function mesurer(combien = 120, paliers: TierName[] = [...ENCODEURS]) {
-  const manque = ceQuiManque();
+/**
+ * Le commit qui tourne, et si l'arbre a bougé depuis.
+ *
+ * Hors dépôt git — une archive décompressée, un conteneur sans `.git` — `execFileSync` lève et on
+ * rend `undefined` : le relevé ne portera alors AUCUN nom de commit. C'est voulu : pas de nom est
+ * honnête, un nom qui n'est pas celui qui a tourné ne l'est pas.
+ */
+function lireLArbre(): { commit: string; sale: boolean } | undefined {
+  try {
+    const cwd = fileURLToPath(new URL("..", import.meta.url));
+    return {
+      commit: execFileSync("git", ["rev-parse", "--short", "HEAD"], { cwd, encoding: "utf8" }).trim(),
+      sale: execFileSync("git", ["status", "--porcelain"], { cwd, encoding: "utf8" }).trim().length > 0,
+    };
+  } catch { return undefined; }
+}
+
+/**
+ * Ce que la passe lit du monde avant de mesurer quoi que ce soit — et qu'un cas peut remplacer.
+ *
+ * TROIS REFUS SE TIENNENT AVANT LA PREMIÈRE IMAGE : l'étage de lecture absent, le moteur de rendu
+ * absent, l'arbre modifié. Chacun interroge la machine — une sonde de plateforme, un chemin sur le
+ * disque, l'état de git — et aucun ne pouvait donc être éprouvé : sur la machine qui mesure les
+ * trois conditions sont fausses, et on ne désinstalle pas Chrome pour voir ce que dit le message.
+ * C'étaient trois refus dont personne n'avait jamais lu un seul mot.
+ *
+ * Chaque entrée vaut par défaut ce qu'elle valait avant cette couture : un appelant qui ne passe
+ * rien ne voit aucune différence, et la ligne de commande plus bas n'a pas changé.
+ */
+export type EntreesDeLaPasse = {
+  /** Ce qui manque à l'étage de lecture, ou `null` s'il est là. Par défaut `ceQuiManque`. */
+  sonde?: () => string | null;
+  /** Le moteur qui rend les documents en images. Par défaut `CHROME`. */
+  chrome?: string;
+  /** Le commit et la propreté de l'arbre. Par défaut `lireLArbre`. */
+  arbre?: () => { commit: string; sale: boolean } | undefined;
+  /** Les arguments reçus, où se lit `--arbre-modifie`. Par défaut `process.argv`. */
+  argv?: readonly string[];
+};
+
+export async function mesurer(
+  combien = 120, paliers: TierName[] = [...ENCODEURS], env: EntreesDeLaPasse = {},
+) {
+  const manque = (env.sonde ?? ceQuiManque)();
+  /* LA RAISON ARRIVE TELLE QUELLE. `ceQuiManque` dit QUOI installer et par quelle commande ;
+     réécrite ici en « OCR unavailable », elle envoie chercher au mauvais endroit. */
   if (manque) throw new Error(manque);
-  if (!existsSync(CHROME)) {
+  const chrome = env.chrome ?? CHROME;
+  if (!existsSync(chrome)) {
     throw new Error(`Chrome is not there, and it is what RENDERS the documents as images here. `
       + `Without it there are no images to read, and this measurement has no object.`);
   }
@@ -88,16 +136,8 @@ export async function mesurer(combien = 120, paliers: TierName[] = [...ENCODEURS
   /* LE RELEVÉ NOMME LE CODE QUI L'A PRODUIT. Sans ça, un chiffre publié six semaines plus tard
      ne peut plus être refait : on ne sait pas quelle version l'a rendu. Et mesurer sur un arbre
      modifié nomme un commit qui n'est pas celui qui a tourné — pire qu'aucun nom. */
-  const version = (() => {
-    try {
-      const cwd = fileURLToPath(new URL("..", import.meta.url));
-      return {
-        commit: execFileSync("git", ["rev-parse", "--short", "HEAD"], { cwd, encoding: "utf8" }).trim(),
-        sale: execFileSync("git", ["status", "--porcelain"], { cwd, encoding: "utf8" }).trim().length > 0,
-      };
-    } catch { return undefined; }
-  })();
-  if (version?.sale && !process.argv.includes("--arbre-modifie")) {
+  const version = (env.arbre ?? lireLArbre)();
+  if (version?.sale && !(env.argv ?? process.argv).includes("--arbre-modifie")) {
     /* UN REFUS A BESOIN D'UNE ISSUE, sinon on commente la garde. L'issue existe, elle est
        explicite, et elle est désagréable à lire — c'est ce qui la garde exceptionnelle : le
        relevé produit portera « sale: true », et tout ce qui le relit le dira. */
@@ -114,6 +154,17 @@ export async function mesurer(combien = 120, paliers: TierName[] = [...ENCODEURS
   const dossier = join(dirname(SORTIE), "data", "ocr");
   mkdirSync(dossier, { recursive: true });
   const docs = generateRecords(combien, "heldout");
+
+  /* UN CORPUS VIDE N'EST PAS UN PALIER AVEUGLE. Sans document, la boucle de `litLeTexte` ne tourne
+     pas et la fonction rend `false` pour TOUT LE MONDE : le refus d'en bas accuserait alors chaque
+     palier d'une cécité qu'il n'a pas, et on irait corriger des paliers pour une faute qui est
+     ici. Un diagnostic qui désigne le mauvais endroit coûte plus cher que pas de diagnostic. */
+  if (docs.length === 0) {
+    throw new Error(`No documents to measure on: ${combien} case(s) asked for leaves an empty `
+      + `corpus. Nothing would be rendered and nothing read, and the blind-tier check below would `
+      + `call every tier blind for want of anything to try it on.`);
+  }
+
   await loadExtractors();
 
   /* Écarter les paliers qui ne lisent pas — et nommer ce qu'on écarte : un chiffre issu d'une
@@ -145,7 +196,7 @@ export async function mesurer(combien = 120, paliers: TierName[] = [...ENCODEURS
   for (const t of paliers) parPalier[t] = { texte: 0, image: 0, sur: 0 };
 
   for (const d of docs) {
-    const blocs = lire(rendre(d, dossier));
+    const blocs = lire(rendre(d, dossier, chrome));
     const luOCR = texteDesBlocs(blocs);
     const lignes = d.text.split("\n").length;
     lignesTotal += lignes; lignesMax = Math.max(lignesMax, lignes);
