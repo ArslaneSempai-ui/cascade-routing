@@ -601,3 +601,30 @@ en plantage natif.
 
 **La famille.** Même forme que « ce que git ne transporte pas » : un état précieux rangé dans
 un dossier qu'un outil considère comme le sien.
+
+## Deux exécutions ne se comparent que si elles ont atteint le même point
+
+Deux mesures de mémoire ont été publiées côte à côte — 147 Mo pour un mégaoctet réparti en
+lignes, 2 457 Mo pour le même mégaoctet dans une cellule — et l'écart annoncé, un facteur
+seize, n'existait pas. **Les deux fichiers n'avaient pas parcouru le même chemin** : celui à
+22 310 lignes était refusé au plafond d'appels **avant qu'aucun modèle ne soit chargé**,
+l'autre allait au bout. On comparait un refus à une mesure complète.
+
+Remesuré au même point, l'écart réel était de 414 Mo — le reste était le coût de charger les
+modèles, présent des deux côtés.
+
+**Ce qui rend le piège difficile : la bifurcation vient d'une garde qui fait bien son
+travail.** Le plafond d'appels est une bonne garde. Elle a rendu deux exécutions
+incomparables sans qu'aucune ne le signale, et **rien dans les deux sorties ne disait « je me
+suis arrêtée plus tôt »**. C'est la même famille que le tube qui mange le code de sortie : le
+canal est ouvert, il ne porte simplement pas l'information qui décide.
+
+**Remède, et il ne demande rien au code :** avant de comparer deux exécutions, vérifier
+qu'elles se terminent sur la **même dernière ligne de sortie**, ou qu'elles écrivent le même
+artefact. Trois secondes, et le faux écart se démasque.
+
+**Et pourquoi ce n'est PAS mécanisé.** L'idée d'un contrôle — chaque garde annoncerait
+qu'elle est un point d'arrêt — a été examinée et abandonnée : il faudrait que des dizaines de
+sites le sachent et le disent dans une forme stable, ce qui coûte plus que le défaut.
+**Toute règle mécanisable ne l'est pas au bon prix**, et une règle mécanisée à contrecœur se
+retire à la première gêne. Celle-ci reste une habitude de lecture, et c'est sa place.
