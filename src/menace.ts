@@ -202,7 +202,23 @@ export function integriteDuVerrou(verrou: { packages?: Record<string, { integrit
  */
 export function bornePosee(source: string): { plafond: boolean; fluxCoupe: boolean } {
   const bloc = source.match(/req\.on\("data"[\s\S]{0,400}?\}\);/)?.[0] ?? "";
-  const plafond = /PLAFOND_CORPS|\d{2,}_?\d*\s*\)/.test(bloc);
+  /*
+   * LE NOM DE LA CONSTANTE NE DIT PAS QUE LA CONDITION PEUT ÊTRE VRAIE.
+   *
+   * Le détecteur cherchait `PLAFOND_CORPS` quelque part dans le bloc. `if (false && octets >
+   * PLAFOND_CORPS)` le satisfait parfaitement : mesuré, la borne ne fait plus rien et
+   * SECURITE.md publie toujours « Request body bounded | held ».
+   *
+   * On lit donc la CONDITION : il lui faut une comparaison contre le plafond, et pas de
+   * littéral qui l'éteigne. Un détecteur textuel restera trompable par une neutralisation
+   * plus soignée — un drapeau lu ailleurs, une constante mise à l'infini ; ce qui tient
+   * vraiment la borne est le cas qui envoie un corps trop grand et exige le refus par son
+   * message. Celui-ci ferme la forme triviale, qu'on écrit en déboguant et qu'on oublie.
+   */
+  const condition = bloc.match(/if\s*\(([^)]*)\)/)?.[1] ?? "";
+  const compare = /[A-Za-z_]\w*\s*>=?\s*(?:PLAFOND_CORPS|\d{2,}_?\d*)/.test(condition);
+  const eteinte = /(^|[^A-Za-z0-9_$])(?:false|0)\s*&&/.test(condition);
+  const plafond = compare && !eteinte;
   const cesseDAccepter = /req\.(destroy|pause)\(\)/.test(bloc);
   const fermee = /req\.destroy\(\)/.test(bloc)
     || /res\.on\(\s*["']finish["'][\s\S]{0,300}?(?:req|socket|res)\.(?:destroy|end)\(\)/.test(source);
@@ -236,6 +252,27 @@ export function temoins(): string[] {
   v("plafond sans rien couper", bornePosee(HANDLER("rendre(400);")), { plafond: true, fluxCoupe: false });
   v("aucun plafond",
     bornePosee(`req.on("data", (b) => { morceaux.push(b); });`), { plafond: false, fluxCoupe: false });
+  /*
+   * UNE BORNE PRÉSENTE MAIS INATTEIGNABLE, ET C'EST LE CAS QUI MANQUAIT.
+   *
+   * Mesuré le 26 août 2026 : en écrivant `if (false && octets > PLAFOND_CORPS)` dans
+   * `server.ts`, la borne ne fait plus rien, `bornePosee` rend toujours
+   * `{ plafond: true, fluxCoupe: true }`, et SECURITE.md continue de publier
+   * « Request body bounded | held ». Le détecteur cherchait le NOM de la constante ; la
+   * question est de savoir si la condition peut être vraie.
+   *
+   * CE QUE CE TÉMOIN NE FERME PAS, et il faut le dire plutôt que de laisser croire : un
+   * détecteur textuel se laissera toujours tromper par une neutralisation plus soignée
+   * — un drapeau lu ailleurs, une constante mise à l'infini. Il ferme la forme triviale,
+   * celle qu'on écrit sans y penser en déboguant et qu'on oublie de retirer. Ce qui tient
+   * VRAIMENT la borne est le cas de `serveur-bornes.test.ts`, qui envoie un corps trop
+   * grand et exige le refus PAR SON MESSAGE.
+   */
+  v("borne rendue inatteignable — doit être refusée",
+    bornePosee(`req.on("data", (b) => { total += b.length; if (false && total > 50000) { req.destroy(); } });`),
+    /* `fluxCoupe` reste vrai : le flux EST coupé — dans une branche morte. C'est `plafond`
+       qui porte la question, et `ajout()` exige les deux, donc le contrôle n'est plus tenu. */
+    { plafond: false, fluxCoupe: true });
 
   /* Un secret planté DOIT sortir. Sinon le zéro du scan n'a aucune valeur. */
   v("clé AWS plantée", secretsDans("const k = 'AKIAIOSFODNN7EXAMPLE';"), ["clé AWS"]);

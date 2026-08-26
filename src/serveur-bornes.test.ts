@@ -90,17 +90,37 @@ test("chaque route POST refuse un corps au-delà de la borne", { timeout: 120_00
   try {
     for (let i = 0; i < 80; i++) { try { await fetch(base + "/api/etat"); break; } catch { await dors(250); } }
 
+    /*
+     * « N'IMPORTE QUEL 4xx » N'EST PAS LE REFUS QU'ON CHERCHE.
+     *
+     * Ce cas acceptait `status >= 400`. Un corps de quatre fois la borne fait « xxxx… », qui
+     * n'est pas du JSON : la route répond 400 « the body must be a JSON object » AVANT que
+     * la borne ait quoi que ce soit à voir là-dedans. Mesuré le 26 août 2026 : en rendant la
+     * borne inatteignable (`if (false && octets > PLAFOND_CORPS)`), ce cas reste VERT — et
+     * le contrôle publié dans SECURITE.md reste « held » avec lui.
+     *
+     * On exige donc LE refus, par son message. Un code de sortie seul ne distingue pas deux
+     * causes qui n'ont pas le même remède.
+     */
     const trop = "x".repeat(PLAFOND_CORPS * 4);
     const passees: string[] = [];
+    const mauvaisMotif: string[] = [];
     for (const route of routes) {
-      let refuse = false;
+      let refuse = false, bonMotif = false;
       try {
         const r = await fetch(base + route, { method: "POST",
           headers: { "content-type": "application/json" }, body: trop });
-        refuse = r.status === 413 || r.status >= 400;
-      } catch { refuse = true; }        /* socket détruite : c'est le refus le plus net */
+        refuse = r.status >= 400;
+        bonMotif = /too large/i.test(await r.text());
+      } catch { refuse = true; bonMotif = true; }   /* socket détruite : le refus le plus net */
       if (!refuse) passees.push(route);
+      else if (!bonMotif) mauvaisMotif.push(route);
     }
+    assert.deepEqual(mauvaisMotif, [],
+      `route(s) refusant ${trop.length} octets pour une AUTRE raison que la borne : `
+      + `${mauvaisMotif.join(", ")}\n`
+      + "  Un corps de quatre fois la borne n'est pas du JSON : la route peut le refuser sans\n"
+      + "  que la borne existe. Ce cas serait alors vert sur un serveur sans borne du tout.");
     assert.deepEqual(passees, [],
       `route(s) POST acceptant ${trop.length} octets alors que la borne est ${PLAFOND_CORPS} : `
       + `${passees.join(", ")}\n  → appeler \`corps(req)\` même quand la route n'a pas besoin du corps.`);
