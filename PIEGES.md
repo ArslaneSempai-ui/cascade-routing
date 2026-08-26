@@ -736,3 +736,39 @@ Un site en commentaire semblait faire tomber la suite, ce qui est impossible. La
 était de publier « muter un commentaire peut rougir un cas ». **Le contre-témoin — la même
 suite, au même commit, sans aucune mutation — était rouge lui aussi.** Sans lui, une
 deuxième cause inventée partait dans un message.
+
+## Expliquer un symptôme juste assez pour le contourner, et s'arrêter là
+
+Le 26 août 2026, deux sessions ont rencontré le même symptôme à des heures d'écart : un
+contrôle positif qui refuse de démarrer, parce qu'un arbre de travail isolé se déclare
+modifié dès sa création.
+
+La première a regardé, trouvé la cause — `.gitignore` porte `node_modules/`, un motif
+qui ne désigne qu'un répertoire, alors que dans un arbre isolé c'est un lien symbolique
+— et a écrit : *« pas un défaut du dépôt, c'est mon montage. »* Elle a contourné chez
+elle avec un `.git/info/exclude` local et elle est passée à autre chose.
+
+**L'explication était exacte. C'est la conséquence qui n'a pas été cherchée.** Tout
+arbre isolé était rapporté sale dès sa naissance, donc les trois commandes qui refusent
+de mesurer sur un arbre modifié refusaient précisément là où une mesure doit tourner. Il
+ne restait que l'arbre partagé — celui qu'on protège toute la journée.
+
+### Pourquoi ça passe
+
+Une explication fausse se fait attraper : elle prédit mal la suite. **Une explication
+vraie mais incomplète ne prédit rien du tout** — elle rend le symptôme acceptable, ce qui
+est exactement ce qu'on cherchait, et l'enquête s'arrête sur un sentiment de résolution.
+
+Le contournement local aggrave le silence : il retire le symptôme du chemin de celui qui
+l'a compris, donc plus personne ne le rencontre avec un contexte suffisant pour aller
+plus loin.
+
+### La question qui rouvre
+
+Après avoir expliqué un symptôme, avant de le contourner : **qui d'autre rencontre cette
+cause, et qu'est-ce qu'elle lui fait ?** Si la réponse est « je ne sais pas », l'enquête
+n'est pas finie — elle est seulement devenue confortable.
+
+Et un contournement local est une décision qui se rapporte, pas un détail de montage : ce
+qui gêne une session en bloque cinq, et personne ne le saura si elle ne le dit pas.
+
