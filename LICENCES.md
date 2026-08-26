@@ -5,6 +5,13 @@
 included. Each was classified on its `license` field **and** on the text of the licence
 file it ships; where the two disagree, the text decides.
 
+2 of them are binaries whose package name carries
+the platform (`@img/sharp`, `@img/sharp-libvips`).
+They are listed under their family name: which variant npm installs depends on the machine,
+while the licence and the version are the family's and do not change with it. Recorded under
+their full names, this inventory could never match on a second machine — and that is exactly
+what kept the public suite from running for nine days.
+
 | Class | Packages | What it means |
 | --- | --- | --- |
 | Permissive | 54 | Attribution. Nothing else. |
@@ -22,7 +29,7 @@ No GPL, AGPL, SSPL or Business Source in the tree. This zero comes from a classi
 
 | Package | Version | Licence |
 | --- | --- | --- |
-| `@img/sharp-libvips-darwin-arm64` | 1.3.2 | LGPL-3.0-or-later |
+| `@img/sharp-libvips` | 1.3.2 | LGPL-3.0-or-later |
 
 The LGPL permits use inside a proprietary product as long as the user can replace the library. That holds here: it arrives through `npm install` on the client's side, unmodified, with no static linking. **The obligation changes the day this tool ships as a sealed binary** — relinking would then have to be offered, or the dependency dropped.
 
@@ -30,7 +37,7 @@ The LGPL permits use inside a proprietary product as long as the user can replac
 
 ### Declared, but shipping no licence file
 
-`@img/sharp-libvips-darwin-arm64@1.3.2` (LGPL-3.0-or-later) · `guid-typescript@1.0.9` (ISC) · `onnxruntime-common@1.21.0` (MIT) · `onnxruntime-common@1.22.0-dev.20250409-89f8206ba4` (MIT) · `onnxruntime-node@1.21.0` (MIT) · `onnxruntime-web@1.22.0-dev.20250409-89f8206ba4` (MIT)
+`@img/sharp-libvips@1.3.2` (LGPL-3.0-or-later) · `guid-typescript@1.0.9` (ISC) · `onnxruntime-common@1.21.0` (MIT) · `onnxruntime-common@1.22.0-dev.20250409-89f8206ba4` (MIT) · `onnxruntime-node@1.21.0` (MIT) · `onnxruntime-web@1.22.0-dev.20250409-89f8206ba4` (MIT)
 
 The field says permissive, the package ships no text. This is not a legal risk: it is a missing item if a buyer asks for full attribution.
 

@@ -116,7 +116,10 @@ export function temoins(): string[] {
   return ratés;
 }
 
-export type Paquet = { nom: string; version: string; declaree: string | null; classe: Classe; fichier: string | null };
+export type Paquet = { nom: string; version: string; declaree: string | null; classe: Classe;
+  fichier: string | null;
+  /** Les contraintes `os`/`cpu` du paquet, quand il n'existe que sur certaines machines. */
+  plateforme?: string | null };
 
 function dossiers(racine: string): string[] {
   const out: string[] = [];
@@ -142,7 +145,40 @@ export function inventaire(racine = "node_modules"): Paquet[] {
     const declaree = typeof d === "string" && d.length > 0 ? d : null;
     const fichier = readdirSync(dir).find((f) => /^(LICEN[CS]E|COPYING)/i.test(f)) ?? null;
     const texte = fichier ? readFileSync(join(dir, fichier), "utf8").slice(0, 6000) : "";
-    const p: Paquet = { nom: m.name ?? dir, version: m.version ?? "?", declaree, classe: classer(declaree, texte), fichier };
+    /*
+     * UN BINAIRE PROPRE À LA MACHINE NE PEUT PAS ÊTRE INSCRIT SOUS SON NOM COMPLET.
+     *
+     * L'inventaire est pris sur `node_modules/`, donc sur la machine qui l'écrit. Sur macOS
+     * npm installe `@img/sharp-darwin-arm64` ; sur le Linux de l'intégration continue,
+     * `@img/sharp-linux-x64`. Les deux jeux ne peuvent JAMAIS coïncider, donc
+     * `licences.ts --check` échouait à chaque passe — et comme `npm test` est une chaîne de
+     * `&&`, `node --test` ne tournait pas du tout. Mesuré : 22 passes d'affilée en échec, la
+     * dernière réussite le 17 août 2026.
+     *
+     * Le nom de famille se DÉDUIT, il ne se devine pas : on retire du nom les jetons que le
+     * paquet déclare lui-même dans `os` et `cpu`. `@img/sharp-darwin-arm64` → `@img/sharp`,
+     * et `@img/sharp-linux-x64` → `@img/sharp`. Un paquet qui porte tous ses binaires dans
+     * un seul dossier — `onnxruntime-node` — garde son nom, puisqu'aucun jeton n'y figure.
+     *
+     * Ce qui est publié reste vrai : la licence est celle de la famille, et le document dit
+     * que la variante concrète dépend de la machine.
+     */
+    const complet: string = m.name ?? dir;
+    /*
+     * On coupe le nom au DERNIER `-<os>` qu'il porte, pas les jetons un par un : retirer
+     * « linux » de `@img/sharp-linuxmusl-x64` laisserait `@img/sharpmusl`, et le document
+     * d'une machine Alpine différerait encore de celui d'une machine glibc. La coupe rend
+     * `@img/sharp` dans les deux cas, comme pour `-darwin-arm64` et `-freebsd-wasm32`.
+     */
+    let nom = complet;
+    for (const t of (Array.isArray(m.os) ? m.os : []) as string[]) {
+      const i = complet.lastIndexOf(`-${t}`);
+      if (i > 0 && i < nom.length) nom = complet.slice(0, i);
+    }
+    const p: Paquet = { nom, version: m.version ?? "?", declaree, classe: classer(declaree, texte), fichier,
+      /* Marqué SEULEMENT si le nom portait la plateforme : `onnxruntime-node` déclare trois
+         systèmes et s'appelle pareil partout — il n'a rien de dépendant de la machine ici. */
+      plateforme: nom !== complet ? "le nom portait la plateforme" : null };
     vus.set(`${p.nom}@${p.version}`, p);   // l'arbre répète les paquets hissés : une clé par version
   }
   return [...vus.values()].sort((a, b) => a.nom.localeCompare(b.nom));
@@ -199,6 +235,13 @@ export function document(paquets: Paquet[], licenceDuDepot: string | null): stri
 ${paquets.length} packages are installed under \`node_modules/\`, development dependencies
 included. Each was classified on its \`license\` field **and** on the text of the licence
 file it ships; where the two disagree, the text decides.
+
+${paquets.filter((p) => p.plateforme).length} of them are binaries whose package name carries
+the platform (${paquets.filter((p) => p.plateforme).map((p) => `\`${p.nom}\``).join(", ") || "none"}).
+They are listed under their family name: which variant npm installs depends on the machine,
+while the licence and the version are the family's and do not change with it. Recorded under
+their full names, this inventory could never match on a second machine — and that is exactly
+what kept the public suite from running for nine days.
 
 | Class | Packages | What it means |
 | --- | --- | --- |
@@ -289,7 +332,36 @@ function principal() {
        première sortie qu'un acheteur voit après un clone, et un accord fautif y coûte plus
        cher qu'ailleurs. */
       `${perimes.join(" and ")} ${perimes.length > 1 ? "no longer match" : "no longer matches"} `
-      + `the installed tree.\n\nRun: npm run licences`);
+      + `the installed tree.`);
+      /*
+       * UN REFUS QUI NE DIT PAS CE QUI DIFFÈRE SE RELIT VINGT-DEUX FOIS SANS RIEN APPRENDRE.
+       *
+       * Ce pas a fait échouer l'intégration continue vingt-deux fois d'affilée, du 17 au 25
+       * août 2026, et le journal public ne portait que « no longer match ». La cause — deux
+       * binaires nommés d'après la machine — se lisait en une ligne dès qu'on comparait les
+       * deux jeux de noms. Personne ne l'a fait, parce que le message ne le proposait pas.
+       */
+      try {
+        const avant = JSON.parse(readFileSync("sbom.json", "utf8")) as { components?: { name: string; version: string }[] };
+        const cle = (c: { name: string; version: string }) => `${c.name}@${c.version}`;
+        const anciens = new Set((avant.components ?? []).map(cle));
+        const neufs = new Set(paquets.map((q) => `${q.nom}@${q.version}`));
+        const partis = [...anciens].filter((x) => !neufs.has(x));
+        const venus = [...neufs].filter((x) => !anciens.has(x));
+        if (partis.length || venus.length) {
+          console.error(`\n  recorded here, absent from the tree : ${partis.join(", ") || "none"}`);
+          console.error(`  in the tree, not recorded here     : ${venus.join(", ") || "none"}`);
+          console.error("\n  A name that carries the platform — `@img/sharp-darwin-arm64` here,");
+          console.error("  `@img/sharp-linux-x64` elsewhere — can never match from one machine to the");
+          console.error("  next. See `inventaire()`, which records them under their family name.");
+        } else {
+          console.error("\n  Same packages, same versions: it is the TEXT of the document that changed,");
+          console.error("  not the tree — often a hand edit inside a generated file.");
+        }
+      } catch {
+        console.error("\n  (sbom.json is unreadable or missing: cannot say what differs.)");
+      }
+      console.error("\nRun: npm run licences");
       process.exit(1);
     }
     console.log(`LICENCES.md and sbom.json are up to date (${paquets.length} packages, ${temoins().length === 0 ? "witnesses green" : "WITNESSES BROKEN"}).`);
