@@ -72,14 +72,52 @@ fi
 echo "  contrôle des documents engendrés…"
 # Les contrôles de documents lancent git pour lire des empreintes de commit : eux aussi doivent
 # ignorer l'index du commit en cours. Aucune exception — tout ce que le crochet lance.
-if ! (env -u GIT_INDEX_FILE sh -c 'node src/readme.ts --check && node src/landing.ts --check \
-      && node src/dossier.ts --check && node src/sonde.ts --check') > /tmp/cascade-pre-commit.log 2>&1; then
+# ─── LES QUATRE CONTRÔLES LISENT L'INDEX, PAS LE DISQUE ───
+#
+# Ils lisaient l'arbre de travail. Un fichier régénéré et laissé HORS de l'index passait donc
+# au vert ici et partait périmé : le crochet validait une chose, git en enregistrait une autre.
+# C'est la panne d'`a0fb723`, celle pour laquelle ce crochet existe, et elle est revenue le
+# 26 août 2026 sur le commit d'une session voisine.
+#
+# La garde d'en dessous ne pouvait pas l'attraper, et c'est son arbitrage qui est en cause, pas
+# un oubli : restreinte aux fichiers DÉJÀ emportés, elle ne voit pas celui qu'on a laissé
+# entièrement dehors. Sa version large, elle, refusait le commit de chacun dès qu'une autre
+# session avait un fichier ouvert. Les deux échouent, dans deux directions.
+#
+# On exporte donc l'index dans un arbre temporaire et on contrôle LÀ. Ce que git s'apprête à
+# enregistrer est exactement ce qui est examiné : l'artefact laissé dehors est attrapé par
+# construction, et le travail non indexé de quiconque n'entre pas en compte.
+#
+# TROIS CHOSES QUI ONT COÛTÉ UN ESSAI CHACUNE :
+#   `node_modules` n'est pas suivi — on le prête par lien.
+#   `data/` non plus, et c'est le cas de l'acheteur : le relevé de référence livré doit suffire.
+#   Les contrôles lancent `git` pour lire des empreintes de commit, et l'arbre exporté n'est pas
+#   un dépôt — on leur passe `GIT_DIR`, sans quoi ils échouent pour la mauvaise raison.
+#
+# `GIT_INDEX_FILE` reste défini pour `checkout-index` — c'est l'index du commit en cours, donc
+# précisément ce qu'on veut exporter — et retiré pour tout ce qui tourne ensuite.
+bacIndex=$(mktemp -d "${TMPDIR:-/tmp}/cascade-index-XXXXXX")
+trap 'rm -rf "$bacIndex"' EXIT
+if ! git checkout-index -a --prefix="$bacIndex/" > /tmp/cascade-pre-commit.log 2>&1; then
   echo ""
-  echo "  DOCUMENT ENGENDRÉ PÉRIMÉ — ce commit livrerait une page qui ne suit plus le code."
+  echo "  L'INDEX N'A PAS PU ÊTRE EXPORTÉ — le crochet ne peut rien contrôler, donc il refuse."
+  sed 's/^/    /' /tmp/cascade-pre-commit.log
+  exit 1
+fi
+ln -s "$(git rev-parse --show-toplevel)/node_modules" "$bacIndex/node_modules" 2>/dev/null
+if ! (cd "$bacIndex" && env -u GIT_INDEX_FILE GIT_DIR="$(git -C "$(dirname "$0")" rev-parse --absolute-git-dir)" \
+      sh -c 'node src/readme.ts --check && node src/landing.ts --check \
+             && node src/dossier.ts --check && node src/sonde.ts --check') > /tmp/cascade-pre-commit.log 2>&1
+then
+  echo ""
+  echo "  DOCUMENT ENGENDRÉ PÉRIMÉ DANS L'INDEX — ce commit livrerait une page qui ne suit plus"
+  echo "  le code. Contrôlé sur ce que git ENREGISTRERAIT, pas sur votre disque : si c'est vert"
+  echo "  chez vous, c'est qu'un fichier régénéré n'est pas indexé."
   echo ""
   sed 's/^/    /' /tmp/cascade-pre-commit.log
   echo ""
-  echo "  → npm run figures    puis recommencer."
+  echo "  → npm run figures    puis   git add <les fichiers régénérés>"
+  echo "  → git status         pour voir ce qui a bougé sans être indexé."
   echo "  → git commit --no-verify   si vous savez pourquoi vous passez outre."
   exit 1
 fi
