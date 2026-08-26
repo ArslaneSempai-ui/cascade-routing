@@ -82,6 +82,59 @@ test("chaque route POST refuse un corps au-delà de la borne", { timeout: 120_00
   }
 });
 
+/**
+ * LA BORNE COMPTE DES UNITÉS UTF-16, PAS DES OCTETS.
+ *
+ * Le cas voisin envoie de l'ASCII, où un caractère vaut un octet : il ne peut pas voir l'écart.
+ * `corps()` accumule `brut += b` — une CHAÎNE — puis compare `brut.length` au plafond. Un corps
+ * de caractères à trois octets passe donc la borne en octets sans l'atteindre en unités.
+ *
+ * Mesuré sur le serveur réel, corps JSON valides, route POST réelle :
+ *
+ *     60 008 octets / 60 008 unités ASCII   → socket coupée, refusé
+ *     135 008 octets / 45 008 unités UTF-8  → 200, ACCEPTÉ
+ *
+ * Deux fois et demie la borne, accepté. Les deux premières mesures étaient confondues — un 404
+ * sur une route inexistante, puis un 400 qui disait « JSON invalide » et non « trop gros » —
+ * et c'est en isolant avec un corps valide sur une route réelle que le défaut apparaît.
+ */
+test("la borne de corps compte des octets, pas des unités UTF-16", { timeout: 120_000 }, async () => {
+  const port = 4990 + Math.floor(Number(process.env.NODE_UNIQUE_ID ?? 0));
+  const base = `http://127.0.0.1:${port}`;
+  const serveur = spawn("node", [fileURLToPath(new URL("./server.ts", import.meta.url))],
+    { env: { ...process.env, PORT: String(port) }, stdio: "ignore" });
+  const dors = (ms: number) => new Promise((r) => setTimeout(r, ms));
+  try {
+    let debout = false;
+    for (let i = 0; i < 80 && !debout; i++) {
+      try { await fetch(base + "/api/etat"); debout = true; } catch { await dors(25); }
+    }
+    /* SANS CE CONTRÔLE, UN SERVEUR MORT FERAIT PASSER LE CAS : toute requête lèverait, et une
+       levée se lit ici comme un refus. */
+    assert.ok(debout, "le serveur n'a pas démarré : rien de ce qui suit ne prouverait quoi que ce soit");
+
+    /* Valide en JSON, sous la borne en unités, bien au-dessus en octets. */
+    const corps = JSON.stringify({ a: "\u3042".repeat(45000) });
+    assert.ok(corps.length < PLAFOND_CORPS,
+      "le montage est faux : ce corps doit être SOUS la borne en unités UTF-16");
+    assert.ok(Buffer.byteLength(corps, "utf8") > PLAFOND_CORPS * 2,
+      "le montage est faux : ce corps doit être bien AU-DESSUS de la borne en octets");
+
+    let refuse = false;
+    try {
+      const r = await fetch(base + "/api/hypotheses", { method: "POST",
+        headers: { "content-type": "application/json" }, body: corps });
+      refuse = r.status >= 400;
+    } catch { refuse = true; }
+    assert.ok(refuse,
+      `un corps de ${Buffer.byteLength(corps, "utf8")} octets doit être refusé par une borne de `
+      + `${PLAFOND_CORPS} octets. Accepté, il fait entrer deux fois et demie ce que la borne `
+      + "annonce, et la borne devient une phrase.");
+  } finally {
+    try { process.kill(serveur.pid!); } catch { /* déjà parti */ }
+  }
+});
+
 test("la politique de contenu est stricte ET la page reste exécutable", { timeout: 120_000 }, async () => {
   /*
    * ─── L'EN-TÊTE DE SÉCURITÉ QUI A DÉTRUIT LE PRODUIT EN SILENCE ───

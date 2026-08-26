@@ -58,15 +58,49 @@ export const PLAFOND_CORPS = 50_000;
 
 function corps(req: IncomingMessage): Promise<Record<string, unknown>> {
   return new Promise((resoudre, rejeter) => {
-    let brut = "";
-    /* REJETER NE COUPE PAS LE FLUX. La promesse est réglée, mais `data` continue de se
-       déclencher et `brut` continue de grossir : la borne annonçait un plafond qu'elle
-       n'imposait pas. On détruit la socket, seul geste qui arrête réellement l'envoi. */
-    req.on("data", (b) => {
-      brut += b;
-      if (brut.length > PLAFOND_CORPS) { req.destroy(); rejeter(new Error(`request too large (> ${PLAFOND_CORPS} octets)`)); }
+    /*
+     * ─── UN FLUX D'OCTETS N'EST PAS UNE CHAÎNE, ET LES TROIS DÉFAUTS N'EN FONT QU'UN ───
+     *
+     * La version précédente faisait `brut += b` — une CHAÎNE — puis comparait `brut.length`
+     * au plafond et décodait chaque morceau au passage. Trois conséquences, toutes mesurées
+     * le 26 août 2026 sur le serveur réel, corps JSON valides, route POST réelle :
+     *
+     *   LE PLAFOND COMPTAIT DES UNITÉS UTF-16 en annonçant des octets.
+     *       60 008 octets / 60 008 unités ASCII   → socket coupée, refusé
+     *      135 008 octets /  45 008 unités UTF-8  → 200, ACCEPTÉ
+     *     Deux fois et demie la borne, acceptée, parce qu'un caractère à trois octets ne
+     *     compte que pour un. Le cas voisin ne pouvait pas le voir : il envoie de l'ASCII,
+     *     où un caractère vaut un octet.
+     *
+     *   UN CARACTÈRE COUPÉ ENTRE DEUX PAQUETS ARRIVAIT CORROMPU. `b.toString()` par morceau
+     *     décode un octet de tête sans sa suite :
+     *       envoyé « aあb », coupé après le premier octet du あ  →  reçu « a␦␦␦b »
+     *     Corruption silencieuse et non déterministe de toute entrée non ASCII, sur un outil
+     *     vendu pour lire des noms et des dates de naissance.
+     *
+     *   ET LE REFUS N'ARRIVAIT JAMAIS AU CLIENT. `req.destroy()` tuait la socket AVANT que le
+     *     message d'erreur soit écrit :
+     *       corps de 60 013 octets → RemoteDisconnected, aucune réponse
+     *     Le message existait, il était soigné, et personne ne l'a jamais lu.
+     *
+     * On accumule donc des Buffers, on compte des octets, on décode UNE fois à la fin, et on
+     * met le flux en pause au lieu de le tuer — la pause ferme la fenêtre TCP, donc l'envoi
+     * s'arrête aussi, mais la réponse peut encore partir. La socket est fermée après, quand
+     * la réponse a fini de sortir.
+     */
+    const morceaux: Buffer[] = [];
+    let octets = 0;
+    req.on("data", (b: Buffer) => {
+      octets += b.length;
+      if (octets > PLAFOND_CORPS) {
+        req.pause();
+        rejeter(new Error(`request too large (> ${PLAFOND_CORPS} octets)`));
+        return;
+      }
+      morceaux.push(b);
     });
     req.on("end", () => {
+      const brut = Buffer.concat(morceaux).toString("utf8");
       /*
        * `null` ET UN TABLEAU NE SONT PAS DES OBJETS, ET LE MESSAGE LE DISAIT EN JAVASCRIPT.
        *
@@ -551,6 +585,10 @@ async function ecouteur(req: IncomingMessage, res: ServerResponse, cheminUi: str
 
     res.writeHead(404).end("introuvable");
   } catch (e) {
+    /* La socket se ferme APRÈS que la réponse est sortie, jamais avant : c'est tout l'écart
+       entre un refus que le client lit et une connexion coupée qu'il ne peut qu'interpréter.
+       `finish` se déclenche quand la réponse a fini de partir. */
+    if (req.readable && !req.readableEnded) res.on("finish", () => req.destroy());
     json(res, { erreur: sansChemins(String((e as Error).message ?? e)) }, 400);
   }
 }
