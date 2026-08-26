@@ -95,7 +95,9 @@ export function lancer(
  */
 const PILE = /\n\s+at\s|node:internal|node:fs:\d/;
 
-export function exigerRefus(s: Sortie, motif: RegExp, quoi: string): void {
+export function exigerRefus(
+  s: Sortie, motif: RegExp, quoi: string, pasApres?: RegExp,
+): void {
   if (s.code === 0) {
     throw new Error(
       `${quoi} : la commande a RÉUSSI (code 0) là où elle devait refuser.\n`
@@ -126,6 +128,25 @@ export function exigerRefus(s: Sortie, motif: RegExp, quoi: string): void {
       + `  le message s'imprimer, le programme continue et s'écrase sur ce qu'il refusait de\n`
       + `  faire, et le code rendu est celui du plantage. Une quinzaine de gardes que je\n`
       + `  croyais couvertes étaient survivantes pour cette seule raison.\n`
+      + `  reçu : ${JSON.stringify(s.texte.slice(0, 400))}`);
+  }
+  /*
+   * `pasApres` EXIGE QUE LE REFUS SOIT TERMINAL, et c'est ce qui manquait le plus.
+   *
+   * Mesuré le 27 août 2026 : sur seize gardes que je croyais couvertes, quatorze survivaient
+   * pour cette seule raison. Neutralisée, une garde laisse passer — et LA GARDE SUIVANTE
+   * refuse à sa place. Le message de la première est toujours dans la sortie, puisqu'il part
+   * avant la sortie du processus ; le code est non nul, puisqu'une autre garde l'a rendu. Le
+   * cas passe, et il n'éprouve plus rien.
+   *
+   * Le motif seul dit « ce refus a été prononcé ». Il ne dit pas « c'est LUI qui a arrêté la
+   * commande ». Nommer ce qui ne doit PAS suivre est la seule façon de le savoir sans deviner.
+   */
+  if (pasApres && pasApres.test(s.texte)) {
+    throw new Error(
+      `${quoi} : le refus attendu est bien là, mais LA COMMANDE A CONTINUÉ — ${pasApres} suit.\n`
+      + `  Ce n'est donc pas cette garde-là qui a arrêté la commande, c'est une suivante. Retirée,\n`
+      + `  la garde visée laisserait passer sans que ce cas bouge.\n`
       + `  reçu : ${JSON.stringify(s.texte.slice(0, 400))}`);
   }
 }
