@@ -1236,6 +1236,9 @@ const leviers = (() => {
    * de bon est une lecture unique et gardée du relevé, partagée par les deux blocs ; le
    * témoin de la ligne 1113 (src/readme-gardes.test.ts) la couvrirait alors entièrement.
    */
+  /* survivant:ok inatteignable — le témoin de la ligne 1113 couvre entièrement ce chemin :
+     l'absence n'y descend jamais, elle meurt sur le `readFileSync` d'au-dessus. Lui écrire un
+     cas rendrait un vert qui ne regarde rien. Marqué pour ne pas être resignalé à chaque passe. */
   if (!existsSync(cheminExp)) throw new Error("exposition.json is missing — restore it with `git checkout exposition.json`.");
   const exp = JSON.parse(readFileSync(cheminExp, "utf8")) as { seuil: { bas: number; haut: number } | null };
 

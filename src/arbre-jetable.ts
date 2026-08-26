@@ -33,8 +33,16 @@ import { fileURLToPath } from "node:url";
 const RACINE = fileURLToPath(new URL("..", import.meta.url));
 
 /** Crée l'arbre et rend son chemin. À retirer avec `retirerArbreJetable`. */
-export function arbreJetable(prefixe: string): string {
-  const chemin = mkdtempSync(join(tmpdir(), `${prefixe}-`));
+export function arbreJetable(prefixe: string, racineTemporaire: string = tmpdir()): string {
+  /*
+   * `racineTemporaire` EXISTE POUR QUE LE REFUS D'EN DESSOUS SOIT ATTEIGNABLE, et pour rien
+   * d'autre : sa valeur par défaut est celle qu'on veut en production. Le balayage du 26 août
+   * 2026 a montré que ce refus était le seul de ce fichier qu'aucun cas ne pouvait déclencher —
+   * il gardait le défaut le plus cher de la journée, un bac à sable créé DANS le vrai arbre,
+   * et rien ne l'éprouvait. Un cas lui passe une racine dont le nom contient `/Documents/`
+   * sans que rien de réel soit touché.
+   */
+  const chemin = mkdtempSync(join(racineTemporaire, `${prefixe}-`));
   if (chemin.includes("/Documents/")) {
     throw new Error(`terrain d'essai dans le vrai arbre : ${chemin}`);
   }

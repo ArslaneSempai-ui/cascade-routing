@@ -85,6 +85,12 @@ export function lire(chemin: string): Bloc[] {
    * sauter : la plateforme décide laquelle des deux propriétés est vraie, et chacune est
    * éprouvée là où elle a un sens. Un cas sauté annoncerait une couverture qu'il n'a pas.
    */
+  /* survivant:ok inatteignable ici — `ceQuiManque()` compile le binaire à la demande, 92 Ko
+     produits dans un arbre neuf, donc aucune entrée ne le déclenche sur une machine outillée.
+     La garde EST atteignable sur `ubuntu-latest`, où la chaîne publie sa vérification : elle
+     n'est pas morte, elle est hors de portée d'ici. Sans cette marque le balayage la resignale
+     à chaque passe, et un avertissement qu'on réexplique chaque nuit finit ignoré — le jour où
+     un vrai survivant s'y glisse, personne ne le distingue. */
   const manque = ceQuiManque();
   if (manque) throw new Error(manque);
 
