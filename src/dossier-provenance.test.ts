@@ -100,3 +100,160 @@ test("une latence non dérivable porte sa provenance dans le code, et la dit au 
     "le document doit dire que c'est une hypothèse GELÉE, pas une mesure — c'est la\n"
     + "  différence exacte entre montrer la limite et la laisser découvrir.");
 });
+
+/*
+ * LE DOCUMENT DISPENSÉ DU CLIQUET, ET LES SIX TAUX TAPÉS QU'IL PORTAIT.
+ *
+ * `cascade.test.ts` refuse qu'un taux de plus soit tapé dans la prose des `.md`, et il
+ * DISPENSE `VALIDATION.md` et `SONDE.md` : « aucun n'est tapé, ils naissent du relevé à
+ * chaque `npm run` ». La phrase était fausse. La table OFAC portait quatre colonnes dont
+ * deux arrivaient en chaînes littérales — six taux — sous un commentaire qui affirmait
+ * l'inverse en capitales.
+ *
+ * Ce que l'exemption promettait, `--check` ne peut pas le tenir : il compare le fichier à
+ * la sortie du générateur, laquelle rend les mêmes littéraux. Il éprouve une TRANSCRIPTION,
+ * jamais une mesure. Un taux tapé dans le générateur est aussi mort qu'un taux tapé dans le
+ * document — il est seulement plus difficile à voir.
+ *
+ * Ça avait déjà coûté une phrase fausse au lecteur, et elle contredisait la table imprimée
+ * trois lignes au-dessus : « they do not answer at all: 0, 15 and 24 values returned »,
+ * quand les règles rendent 290, 198 et 259 valeurs sur ce même CSV. Un taux de 100,0 % sur
+ * n=290 est incompatible avec « zéro valeur rendue » ; personne ne l'a vu parce que rien ne
+ * regardait ce fichier.
+ */
+
+/** Ce qui a le droit de porter un taux littéral dans un générateur, et pourquoi. */
+const PERMIS: { fichier: string; extrait: string; raison: string }[] = [
+  { fichier: "dossier.ts", extrait: "Wald leaves [0, 1] near 0 % or 100 %",
+    raison: "phrase sur la forme de l'intervalle, aucune mesure citée" },
+  { fichier: "dossier.ts", extrait: "0 of 20 gives [0 – 16.1 %]",
+    raison: "les deux bornes Wilson publiées, tenues par precision() dans interval.test.ts" },
+  { fichier: "dossier.ts", extrait: '"95 % interval"',
+    raison: "l'en-tête d'une colonne, pas un chiffre mesuré" },
+  { fichier: "dossier.ts", extrait: "scored the hand-written rules at 100 % on all five fields",
+    raison: "récit d'un incident révolu : le remesurer n'aurait pas de sens" },
+  { fichier: "dossier.ts", extrait: 'birth: "96.7 %"',
+    raison: "colonne OFAC/large, gelée : voir OFAC_LARGE_MESURE_LE et sa raison" },
+  { fichier: "dossier.ts", extrait: 'document: "35.3 %"', raison: "idem" },
+  { fichier: "dossier.ts", extrait: 'country: "85.3 %"', raison: "idem" },
+  { fichier: "sonde.ts", extrait: "Every rate with its 95 % interval",
+    raison: "l'en-tête d'une colonne, pas un chiffre mesuré" },
+  { fichier: "sonde.ts", extrait: "These move by 20–30 % between runs",
+    raison: "réserve sur la variabilité entre passes, pas un taux publié" },
+];
+
+test("aucun taux ne se tape dans un générateur de document engendré", () => {
+  const sansCommentaires = (f: string) =>
+    readFileSync(fileURLToPath(new URL(`./${f}`, import.meta.url)), "utf8")
+      .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, " "))
+      .replace(/(?<!:)\/\/.*$/gm, " ");
+
+  /*
+   * LA LISTE VIENT DE L'EXEMPTION, PAS DE MA MÉMOIRE.
+   *
+   * Recopier « dossier.ts, sonde.ts » ici, c'est promettre de fouiller les générateurs des
+   * documents dispensés tout en regardant une AUTRE collection — celle que j'avais en tête
+   * le jour où j'ai écrit le cas. Un document ajouté à `ENGENDRES` demain serait dispensé
+   * du cliquet et jamais fouillé, et rien ne le dirait.
+   *
+   * Elle se LIT dans la source de `cascade.test.ts` plutôt que de s'importer : importer un
+   * fichier de cas y enregistre tous ses cas une seconde fois, et un dépôt qui compte ses
+   * cas se mettrait à en compter deux fois les mêmes.
+   */
+  const tableau = readFileSync(fileURLToPath(new URL("./cascade.test.ts", import.meta.url)), "utf8")
+    .match(/const ENGENDRES[^{]*\{([^}]*)\}/)?.[1] ?? "";
+  const generateurs = [...tableau.matchAll(/src\/(\S+?\.ts)/g)].map((m) => m[1]!);
+  assert.ok(generateurs.length >= 2 && generateurs.every(Boolean),
+    `« ${generateurs.join(", ")} » : une commande d'ENGENDRES ne nomme plus son générateur,\n`
+    + "  donc ce cliquet fouillerait moins de fichiers qu'il n'y a de documents dispensés.");
+
+  const trouves: string[] = [];
+  const couverts = new Set<number>();
+  for (const f of generateurs) {
+    sansCommentaires(f).split("\n").forEach((l, i) => {
+      if (!/\d+(?:[.,]\d+)?\s*%/.test(l)) return;
+      const j = PERMIS.findIndex((p) => p.fichier === f && l.includes(p.extrait));
+      if (j >= 0) { couverts.add(j); return; }
+      trouves.push(`${f}:${i + 1}  ${l.trim()}`);
+    });
+  }
+
+  /*
+   * TÉMOIN DE NON-VACUITÉ. Si le motif cesse de reconnaître un taux, ce cas passerait au
+   * vert sans rien regarder — exactement la panne qu'il est censé rendre impossible.
+   */
+  assert.ok(couverts.size >= 5,
+    `le relevé ne reconnaît plus que ${couverts.size} des taux déclarés permis : c'est le\n`
+    + "  motif qui est cassé, pas le code. Un cliquet qui ne voit rien ne garde rien.");
+
+  assert.deepEqual(trouves, [],
+    "un taux est tapé dans un générateur, et le document qu'il écrit est DISPENSÉ du cliquet\n"
+    + "  des taux tapés (voir ENGENDRES dans cascade.test.ts). `--check` ne peut pas le\n"
+    + "  rattraper : il compare le fichier à la sortie du générateur, donc aux mêmes littéraux.\n"
+    + "  → dérivez-le du relevé, ou inscrivez-le dans PERMIS avec la raison qui le fige.");
+});
+
+test("la colonne « ce corpus » de la table OFAC vient du relevé, pas d'une chaîne", () => {
+  /*
+   * CE CAS N'ÉPROUVE PAS LE DÉFAUT D'ORIGINE, ET IL FAUT LE DIRE.
+   *
+   * Remis dans l'état d'avant le correctif, il passe au VERT : les trois chaînes tapées
+   * valaient exactement ce que le relevé livré donne aujourd'hui. Un document juste par
+   * hasard est indiscernable d'un document juste par construction — c'est la phrase que ce
+   * dépôt s'écrit déjà à propos de `--check`, et elle vaut ici. Ce cas ne garde donc pas le
+   * passé : il attrape la DÉRIVE, le jour où le relevé bouge. Ce qui éprouve le défaut lui-même
+   * est le cliquet ci-dessus.
+   */
+  const p = readProfiles()!;
+  const texte = dossier(p, ASSUMPTIONS);
+
+  let vus = 0;
+  for (const champ of ["birth", "document", "country"] as const) {
+    const l = texte.split("\n").find((x) => x.startsWith(`| \`${champ}\` |`));
+    if (!l) continue;
+    const cellules = l.split("|").map((c) => c.trim());
+    const q = p.extraction["rules"][champ];
+    const attendu = (100 * (Math.round(q.accuracy * q.items) / q.items)).toFixed(1) + " %";
+    assert.equal(cellules[2], attendu,
+      `la table publie « ${cellules[2]} » pour \`${champ}\` là où le relevé donne ${attendu}.`);
+    vus++;
+  }
+  assert.equal(vus, 3, "les trois lignes de la table OFAC ont disparu : ce cas ne garde plus rien.");
+});
+
+test("le document ne peut pas se contredire sur ce que les règles rendent", () => {
+  const texte = dossier(readProfiles()!, ASSUMPTIONS);
+
+  /*
+   * ON NE PEUT PAS AVOIR RAISON PLUS SOUVENT QU'ON NE RÉPOND.
+   *
+   * C'est l'invariant que la phrase supprimée violait : « 0 valeur rendue » sous une
+   * cellule à 100,0 % de n=290. Il ne cite aucun chiffre, donc il survit à une remesure,
+   * et il rougit sur toute prose qui recommencerait à raconter autre chose que la table.
+   */
+  /* On cherche la PHRASE, pas sa formulation : sinon le cas rougit parce que le texte a
+     changé, ce qui se lit comme un défaut là où il n'y en a pas — et, pire, il resterait
+     muet sur une autre phrase qui raconterait la même chose autrement. */
+  const l = texte.split("\n").find((x) => /values returned/.test(x));
+  assert.ok(l, "aucune phrase ne dit plus ce que les règles rendent : ce cas ne garde plus rien.");
+  const rendus = (l!.match(/(\d+),\s*(\d+)\s*(?:,|and)\s*(\d+)/) ?? []).slice(1).map(Number);
+  assert.equal(rendus.length, 3, `« ${l} » ne porte plus trois nombres.`);
+
+  const champs = ["birth", "document", "country"] as const;
+  champs.forEach((champ, i) => {
+    const ligne = texte.split("\n").find((x) => x.startsWith(`| \`${champ}\` |`))!;
+    const c = ligne.split("|").map((x) => x.trim());
+    const taux = Number(c[3]!.replace(/[^\d.]/g, "").replace(/^(\d+\.\d)\d*$/, "$1"));
+    const n = Number(c[3]!.match(/n=(\d+)/)?.[1] ?? 0);
+    assert.ok(n > 0, `la cellule OFAC de \`${champ}\` ne porte plus son échantillon.`);
+    const justes = Math.round((taux / 100) * n);
+    assert.ok(rendus[i]! >= justes,
+      `le document dit que \`${champ}\` rend ${rendus[i]} valeurs et qu'il en a ${justes} de\n`
+      + `  justes sur ${n}. On ne peut pas avoir raison plus souvent qu'on ne répond : l'une des\n`
+      + "  deux phrases ne vient pas de la mesure.");
+  });
+
+  assert.ok(!/do not answer at all/.test(texte),
+    "« they do not answer at all » est de retour : mesuré sur le CSV livré, les règles\n"
+    + "  rendent 290, 198 et 259 valeurs.");
+});

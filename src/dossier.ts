@@ -212,25 +212,88 @@ export function dossier(p: Profiles, h: Assumptions): string {
       const r = (RULES as Record<string, ((t: string) => string) | undefined>)[champ];
       const avec = cas.filter((c) => c[champ]);
       if (!r || avec.length < 50) return null;
-      return { taux: 100 * avec.filter((c) => norm(r(c["text"]!)) === norm(c[champ]!)).length / avec.length, n: avec.length };
+      return {
+        taux: 100 * avec.filter((c) => norm(r(c["text"]!)) === norm(c[champ]!)).length / avec.length,
+        n: avec.length,
+        rendus: avec.filter((c) => r(c["text"]!) !== "").length,
+      };
     };
     return { score, total: cas.length };
   })();
 
+  /*
+   * DEUX COLONNES SUR TROIS ETAIENT TAPEES, SOUS UN COMMENTAIRE QUI DISAIT LE CONTRAIRE.
+   *
+   * « CES CHIFFRES SONT CALCULES ICI, JAMAIS TAPES » ne portait que sur la colonne du
+   * milieu. « This corpus, rules » et « OFAC, large » arrivaient en chaines litterales
+   * — six taux — et ce document est dispense du cliquet des taux tapes parce qu'il est
+   * repute engendre. L'exemption reposait donc sur une phrase fausse : `--check` compare
+   * le fichier a la sortie du generateur, qui rend les memes litteraux, alors il verifie
+   * une transcription et jamais une mesure.
+   *
+   * La premiere colonne vient du releve, comme le reste du document. La seconde ne se
+   * derive pas ici — elle demande de faire tourner `large` sur la liste SDN, donc le
+   * modele — alors elle est GELEE avec sa date et la raison de son absence, et le
+   * document le dit sous la table.
+   */
+  const OFAC_LARGE: Record<string, string> = {
+    birth: "96.7 %",
+    document: "35.3 %",
+    country: "85.3 %",
+  };
+  const OFAC_LARGE_MESURE_LE = "2026-08-25";
+  const OFAC_LARGE_PAS_DERIVABLE_ICI =
+    "running `large` over the SDN list needs the model, which `npm test` does not download";
+
   if (externe) {
-    const ligne = (champ: string, ici: string, large: string) => {
+    const ligne = (champ: Field) => {
       const e = externe.score(champ);
-      return [`\`${champ}\``, ici, e ? `**${e.taux.toFixed(1)} %** (n=${e.n})` : "—", large];
+      return [`\`${champ}\``, pc(taux(p, "rules", champ).rate),
+        e ? `**${e.taux.toFixed(1)} %** (n=${e.n})` : "—", OFAC_LARGE[champ] ?? "—"];
     };
     w(table(["Field", "This corpus, rules", "OFAC, rules", "OFAC, \`large\`"], [
-      ligne("birth", "100.0 %", "96.7 %"),
-      ligne("document", "79.7 %", "35.3 %"),
-      ligne("country", "100.0 %", "85.3 %"),
+      ligne("birth"),
+      ligne("document"),
+      ligne("country"),
     ]));
   }
   w(``);
-  w(`They do not answer wrongly — they do not answer at all: 0, 15 and 24 values returned out`);
-  w(`of 198 to 290 cases. The tool is not what fails here; the free tier is. On a real`);
+  /*
+   * CETTE PHRASE ETAIT FAUSSE, ET ELLE CONTREDISAIT LA TABLE TROIS LIGNES PLUS HAUT.
+   *
+   * « they do not answer at all: 0, 15 and 24 values returned » : mesure sur ce meme CSV,
+   * les regles rendent 290, 198 et 259 valeurs. Un taux de 100,0 % sur n=290, imprime juste
+   * au-dessus, est incompatible avec « zero valeur rendue ». La phrase decrivait un etat
+   * revolu et elle a survecu parce que ce document est dispense du cliquet.
+   *
+   * Ce qui la remplace se calcule. Ce qui reste a decider n'est pas de l'entretien : sur
+   * cette liste les regles tiennent mieux que ce paragraphe ne l'annonce, et c'est
+   * l'argument du paragraphe qui doit etre repris, pas le chiffre.
+   */
+  if (externe) {
+    const champs: Field[] = ["birth", "document", "country"];
+    const vus = champs.map((c) => ({ c, e: externe.score(c), ici: 100 * taux(p, "rules", c).rate }));
+    const nomme = (x: string) => "`" + x + "`";
+    const rendus = vus.map((v) => (v.e ? v.e.rendus : 0));
+    const totaux = vus.map((v) => (v.e ? v.e.n : 0));
+    const abstentions = vus.reduce((s2, v) => s2 + (v.e ? v.e.n - v.e.rendus : 0), 0);
+    const ecarts = vus.map((v) => {
+      if (!v.e) return nomme(v.c) + " —";
+      const d = v.ici - v.e.taux;
+      /* « \u22120.0 points » se lit comme une perte ; un ecart qui s'arrondit a zero se dit. */
+      if (Math.abs(d) < 0.05) return nomme(v.c) + " unchanged";
+      return nomme(v.c) + " " + (d >= 0 ? "\u2212" : "+") + Math.abs(d).toFixed(1) + " points";
+    });
+    w(`They do answer: ${rendus.join(", ")} values returned for ${champs.map(nomme).join(", ")}`);
+    w(`out of ${totaux.join(", ")} cases, with ${abstentions} abstentions in all. What moves is`);
+    w(`the accuracy: ${ecarts.join(", ")} against this corpus.`);
+    w(``);
+    w(`The \`large\` column is not measured here. It was taken on ${OFAC_LARGE_MESURE_LE} and`);
+    w(`is frozen in the generator, because ${OFAC_LARGE_PAS_DERIVABLE_ICI}.`);
+    w(``);
+    w(`On a real`);
+  }
+
   /*
    * CE CHIFFRE ÉTAIT FAUX D'UN FACTEUR VINGT À QUATRE-VINGTS, DANS LE SENS QUI NOUS ABÎME.
    *

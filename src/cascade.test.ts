@@ -2278,7 +2278,10 @@ const TAUX_EN_PROSE_AU_23_08 = 12;
  * L'entrée porte sa commande, et un test vérifie que cette commande est bien dans `npm test`.
  * Sans ça, il suffirait d'inscrire un fichier ici pour le soustraire au contrôle.
  */
-const ENGENDRES: Record<string, string> = {
+/* Exporté parce qu'un autre cas doit voir CETTE table : ce qui est dispensé du cliquet des
+   taux tapés est exactement ce dont le générateur doit être fouillé. Voir
+   `dossier-provenance.test.ts`. Une liste recopiée là-bas regarderait une autre collection. */
+export const ENGENDRES: Record<string, string> = {
   "VALIDATION.md": "node src/dossier.ts --check",
   "SONDE.md": "node src/sonde.ts --check",
 };

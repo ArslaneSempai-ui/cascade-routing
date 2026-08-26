@@ -50,8 +50,14 @@ every expected answer verified to appear verbatim in the source text:
 | `document` | 79.7 % | **76.8 %** (n=198) | 35.3 % |
 | `country` | 100.0 % | **88.7 %** (n=266) | 85.3 % |
 
-They do not answer wrongly — they do not answer at all: 0, 15 and 24 values returned out
-of 198 to 290 cases. The tool is not what fails here; the free tier is. On a real
+They do answer: 290, 198, 259 values returned for `birth`, `document`, `country`
+out of 290, 198, 266 cases, with 7 abstentions in all. What moves is
+the accuracy: `birth` unchanged, `document` −2.9 points, `country` −11.3 points against this corpus.
+
+The `large` column is not measured here. It was taken on 2026-08-25 and
+is frozen in the generator, because running `large` over the SDN list needs the model, which `npm test` does not download.
+
+On a real
 distribution those three fields fall back to a measured tier. That is machine time on the
 client's own hardware, not a provider fee — $3 to
 $6 per period at the declared volume,
