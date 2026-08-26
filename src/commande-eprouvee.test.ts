@@ -7,7 +7,9 @@
  */
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { mkdtempSync, writeFileSync, symlinkSync, appendFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { lancer, exigerRefus, exigerQueCaMarcheSansCa } from "./commande-eprouvee.ts";
@@ -55,4 +57,43 @@ test("l'index du commit en cours n'est jamais transmis au sous-processus", () =>
     { env: { GIT_INDEX_FILE: "/tmp/index-empoisonne" } });
   assert.equal(s.texte.trim(), "null",
     "GIT_INDEX_FILE a traversé : un sous-processus git écrirait dans l'index de l'appelant.");
+});
+
+/*
+ * UNE GARDE DE PROVENANCE, ÉPROUVÉE DE BOUT EN BOUT.
+ *
+ * `apparier-prompt.ts` refuse de mesurer sur un arbre modifié. Ce n'est pas du confort : le
+ * relevé qu'il écrit porte le commit courant, et un relevé estampillé d'un commit qui ne
+ * contient pas le code mesuré affirme une provenance fausse — qui se cite ensuite.
+ *
+ * La garde lit l'arbre du module lui-même, donc elle s'éprouve dans un clone. Le contrôle
+ * positif ne va pas au bout : la commande lancerait une vraie mesure. Il exige seulement
+ * qu'elle DÉPASSE cette garde, ce qui est exactement ce qu'on veut savoir.
+ */
+test("mesurer sur un arbre modifié est refusé, et le refus dit quoi faire", { timeout: 120_000 }, () => {
+  const d = mkdtempSync(join(tmpdir(), "cascade-sale-"));
+  const clone = join(d, "cascade");
+  const racine = fileURLToPath(new URL("..", import.meta.url));
+  execFileSync("git", ["clone", "--quiet", racine, clone], { stdio: "pipe" });
+  symlinkSync(join(racine, "node_modules"), join(clone, "node_modules"));
+  /*
+   * `.gitignore` porte `node_modules/`, avec une barre : le motif vise un DOSSIER, et notre
+   * lien symbolique n'en est pas un. Sans cette ligne l'arbre du clone est sale dès le départ,
+   * le contrôle positif tombe, et on accuse la garde de crier à tort alors qu'elle a raison.
+   * On exclut donc localement — ce qui ne modifie ni le dépôt ni ce que le clone porte.
+   */
+  appendFileSync(join(clone, ".git", "info", "exclude"), "\nnode_modules\n");
+
+  const cmd = [join(clone, "src", "apparier-prompt.ts"), "--cases=1"];
+
+  /* CONTRÔLE POSITIF D'ABORD : sur l'arbre propre, la garde ne doit PAS parler. Sans lui, le
+     refus mesuré ensuite pourrait venir de n'importe quoi — un import cassé, par exemple. */
+  const propre = lancer(cmd, { cwd: clone, msMax: 20_000 });
+  assert.doesNotMatch(propre.texte, /Modified tree/,
+    "la garde parle sur un arbre PROPRE : elle ne mesure donc pas ce qu'elle prétend.\n"
+    + `  ${JSON.stringify(propre.texte.slice(0, 200))}`);
+
+  writeFileSync(join(clone, "src", "sonde.ts"), "export const x = 1;\n");
+  exigerRefus(lancer(cmd, { cwd: clone, msMax: 20_000 }), /Modified tree: commit before measuring/,
+    "un arbre modifié doit être refusé");
 });

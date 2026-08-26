@@ -33,19 +33,42 @@
  */
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { existsSync, realpathSync } from "node:fs";
 
 const RACINE = fileURLToPath(new URL("..", import.meta.url));
 
 export type Sortie = { code: number; texte: string };
 
 /** Lance une commande du dépôt et rend son code et tout ce qu'elle a dit. */
-export function lancer(args: string[], options: { cwd?: string; env?: NodeJS.ProcessEnv } = {}): Sortie {
+export function lancer(
+  args: string[],
+  options: { cwd?: string; env?: NodeJS.ProcessEnv; msMax?: number } = {},
+): Sortie {
   const env = { ...process.env, ...(options.env ?? {}) };
   /* La suite peut tourner sous un crochet git, qui exporte GIT_INDEX_FILE. Transmis à un
      sous-processus, il fait écrire ce processus dans l'index du commit en cours. Mesuré. */
   delete env.GIT_INDEX_FILE; delete env.GIT_DIR; delete env.GIT_WORK_TREE;
-  const r = spawnSync(process.execPath, args, {
-    cwd: options.cwd ?? RACINE, encoding: "utf8", env,
+  /* `msMax` sert au CONTRÔLE POSITIF d'une commande coûteuse : on ne veut pas qu'elle
+     aille au bout, seulement qu'elle dépasse la garde qu'on éprouve. Le code rendu est alors
+     celui d'un processus tué — c'est pourquoi le contrôle positif porte sur ce qui a été DIT,
+     jamais sur le code, quand une borne est posée. */
+  /*
+   * LE CHEMIN EST RÉSOLU, ET SANS ÇA CE FICHIER FABRIQUERAIT DES VERTS VIDES.
+   *
+   * Un module de ce dépôt ne s'exécute que s'il se reconnaît comme point d'entrée :
+   * `import.meta.url === pathToFileURL(process.argv[1]).href`. Or `import.meta.url` résout les
+   * liens symboliques et `pathToFileURL(argv[1])` non. Sur macOS, `mkdtemp` rend
+   * `/var/folders/…` là où le chemin réel est `/private/var/folders/…` : les deux diffèrent, la
+   * garde rend `false`, `principal()` n'est jamais appelé.
+   *
+   * Le symptôme mesuré : code 0, sortie VIDE. Un cas qui exige un refus tombe alors en
+   * accusant la garde, et un cas qui exige un succès PASSE en n'ayant rien lancé du tout.
+   * C'est le vert le plus vide possible — la commande n'a pas tourné.
+   */
+  const argsResolus = args.map((a, i) =>
+    i === 0 && existsSync(a) ? realpathSync(a) : a);
+  const r = spawnSync(process.execPath, argsResolus, {
+    cwd: options.cwd ?? RACINE, encoding: "utf8", env, timeout: options.msMax,
   });
   return { code: r.status ?? -1, texte: `${r.stdout ?? ""}${r.stderr ?? ""}` };
 }
