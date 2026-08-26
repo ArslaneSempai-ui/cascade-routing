@@ -278,6 +278,45 @@ function canonique(x: unknown): unknown {
 export function empreinteDuReleve(profils: unknown): string {
   return createHash("sha256").update(JSON.stringify(canonique(profils))).digest("hex").slice(0, 16);
 }
+/**
+ * Écrit un relevé de mesure — SCELLÉ, et par renommage.
+ *
+ * ─── LES DEUX DÉFAUTS QUE CETTE FONCTION FERME, ET POURQUOI ILS ÉTAIENT INVISIBLES ───
+ *
+ * Le relevé s'écrivait à DEUX endroits : la sauvegarde après chaque palier, et l'écriture
+ * finale. Elles ont divergé sur les deux points qui comptent, chacune gardant ce que l'autre
+ * avait corrigé.
+ *
+ * **La sauvegarde incrémentale n'était pas scellée.** Or `readProfiles()` REFUSE un relevé sans
+ * empreinte — c'est la garde qui empêche de publier un chiffre modifié à la main — et `sauver()`
+ * appelle `readProfiles()` à chaque palier pour reprendre les précédents. Depuis l'ajout du
+ * scellé, `npm run measure` mourait donc au DEUXIÈME palier, sur un refus parfaitement juste
+ * déclenché par sa propre écriture. Reproduit avant correction : un relevé partiel écrit tel
+ * quel, `readProfiles` lève « carries no content fingerprint ». La commande la plus chère du
+ * dépôt était cassée, et rien ne le disait parce que personne ne la lance — elle demande une
+ * heure et un accord explicite.
+ *
+ * **L'écriture finale n'était pas atomique.** `writeFileSync` tronque avant de remplir : un
+ * lecteur concurrent — `npm run figures` pendant une mesure — peut tomber sur un JSON coupé en
+ * deux, et une coupure laisse le relevé en morceaux. La sauvegarde incrémentale avait été rendue
+ * atomique pour ce motif exact ; l'écriture finale ne l'a jamais été.
+ *
+ * Chacune portait la correction que l'autre n'avait pas. Cinquième fois de la journée dans ce
+ * dépôt que deux façons de produire la même chose divergent, et la seule parade est qu'il n'y
+ * en ait qu'une.
+ */
+export function ecrireReleve(fichier: string, releve: Profiles): Profiles {
+  mkdirSync(dirname(fichier), { recursive: true });
+  /* Le scellé se pose sur le contenu et s'exclut lui-même du calcul — voir `canonique()`. */
+  (releve as Record<string, unknown>).empreinte = empreinteDuReleve(releve);
+  const provisoire = `${fichier}.tmp`;
+  writeFileSync(provisoire, JSON.stringify(releve, null, 2));
+  /* Le renommage est atomique sur le même système de fichiers : un lecteur voit l'ancien
+     fichier ou le nouveau, jamais un fichier à moitié écrit. */
+  renameSync(provisoire, fichier);
+  return releve;
+}
+
 export function readProfiles(
   /*
    * LES DEUX CHEMINS SONT DES PARAMÈTRES PARCE QU'UNE GARDE QU'AUCUN TEST NE PEUT
@@ -489,9 +528,7 @@ export async function measure(
      * Le renommage est atomique sur le même système de fichiers : un lecteur voit l'ancien
      * fichier ou le nouveau, jamais un fichier à moitié écrit.
      */
-    const provisoire = FICHIER + ".tmp";
-    writeFileSync(provisoire, JSON.stringify(partiel, null, 2));
-    renameSync(provisoire, FICHIER);
+    ecrireReleve(FICHIER, partiel);
   };
 
   /*
@@ -706,10 +743,7 @@ export async function measure(
     tiers: [],
   };
   profils.tiers = (Object.keys(profils.extraction) as TierName[]);
-  mkdirSync(dirname(FICHIER), { recursive: true });
-  /* le scellé se pose sur le contenu final, et il s'exclut lui-même du calcul */
-  (profils as Record<string, unknown>).empreinte = empreinteDuReleve(profils);
-  writeFileSync(FICHIER, JSON.stringify(profils, null, 2));
+  ecrireReleve(FICHIER, profils);
   const { lignes, chemin } = journal.fermer();
   console.log(`\n${lignes} attempts recorded in ${chemin.split("/").slice(-2).join("/")}`);
   return profils;
