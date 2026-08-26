@@ -269,9 +269,34 @@ export function construire(): void {
     const src = root + "src/" + n.replace(/\.js$/, ".ts");
     if (existsSync(src)) empreintes["js/" + n] = createHash("sha256").update(readFileSync(src)).digest("hex");
   }
+  /*
+   * ET L'EMPREINTE DE CE QUI EST SERVI, PAS SEULEMENT DE CE QUI L'A PRODUIT.
+   *
+   * Les empreintes ci-dessus répondent à « la source a-t-elle bougé depuis la construction ».
+   * Elles ne répondent PAS à « le fichier que le navigateur charge est-il celui qu'on a
+   * construit » — et c'est la seconde question qui protège un visiteur.
+   *
+   * Mesuré le 26 août 2026 : une ligne ajoutée à la main dans `docs/js/assumptions.js`, le
+   * fichier réellement servi, laisse le contrôle de fraîcheur à 5 sur 5. Aucune source n'a
+   * bougé, donc toutes les empreintes concordent, et le module falsifié part avec la page.
+   *
+   * Les fichiers COPIÉS verbatim — graphes.js, registre.css — sont déjà couverts autrement :
+   * le contrôle les compare octet pour octet à leur homonyme de `src/`. Ce qui manquait est
+   * le COMPILÉ, qui n'a pas d'homonyme comparable.
+   *
+   * Ce que ça ne ferme pas, et je l'écris plutôt que de le taire : une main qui falsifie le
+   * module ET le manifeste passe. Le manifeste est versionné, donc c'est l'historique qui
+   * répond de ce cas-là — pas ce contrôle.
+   */
+  const publies: Record<string, string> = {};
+  for (const n of atteints) {
+    const servi = docs + "/js/" + n;
+    if (existsSync(servi)) publies["js/" + n] = createHash("sha256").update(readFileSync(servi)).digest("hex");
+  }
+
   writeFileSync(docs + "/.sources.json", JSON.stringify(
     { quoi: "sha256 of each SOURCE at build time. A freshness check compares these to the sources on disk; a modification date would compare the machine instead.", empreintes,
-      releve: RELEVE_DE_LA_PAGE },
+      releve: RELEVE_DE_LA_PAGE, publies },
     null, 2) + "\n");
   console.log(`docs/ built — ${atteints.size} module(s) published`
     + (inutiles.length ? `, ${inutiles.length} dropped: ${inutiles.join(", ")}` : ""));
