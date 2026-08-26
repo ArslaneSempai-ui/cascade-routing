@@ -17,6 +17,19 @@
  *    positif, un cas qui exige un échec passe au vert sur un environnement cassé — et il passe
  *    d'autant mieux que tout est cassé. Un environnement abîmé ne rend pas la mesure bruyante,
  *    il la rend flatteuse : ce qui dégrade un résultat se remarque, ce qui l'améliore se publie.
+ *
+ * ET UN PIÈGE QUI VIENT AVEC CETTE AIDE, PARCE QU'ELLE POUSSE À EXTRAIRE.
+ *
+ * Pour rendre une garde éprouvable, on la sort en fonction. **Une extraction crée un site
+ * d'appel neuf, et un site d'appel neuf n'a aucun témoin par construction** : la fonction est
+ * parfaitement couverte, et rien n'exige que l'appelant l'appelle encore.
+ *
+ * Mesuré le 26 août 2026, sur l'extraction faite le jour même : remplacer `return
+ * interpreter(sortie, chemin)` par un `JSON.parse` direct dans l'appelant **compile sans une
+ * erreur et laisse la suite verte**. La garde était parfaitement éprouvée et parfaitement
+ * contournable. Le typage ne couvrait pas ce que l'auteur croyait qu'il couvrait.
+ *
+ * Donc : après toute extraction, muter le POINT D'APPEL — pas la fonction — et exiger le rouge.
  */
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
