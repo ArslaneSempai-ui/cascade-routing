@@ -620,7 +620,27 @@ export function balayerLHistorique(racine: string, lancer: LanceurGit = gitReel(
       + "  that read nothing finds nothing either.");
   }
 
-  const temoins = ATTENDUS.filter((a) => secretsDans(TEMOINS).includes(a)).length;
+  /*
+   * LE TÉMOIN DOIT TRAVERSER LE TUYAU, PAS UN LITTÉRAL.
+   *
+   * Il s'écrivait `secretsDans(TEMOINS)` — une constante locale. Il prouvait donc que
+   * l'expression régulière reconnaît une clé AWS, ce qui est vrai et sans rapport avec la
+   * question posée. **Si `git log` rendait un flux vide ou tronqué, `temoins` valait toujours
+   * 2 sur 2** et le relevé publiait « aucun secret » en vert.
+   *
+   * Les leurres sont maintenant ajoutés au FLUX BALAYÉ, sous un nom de fichier réservé. Les
+   * retrouver prouve que la boucle est passée sur le flux qu'on lui a donné ; ne pas les
+   * retrouver veut dire que la lecture n'a pas eu lieu, quelle qu'en soit la raison.
+   *
+   * CE QUE ÇA NE PROUVE PAS, et qui doit rester écrit : les leurres sont ajoutés à la FIN, donc
+   * un flux tronqué avant eux les laisserait quand même visibles. C'est le plancher d'octets,
+   * quelques lignes plus haut, qui garde ce cas-là — et lui a son propre témoin depuis peu. Les
+   * deux gardes sont nécessaires et aucune ne remplace l'autre.
+   */
+  const FICHIER_TEMOIN = "cascade-temoin-de-balayage";
+  const flux = `${patch.stdout}\ncommit 0000000000000000000000000000000000000000\n`
+    + `+++ b/${FICHIER_TEMOIN}\n`
+    + TEMOINS.split("\n").filter(Boolean).map((l) => `+${l}`).join("\n") + "\n";
 
   /*
    * ON RETIENT LE FICHIER, PAS SEULEMENT LA FORME.
@@ -670,10 +690,11 @@ export function balayerLHistorique(racine: string, lancer: LanceurGit = gitReel(
   const atteignables = new Set(
     (lancer(["rev-list", "HEAD"]).stdout || "").split("\n").map((l) => l.trim()).filter(Boolean));
   const trouvailles = new Map<string, Trouvaille>();
+  const commitsLus = new Set<string>();
   let fichier = "?", sha = "";
-  for (const ligne of patch.stdout.split("\n")) {
+  for (const ligne of flux.split("\n")) {
     const nouveauCommit = ligne.match(/^commit ([0-9a-f]{7,40})/);
-    if (nouveauCommit) { fichier = "?"; sha = nouveauCommit[1]!; continue; }
+    if (nouveauCommit) { fichier = "?"; sha = nouveauCommit[1]!; commitsLus.add(sha); continue; }
     if (ligne.startsWith("--- ")) {
       /* `--- a/X` nomme le fichier d'AVANT : utile quand `+++` vaut /dev/null. */
       if (ligne.startsWith("--- a/")) fichier = ligne.slice(6);
@@ -696,6 +717,32 @@ export function balayerLHistorique(racine: string, lancer: LanceurGit = gitReel(
       trouvailles.set(cle, { forme: nom, fichier, empreinte, publie: publie || vu?.publie === true });
     }
   }
+
+  /*
+   * LE BALAYEUR A-T-IL VU TOUT L'HISTORIQUE, OU SEULEMENT SON DÉBUT ?
+   *
+   * Le plancher d'octets attrape un tuyau vide. Une troncature AU-DESSUS du plancher — un tuyau
+   * fermé à mi-course, une sortie coupée par une limite de tampon — le passe, et le relevé
+   * publiait alors « aucun secret » sur un historique lu à moitié. Les leurres ne l'attrapent
+   * pas non plus : ils sont ajoutés à la fin, donc ils survivent à toute troncature du flux.
+   *
+   * On compare donc les commits que la BOUCLE a rencontrés à ceux que `rev-list` a comptés. Le
+   * leurre ajouté à la fin en fait partie, d'où le `- 1`. La marge est large parce que `git log`
+   * ne rend légitimement aucun bloc pour un commit sans diff — un écart de moitié, en revanche,
+   * veut dire que le flux s'est arrêté avant la fin.
+   */
+  const lus = commitsLus.size - 1;
+  if (lus < commits * 0.5) {
+    throw new Error(
+      `git log yielded ${lus} commit(s) for a history of ${commits}.\n`
+      + "  The stream stopped before the end: the sweep read a prefix of the history, and a\n"
+      + "  sweep that read a prefix finds only the secrets that happen to be in it.");
+  }
+
+  /* Les leurres retrouvés PAR LA BOUCLE, pas par un appel de côté. */
+  const dansLeFlux = [...trouvailles.values()].filter((t) => t.fichier === FICHIER_TEMOIN);
+  const temoins = ATTENDUS.filter((a) => dansLeFlux.some((t) => t.forme === a)).length;
+  for (const t of dansLeFlux) trouvailles.delete(`${t.forme}|${t.fichier}|${t.empreinte}`);
 
   const declares = lireDeclarations(racine);
   const estDeclare = (t: Trouvaille) =>

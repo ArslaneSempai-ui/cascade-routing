@@ -338,3 +338,48 @@ test("le balayage refuse de publier quand `git log` n'a pas pu être lancé", ()
     + "  celle du code de sortie, qui parle d'un code que git n'a jamais eu l'occasion de rendre ;\n"
     + "  et « truncated » serait faux, puisque rien n'a tourné.");
 });
+
+/**
+ * UN FLUX TRONQUÉ AU-DESSUS DU PLANCHER RESTAIT INVISIBLE.
+ *
+ * Trois gardes protègent le zéro de ce balayage, et aucune n'attrapait ce cas-là :
+ *
+ *   le compte de commits    attrape « rev-list n'a rien rendu »
+ *   le plancher d'octets    attrape « le tuyau était vide »
+ *   les leurres             attrapent « le balayeur n'est pas passé sur le flux »
+ *
+ * Un tuyau fermé à mi-course rend assez d'octets pour franchir le plancher, et les leurres —
+ * ajoutés à la fin — survivent à toute troncature. Le relevé publiait donc « aucun secret » sur
+ * un historique lu à moitié, avec un 2 sur 2 rassurant à côté.
+ *
+ * La boucle compte maintenant les commits qu'elle rencontre, et le relevé refuse si ce compte
+ * s'éloigne de celui de `rev-list`.
+ */
+test("un flux qui franchit le plancher mais s'arrête à mi-historique est refusé", () => {
+  /* Trois cents commits annoncés, plancher à 60 000 octets. On rend 100 000 octets — donc le
+     plancher passe — mais seulement dix blocs de commit. */
+  const dix = Array.from({ length: 10 }, (_, i) =>
+    `commit ${String(i).padStart(40, "0")}\n+++ b/f.txt\n+${"x".repeat(9000)}`).join("\n");
+  assert.throws(
+    () => balayerLHistorique(racine, (args) =>
+      args[0] === "rev-list"
+        ? { status: 0, stdout: "300\n" }
+        : { status: 0, stdout: dix }),
+    /stopped before the end/,
+    "dix commits lus pour un historique de trois cents : le balayage n'a vu qu'un préfixe, et "
+    + "un préfixe ne trouve que les secrets qui s'y trouvent");
+});
+
+test("un historique entièrement lu passe — sinon la garde ci-dessus refuse tout", () => {
+  /* LA DIRECTION QUI DÉCIDE. Trois cents commits annoncés, trois cents rencontrés. */
+  /* Chaque bloc doit aussi franchir le plancher d'octets — 300 commits demandent 60 000 octets.
+     Un cas sain qui échoue sur une AUTRE garde ne dit rien de celle qu'on éprouve ici. */
+  const tous = Array.from({ length: 300 }, (_, i) =>
+    `commit ${String(i).padStart(40, "0")}\n+++ b/f.txt\n+ligne ${i} ${"-".repeat(220)}`).join("\n");
+  const r = balayerLHistorique(racine, (args) =>
+    args[0] === "rev-list" ? { status: 0, stdout: "300\n" } : { status: 0, stdout: tous });
+  assert.equal(r.commits, 300);
+  assert.equal(r.temoins, 2,
+    "les leurres doivent être retrouvés DANS le flux : c'est ce qui prouve que la boucle est "
+    + "passée sur ce qu'on lui a donné, et non sur un littéral");
+});
