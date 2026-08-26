@@ -79,6 +79,22 @@ export function lancer(
  * `motif` n'est pas une commodité : c'est ce qui distingue un refus d'un plantage. Sans lui le
  * cas passe au vert sur une erreur d'import, une dépendance absente ou un fichier manquant.
  */
+/*
+ * UN REFUS SUIVI D'UN PLANTAGE N'EST PAS UN REFUS, et cette aide ne le voyait pas.
+ *
+ * Mesuré le 27 août 2026 sur le balayage : neutraliser `process.exit(2)` en `void (2)` laisse
+ * le message s'imprimer — il part AVANT la sortie — puis le programme continue et s'écrase
+ * plus loin sur ce qu'il refusait de faire. Le code rendu est 1, celui du plantage. Mon
+ * `exigerRefus` voyait un code non nul et le bon motif : il passait.
+ *
+ * Une quinzaine de gardes que je croyais couvertes sont ressorties SURVIVANTES pour cette
+ * seule raison. Le témoin passait, la garde ne gardait rien, et rien ne les distinguait.
+ *
+ * Un refus propre s'arrête. Une pile d'appels Node après le message dit exactement le
+ * contraire : la commande a dit non et l'a fait quand même.
+ */
+const PILE = /\n\s+at\s|node:internal|node:fs:\d/;
+
 export function exigerRefus(s: Sortie, motif: RegExp, quoi: string): void {
   if (s.code === 0) {
     throw new Error(
@@ -92,6 +108,25 @@ export function exigerRefus(s: Sortie, motif: RegExp, quoi: string): void {
       + `  reçu    : ${JSON.stringify(s.texte.slice(0, 400))}\n`
       + `  Un code non nul se produit aussi sur un import cassé ou un module absent ; sans le\n`
       + `  motif, ce cas passerait au vert sur un environnement abîmé plutôt que sur la garde.`);
+  }
+  /*
+   * L'ORDRE COMPTE. Ce contrôle vient APRÈS le motif, jamais avant : quand la commande n'a
+   * rien refusé du tout — un module absent, un import cassé — elle plante sans message, et
+   * annoncer « refus imprimé puis plantage » serait un diagnostic faux. Mon propre témoin
+   * du « mauvais motif » me l'a dit dans la minute où j'ai posé ce contrôle en tête.
+   *
+   * Ici le motif est satisfait : la commande a bien dit non. Une pile d'appels après ça dit
+   * qu'elle l'a dit ET l'a fait quand même.
+   */
+  if (PILE.test(s.texte)) {
+    throw new Error(
+      `${quoi} : le refus a été IMPRIMÉ puis la commande a PLANTÉ — ce n'est pas un refus.\n`
+      + `  Le message part avant la sortie, donc un motif satisfait ne prouve rien : il faut\n`
+      + `  que la commande S'ARRÊTE. Mesuré le 27 août 2026 — neutraliser process.exit laisse\n`
+      + `  le message s'imprimer, le programme continue et s'écrase sur ce qu'il refusait de\n`
+      + `  faire, et le code rendu est celui du plantage. Une quinzaine de gardes que je\n`
+      + `  croyais couvertes étaient survivantes pour cette seule raison.\n`
+      + `  reçu : ${JSON.stringify(s.texte.slice(0, 400))}`);
   }
 }
 
