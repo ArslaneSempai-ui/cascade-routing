@@ -20,7 +20,8 @@
  */
 
 import { availableParallelism, loadavg } from "node:os";
-import { pathToFileURL } from "node:url";
+
+import { isMain } from "./cli.ts";
 import { fork } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
@@ -45,13 +46,21 @@ import { fileURLToPath } from "node:url";
  * contenant un espace ou un accent, et son échec est silencieux — le fichier ne fait alors
  * rien du tout et sort en 0, ce qui se lit comme un succès.
  */
-function estLancéDirectement() {
-  const argv1 = process.argv[1];
-  if (!argv1) return false;
-  return import.meta.url === pathToFileURL(argv1).href;
-}
+/*
+ * LA DÉTECTION DU POINT D'ENTRÉE VIENT DE `cli.ts`, ELLE NE SE RÉÉCRIT PAS ICI.
+ *
+ * Cinq modules portaient chacun leur copie de `import.meta.url === pathToFileURL(argv1).href`,
+ * chacune avec son commentaire expliquant le piège URL-contre-chemin. Cinq copies d'une
+ * comparaison subtile, c'est cinq endroits où se tromper demain et une correction à faire cinq
+ * fois — et elles rendent toutes le même résultat le jour où on les écrit, ce qui est
+ * exactement ce qui les rend difficiles à voir.
+ *
+ * `isMain` est éprouvé équivalent avant ce remplacement, sur les quatre cas qui séparent les
+ * deux formes : chemin accentué avec espaces, invocation relative, et lien symbolique — où les
+ * deux rendent `false`.
+ */
 
-if (estLancéDirectement()) {
+if (isMain(import.meta)) {
   if (process.env.CHARGER_FILS) {
     for (;;) { /* saturer un cœur */ }
   }

@@ -36,7 +36,8 @@
  */
 import { createVerify, createPublicKey, verify as verifierBrut } from "node:crypto";
 import { readFileSync } from "node:fs";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
+import { isMain } from "./cli.ts";
 import { createHash } from "node:crypto";
 
 const DEBUT_DONNEES = '<script type="application/json" id="rapport">';
@@ -279,21 +280,18 @@ function principal() {
     + `held by the measurements, their intervals, and the retraction log.`);
 }
 
-/**
- * Ce module est-il le point d'entrée ?
+/*
+ * LA DÉTECTION DU POINT D'ENTRÉE VIENT DE `cli.ts`, ELLE NE SE RÉÉCRIT PAS ICI.
  *
- * `import.meta.url === \`file://${process.argv[1]}\`` compare une URL à un chemin. Ils
- * coïncident tant que le chemin ne contient ni espace ni accent ; dès qu'il en contient, l'URL
- * porte `%20` et la comparaison échoue. Le programme se termine alors SANS RIEN FAIRE, code 0.
+ * Cinq modules portaient chacun leur copie de `import.meta.url === pathToFileURL(argv1).href`,
+ * chacune avec son commentaire expliquant le piège URL-contre-chemin. Cinq copies d'une
+ * comparaison subtile, c'est cinq endroits où se tromper demain et une correction à faire cinq
+ * fois — et elles rendent toutes le même résultat le jour où on les écrit, ce qui est
+ * exactement ce qui les rend difficiles à voir.
  *
- * Trouvé le 24 août 2026 par une session de contrôle : le dépôt rangé dans un dossier nommé
- * « Mes Rapports 2026 », le vérificateur de rapport rend 0 et n'imprime rien — donc tout
- * `… && echo VÉRIFIÉ` imprime VÉRIFIÉ. Un outil de sécurité muet est pire qu'un outil absent.
+ * `isMain` est éprouvé équivalent avant ce remplacement, sur les quatre cas qui séparent les
+ * deux formes : chemin accentué avec espaces, invocation relative, et lien symbolique — où les
+ * deux rendent `false`.
  */
-function estLancéDirectement() {
-  const argv1 = process.argv[1];
-  if (!argv1) return false;
-  return import.meta.url === pathToFileURL(argv1).href;
-}
 
-if (estLancéDirectement()) principal();
+if (isMain(import.meta)) principal();

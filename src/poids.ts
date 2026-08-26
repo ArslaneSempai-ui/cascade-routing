@@ -38,7 +38,8 @@
 import { createHash } from "node:crypto";
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, relative, sep } from "node:path";
-import { pathToFileURL } from "node:url";
+
+import { isMain } from "./cli.ts";
 import { POIDS_MODELES, racineDesPoids, type CleModele } from "./tiers.ts";
 
 /** Le nom du manifeste dans le dossier d'export. Un dossier sans lui n'est pas un export. */
@@ -272,14 +273,20 @@ export function rapport(racine?: string): string {
   return `Model weights under ${base}\n\n` + lignes.join("\n") + "\n";
 }
 
-/* Le point d'entrée n'agit QUE si ce fichier est la commande lancée. Importé, il ne fait
-   rien — un module qui agit à l'import tue le fichier de test qui l'importe. */
-function estLaCommande(): boolean {
-  const a = process.argv[1];
-  return a !== undefined && import.meta.url === pathToFileURL(a).href;
-}
+/*
+ * LA DÉTECTION DU POINT D'ENTRÉE VIENT DE `cli.ts`, ELLE NE SE RÉÉCRIT PAS ICI.
+ *
+ * Cinq modules portaient chacun leur copie de `import.meta.url === pathToFileURL(argv1).href`.
+ * Cinq copies d'une comparaison subtile, c'est cinq endroits où se tromper demain — et elles
+ * rendent toutes le même résultat le jour où on les écrit, ce qui est ce qui les rend
+ * difficiles à voir.
+ *
+ * Ce que disait le commentaire d'ici et qui reste vrai : le point d'entrée n'agit QUE si ce
+ * fichier est la commande lancée. Importé, il ne fait rien — un module qui agit à l'import tue
+ * le fichier de test qui l'importe.
+ */
 
-if (estLaCommande()) {
+if (isMain(import.meta)) {
   const args = process.argv.slice(2);
   const modeles = Object.keys(POIDS_MODELES) as CleModele[];
   const valeur = (nom: string): string | undefined => {

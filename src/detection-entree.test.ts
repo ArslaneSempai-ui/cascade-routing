@@ -104,15 +104,35 @@ test("toute détection d'entrée garde process.argv[1] avant de le convertir", (
     + "casserait à l'import, avant d'avoir rien fait.");
 });
 
-test("le dépôt porte bien des détections à contrôler", () => {
-  /* LA DIRECTION QUI DÉCIDE. Les deux cas ci-dessus passent aussi sur un dépôt qui ne
-     détecte rien du tout — et ils passeraient encore si le filtre des commentaires mangeait
-     tout le fichier par erreur. Celui-ci refuse ce vert-là. */
-  const avec = sources().filter(({ code }) =>
-    code.some(({ texte }) => texte.includes("import.meta.url") && /pathToFileURL|isMain/.test(texte)));
-  assert.ok(avec.length >= 5,
-    `seulement ${avec.length} fichier(s) détectent leur point d'entrée. Il y en avait sept `
-    + "le 26 août 2026 : soit ils ont été regroupés derrière isMain — auquel cas relire les "
-    + "deux cas ci-dessus, qui ne gardent presque plus rien — soit le filtrage des "
-    + "commentaires mange du code et ces deux cas examinent le vide.");
+test("les deux cas ci-dessus ont bien quelque chose à examiner", () => {
+  /*
+   * LA DIRECTION QUI DÉCIDE, ET ELLE COMPTE DEUX POPULATIONS PARCE QU'IL Y EN A DEUX.
+   *
+   * Les deux cas ci-dessus n'examinent que les détections ÉCRITES SUR PLACE. Un fichier qui
+   * appelle `isMain(import.meta)` ne les concerne pas : il n'y a plus de forme à se tromper.
+   *
+   * Ce cas a rougi le jour où quatre modules sont passés à `isMain` — le compte est tombé de
+   * sept à trois. C'était son travail, et le geste correct n'était pas de baisser le seuil
+   * pour faire passer mon propre changement : c'était de compter séparément ce que les deux
+   * premiers cas gardent, et ce qui prouve que le filtre à commentaires n'avale pas le code.
+   */
+  const locales = sources().filter(({ code }) =>
+    code.some(({ texte }) => texte.includes("import.meta.url") && /pathToFileURL/.test(texte)));
+  const parIsMain = sources().filter(({ code }) =>
+    code.some(({ texte }) => /isMain\(\s*import\.meta/.test(texte)));
+
+  assert.ok(locales.length >= 1,
+    "plus aucun fichier n'écrit sa propre détection : les deux cas ci-dessus ne gardent plus "
+    + "rien et passeraient sur n'importe quoi. Soit tout est passé derrière isMain — auquel "
+    + "cas les retirer plutôt que les laisser rassurer — soit le filtre à commentaires avale "
+    + "du code.");
+
+  /* Le total, lui, ne dépend pas de la répartition entre les deux formes : il ne peut tomber
+     que si le dépôt cesse de détecter ses points d'entrée, ou si le filtre mange le code. */
+  const total = new Set([...locales, ...parIsMain].map((f) => f.nom)).size;
+  assert.ok(total >= 5,
+    `seulement ${total} fichier(s) détectent leur point d'entrée, sous une forme ou l'autre. `
+    + `Il y en avait sept le 26 août 2026 (${locales.length} sur place, ${parIsMain.length} `
+    + "par isMain). Un effondrement de ce compte veut dire que le filtre à commentaires "
+    + "mange du code, et que les deux cas ci-dessus examinent le vide.");
 });
