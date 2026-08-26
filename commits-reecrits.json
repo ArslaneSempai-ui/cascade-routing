@@ -19,9 +19,10 @@
       "missing": "64bdacf",
       "nowAt": "19d19e8",
       "citedBy": [
-        "profiles-2026-08-20-coeur-rendu.json",
+        "data/profiles.json",
+        "landing.json",
         "profiles-2026-08-20-charge-8.json",
-        "data/profiles.json"
+        "profiles-2026-08-20-coeur-rendu.json"
       ],
       "establishedBy": "inferred, not recorded",
       "contentEvidence": "The relevé records `charge.externalBefore` for every tier. `19d19e8` introduces that field to src/measure.ts (4 occurrences); its predecessor `c199da4` has none. The relevé cannot have been produced by any earlier commit.",

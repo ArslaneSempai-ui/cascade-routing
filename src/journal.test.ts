@@ -207,6 +207,106 @@ test("chaque ligne porte sa formulation, référence comprise", () => {
  */
 const PRODUITS_HORS_DEPOT = new Set(["exposition.json"]);
 
+/*
+ * CE QUE LE CONTRÔLE DES COMMITS NE PEUT PAS VOIR, ET QUI N'ÉTAIT NOMMÉ NULLE PART.
+ *
+ * Le cas ci-dessous se donne sa propre liste : il retient les fichiers JSON de la racine
+ * QUI CITENT un commit. C'est la bonne façon de ne pas réciter une liste — mais elle a un
+ * revers, et il est exactement à l'envers de ce qu'on veut. Un relevé qui ne cite AUCUN
+ * commit n'est pas signalé : il est écarté. Le cas le plus grave — une mesure publiée sans
+ * la moindre provenance — est celui que la sélection fait disparaître.
+ *
+ * Mesuré le 26 août 2026 : 34 fichiers JSON à la racine, 16 contrôlés, DIX-HUIT dehors.
+ * Tous ne sont pas des relevés — `sbom.json`, `stryker.conf.json`, `intake-template.json` ne
+ * mesurent rien — et c'est pourquoi ce plancher ne prétend pas qu'ils devraient tous porter
+ * un commit. Il refuse seulement que leur nombre MONTE sans que quelqu'un l'ait décidé.
+ *
+ * Un chiffre de sélection porte le compte de ce qu'il écarte, ou il ne se publie pas.
+ */
+const SANS_PROVENANCE_AU_26_08 = 18;
+
+test("chaque redirection de commit nomme les relevés qui la citent vraiment", () => {
+  /*
+   * `citedBy` N'ÉTAIT LU PAR RIEN, ET IL ÉTAIT DÉJÀ FAUX.
+   *
+   * L'entrée de `64bdacf` nommait trois fichiers. `landing.json` le cite quinze fois et n'y
+   * était pas — parce que ses citations vivent sous `generatedFrom.*`, que l'ancien lecteur
+   * n'ouvrait pas. Un champ que personne ne vérifie occupe la place du contrôle qui aurait
+   * pu exister : il se lit comme un relevé de ce qui cite, et il en manquait un tiers.
+   *
+   * Le sens vérifié est celui qui attrape le défaut : tout fichier de la racine qui cite un
+   * hash redirigé doit être nommé. L'inverse ne se contrôle pas ici — une entrée peut nommer
+   * un fichier hors de la racine, `data/profiles.json` par exemple, que git ne transporte pas.
+   */
+  const racine = fileURLToPath(new URL("..", import.meta.url));
+  const f = join(racine, "commits-reecrits.json");
+  /* Ce fichier est livré : son absence est un défaut, pas une raison de rendre la main. */
+  assert.ok(existsSync(f),
+    "commits-reecrits.json a disparu : les relevés qui citent un commit réécrit n'ont plus\n"
+    + "  rien qui dise vers quoi il redirige, et le contrôle voisin les déclarerait introuvables.");
+  const j = JSON.parse(readFileSync(f, "utf8")) as {
+    entries: { missing: string; nowAt: string; citedBy?: string[] }[] };
+
+  const hashesDe = (o: unknown, acc: Set<string> = new Set()): Set<string> => {
+    if (o === null || typeof o !== "object") return acc;
+    for (const [k, v] of Object.entries(o as Record<string, unknown>)) {
+      if (k === "commit" && typeof v === "string" && /^[0-9a-f]{7,40}$/.test(v)) acc.add(v);
+      else hashesDe(v, acc);
+    }
+    return acc;
+  };
+  const parFichier = new Map<string, Set<string>>();
+  for (const n of readdirSync(racine).filter((x) => x.endsWith(".json") && !/^(package|package-lock|tsconfig)/.test(x))) {
+    try { parFichier.set(n, hashesDe(JSON.parse(readFileSync(join(racine, n), "utf8")))); } catch { /* pas un objet */ }
+  }
+  assert.ok(parFichier.size >= 10, `${parFichier.size} fichier(s) lu(s) : la lecture a échoué.`);
+
+  let verifiees = 0;
+  for (const e of j.entries) {
+    const citeurs = [...parFichier.entries()]
+      .filter(([, hs]) => [...hs].some((h) => h.startsWith(e.missing) || e.missing.startsWith(h)))
+      .map(([n]) => n);
+    if (citeurs.length === 0) continue;
+    verifiees++;
+    const manquants = citeurs.filter((n) => !(e.citedBy ?? []).includes(n));
+    assert.deepEqual(manquants, [],
+      `la redirection ${e.missing} → ${e.nowAt} ne nomme pas ${manquants.join(", ")}, qui la cite(nt).\n`
+      + "  `citedBy` se lit comme le relevé de ce qui dépend de cette redirection : incomplet,\n"
+      + "  il fait croire qu'un relevé n'en dépend pas.");
+  }
+  assert.ok(verifiees >= 1,
+    "aucune redirection n'est citée par un fichier de la racine : ce cas ne garde plus rien.");
+});
+
+test("le nombre de fichiers livrés qu'aucun contrôle de provenance ne regarde ne monte pas", () => {
+  const racine = fileURLToPath(new URL("..", import.meta.url));
+  const cite = (o: unknown): boolean => {
+    if (o === null || typeof o !== "object") return false;
+    for (const [k, v] of Object.entries(o as Record<string, unknown>)) {
+      if (k === "commit" && typeof v === "string" && /^[0-9a-f]{7,40}$/.test(v)) return true;
+      if (cite(v)) return true;
+    }
+    return false;
+  };
+  const tous = readdirSync(racine)
+    .filter((n) => n.endsWith(".json") && !/^(package|package-lock|tsconfig)/.test(n));
+  const dehors = tous.filter((n) => {
+    try { return !cite(JSON.parse(readFileSync(join(racine, n), "utf8"))); } catch { return true; }
+  });
+
+  /* Non-vacuité : sans lecture, `tous` est vide et « rien dehors » serait un vert par absence. */
+  assert.ok(tous.length >= 10, `${tous.length} fichier(s) JSON lu(s) à la racine : la lecture a échoué.`);
+
+  assert.ok(dehors.length <= SANS_PROVENANCE_AU_26_08,
+    `${dehors.length} fichiers livrés ne citent aucun commit, contre `
+    + `${SANS_PROVENANCE_AU_26_08} au moment où ce plancher a été posé :\n  `
+    + dehors.join("\n  ")
+    + "\n  Le contrôle des commits se donne sa liste en retenant ce qui CITE un commit : un\n"
+    + "  fichier qui n'en cite aucun n'est pas signalé, il est écarté. Le pire cas est donc\n"
+    + "  celui que la sélection efface.\n"
+    + "  → soit le nouveau fichier porte sa provenance, soit ce plancher monte avec la raison.");
+});
+
 test("aucun relevé livré ne cite un commit introuvable", () => {
   const racine = fileURLToPath(new URL("..", import.meta.url));
   /*
@@ -311,12 +411,33 @@ test("aucun relevé livré ne cite un commit introuvable", () => {
         `${n} est inscrit comme produit hors de ce dépôt, mais ne nomme pas lequel dans « code.depot ».\n`
         + "  Sans ce nom, son commit n'est retrouvable nulle part, et le relevé ne se vérifie pas.");
     }
+    /*
+     * LE LECTEUR ÉTAIT PLUS ÉTROIT QUE LE FILTRE QUI LE NOURRIT.
+     *
+     * La liste retient tout fichier qui cite un commit N'IMPORTE OÙ — `citeUnCommit` descend
+     * l'objet entier. Le lecteur, lui, ne regardait que `code.commit` et `provenance.*`.
+     * Deux relevés livrés tombaient dans l'écart et étaient comptés « sans provenance » :
+     *
+     *   landing.json           15 citations, sous `generatedFrom.commit` et `generatedFrom.perTier.*`
+     *   menace-historique.json  1 citation, à la racine — et c'est le relevé du balayage de
+     *                           l'historique, celui qui porte la promesse sur les secrets.
+     *
+     * Le commentaire qui figeait leur nombre à deux disait qu'ils « datent d'avant la
+     * provenance ». C'est faux : ils en portent, à un endroit que le lecteur n'ouvrait pas.
+     * Une explication fausse tient un chiffre juste, et le chiffre la fait passer pour vraie.
+     *
+     * On lit donc par le MÊME parcours que le filtre. Un chemin de plus dans un relevé neuf
+     * ne peut plus créer un angle mort.
+     */
     const cites = new Set<string>();
-    if (p.code?.commit) cites.add(p.code.commit);
-    for (const v of Object.values(p.provenance ?? {})) {
-      if (v.accuracy?.commit) cites.add(v.accuracy.commit);
-      if (v.latency?.commit) cites.add(v.latency.commit);
-    }
+    const ramasser = (o: unknown): void => {
+      if (o === null || typeof o !== "object") return;
+      for (const [k, v] of Object.entries(o as Record<string, unknown>)) {
+        if (k === "commit" && typeof v === "string" && /^[0-9a-f]{7,40}$/.test(v)) cites.add(v);
+        else ramasser(v);
+      }
+    };
+    ramasser(p);
     if (cites.size === 0) sansCommit.push(n);
     for (const c of cites) {
       verifies++;
@@ -340,9 +461,11 @@ test("aucun relevé livré ne cite un commit introuvable", () => {
    * ici ne peut les rattacher à du code. Les compter comme vérifiés serait le vert vide que ce
    * dépôt corrige partout — ils sont donc nommés, pas passés sous silence.
    */
-  assert.equal(sansCommit.length, 2,
-    `${sansCommit.length} relevé(s) sans aucun commit : ${sansCommit.join(", ") || "aucun"}.\n`
-    + `  → si ce nombre monte, une mesure a été écrite sans provenance et rien ne la rattache au code.`);
+  assert.equal(sansCommit.length, 0,
+    `${sansCommit.length} relevé(s) retenu(s) par le filtre mais illisibles par le lecteur : `
+    + `${sansCommit.join(", ")}.\n`
+    + "  Les deux parcourent le même objet : un écart ici veut dire que l'un des deux a changé\n"
+    + "  et que des citations sont redevenues invisibles.");
   assert.ok(verifies >= releves.length - sansCommit.length,
     `${verifies} citation(s) vérifiée(s) pour ${releves.length - sansCommit.length} relevé(s) avec provenance.`);
   assert.ok(verifies >= 3,
