@@ -287,17 +287,24 @@ if ! sortie=$(env -u GIT_INDEX_FILE node --test src/*.test.ts src/*.test.mjs 2>&
 fi
 apresSuite=$(git status --porcelain)
 if [ "$avantSuite" != "$apresSuite" ]; then
-  printf '\n  LA SUITE A ÉCRIT DANS L ARBRE VIVANT.\n\n'
+  printf '\n  QUELQUE CHOSE A ÉCRIT DANS L ARBRE PENDANT LA SUITE.\n\n'
   printf '%s\n' "$apresSuite" > /tmp/apres-suite.$$
   printf '%s\n' "$avantSuite" > /tmp/avant-suite.$$
   comm -13 /tmp/avant-suite.$$ /tmp/apres-suite.$$ 2>/dev/null | sed 's/^/    /'
   rm -f /tmp/avant-suite.$$ /tmp/apres-suite.$$
-  printf '\n  Un cas écrit là où git regarde. Deux conséquences, toutes deux vécues :\n'
-  printf '    · il salit l arbre, donc les gardes qui refusent de mesurer sur un arbre modifié\n'
-  printf '      refusent à la passe suivante — vertes une fois, rouges ensuite.\n'
-  printf '    · node --test lance les fichiers en PARALLÈLE : pendant sa fenêtre, tout autre cas\n'
-  printf '      reçoit ce qu il a écrit, même s il restaure après.\n\n'
-  printf '  Le remède est un bac à sable par cas. Ça ne guérira pas tout seul.\n\n'
+  printf '\n  DEUX CAUSES, ET CE CONTRÔLE NE SAIT PAS LES DISTINGUER — ne concluez pas sans regarder.\n\n'
+  printf '    UN CAS QUI ÉCRIT LÀ OÙ GIT REGARDE. Il salit l arbre, donc les gardes qui refusent\n'
+  printf '      de mesurer sur un arbre modifié refusent à la passe SUIVANTE — vertes une fois,\n'
+  printf '      rouges ensuite. Et `node --test` lance les fichiers en PARALLÈLE : pendant sa\n'
+  printf '      fenêtre, tout autre cas reçoit ce qu il a écrit, même s il restaure après.\n'
+  printf '      Remède : un bac à sable par cas. Ça ne guérira pas tout seul.\n\n'
+  printf '    UNE AUTRE SESSION QUI TRAVAILLE. Six sessions écrivent ici. Un fichier modifié\n'
+  printf '      pendant la fenêtre de la suite peut simplement être le travail de quelqu un\n'
+  printf '      d autre. La corrélation est réelle, la causalité non.\n\n'
+  printf '  CE QUI TRANCHE : relancez la suite seule dans un arbre jetable. Si l écart revient,\n'
+  printf '  c est un cas ; s il ne revient pas, c était un voisin. Sans ce pas, cet avertissement\n'
+  printf '  crierait à chaque commit dès que deux sessions travaillent — et un avertissement qui\n'
+  printf '  crie toujours cesse d être lu.\n\n'
 fi
 ignores=$(compterIgnores "$sortie")
 if [ "$ignores" = "?" ]; then
