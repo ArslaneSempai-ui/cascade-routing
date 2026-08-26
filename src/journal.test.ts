@@ -1099,6 +1099,64 @@ test("l'intégration continue clone l'historique entier, sinon quatre cas tomben
 });
 function t2skip(): void { throw new Error(".github/workflows/verifier.yml est absent : la passe d'intégration continue a disparu."); }
 
+test("le pas qui refuse un cas ignoré cherche ce que le rapporteur écrit vraiment", () => {
+  /*
+   * IL CHERCHAIT UN MARQUEUR QUI N'A JAMAIS ÉTÉ ÉCRIT.
+   *
+   * Le pas lisait `^# skipped N`, la forme TAP. `node --test` écrit `ℹ skipped N`, et par cas
+   * `﹣ nom (durée) # raison`. Mesuré le 26 août 2026 sur une suite portant un vrai
+   * `t.skip()` : zéro correspondance. Le refus n'a jamais pu se déclencher.
+   *
+   * Ce qui l'a caché est le `${ignores:-0}` : « ligne introuvable » et « zéro cas ignoré »
+   * rendaient le même chiffre. **L'absence de mesure se lisait comme une mesure à zéro.**
+   *
+   * Ce cas n'inspecte pas le texte du pas : il l'EXÉCUTE, sur trois sorties fabriquées. Un
+   * motif se contrôle en le faisant tourner sur ce qu'il doit reconnaître et sur ce qu'il
+   * doit rejeter ; le relire ne dit rien — c'est en le relisant qu'on l'a écrit faux.
+   */
+  const f = fileURLToPath(new URL("../.github/workflows/verifier.yml", import.meta.url));
+  assert.ok(existsSync(f), ".github/workflows/verifier.yml est absent.");
+  const y = readFileSync(f, "utf8");
+
+  /* On extrait le corps du pas, et on remplace la seule ligne qui lance la suite. */
+  const bloc = y.split("- name: suite, et aucun cas ignoré")[1] ?? "";
+  const lignes = bloc.split("\n");
+  const debut = lignes.findIndex((l) => /run:\s*\|/.test(l));
+  assert.ok(debut >= 0, "le pas ne porte plus de bloc `run: |` : ce cas ne garde plus rien.");
+  const corps: string[] = [];
+  for (const l of lignes.slice(debut + 1)) {
+    if (l.trim() !== "" && !/^\s{10}/.test(l)) break;
+    corps.push(l.replace(/^\s{10}/, ""));
+  }
+  const script = corps.join("\n").replace(/^\s*npm test .*$/m, 'cat "$1" > /tmp/suite.txt');
+  assert.match(script, /cat "\$1"/, "la ligne qui lance la suite n'a pas été trouvée dans le pas.");
+  assert.match(script, /skipped/, "le pas ne cherche plus rien à propos des cas ignorés.");
+
+  const tmp = mkdtempSync(join(tmpdir(), "ci-skip-"));
+  const ecrire = (nom: string, texte: string) => { const q = join(tmp, nom); writeFileSync(q, texte); return q; };
+  const lancer = (fixture: string) =>
+    spawnSync("sh", ["-c", script.replace(/^\s*set -o pipefail\s*$/m, ""), "sh", fixture],
+      { encoding: "utf8" }).status;
+
+  try {
+    const propre = ecrire("propre.txt", "✔ un cas (1ms)\nℹ pass 1\nℹ fail 0\nℹ skipped 0\n");
+    const ignore = ecrire("ignore.txt", "﹣ un cas (1ms) # exprès\nℹ pass 1\nℹ fail 0\nℹ skipped 1\n");
+    const muet = ecrire("muet.txt", "✔ un cas (1ms)\nla suite s'est arrêtée avant son résumé\n");
+
+    assert.equal(lancer(propre), 0,
+      "une suite sans cas ignoré est refusée : le pas interdirait toute construction verte.");
+    assert.notEqual(lancer(ignore), 0,
+      "UNE SUITE AVEC UN CAS IGNORÉ PASSE. Le pas cherche un marqueur que `node --test`\n"
+      + "  n'écrit pas — il écrit « ℹ skipped N » — donc son refus ne peut jamais se déclencher,\n"
+      + "  et un contrôle qui ne s'est pas exécuté compte comme un contrôle vert.");
+    assert.notEqual(lancer(muet), 0,
+      "une sortie SANS ligne de résumé passe : « introuvable » se lit comme « zéro ignoré ».\n"
+      + "  L'absence de mesure ne doit pas rendre le même chiffre qu'une mesure à zéro.");
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
 test("le relevé qui porte la promesse la plus vendable voyage avec le dépôt", () => {
   /*
    * « Nothing leaves your machine » est l'argument le plus fort du README, et `npm run egress`
