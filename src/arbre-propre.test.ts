@@ -1,11 +1,11 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { appendFileSync, readFileSync, existsSync, cpSync, mkdtempSync, symlinkSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { appendFileSync, readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { lancer, exigerRefus, exigerQueCaMarcheSansCa } from "./commande-eprouvee.ts";
+import { arbreJetable, retirerArbreJetable } from "./arbre-jetable.ts";
 
 /*
  * « MODIFIED TREE : COMMITE AVANT DE MESURER » — trois commandes, une seule garde.
@@ -33,35 +33,6 @@ import { lancer, exigerRefus, exigerQueCaMarcheSansCa } from "./commande-eprouve
 
 const RACINE = fileURLToPath(new URL("..", import.meta.url));
 
-/**
- * L'ARBRE D'ESSAI VIT DANS LE DOSSIER TEMPORAIRE, PAS À CÔTÉ DES VRAIS DÉPÔTS.
- *
- * La première version le posait dans `~/Documents/.worktrees-cascade/`. Une garde du dépôt l'a
- * refusée — « aucun contrôle ne s'est mis à lire le vrai arbre des dépôts sans le dire » — et
- * elle avait raison : un cas qui écrit dans le dossier des dépôts peut les abîmer tous, et
- * celui-ci copie puis efface des répertoires entiers.
- *
- * Il aurait été facile de contourner le détecteur — il cherche `new URL("../../`, qu'un
- * `join()` évite. Contourner un détecteur sans répondre à ce qu'il protège, c'est le vider.
- * Le dossier temporaire répond vraiment : rien de ce que ce cas écrit ne peut atteindre un
- * dépôt, même s'il s'interrompt au mauvais moment.
- */
-function arbreJetable(): string {
-  const chemin = mkdtempSync(join(tmpdir(), "arbre-propre-"));
-  assert.ok(!chemin.includes("/Documents/"),
-    `terrain d'essai dans le vrai arbre : ${chemin}`);
-  execFileSync("git", ["-C", RACINE, "worktree", "add", "--detach", "-q", chemin, "HEAD"],
-    { encoding: "utf8" });
-  /* `node_modules` est LIÉ, jamais installé : le dépôt y garde un cache de modèles de plus
-     d'un gigaoctet, et les trois commandes ne démarrent pas sans lui. */
-  symlinkSync(join(RACINE, "node_modules"), join(chemin, "node_modules"));
-  return chemin;
-}
-
-function retirerArbre(chemin: string): void {
-  try { execFileSync("git", ["-C", RACINE, "worktree", "remove", "--force", chemin]); } catch { /* déjà parti */ }
-  rmSync(chemin, { recursive: true, force: true });
-}
 
 /** Les trois commandes, avec l'en-tête qui prouve qu'elles ont dépassé la garde. */
 const COMMANDES = [
@@ -77,36 +48,8 @@ test("les trois commandes refusent de mesurer sur un arbre modifié", { timeout:
     t.diagnostic("hors dépôt git — la garde n'a pas de sens ici");
     return;
   }
-  const WT = arbreJetable();
+  const WT = arbreJetable("arbre-propre");
   try {
-    /*
-     * L'ARBRE ISOLÉ EST CRÉÉ SUR HEAD — DONC IL NE VOIT PAS CE QUI EST SUR LE DISQUE.
-     *
-     * Sans la copie ci-dessous, ce cas éprouverait la garde telle qu'elle est COMMITÉE et
-     * resterait vert alors qu'on vient de la retirer du fichier de travail. C'est-à-dire
-     * exactement l'inverse de ce qu'on demande à une suite lancée avant un commit : elle doit
-     * juger ce qui va partir, pas ce qui est déjà parti.
-     *
-     * Mesuré en le vérifiant : la mutation de la garde dans l'arbre partagé laissait ce cas
-     * vert tant que la copie n'était pas faite.
-     */
-    cpSync(join(RACINE, "src"), join(WT, "src"), { recursive: true });
-    /*
-     * ET ON FIGE LA COPIE PAR UN COMMIT DANS L'ARBRE ISOLÉ.
-     *
-     * La copie apporte le code du disque — et le rend SALE, puisque c'est ce que « sale » veut
-     * dire. Or l'état sain qu'on veut éprouver, c'est « ce code-ci, sur un arbre propre ». Le
-     * commit local le produit : il est détaché, ne touche aucune branche, et disparaît avec
-     * l'arbre.
-     *
-     * L'identité passe par `-c` et n'est PAS posée par `git config` : un arbre de travail ne
-     * possède pas sa propre configuration, et l'y écrire signerait les commits de toutes les
-     * autres sessions. Payé le 26 août 2026, onze commits réécrits.
-     */
-    execFileSync("git", ["-C", WT, "add", "-A"], { encoding: "utf8" });
-    execFileSync("git", ["-C", WT, "-c", "user.name=t", "-c", "user.email=t@t",
-      "commit", "-q", "--no-verify", "-m", "état du disque, figé pour ce cas"],
-      { encoding: "utf8" });
     /* ─── LE CONTRÔLE POSITIF D'ABORD ───
        Sans lui, les refus ci-dessous pourraient venir d'un arbre isolé qui ne tourne pas du
        tout — et ils passeraient d'autant mieux que tout serait cassé. */
@@ -130,7 +73,7 @@ test("les trois commandes refusent de mesurer sur un arbre modifié", { timeout:
         + `n'arrête pas laisse partir le relevé qu'il prétend empêcher.`);
     }
   } finally {
-    retirerArbre(WT);
+    retirerArbreJetable(WT);
   }
 });
 

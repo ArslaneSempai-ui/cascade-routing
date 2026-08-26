@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { lancer, exigerRefus } from "./commande-eprouvee.ts";
+import { arbreJetable, retirerArbreJetable } from "./arbre-jetable.ts";
 
 /*
  * LES REFUS QUI PROTÈGENT UN CHIFFRE PUBLIÉ — et qui ne tenaient rien.
@@ -30,29 +31,10 @@ import { lancer, exigerRefus } from "./commande-eprouvee.ts";
 
 const RACINE = fileURLToPath(new URL("..", import.meta.url));
 
-/** Un arbre jetable, dans le dossier temporaire — jamais à côté des vrais dépôts. */
-function arbreJetable(): string {
-  const chemin = mkdtempSync(join(tmpdir(), "refus-mesure-"));
-  assert.ok(!chemin.includes("/Documents/"), `terrain d'essai dans le vrai arbre : ${chemin}`);
-  execFileSync("git", ["-C", RACINE, "worktree", "add", "--detach", "-q", chemin, "HEAD"]);
-  symlinkSync(join(RACINE, "node_modules"), join(chemin, "node_modules"));
-  /* Le code du DISQUE, pas celui de HEAD : une suite lancée avant un commit doit juger ce qui
-     va partir. Figé par un commit détaché pour que l'arbre soit propre malgré la copie. */
-  cpSync(join(RACINE, "src"), join(chemin, "src"), { recursive: true });
-  execFileSync("git", ["-C", chemin, "add", "-A"]);
-  execFileSync("git", ["-C", chemin, "-c", "user.name=t", "-c", "user.email=t@t",
-    "commit", "-q", "--no-verify", "-m", "état du disque, figé pour ce cas"]);
-  return chemin;
-}
-
-function retirer(chemin: string): void {
-  try { execFileSync("git", ["-C", RACINE, "worktree", "remove", "--force", chemin]); } catch { /* parti */ }
-  rmSync(chemin, { recursive: true, force: true });
-}
 
 test("measure refuse une heure de calcul sur un geste distrait", { timeout: 600_000 }, (t) => {
   if (!existsSync(join(RACINE, ".git"))) { t.diagnostic("hors dépôt git"); return; }
-  const WT = arbreJetable();
+  const WT = arbreJetable("refus-mesure");
   try {
     const sansAccord = lancer([join(WT, "src", "measure.ts")],
       { cwd: WT, env: { MESURE_VOULUE: "" }, msMax: 120_000 });
@@ -69,12 +51,12 @@ test("measure refuse une heure de calcul sur un geste distrait", { timeout: 600_
     exigerRefus(avecAccord, /uncommitted changes/, "measure avec accord, sur arbre sali");
     assert.doesNotMatch(avecAccord.texte, /this pass downloads/,
       "l'accord donné, la première garde ne doit plus parler.");
-  } finally { retirer(WT); }
+  } finally { retirerArbreJetable(WT); }
 });
 
 test("measure refuse de mesurer sur un arbre modifié, et dit comment passer outre", { timeout: 600_000 }, (t) => {
   if (!existsSync(join(RACINE, ".git"))) { t.diagnostic("hors dépôt git"); return; }
-  const WT = arbreJetable();
+  const WT = arbreJetable("refus-mesure");
   try {
     appendFileSync(join(WT, "src", "corpus.ts"), "\n/* une ligne qui salit l'arbre */\n");
     const sale = lancer([join(WT, "src", "measure.ts"), "--je-veux-mesurer"],
@@ -85,10 +67,10 @@ test("measure refuse de mesurer sur un arbre modifié, et dit comment passer out
       + "qu'il refuse. Sans ça, `--allow-dirty` se pose sans y penser.");
     assert.match(sale.texte, /--allow-dirty/,
       "et nommer l'issue, dont la raison part dans le relevé.");
-  } finally { retirer(WT); }
+  } finally { retirerArbreJetable(WT); }
 });
 
-test("egress refuse de conclure quand il ne peut RIEN observer", { timeout: 300_000 }, () => {
+test("egress refuse de conclure quand il ne peut RIEN observer", { timeout: 600_000 }, () => {
   /*
    * LE ZÉRO QUI NE VEUT RIEN DIRE. Sans `lsof`, ce contrôle ne voit aucune connexion — et
    * « aucune connexion observée » est précisément ce qu'il publierait. Un scan cassé et un
@@ -97,17 +79,32 @@ test("egress refuse de conclure quand il ne peut RIEN observer", { timeout: 300_
    * On casse l'environnement d'une seule façon, et de la bonne : un `PATH` d'où `lsof` est
    * absent. Le reste de la commande est intact.
    */
-  const chemin = join(RACINE, "src", "egress.ts");
-  const sansLsof = lancer([chemin, "src/sonde.ts"],
-    { cwd: RACINE, env: { PATH: "/nonexistent" }, msMax: 120_000 });
-  exigerRefus(sansLsof, /lsof.*is not available|not available.*lsof/s, "egress sans lsof");
-  assert.match(sansLsof.texte, /does not\s+start|so it does not/,
-    "le refus doit dire qu'il NE DÉMARRE PAS — un avertissement suivi d'une mesure quand même "
-    + "publierait le zéro qu'il vient de déclarer sans valeur.");
+  /*
+   * ─── DANS UN ARBRE JETABLE, ET CE N'EST PAS UN CONFORT ───
+   *
+   * `egress` écrit son relevé dans `egress.json`, À LA RACINE DU DÉPÔT, et ce fichier est
+   * SUIVI par git. Lancé ici, ce cas salissait donc l'arbre partagé — et les deux cas
+   * au-dessus exigent un arbre propre. Il se serait empoisonné lui-même : vert au premier
+   * lancement, rouge au suivant, sans que rien dans son message ne le dise. Une session
+   * voisine l'a vu avant que ça coûte quelque chose.
+   *
+   * Mesuré : l'empreinte d'`egress.json` change pendant le lancement, et `git status` passe
+   * de vide à « M egress.json ».
+   */
+  const WT = arbreJetable("egress-lsof");
+  try {
+    const chemin = join(WT, "src", "egress.ts");
+    const sansLsof = lancer([chemin, "src/sonde.ts"],
+      { cwd: WT, env: { PATH: "/nonexistent" }, msMax: 120_000 });
+    exigerRefus(sansLsof, /lsof.*is not available|not available.*lsof/s, "egress sans lsof");
+    assert.match(sansLsof.texte, /does not\s+start|so it does not/,
+      "le refus doit dire qu'il NE DÉMARRE PAS — un avertissement suivi d'une mesure quand même "
+      + "publierait le zéro qu'il vient de déclarer sans valeur.");
 
-  /* LE CONTRÔLE POSITIF : le même appel, `PATH` intact, doit dépasser la garde. */
-  const normal = lancer([chemin, "src/sonde.ts"], { cwd: RACINE, msMax: 25_000 });
-  assert.match(normal.texte, /Watching network traffic/,
-    `egress ne démarre pas dans l'état sain : le refus mesuré à côté ne prouve donc rien.\n`
-    + normal.texte.slice(0, 300));
+    /* LE CONTRÔLE POSITIF : le même appel, `PATH` intact, doit dépasser la garde. */
+    const normal = lancer([chemin, "src/sonde.ts"], { cwd: WT, msMax: 25_000 });
+    assert.match(normal.texte, /Watching network traffic/,
+      `egress ne démarre pas dans l'état sain : le refus mesuré à côté ne prouve donc rien.\n`
+      + normal.texte.slice(0, 300));
+  } finally { retirerArbreJetable(WT); }
 });
