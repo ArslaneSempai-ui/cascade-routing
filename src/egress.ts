@@ -358,9 +358,21 @@ const enfant = spawn("node", commande, { stdio: ["ignore", "ignore", "ignore"] }
    * qu'elle n'a pas vu, elle ne l'a pas vu non plus.
    */
   if (releves < ASSEZ) {
-    console.log(`${releves} samples only — too short to establish anything,`);
-    console.log(`${liste.length ? `including that the ${liste.length} host(s) seen are the only ones.` : `in either direction.`}`);
-    console.log(`At least ${ASSEZ} are needed: watch a real measurement, not an instant command.\n`);
+    /*
+     * CE REFUS SORTAIT EN 1 AVEC UN STDERR VIDE.
+     *
+     * Les trois autres refus de ce fichier écrivent sur la sortie d'erreur ; celui-ci
+     * écrivait sur la sortie standard. Un appelant qui lit `stderr` — un pas d'intégration
+     * continue, un script, un `2>&1 | grep` — voyait un échec muet, et le seul message qui
+     * dit quoi faire partait dans un canal que personne ne regardait à ce moment-là.
+     *
+     * Trouvé par `documents-3c` le 26 août 2026 dans un fichier que j'avais ouvert pour
+     * autre chose. Mesuré : `node src/egress.ts <commande instantanée>` rendait le code 1 et
+     * zéro octet sur `stderr`.
+     */
+    console.error(`\n${releves} samples only — too short to establish anything,`);
+    console.error(`${liste.length ? `including that the ${liste.length} host(s) seen are the only ones.` : `in either direction.`}`);
+    console.error(`At least ${ASSEZ} are needed: watch a real measurement, not an instant command.\n`);
     process.exitCode = 1;
     writeFileSync(FICHIER, JSON.stringify({
       mesureLe: new Date().toISOString(), commande: commandePubliable(commande),

@@ -5,7 +5,7 @@ import { mkdtempSync, mkdirSync, copyFileSync, writeFileSync, chmodSync, existsS
 import { join, dirname } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
-import { pidsSurveilles, connexions } from "./egress.ts";
+import { pidsSurveilles, connexions, ASSEZ_DE_RELEVES } from "./egress.ts";
 
 /*
  * LA GARDE QUI EMPÊCHE « rien vu » DE SE FAIRE PASSER POUR « rien ».
@@ -255,6 +255,36 @@ test("`lsof` qui répond n'importe quoi : la commande refuse aussi, et dit quel 
  * regardent QUELS PROCESSUS sont surveillés, et vérifient de bout en bout sur la boucle
  * locale — dont l'outil se moque pour son verdict, mais qui prouve que le fils est bien lu.
  */
+test("une passe trop courte refuse SUR LA SORTIE D'ERREUR, pas en silence", async () => {
+  /*
+   * LE REFUS QUI SORTAIT EN 1 SANS UN MOT SUR `stderr`.
+   *
+   * Le plancher de relevés était éprouvé sur `verdictEgress`, la fonction pure. Le CHEMIN
+   * qui refuse, lui, n'avait aucun témoin : il écrivait son message sur la sortie standard
+   * et sortait en 1. Un appelant qui lit `stderr` — un pas d'intégration continue, un
+   * `2>&1 | grep` — voyait un échec muet.
+   *
+   * Le cas voisin (« lsof répond pendant toute la passe ») ne pouvait pas l'attraper : il
+   * observe une passe assez longue, donc il ne passe jamais par ici.
+   */
+  const b = bacASable(() => `#!/bin/sh\nexit 1\n`);
+  try {
+    /* Une commande instantanée : zéro relevé, donc sous le plancher à coup sûr. */
+    writeFileSync(b.observee, "process.exit(0);\n");
+    const { code, err } = await passe(b);
+
+    assert.equal(code, 1, `une passe trop courte sort en ${code} : elle ne refuse plus.`);
+    assert.ok(err.trim().length > 0,
+      "la commande refuse en 1 avec un `stderr` VIDE. Un appelant qui lit la sortie d'erreur\n"
+      + "  ne voit qu'un échec sans cause, et le seul message qui dit quoi faire part dans un\n"
+      + "  canal que personne ne regarde à ce moment-là.");
+    assert.match(err, new RegExp(`At least ${ASSEZ_DE_RELEVES} are needed`),
+      "le refus ne dit plus combien de relevés il faut : un refus sans issue se contourne.");
+  } finally {
+    rmSync(b.tmp, { recursive: true, force: true });
+  }
+});
+
 test("la surveillance couvre la descendance, pas seulement le processus lancé", async () => {
   const dossier = mkdtempSync(join(tmpdir(), "egress-descendance-"));
   writeFileSync(join(dossier, "fils.mjs"), "setTimeout(() => {}, 8000);\n");
