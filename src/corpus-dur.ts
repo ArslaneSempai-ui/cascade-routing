@@ -97,7 +97,10 @@ function cellule(brut: string, ligne: number, fichier: string): Attendu {
   /* survivant:ok inatteignable — le vide est capté plus haut par `t === ""`, et une chaîne
      trimée non vide rend toujours au moins une lecture. Force brute, 26 août 2026. */
   if (lectures.length === 0) throw new CorpusIllisible(`${fichier}:${ligne} : cellule vide non reconnue.`);
-  if (lectures.some((x) => x.includes("**") || x.includes("*(")))
+  /* Élargi le 27 août 2026 : un marqueur `*mot:*` non interprété — la forme exacte qui a
+     pollué 13 clés pendant des semaines — refuse désormais au lieu de passer. La promesse de ce
+     lecteur est « refuse plutôt qu'ignorer », et l'astérisque simple la contournait. */
+  if (lectures.some((x) => x.includes("**") || x.includes("*(") || /\*[a-z]+:\*/i.test(x)))
     throw new CorpusIllisible(`${fichier}:${ligne} : « ${t} » porte un balisage non interprété.`);
   return { lectures, silence: false };
 }
@@ -144,8 +147,19 @@ export function lireFichier(fichier: string, dossier: string = DOSSIER): CasDur[
 
     const colonnes = rang[2]!.split("|");
     const principal = cellule(colonnes[0]!, i + 1, fichier);
-    /* La colonne « accepted alternative » élargit la liste ; elle ne la remplace pas. */
-    const alt = colonnes.length > 1 ? cellule(colonnes[1]!, i + 1, fichier) : { lectures: [], silence: false };
+    /*
+     * La colonne « accepted alternative » élargit la liste ; elle ne la remplace pas.
+     *
+     * LE MARQUEUR `*accepted:*` EST RETIRÉ AVANT LECTURE. C'est le format documenté du fichier
+     * (« Grade the accepted alternatives as stated », l. 518) — et il entrait TEL QUEL dans la
+     * clé de notation de 13 cas : un palier rendant « carte nationale d'identité », la
+     * complétion que le Why du cas déclare correcte, était noté FAUX parce que la clé portait
+     * « *accepted:* carte nationale d'identité ». Les taux publiés du corpus dur sous-notaient
+     * chaque palier sur le champ document, asymétriquement — un palier qui traduit était puni,
+     * un palier qui recopie verbatim ne l'était pas. Trouvé par l'audit du 27 août 2026.
+     */
+    const brutAlt = colonnes.length > 1 ? colonnes[1]!.replace(/\*accepted:\*\s*/g, "") : "";
+    const alt = brutAlt.trim() ? cellule(brutAlt, i + 1, fichier) : { lectures: [], silence: false };
     courant.attendus[champ] = principal.silence
       ? principal
       : { lectures: [...principal.lectures, ...alt.lectures], silence: false };

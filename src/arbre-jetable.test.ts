@@ -11,7 +11,7 @@
  */
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, mkdirSync, rmSync } from "node:fs";
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { arbreJetable } from "./arbre-jetable.ts";
@@ -40,5 +40,29 @@ test("une racine ordinaire passe — sinon le refus ci-dessus ne prouverait rien
       `l'arbre n'a pas été créé sous un dossier temporaire : ${chemin}`);
   } finally {
     rmSync(chemin, { recursive: true, force: true });
+  }
+});
+
+test("un GIT_INDEX_FILE hérité ne touche pas l'index de l'appelant", () => {
+  /*
+   * Le mécanisme des quatre commits vides du 26 août : hérité d'un crochet, GIT_INDEX_FILE
+   * fait écrire le `git add -A` de l'arbre jetable dans l'index du COMMIT EN COURS. On pose la
+   * variable sur un faux index, on crée un arbre, et on exige que le faux index n'ait pas
+   * grossi d'un octet — c'est lui qui aurait reçu les écritures.
+   */
+  const faux = join(mkdtempSync(join(tmpdir(), "idx-")), "index-empoisonne");
+  writeFileSync(faux, "");
+  const avant = process.env.GIT_INDEX_FILE;
+  process.env.GIT_INDEX_FILE = faux;
+  let chemin = "";
+  try {
+    chemin = arbreJetable("essai-env");
+    assert.equal(readFileSync(faux, "utf8"), "",
+      "L'ARBRE JETABLE A ÉCRIT DANS L'INDEX DE SON APPELANT : c'est le mécanisme exact des\n"
+      + "  quatre commits vides du 26 août, dans l'outil construit pour s'en protéger.");
+  } finally {
+    if (avant === undefined) delete process.env.GIT_INDEX_FILE;
+    else process.env.GIT_INDEX_FILE = avant;
+    if (chemin) rmSync(chemin, { recursive: true, force: true });
   }
 });

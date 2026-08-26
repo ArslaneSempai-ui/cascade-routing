@@ -355,7 +355,7 @@
         "basis": "latence mesurée × tarif machine supposé, sommée sur les cinq champs"
       },
       "costPerThousandExtractions": {
-        "value": 0.074,
+        "value": 0.0778,
         "provenance": "assumed",
         "basis": "un cinquième d'un document — ne jamais afficher ce nombre sous « par document »"
       },
@@ -406,7 +406,7 @@
         "basis": "latence mesurée × tarif machine supposé, sommée sur les cinq champs"
       },
       "costPerThousandExtractions": {
-        "value": 0.2365,
+        "value": 0.2627,
         "provenance": "assumed",
         "basis": "un cinquième d'un document — ne jamais afficher ce nombre sous « par document »"
       },
@@ -457,7 +457,7 @@
         "basis": "latence mesurée × tarif machine supposé, sommée sur les cinq champs"
       },
       "costPerThousandExtractions": {
-        "value": 0.3671,
+        "value": 0.3982,
         "provenance": "assumed",
         "basis": "un cinquième d'un document — ne jamais afficher ce nombre sous « par document »"
       },

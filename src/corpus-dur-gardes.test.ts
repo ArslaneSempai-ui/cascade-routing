@@ -148,3 +148,46 @@ test("lireFichier lit bien le dossier qu'on lui donne, pas le dossier du dépôt
     assert.equal(cas[0]!.id, "ZZ9", "le dossier passé doit être celui qui est lu.");
   } finally { rmSync(d, { recursive: true, force: true }); }
 });
+
+test("le marqueur *accepted:* est interprété, jamais noté tel quel", () => {
+  /*
+   * Le format du fichier le documente (« Grade the accepted alternatives as stated ») et le
+   * lecteur ne l'interprétait pas : 13 clés de notation portaient « *accepted:* carte… » et un
+   * palier rendant la complétion déclarée correcte était noté FAUX. Les taux publiés du corpus
+   * dur sous-notaient chaque palier sur le champ document. Audit du 27 août 2026.
+   */
+  const table = [
+    "|full name|Anna Petrova|",
+    "|date of birth|3 May 1990|",
+    "|document type|CARTE NATIONALE D'IDENTIT|*accepted:* carte nationale d'identité / national identity card|",
+    "|country|Bulgaria|",
+    "|address|1 rue de la Paix|",
+  ].join("\n");
+  const d = dossierAvec({ "documents-malformes.md": ENTETE + casValide("MD1", "Client: Anna Petrova", table) });
+  const cas = lireFichier("documents-malformes.md", d);
+  /* Les clés d'attendus sont les noms COURTS des champs (`document`), pas les intitulés du
+     tableau — vérifié en lisant la sortie réelle plutôt qu'en la supposant. */
+  const doc = cas[0]!.attendus["document"]!;
+  assert.deepEqual(doc.lectures,
+    ["CARTE NATIONALE D'IDENTIT", "carte nationale d'identité", "national identity card"],
+    `la clé de notation porte encore le marqueur, ou perd une alternative : ${JSON.stringify(doc.lectures)}\n`
+    + "  Un palier rendant « carte nationale d'identité » — déclarée correcte par le format —\n"
+    + "  serait noté faux, et les taux publiés sous-noteraient ce palier.");
+});
+
+test("un marqueur *mot:* NON interprété refuse — la promesse est « refuse plutôt qu'ignorer »", () => {
+  /* CONTRE-ÉPREUVE de l'interprétation : si demain quelqu'un écrit `*note:*` dans une cellule,
+     le lecteur ne doit pas l'avaler en silence comme il avalait `*accepted:*` pendant des
+     semaines. L'astérisque simple contournait la garde `**`/`*(`. */
+  const table = [
+    "|full name|Anna Petrova|",
+    "|date of birth|3 May 1990|",
+    "|document type|PASSPORT|*note:* à revoir|",
+    "|country|Bulgaria|",
+    "|address|1 rue de la Paix|",
+  ].join("\n");
+  const d = dossierAvec({ "documents-malformes.md": ENTETE + casValide("MD1", "Client: Anna Petrova", table) });
+  assert.throws(() => lireFichier("documents-malformes.md", d), /balisage non interprété/,
+    "un marqueur inconnu est entré dans une clé de notation sans un mot : la prochaine\n"
+    + "  pollution des taux publiés durera aussi longtemps que la première.");
+});

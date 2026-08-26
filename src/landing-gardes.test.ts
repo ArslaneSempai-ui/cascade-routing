@@ -73,3 +73,32 @@ test("un seuil qui annonce un mouvement que la bascule ne produit pas est refus�
     "un seuil peut être exact et sa description fausse ; c'est la description que le "
     + "lecteur retient");
 });
+
+test("le prix par extraction est un cinquième du prix du document, pour chaque palier", () => {
+  /*
+   * Le basis de cette clé promet « un cinquième d'un document ». L'ancienne écriture publiait
+   * le prix du seul champ le plus rapide : −10 % sur gen-4b, dans le sens qui flatte l'offre.
+   * L'identité value × champs = prix du document est la seule lecture compatible avec le basis,
+   * et ce cas la verrouille sur la vue RÉELLE — celle que landing.json livre.
+   */
+  const vue = construire(p) as unknown as { tiers: {
+    id: string;
+    costPerThousandDocuments: { value: number | null };
+    costPerThousandExtractions: { value: number | null };
+    acc: Record<string, unknown>;
+  }[] };
+  for (const t of vue.tiers) {
+    if (t.costPerThousandDocuments.value === null) {
+      assert.equal(t.costPerThousandExtractions.value, null,
+        `${t.id} : le document n'a pas de prix mais l'extraction en affiche un — un chiffre né de null.`);
+      continue;
+    }
+    const attendu = Number((t.costPerThousandDocuments.value / Object.keys(t.acc).length).toFixed(4));
+    assert.notEqual(t.costPerThousandExtractions.value, null,
+      `${t.id} : le document a un prix mais l'extraction rend null.`);
+    assert.ok(Math.abs(t.costPerThousandExtractions.value! - attendu) <= 0.0002,
+      `${t.id} : extraction ${t.costPerThousandExtractions.value} × ${Object.keys(t.acc).length}`
+      + ` ≠ document ${t.costPerThousandDocuments.value} — le basis « un cinquième d'un document »`
+      + ` ment, et il ment dans le sens qui flatte l'offre.`);
+  }
+});

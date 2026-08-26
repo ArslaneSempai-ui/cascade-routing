@@ -28,6 +28,24 @@ import { cpSync, mkdtempSync, rmSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { execFileSync } from "node:child_process";
+
+/*
+ * CHAQUE COMMANDE GIT D'ICI NETTOIE SON ENVIRONNEMENT, et c'est le point le plus important du
+ * fichier. Git exporte GIT_INDEX_FILE à ses crochets ; un pre-commit qui lance la suite le
+ * transmet à tout ce qu'elle lance. Hérité, le `git add -A` d'en dessous ÉCRIT DANS L'INDEX DU
+ * COMMIT EN COURS — celui de l'appelant — au lieu du sien. C'est le mécanisme exact qui a
+ * produit quatre commits vides le 26 août 2026 : trois sessions ont perdu du travail, et le
+ * défaut a été corrigé partout SAUF ici, dans l'outil construit pour s'en protéger. Trouvé par
+ * l'audit du 27 août.
+ */
+const envGitPropre = (): NodeJS.ProcessEnv => {
+  const env = { ...process.env };
+  delete env.GIT_INDEX_FILE; delete env.GIT_DIR; delete env.GIT_WORK_TREE; delete env.GIT_PREFIX;
+  return env;
+};
+const git = (args: string[]): void => {
+  execFileSync("git", args, { env: envGitPropre() });
+};
 import { fileURLToPath } from "node:url";
 
 const RACINE = fileURLToPath(new URL("..", import.meta.url));
@@ -46,20 +64,20 @@ export function arbreJetable(prefixe: string, racineTemporaire: string = tmpdir(
   if (chemin.includes("/Documents/")) {
     throw new Error(`terrain d'essai dans le vrai arbre : ${chemin}`);
   }
-  execFileSync("git", ["-C", RACINE, "worktree", "add", "--detach", "-q", chemin, "HEAD"]);
+  git(["-C", RACINE, "worktree", "add", "--detach", "-q", chemin, "HEAD"]);
   /* `node_modules` est LIÉ, jamais installé : le dépôt y garde plus d'un gigaoctet de modèles
      en cache, et les commandes ne démarrent pas sans lui. */
   symlinkSync(join(RACINE, "node_modules"), join(chemin, "node_modules"));
   cpSync(join(RACINE, "src"), join(chemin, "src"), { recursive: true });
-  execFileSync("git", ["-C", chemin, "add", "-A"]);
-  execFileSync("git", ["-C", chemin, "-c", "user.name=t", "-c", "user.email=t@t",
+  git(["-C", chemin, "add", "-A"]);
+  git(["-C", chemin, "-c", "user.name=t", "-c", "user.email=t@t",
     "commit", "-q", "--no-verify", "--allow-empty", "-m", "état du disque, figé pour ce cas"]);
   return chemin;
 }
 
 export function retirerArbreJetable(chemin: string): void {
   try {
-    execFileSync("git", ["-C", RACINE, "worktree", "remove", "--force", chemin]);
+    git(["-C", RACINE, "worktree", "remove", "--force", chemin]);
   } catch { /* déjà parti : rien à faire */ }
   rmSync(chemin, { recursive: true, force: true });
 }

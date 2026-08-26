@@ -45,3 +45,5 @@ pas. Le détail va dans le message de commit, qui voyage avec la ligne qu'il exp
 - [ ] Refonte du design, sous Fable 5 : animation d'entrée, écrans au défilement, la mesure sur le premier écran, 404 dessiné
 - [ ] Windows : écarté par écrit, à traiter plus tard
 - [ ] 13 commits en attente de poussée (décision d'Arslane)
+
+- [ ] **Re-mesurer le corpus dur** : les taux publiés ont été calculés contre 13 clés polluées par `*accepted:*` (corrigé le 27 août) — ils sous-notent les paliers. La re-mesure demande les modèles (~heures) et fera BOUGER des chiffres publiés : décision, pas maintenance.

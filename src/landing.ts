@@ -804,18 +804,32 @@ export function construire(p: Profiles): unknown {
     fields: FIELDS,
     /* L'unité, écrite une fois, parce qu'elle a déjà fait publier un chiffre faux. */
     costUnit: "par millier de documents ; un document porte les cinq champs",
-    tiers: paliers.map((t) => ({
+    tiers: paliers.map((t) => {
+      /* Hissé une fois : `value` peut être null (palier humain), et la division naïve l'aurait
+         transformé en 0 — un prix nul affiché là où le chiffre n'existe pas. Le typage l'a
+         attrapé au moment où l'audit faisait corriger cette clé. */
+      const prixDocument = cout(p, t);
+      return {
       id: t,
       n: p.extraction[t][FIELDS[0]!].items,
-      costPerThousandDocuments: cout(p, t),
+      costPerThousandDocuments: prixDocument,
       costPerThousandExtractions: {
-        value: Number(pricePerThousandExtractions(t, ASSUMPTIONS,
-          p.extraction[t][FIELDS[0]!].latency).toFixed(4)),
-        provenance: cout(p, t).provenance,
+        /*
+         * UN CINQUIÈME DU DOCUMENT, DONC UN CINQUIÈME DE SON PRIX — jamais le prix d'un champ
+         * particulier. L'ancienne écriture passait la latence de FIELDS[0], `name`, le champ le
+         * plus RAPIDE des paliers génératifs : le chiffre publié était −10 % sur gen-4b, −8 %
+         * sur gen-8b, −5 % sur gen-0.6b, toujours dans le sens qui flatte l'offre, sous un
+         * basis affirmant « un cinquième d'un document ». Un lecteur qui suivait le basis et
+         * multipliait par cinq n'obtenait pas le prix du document. Audit du 27 août 2026.
+         */
+        value: prixDocument.value === null ? null
+          : Number((prixDocument.value / FIELDS.length).toFixed(4)),
+        provenance: prixDocument.provenance,
         basis: "un cinquième d'un document — ne jamais afficher ce nombre sous « par document »",
       },
       acc: Object.fromEntries(FIELDS.map((c) => [c, exactitude(p, t, c)])),
-    })),
+      };
+    }),
     routing: optimum === null ? null : {
       fields: optimum.routing,
       accuracy: Number((100 * optimum.accuracy).toFixed(1)),
