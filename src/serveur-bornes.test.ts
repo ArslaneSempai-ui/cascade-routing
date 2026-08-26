@@ -160,8 +160,25 @@ test("la borne de corps compte des octets, pas des unités UTF-16", { timeout: 1
   const dors = (ms: number) => new Promise((r) => setTimeout(r, ms));
   try {
     let debout = false;
+    /*
+     * VINGT SECONDES, COMME SES DEUX VOISINS — ET PAS DEUX.
+     *
+     * Cette boucle attendait `dors(25)`, soit 80 x 25 ms = 2 s, quand les deux autres cas du
+     * fichier attendent `dors(250)` = 20 s pour exactement la même chose. L'asymétrie est un
+     * fait ; sa valeur juste est celle des voisins.
+     *
+     * CE QUI N'EST PAS ÉTABLI, ET C'EST LA DEUXIÈME FOIS SUR CE CAS. Une sonde a mesuré 3841 ms
+     * avant la première réponse du serveur sur cette machine au repos, ce qui ferait de ce
+     * budget la moitié du nécessaire. Mais la contre-preuve ne reproduit PAS l'échec : budget
+     * de 2 s remis, trois passes en parallèle, trois fois vert. La sonde mesurait sans doute un
+     * cache de transformation froid que le cas ne paie pas toujours.
+     *
+     * Donc : ce changement retire une cause plausible et aligne un cas sur ses voisins. Il
+     * n'est pas démontré qu'il guérit l'intermittence, et le prochain qui verra ce cas rouge
+     * ne doit pas croire que la question est réglée ici.
+     */
     for (let i = 0; i < 80 && !debout; i++) {
-      try { await fetch(base + "/api/etat"); debout = true; } catch { await dors(25); }
+      try { await fetch(base + "/api/etat"); debout = true; } catch { await dors(250); }
     }
     /* SANS CE CONTRÔLE, UN SERVEUR MORT FERAIT PASSER LE CAS : toute requête lèverait, et une
        levée se lit ici comme un refus. */
