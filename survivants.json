@@ -1,0 +1,810 @@
+{
+ "quoi": "Chaque garde du dépôt, retirée une par une. Un SURVIVANT est une garde dont le retrait ne fait tomber aucun cas : elle est peut-être juste, et rien ne le vérifie.",
+ "mesureLe": "2026-08-26",
+ "code": {
+  "commit": "a861065dc25d4c3d145956638b9730aff1c2fbee"
+ },
+ "cle": "fichier + forme + n, où n est l'index de la forme dans le CODE, commentaires et chaînes exclus",
+ "formes": [
+  "throw",
+  "exit"
+ ],
+ "comptes": {
+  "par forme": {
+   "throw": 0,
+   "exit": 98
+  },
+  "par etat": {
+   "SURVIVANT": 63,
+   "attrapé": 17,
+   "tenu par le typage": 16,
+   "tenu par un document engendré": 2
+  }
+ },
+ "sites": [
+  {
+   "fichier": "abstention.ts",
+   "forme": "exit",
+   "n": 0,
+   "ligne": 139,
+   "etat": "tenu par le typage",
+   "ou": "typage"
+  },
+  {
+   "fichier": "abstention.ts",
+   "forme": "exit",
+   "n": 1,
+   "ligne": 145,
+   "etat": "tenu par le typage",
+   "ou": "typage"
+  },
+  {
+   "fichier": "apparier-prompt.ts",
+   "forme": "exit",
+   "n": 0,
+   "ligne": 48,
+   "etat": "SURVIVANT",
+   "ou": "cas"
+  },
+  {
+   "fichier": "capturer.mjs",
+   "forme": "exit",
+   "n": 0,
+   "ligne": 61,
+   "etat": "attrapé",
+   "ou": "cas"
+  },
+  {
+   "fichier": "capturer.mjs",
+   "forme": "exit",
+   "n": 1,
+   "ligne": 525,
+   "etat": "attrapé",
+   "ou": "cas"
+  },
+  {
+   "fichier": "capturer.mjs",
+   "forme": "exit",
+   "n": 2,
+   "ligne": 579,
+   "etat": "attrapé",
+   "ou": "cas"
+  },
+  {
+   "fichier": "capturer.mjs",
+   "forme": "exit",
+   "n": 3,
+   "ligne": 672,
+   "etat": "attrapé",
+   "ou": "cas"
+  },
+  {
+   "fichier": "charger.mjs",
+   "forme": "exit",
+   "n": 0,
+   "ligne": 65,
+   "etat": "SURVIVANT",
+   "ou": "cas"
+  },
+  {
+   "fichier": "charger.mjs",
+   "forme": "exit",
+   "n": 1,
+   "ligne": 71,
+   "etat": "SURVIVANT",
+   "ou": "cas"
+  },
+  {
+   "fichier": "clone-neuf.mjs",
+   "forme": "exit",
+   "n": 0,
+   "ligne": 261,
+   "etat": "SURVIVANT",
+   "ou": "cas"
+  },
+  {
+   "fichier": "departager-reglage.ts",
+   "forme": "exit",
+   "n": 0,
+   "ligne": 67,
+   "etat": "SURVIVANT",
+   "ou": "cas"
+  },
+  {
+   "fichier": "diff.ts",
+   "forme": "exit",
+   "n": 0,
+   "ligne": 112,
+   "etat": "SURVIVANT",
+   "ou": "cas"
+  },
+  {
+   "fichier": "diff.ts",
+   "forme": "exit",
+   "n": 1,
+   "ligne": 127,
+   "etat": "SURVIVANT",
+   "ou": "cas"
+  },
+  {
+   "fichier": "diff.ts",
+   "forme": "exit",
+   "n": 2,
+   "ligne": 132,
+   "etat": "SURVIVANT",
+   "ou": "cas"
+  },
+  {
+   "fichier": "diff.ts",
+   "forme": "exit",
+   "n": 3,
+   "ligne": 147,
+   "etat": "SURVIVANT",
+   "ou": "cas"
+  },
+  {
+   "fichier": "dossier.ts",
+   "forme": "exit",
+   "n": 0,
+   "ligne": 528,
+   "etat": "tenu par le typage",
+   "ou": "typage"
+  },
+  {
+   "fichier": "dossier.ts",
+   "forme": "exit",
+   "n": 1,
+   "ligne": 550,
+   "etat": "tenu par un document engendré",
+   "ou": "document engendré"
+  },
+  {
+   "fichier": "dossier.ts",
+   "forme": "exit",
+   "n": 2,
+   "ligne": 554,
+   "etat": "SURVIVANT",
+   "ou": "cas"
+  },
+  {
+   "fichier": "egress.ts",
+   "forme": "exit",
+   "n": 0,
+   "ligne": 226,
+   "etat": "SURVIVANT",
+   "ou": "cas"
+  },
+  {
+   "fichier": "egress.ts",
+   "forme": "exit",
+   "n": 1,
+   "ligne": 238,
+   "etat": "SURVIVANT",
+   "ou": "cas"
+  },
+  {
+   "fichier": "egress.ts",
+   "forme": "exit",
+   "n": 2,
+   "ligne": 321,
+   "etat": "SURVIVANT",
+   "ou": "cas"
+  },
+  {
+   "fichier": "escalade.ts",
+   "forme": "exit",
+   "n": 0,
+   "ligne": 126,
+   "etat": "tenu par le typage",
+   "ou": "typage"
+  },
+  {
+   "fichier": "escalade.ts",
+   "forme": "exit",
+   "n": 1,
+   "ligne": 153,
+   "etat": "tenu par le typage",
+   "ou": "typage"
+  },
+  {
+   "fichier": "figures.ts",
+   "forme": "exit",
+   "n": 0,
+   "ligne": 102,
+   "etat": "attrapé",
+   "ou": "cas"
+  },
+  {
+   "fichier": "fuite.ts",
+   "forme": "exit",
+   "n": 0,
+   "ligne": 87,
+   "etat": "SURVIVANT",
+   "ou": "cas"
+  },
+  {
+   "fichier": "hostile.ts",
+   "forme": "exit",
+   "n": 0,
+   "ligne": 284,
+   "etat": "attrapé",
+   "ou": "cas"
+  },
+  {
+   "fichier": "hostile.ts",
+   "forme": "exit",
+   "n": 1,
+   "ligne": 303,
+   "etat": "SURVIVANT",
+   "ou": "cas"
+  },
+  {
+   "fichier": "intake.ts",
+   "forme": "exit",
+   "n": 0,
+   "ligne": 135,
+   "etat": "SURVIVANT",
+   "ou": "cas"
+  },
+  {
+   "fichier": "intake.ts",
+   "forme": "exit",
+   "n": 1,
+   "ligne": 140,
+   "etat": "SURVIVANT",
+   "ou": "cas"
+  },
+  {
+   "fichier": "intake.ts",
+   "forme": "exit",
+   "n": 2,
+   "ligne": 165,
+   "etat": "tenu par le typage",
+   "ou": "typage"
+  },
+  {
+   "fichier": "intake.ts",
+   "forme": "exit",
+   "n": 3,
+   "ligne": 181,
+   "etat": "SURVIVANT",
+   "ou": "cas"
+  },
+  {
+   "fichier": "intake.ts",
+   "forme": "exit",
+   "n": 4,
+   "ligne": 190,
+   "etat": "SURVIVANT",
+   "ou": "cas"
+  },
+  {
+   "fichier": "intake.ts",
+   "forme": "exit",
+   "n": 5,
+   "ligne": 195,
+   "etat": "attrapé",
+   "ou": "cas"
+  },
+  {
+   "fichier": "intake.ts",
+   "forme": "exit",
+   "n": 6,
+   "ligne": 267,
+   "etat": "attrapé",
+   "ou": "cas"
+  },
+  {
+   "fichier": "landing.ts",
+   "forme": "exit",
+   "n": 0,
+   "ligne": 1238,
+   "etat": "tenu par le typage",
+   "ou": "typage"
+  },
+  {
+   "fichier": "landing.ts",
+   "forme": "exit",
+   "n": 1,
+   "ligne": 1276,
+   "etat": "SURVIVANT",
+   "ou": "cas"
+  },
+  {
+   "fichier": "landing.ts",
+   "forme": "exit",
+   "n": 2,
+   "ligne": 1289,
+   "etat": "attrapé",
+   "ou": "cas"
+  },
+  {
+   "fichier": "landing.ts",
+   "forme": "exit",
+   "n": 3,
+   "ligne": 1303,
+   "etat": "SURVIVANT",
+   "ou": "cas"
+  },
+  {
+   "fichier": "licences.ts",
+   "forme": "exit",
+   "n": 0,
+   "ligne": 272,
+   "etat": "SURVIVANT",
+   "ou": "cas"
+  },
+  {
+   "fichier": "licences.ts",
+   "forme": "exit",
+   "n": 1,
+   "ligne": 276,
+   "etat": "SURVIVANT",
+   "ou": "cas"
+  },
+  {
+   "fichier": "licences.ts",
+   "forme": "exit",
+   "n": 2,
+   "ligne": 292,
+   "etat": "SURVIVANT",
+   "ou": "cas"
+  },
+  {
+   "fichier": "measure.ts",
+   "forme": "exit",
+   "n": 0,
+   "ligne": 739,
+   "etat": "SURVIVANT",
+   "ou": "cas"
+  },
+  {
+   "fichier": "measure.ts",
+   "forme": "exit",
+   "n": 1,
+   "ligne": 747,
+   "etat": "SURVIVANT",
+   "ou": "cas"
+  },
+  {
+   "fichier": "measure.ts",
+   "forme": "exit",
+   "n": 2,
+   "ligne": 759,
+   "etat": "SURVIVANT",
+   "ou": "cas"
+  },
+  {
+   "fichier": "measure.ts",
+   "forme": "exit",
+   "n": 3,
+   "ligne": 769,
+   "etat": "SURVIVANT",
+   "ou": "cas"
+  },
+  {
+   "fichier": "measure.ts",
+   "forme": "exit",
+   "n": 4,
+   "ligne": 833,
+   "etat": "SURVIVANT",
+   "ou": "cas"
+  },
+  {
+   "fichier": "measure.ts",
+   "forme": "exit",
+   "n": 5,
+   "ligne": 849,
+   "etat": "SURVIVANT",
+   "ou": "cas"
+  },
+  {
+   "fichier": "measure.ts",
+   "forme": "exit",
+   "n": 6,
+   "ligne": 861,
+   "etat": "SURVIVANT",
+   "ou": "cas"
+  },
+  {
+   "fichier": "menace.ts",
+   "forme": "exit",
+   "n": 0,
+   "ligne": 752,
+   "etat": "SURVIVANT",
+   "ou": "cas"
+  },
+  {
+   "fichier": "menace.ts",
+   "forme": "exit",
+   "n": 1,
+   "ligne": 760,
+   "etat": "SURVIVANT",
+   "ou": "cas"
+  },
+  {
+   "fichier": "menace.ts",
+   "forme": "exit",
+   "n": 2,
+   "ligne": 777,
+   "etat": "SURVIVANT",
+   "ou": "cas"
+  },
+  {
+   "fichier": "menace.ts",
+   "forme": "exit",
+   "n": 3,
+   "ligne": 801,
+   "etat": "SURVIVANT",
+   "ou": "cas"
+  },
+  {
+   "fichier": "menace.ts",
+   "forme": "exit",
+   "n": 4,
+   "ligne": 810,
+   "etat": "SURVIVANT",
+   "ou": "cas"
+  },
+  {
+   "fichier": "menace.ts",
+   "forme": "exit",
+   "n": 5,
+   "ligne": 816,
+   "etat": "SURVIVANT",
+   "ou": "cas"
+  },
+  {
+   "fichier": "mesurer-dur.ts",
+   "forme": "exit",
+   "n": 0,
+   "ligne": 84,
+   "etat": "SURVIVANT",
+   "ou": "cas"
+  },
+  {
+   "fichier": "mesurer-dur.ts",
+   "forme": "exit",
+   "n": 1,
+   "ligne": 125,
+   "etat": "SURVIVANT",
+   "ou": "cas"
+  },
+  {
+   "fichier": "mesurer-dur.ts",
+   "forme": "exit",
+   "n": 2,
+   "ligne": 261,
+   "etat": "SURVIVANT",
+   "ou": "cas"
+  },
+  {
+   "fichier": "mesurer-ocr.ts",
+   "forme": "exit",
+   "n": 0,
+   "ligne": 292,
+   "etat": "SURVIVANT",
+   "ou": "cas"
+  },
+  {
+   "fichier": "mur.ts",
+   "forme": "exit",
+   "n": 0,
+   "ligne": 67,
+   "etat": "tenu par le typage",
+   "ou": "typage"
+  },
+  {
+   "fichier": "optimise.ts",
+   "forme": "exit",
+   "n": 0,
+   "ligne": 486,
+   "etat": "tenu par le typage",
+   "ou": "typage"
+  },
+  {
+   "fichier": "optimise.ts",
+   "forme": "exit",
+   "n": 1,
+   "ligne": 495,
+   "etat": "tenu par le typage",
+   "ou": "typage"
+  },
+  {
+   "fichier": "pages.ts",
+   "forme": "exit",
+   "n": 0,
+   "ligne": 53,
+   "etat": "attrapé",
+   "ou": "cas"
+  },
+  {
+   "fichier": "poids.ts",
+   "forme": "exit",
+   "n": 0,
+   "ligne": 291,
+   "etat": "SURVIVANT",
+   "ou": "cas"
+  },
+  {
+   "fichier": "poids.ts",
+   "forme": "exit",
+   "n": 1,
+   "ligne": 298,
+   "etat": "SURVIVANT",
+   "ou": "cas"
+  },
+  {
+   "fichier": "poids.ts",
+   "forme": "exit",
+   "n": 2,
+   "ligne": 305,
+   "etat": "SURVIVANT",
+   "ou": "cas"
+  },
+  {
+   "fichier": "poids.ts",
+   "forme": "exit",
+   "n": 3,
+   "ligne": 322,
+   "etat": "SURVIVANT",
+   "ou": "cas"
+  },
+  {
+   "fichier": "premiere-reponse.mjs",
+   "forme": "exit",
+   "n": 0,
+   "ligne": 148,
+   "etat": "attrapé",
+   "ou": "cas"
+  },
+  {
+   "fichier": "readme.ts",
+   "forme": "exit",
+   "n": 0,
+   "ligne": 40,
+   "etat": "tenu par le typage",
+   "ou": "typage"
+  },
+  {
+   "fichier": "regler-prompt.ts",
+   "forme": "exit",
+   "n": 0,
+   "ligne": 93,
+   "etat": "SURVIVANT",
+   "ou": "cas"
+  },
+  {
+   "fichier": "regler-prompt.ts",
+   "forme": "exit",
+   "n": 1,
+   "ligne": 117,
+   "etat": "SURVIVANT",
+   "ou": "cas"
+  },
+  {
+   "fichier": "sceller.ts",
+   "forme": "exit",
+   "n": 0,
+   "ligne": 37,
+   "etat": "SURVIVANT",
+   "ou": "cas"
+  },
+  {
+   "fichier": "sceller.ts",
+   "forme": "exit",
+   "n": 1,
+   "ligne": 50,
+   "etat": "SURVIVANT",
+   "ou": "cas"
+  },
+  {
+   "fichier": "sceller.ts",
+   "forme": "exit",
+   "n": 2,
+   "ligne": 59,
+   "etat": "SURVIVANT",
+   "ou": "cas"
+  },
+  {
+   "fichier": "sensibilite-prompt.ts",
+   "forme": "exit",
+   "n": 0,
+   "ligne": 57,
+   "etat": "SURVIVANT",
+   "ou": "cas"
+  },
+  {
+   "fichier": "sensitivity.ts",
+   "forme": "exit",
+   "n": 0,
+   "ligne": 221,
+   "etat": "tenu par le typage",
+   "ou": "typage"
+  },
+  {
+   "fichier": "server.ts",
+   "forme": "exit",
+   "n": 0,
+   "ligne": 541,
+   "etat": "SURVIVANT",
+   "ou": "cas"
+  },
+  {
+   "fichier": "server.ts",
+   "forme": "exit",
+   "n": 1,
+   "ligne": 546,
+   "etat": "SURVIVANT",
+   "ou": "cas"
+  },
+  {
+   "fichier": "signal.ts",
+   "forme": "exit",
+   "n": 0,
+   "ligne": 283,
+   "etat": "tenu par le typage",
+   "ou": "typage"
+  },
+  {
+   "fichier": "sonde.ts",
+   "forme": "exit",
+   "n": 0,
+   "ligne": 349,
+   "etat": "tenu par le typage",
+   "ou": "typage"
+  },
+  {
+   "fichier": "sonde.ts",
+   "forme": "exit",
+   "n": 1,
+   "ligne": 357,
+   "etat": "tenu par un document engendré",
+   "ou": "document engendré"
+  },
+  {
+   "fichier": "sonde.ts",
+   "forme": "exit",
+   "n": 2,
+   "ligne": 361,
+   "etat": "SURVIVANT",
+   "ou": "cas"
+  },
+  {
+   "fichier": "tentatives.ts",
+   "forme": "exit",
+   "n": 0,
+   "ligne": 35,
+   "etat": "SURVIVANT",
+   "ou": "cas"
+  },
+  {
+   "fichier": "verifier-ecran.mjs",
+   "forme": "exit",
+   "n": 0,
+   "ligne": 384,
+   "etat": "attrapé",
+   "ou": "cas"
+  },
+  {
+   "fichier": "verifier-ecran.mjs",
+   "forme": "exit",
+   "n": 1,
+   "ligne": 396,
+   "etat": "attrapé",
+   "ou": "cas"
+  },
+  {
+   "fichier": "verifier-ecran.mjs",
+   "forme": "exit",
+   "n": 2,
+   "ligne": 470,
+   "etat": "attrapé",
+   "ou": "cas"
+  },
+  {
+   "fichier": "verifier-rapport.mjs",
+   "forme": "exit",
+   "n": 0,
+   "ligne": 215,
+   "etat": "SURVIVANT",
+   "ou": "cas"
+  },
+  {
+   "fichier": "verifier-rapport.mjs",
+   "forme": "exit",
+   "n": 1,
+   "ligne": 223,
+   "etat": "SURVIVANT",
+   "ou": "cas"
+  },
+  {
+   "fichier": "verifier-rapport.mjs",
+   "forme": "exit",
+   "n": 2,
+   "ligne": 245,
+   "etat": "SURVIVANT",
+   "ou": "cas"
+  },
+  {
+   "fichier": "verifier-rapport.mjs",
+   "forme": "exit",
+   "n": 3,
+   "ligne": 260,
+   "etat": "attrapé",
+   "ou": "cas"
+  },
+  {
+   "fichier": "verifier-rapport.mjs",
+   "forme": "exit",
+   "n": 4,
+   "ligne": 266,
+   "etat": "SURVIVANT",
+   "ou": "cas"
+  },
+  {
+   "fichier": "your-cases.ts",
+   "forme": "exit",
+   "n": 0,
+   "ligne": 1138,
+   "etat": "tenu par le typage",
+   "ou": "typage"
+  },
+  {
+   "fichier": "your-cases.ts",
+   "forme": "exit",
+   "n": 1,
+   "ligne": 1140,
+   "etat": "SURVIVANT",
+   "ou": "cas"
+  },
+  {
+   "fichier": "your-cases.ts",
+   "forme": "exit",
+   "n": 2,
+   "ligne": 1200,
+   "etat": "SURVIVANT",
+   "ou": "cas"
+  },
+  {
+   "fichier": "your-cases.ts",
+   "forme": "exit",
+   "n": 3,
+   "ligne": 1206,
+   "etat": "tenu par le typage",
+   "ou": "typage"
+  },
+  {
+   "fichier": "your-cases.ts",
+   "forme": "exit",
+   "n": 4,
+   "ligne": 1213,
+   "etat": "SURVIVANT",
+   "ou": "cas"
+  },
+  {
+   "fichier": "your-cases.ts",
+   "forme": "exit",
+   "n": 5,
+   "ligne": 1262,
+   "etat": "attrapé",
+   "ou": "cas"
+  },
+  {
+   "fichier": "your-cases.ts",
+   "forme": "exit",
+   "n": 6,
+   "ligne": 1328,
+   "etat": "SURVIVANT",
+   "ou": "cas"
+  },
+  {
+   "fichier": "your-cases.ts",
+   "forme": "exit",
+   "n": 7,
+   "ligne": 1589,
+   "etat": "attrapé",
+   "ou": "cas"
+  }
+ ]
+}

@@ -665,3 +665,74 @@ en une commande, une cause inventée se recopie.
 
 **Un fait observé et une cause supposée ne s'écrivent pas de la même encre.** Si la
 cause n'a pas été éprouvée, elle s'écrit « cause inconnue ».
+
+## Deux façons de produire une même grandeur divergent toujours
+
+Trois fois le 26 août 2026, dans trois fichiers différents.
+
+- `muter()` recomptait les correspondances d'une forme au lieu de lire la liste que
+  `sites_de()` venait de produire. Les deux comptages ont divergé le jour où l'un des
+  deux s'est mis à écarter les commentaires : le n-ième site ne désignait plus la
+  n-ième correspondance, et l'outil mutait une ligne pour une autre.
+- Le relevé était écrit à deux endroits du même fichier, avec deux listes de champs.
+- Une grandeur publiée sur une page de vente venait d'un calcul, et la même grandeur
+  d'un fichier de données figé.
+
+Aucune de ces trois divergences n'était visible : les deux sources rendaient le même
+résultat le jour où on les a écrites. **C'est précisément ce qui les rend chères** —
+elles ne se contredisent qu'après une modification, donc longtemps après que celui qui
+les a écrites soit passé à autre chose, et jamais au moment où on les regarde.
+
+### La règle
+
+Une grandeur a **une** source. Tout le reste la lit.
+
+Si une seconde façon de la produire existe pour une raison de performance ou de
+commodité, elle doit être **comparée à la première par un cas**, pas seulement écrite
+avec soin.
+
+### Le contrôle
+
+Le motif qui l'attrape n'est pas syntaxique — c'est une question à se poser à la
+relecture : *cette valeur, qui d'autre sait la calculer ?* Si la réponse n'est pas
+« personne », soit on supprime l'autre, soit on écrit le cas qui les confronte.
+
+Le symptôme, quand ça a déjà cassé : deux nombres qui devraient être égaux et qu'on
+se met à expliquer. **Avant de discuter la méthode, échanger l'empreinte de ce qu'on
+a mesuré** — la divergence est presque toujours dans l'objet, pas dans le raisonnement.
+
+## Une base vérifiée au départ n'est pas une base tenue
+
+Le balayage des gardes vérifie que la suite est verte avant de commencer, puis mute un
+site à la fois. Le 26 août 2026, une session voisine a commité dans le dossier partagé
+`identite` à 02:23 et 02:43 — pendant une mesure d'une heure et demie qui en dépendait.
+
+Le cas qui compare les copies de cascade à leur source est passé au rouge et y est resté.
+À partir de là, **chaque site éprouvé a été enregistré « attrapé » sans qu'aucune garde
+n'ait été éprouvée** : la suite tombait de toute façon. Le relevé a rendu 67 gardes
+couvertes sur 105 et un mur de couverture presque parfaite. Le relevé refait, avec la base
+recontrôlée en cours de route, en donne **17 sur 98**. Les deux nombres décrivent le même
+code ; l'un décrit surtout un voisin qui a bougé.
+
+**Le pire est ce que ça fait au chiffre alarmant.** Un environnement cassé ne rend pas la
+mesure bruyante, il la rend **flatteuse** : tout paraît couvert. Un défaut qui dégrade un
+résultat se remarque ; un défaut qui l'améliore se publie.
+
+### Ce qu'il faut
+
+- La condition d'une mesure longue se **revérifie pendant**, pas seulement avant. Vérifier
+  une fois, c'est supposer que rien ne bouge sur une machine où cinq sessions écrivent.
+- Quand la base tombe, les verdicts pris depuis le dernier contrôle sain **se retirent**.
+  Un relevé tronqué qui le dit vaut mieux qu'un relevé complet qui ment.
+- Le pas est un compromis à écrire, pas un choix neutre : tous les dix sites coûte 10 % de
+  temps et jette jusqu'à dix verdicts ; à chaque site, ça coûte 100 % et ne jette rien.
+- Et la règle humaine, qui ne remplace pas la parade mécanique : **on ne touche pas à une
+  couche partagée pendant qu'une mesure en dépend**, et celui qui doit le faire prévient
+  avant. La parade mécanique reste nécessaire — elle attrape les fois où personne n'y pense.
+
+### Le contre-témoin qui l'a trouvé
+
+Un site en commentaire semblait faire tomber la suite, ce qui est impossible. La tentation
+était de publier « muter un commentaire peut rougir un cas ». **Le contre-témoin — la même
+suite, au même commit, sans aucune mutation — était rouge lui aussi.** Sans lui, une
+deuxième cause inventée partait dans un message.
