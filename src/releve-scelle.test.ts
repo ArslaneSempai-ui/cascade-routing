@@ -1,7 +1,7 @@
 /**
  * LE SCELLÉ DU RELEVÉ, ÉPROUVÉ SUR LES DEUX CHEMINS QU'IL GARDE.
  *
- * `readProfiles()` refuse un relevé sans empreinte, et un relevé dont l'empreinte ne
+ * `readProfiles(f, r)` refuse un relevé sans empreinte, et un relevé dont l'empreinte ne
  * correspond plus à son contenu. Quatre refus, deux par chemin : celui du client
  * (`data/profiles.json`, la mesure qu'il a faite lui-même) et celui du dépôt (le relevé de
  * référence, qui produit TOUS les chiffres publiés dans un clone neuf).
@@ -10,7 +10,7 @@
  * sans qu'aucun cas ne bouge. **Ils étaient justes et rien ne le vérifiait** — et c'est la
  * définition d'une garde qui se fera retirer au premier remaniement qui la trouve encombrante.
  *
- * Chaque cas passe par le DISQUE, parce que c'est là que le défaut vit : `readProfiles()` ne
+ * Chaque cas passe par le DISQUE, parce que c'est là que le défaut vit : `readProfiles(f, r)` ne
  * prend aucun paramètre et lit un chemin fixe. Un témoin qui appellerait la comparaison
  * d'empreinte directement éprouverait l'arithmétique et laisserait le refus sans couverture —
  * la mutation d'origine ne le ferait pas rougir.
@@ -22,12 +22,13 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync, writeFileSync, existsSync, mkdirSync, rmSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { readProfiles, empreinteDuReleve, RELEVE_DE_REFERENCE } from "./measure.ts";
 
 const RACINE = fileURLToPath(new URL("..", import.meta.url));
-const PROFILS_CLIENT = `${RACINE}data/profiles.json`;
 const REFERENCE = `${RACINE}${RELEVE_DE_REFERENCE}`;
 
 /** Un relevé minimal mais valide : ce que `readProfiles` exige pour rendre au lieu de refuser. */
@@ -44,32 +45,59 @@ function releveValide(): Record<string, unknown> {
   return { ...corps, empreinte: empreinteDuReleve(corps) };
 }
 
-/** Écrit le relevé client, joue, restaure — même si le corps lève. */
-function avecProfilsClient(contenu: unknown, jouer: () => void): void {
-  const existait = existsSync(PROFILS_CLIENT);
-  const avant = existait ? readFileSync(PROFILS_CLIENT, "utf8") : null;
-  mkdirSync(`${RACINE}data`, { recursive: true });
-  writeFileSync(PROFILS_CLIENT, JSON.stringify(contenu, null, 2));
-  try { jouer(); }
-  finally {
-    if (avant === null) rmSync(PROFILS_CLIENT, { force: true });
-    else writeFileSync(PROFILS_CLIENT, avant);
+/*
+ * CES DEUX AIDES ÉCRIVAIENT DANS L'ARBRE VIVANT, ET C'EST CE QUI FAISAIT COMMITER ROUGE.
+ *
+ * Elles posaient `data/profiles.json` — ou remplaçaient le relevé de référence — à la
+ * racine du dépôt, jouaient, puis restauraient. La restauration était correcte. Le défaut
+ * est ailleurs : `node --test` lance les fichiers de cas dans des PROCESSUS PARALLÈLES, et
+ * pendant la fenêtre où le relevé factice est en place, tout autre cas qui appelle
+ * `readProfiles(f, r)` le reçoit à la place du vrai.
+ *
+ * Mesuré le 26 août 2026 : `seuil.test.ts` passe 6 sur 6 seul et tombe dans la suite
+ * complète. Avec le relevé factice posé à la main — extraction vide — ses cas tombent
+ * aussi, mais PAS LES MÊMES : quels cas tombent dépend de l'instant où la fenêtre s'ouvre.
+ * C'est pourquoi le rouge est intermittent et pourquoi il a l'air d'un problème de charge.
+ *
+ * `measure.ts` avait déjà tranché la question dans son propre commentaire : les valeurs par
+ * défaut de `readProfiles(f, r)` SONT la production, pour que les appels du dépôt éprouvent le
+ * point d'appel réel — et « seuls les témoins passent un bac à sable ». Ce fichier faisait
+ * l'inverse : il gardait les défauts et déplaçait le dépôt sous eux.
+ *
+ * Un bac à sable par cas, donc. Rien de partagé, aucune fenêtre, et les quatre refus
+ * éprouvent exactement les mêmes lignes qu'avant.
+ */
+function avecBac(jouer: (fichier: string, racine: string) => void, poser: (racine: string) => void): void {
+  const bac = mkdtempSync(join(tmpdir(), "cascade-releve-"));
+  try {
+    mkdirSync(join(bac, "data"), { recursive: true });
+    poser(bac);
+    /* Le chemin du relevé client est passé explicitement : quand le cas éprouve le relevé
+       de RÉFÉRENCE, ce fichier-ci n'existe pas, et `readProfiles` bascule sur le balayage
+       de la racine — le chemin de l'acheteur, celui qui compte le plus. */
+    jouer(join(bac, "data", "profiles.json"), bac + "/");
+  } finally {
+    rmSync(bac, { recursive: true, force: true });
   }
 }
 
-/** Remplace le relevé de référence du dépôt, joue, restaure toujours. */
-function avecReference(contenu: unknown, jouer: () => void): void {
-  const avant = readFileSync(REFERENCE, "utf8");
-  writeFileSync(REFERENCE, JSON.stringify(contenu, null, 2));
-  try { jouer(); }
-  finally { writeFileSync(REFERENCE, avant); }
+/** Le relevé du client, dans un bac à sable. */
+function avecProfilsClient(contenu: unknown, jouer: (f: string, r: string) => void): void {
+  avecBac(jouer, (bac) =>
+    writeFileSync(join(bac, "data", "profiles.json"), JSON.stringify(contenu, null, 2)));
+}
+
+/** Le relevé de référence du dépôt, dans un bac à sable. */
+function avecReference(contenu: unknown, jouer: (f: string, r: string) => void): void {
+  avecBac(jouer, (bac) =>
+    writeFileSync(join(bac, RELEVE_DE_REFERENCE), JSON.stringify(contenu, null, 2)));
 }
 
 test("le relevé du client sans empreinte est refusé", () => {
   const { empreinte, ...sansScelle } = releveValide();
   void empreinte;
-  avecProfilsClient(sansScelle, () => {
-    assert.throws(() => readProfiles(), /carries no content fingerprint/,
+  avecProfilsClient(sansScelle, (f, r) => {
+    assert.throws(() => readProfiles(f, r), /carries no content fingerprint/,
       "un relevé sans empreinte ne peut pas dire si ses chiffres sont ceux qui ont été "
       + "mesurés ; le publier reviendrait à publier un chiffre dont personne ne répond");
   });
@@ -81,8 +109,8 @@ test("le relevé du client dont l'empreinte ne correspond plus est refusé", () 
      Changer l'empreinte plutôt que le contenu éprouverait la même comparaison, mais pas
      le geste qu'on redoute — et c'est le geste qui doit rougir. */
   (altere as Record<string, unknown>).code = "modifie-a-la-main";
-  avecProfilsClient(altere, () => {
-    assert.throws(() => readProfiles(), /has changed since it was measured/,
+  avecProfilsClient(altere, (f, r) => {
+    assert.throws(() => readProfiles(f, r), /has changed since it was measured/,
       "un chiffre modifié après coup rend tout le fichier sans valeur, et le refus doit "
       + "arriver avant qu'une page ne le publie");
   });
@@ -91,8 +119,8 @@ test("le relevé du client dont l'empreinte ne correspond plus est refusé", () 
 test("le relevé du client intact passe — sinon la garde a coûté la mesure", () => {
   /* LA DIRECTION QUI DÉCIDE. Sans ce cas, les deux verts ci-dessus prouveraient seulement
      que `readProfiles` refuse tout, ce qu'une garde cassée fait aussi. */
-  avecProfilsClient(releveValide(), () => {
-    const p = readProfiles();
+  avecProfilsClient(releveValide(), (f, r) => {
+    const p = readProfiles(f, r);
     assert.ok(p, "un relevé correctement scellé doit être rendu");
     assert.equal((p as unknown as Record<string, unknown>).code, "temoin");
   });
@@ -103,16 +131,16 @@ test("le relevé de référence du dépôt sans empreinte est refusé", () => {
      neuf — celui de l'acheteur — c'est ce fichier qui produit TOUS les chiffres publiés. */
   const { empreinte, ...sansScelle } = releveValide();
   void empreinte;
-  avecReference(sansScelle, () => {
-    assert.throws(() => readProfiles(), /carries no content fingerprint/);
+  avecReference(sansScelle, (f, r) => {
+    assert.throws(() => readProfiles(f, r), /carries no content fingerprint/);
   });
 });
 
 test("le relevé de référence du dépôt altéré est refusé", () => {
   const altere = releveValide();
   (altere as Record<string, unknown>).code = "modifie-a-la-main";
-  avecReference(altere, () => {
-    assert.throws(() => readProfiles(), /has changed since it was measured/);
+  avecReference(altere, (f, r) => {
+    assert.throws(() => readProfiles(f, r), /has changed since it was measured/);
   });
 });
 
