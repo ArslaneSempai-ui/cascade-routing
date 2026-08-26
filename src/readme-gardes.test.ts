@@ -183,3 +183,57 @@ test("si aucun document livré n'est trouvé, le tableau REFUSE de proclamer leu
       `zéro document trouvé et pas de refus : le tableau publierait une absence qui n'existe pas.\n${r.stderr}`);
   } finally { rmSync(d, { recursive: true, force: true }); }
 });
+
+/*
+ * UN BLOC RETIRÉ DE LA CARTE GARDE SES MARQUEURS, ET PLUS PERSONNE NE LE REGARDE.
+ *
+ * `figures()` ne contrôle QUE `Object.keys(blocks)`. Un bloc qui vit dans le README avec ses
+ * marqueurs `<!-- figures:x -->` mais qui a quitté la carte passée à `emit(...)` n'est plus
+ * comparé à rien : `--check` annonce « up to date », et le bloc reste figé pour toujours en
+ * portant la marque de ce qui est engendré.
+ *
+ * Ce n'est pas une hypothèse de bureau : DEUX cliquets de ce dépôt retirent les blocs
+ * `figures:` avant de compter, avec pour seule raison qu'« ils sont tenus par leur
+ * générateur » — le cliquet des taux tapés et celui de la prose. Retirer une clé les fait
+ * donc tous les deux détourner le regard d'un bloc que plus rien ne tient. Une clé de moins,
+ * et de la prose gelée porte la marque d'une mesure sous trois gardes qui l'ignorent.
+ *
+ * Mesuré le 26 août 2026 : 29 marqueurs, 29 clés. Le trou n'était pas ouvert ; il était
+ * simplement ouvrable sans bruit, et c'est ce que ce cas ferme.
+ *
+ * Il se lit dans la SOURCE : importer `readme.ts` réécrirait la page — voir l'en-tête.
+ */
+test("tout bloc engendré du README a la clé qui l'engendre, et réciproquement", () => {
+  const src = readFileSync(join(racine, "src", "readme.ts"), "utf8");
+  const i = src.indexOf("emit(fileURLToPath");
+  assert.ok(i > 0, "`readme.ts` ne finit plus par un `emit(fileURLToPath…)` : ce cas ne garde plus rien.");
+
+  /* Découpe par profondeur : un motif sur les virgules perd une clé sur deux dès que deux
+     abréviations se suivent — la virgule consommée par la première manque à la seconde. */
+  const deb = src.indexOf("{", i);
+  let d = 0, fin = deb;
+  for (let k = deb; k < src.length; k++) {
+    const c = src[k]!;
+    if (c === "{" || c === "[" || c === "(") d++;
+    else if (c === "}" || c === "]" || c === ")") { d--; if (d === 0) { fin = k; break; } }
+  }
+  const cles = src.slice(deb + 1, fin).split(",")
+    .map((x) => x.trim().split(":")[0]!.trim()).filter(Boolean).sort();
+
+  const marqueurs = [...readFileSync(join(racine, "README.md"), "utf8")
+    .matchAll(/<!-- figures:([A-Za-z0-9-]+) -->/g)].map((m) => m[1]!).sort();
+
+  /* Non-vacuité dans les deux sens : deux listes vides sont égales et ne gardent rien. */
+  assert.ok(cles.length >= 10, `${cles.length} clé(s) lue(s) dans l'appel : la découpe est cassée.`);
+  assert.ok(marqueurs.length >= 10, `${marqueurs.length} marqueur(s) lu(s) : la lecture est cassée.`);
+
+  assert.deepEqual(marqueurs, cles,
+    "un bloc engendré du README n'a plus de clé pour l'engendrer, ou l'inverse.\n"
+    + `  marqueurs sans clé : ${marqueurs.filter((m) => !cles.includes(m)).join(", ") || "—"}\n`
+    + `  clés sans marqueur : ${cles.filter((c) => !marqueurs.includes(c)).join(", ") || "—"}\n`
+    + "  `figures()` ne contrôle que les clés de la carte : un bloc sans clé garde ses marqueurs,\n"
+    + "  `--check` le déclare à jour, et les cliquets qui écartent les blocs `figures:` — celui\n"
+    + "  des taux tapés, celui de la prose — continuent de l'écarter. Plus rien ne le tient.\n"
+    + "  → remettre la clé, ou retirer les marqueurs pour que le bloc redevienne de la prose\n"
+    + "    contrôlée comme telle.");
+});
