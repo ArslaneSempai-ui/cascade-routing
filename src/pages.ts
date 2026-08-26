@@ -27,7 +27,7 @@ import { createHash } from "node:crypto";
 export const PRODUISENT_LA_PAGE = ["ui.html", "gabarit.html", "pages.ts", "registre.css", "graphes.js"] as const;
 import { fileURLToPath } from "node:url";
 import { isMain } from "./cli.ts";
-import { readProfiles } from "./measure.ts";
+import { readProfiles, RELEVE_DE_REFERENCE } from "./measure.ts";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 
@@ -43,7 +43,7 @@ const root = fileURLToPath(new URL("..", import.meta.url));
  * Conséquence mesurée : la page publiée faisait tourner du code vieux de plusieurs commits,
  * parce que personne ne pouvait la régénérer et que rien ne le signalait.
  */
-const PROFILS = (() => {
+const PROFIL_UTILISE = (() => {
   const p = readProfiles();
   if (!p) {
     console.error(
@@ -52,8 +52,34 @@ const PROFILS = (() => {
       + "  If it is gone, restore it with `git checkout profiles-*.json`.");
     process.exit(1);
   }
-  return JSON.stringify(p);
+  return p;
 })();
+
+/*
+ * LE RELEVÉ EST UNE SOURCE DE LA PAGE, AU MÊME TITRE QUE `ui.html`.
+ *
+ * Il ne l'était pas, et la conséquence a été mesurée le 26 août 2026 : on remesure, on
+ * rescelle, on refait les figures, le dossier et la sonde — la discipline complète — et
+ * `npm test` rend 442 sur 442 avec sortie 0 pendant que `docs/index.html` sert toujours
+ * l'ancien chiffre. Seul `npm run pages` refait la page, et rien ne le disait.
+ *
+ * Le sceau ci-dessous ne couvrait que le CODE qui produit la page. Un code inchangé qui
+ * recopie un relevé changé rend une page fausse dont toutes les empreintes concordent :
+ * la garde regardait à côté de ce qui peut mentir.
+ *
+ * On enregistre donc l'empreinte du relevé employé à la construction, et le contrôle de
+ * fraîcheur la compare à celle du relevé de référence tel qu'il est aujourd'hui. Deux
+ * causes distinctes rougissent, et le message les sépare :
+ *   — le relevé a été remesuré depuis, donc la page est périmée ;
+ *   — la page a été construite depuis une mesure locale que `data/` ne versionne pas,
+ *     donc personne d'autre ne peut la refaire.
+ */
+const RELEVE_DE_LA_PAGE = {
+  attendu: RELEVE_DE_REFERENCE,
+  empreinte: (PROFIL_UTILISE as unknown as Record<string, unknown>).empreinte,
+};
+
+const PROFILS = JSON.stringify(PROFIL_UTILISE);
 
 const SHIM = `<script>window.LOCAL_PRET = new Promise((r) => { window.LOCAL_POSE = r; });</` + `script>
 <script type="module">
@@ -224,7 +250,8 @@ export function construire(): void {
     if (existsSync(src)) empreintes["js/" + n] = createHash("sha256").update(readFileSync(src)).digest("hex");
   }
   writeFileSync(docs + "/.sources.json", JSON.stringify(
-    { quoi: "sha256 of each SOURCE at build time. A freshness check compares these to the sources on disk; a modification date would compare the machine instead.", empreintes },
+    { quoi: "sha256 of each SOURCE at build time. A freshness check compares these to the sources on disk; a modification date would compare the machine instead.", empreintes,
+      releve: RELEVE_DE_LA_PAGE },
     null, 2) + "\n");
   console.log(`docs/ built — ${atteints.size} module(s) published`
     + (inutiles.length ? `, ${inutiles.length} dropped: ${inutiles.join(", ")}` : ""));
