@@ -182,10 +182,31 @@ export function integriteDuVerrou(verrou: { packages?: Record<string, { integrit
   return { total: Object.keys(p).length - 1, sans };
 }
 
-/** Une borne qui règle la promesse sans couper le flux annonce un plafond qu'elle n'impose pas. */
+/**
+ * Une borne qui règle la promesse sans couper le flux annonce un plafond qu'elle n'impose pas.
+ *
+ * ÉLARGI LE 26 AOÛT 2026, ET SEULEMENT PARCE QUE LA CONTRE-ÉPREUVE TIENT ENCORE.
+ *
+ * La règle cherchait `req.destroy()` DANS le gestionnaire `data` — une forme, pas une
+ * propriété. Elle refusait donc un correctif strictement meilleur : `req.destroy()` tue la
+ * socket AVANT que le refus parte, si bien que le client reçoit une connexion coupée et
+ * jamais la raison. Mesuré sur un serveur réel : corps de 200 ko, le client reçoit
+ * `HTTP 400 request too large` PUIS la coupure. Borné, et le client sait pourquoi.
+ *
+ * La propriété est en deux morceaux et il faut les DEUX : on cesse d'accepter des octets au
+ * plafond, et la connexion finit fermée — tout de suite, ou après que la réponse est partie.
+ * Un `pause()` seul, sans fermeture nulle part, laisse la socket ouverte et reste refusé.
+ *
+ * Élargir un contrôle de sécurité pour faire passer un correctif est le geste qui ouvre un
+ * faux vert. Il ne se fait qu'avec la contre-épreuve qui échoue encore, et elle est plus bas.
+ */
 export function bornePosee(source: string): { plafond: boolean; fluxCoupe: boolean } {
   const bloc = source.match(/req\.on\("data"[\s\S]{0,400}?\}\);/)?.[0] ?? "";
-  return { plafond: /PLAFOND_CORPS|\d{2,}_?\d*\s*\)/.test(bloc), fluxCoupe: /req\.destroy\(\)/.test(bloc) };
+  const plafond = /PLAFOND_CORPS|\d{2,}_?\d*\s*\)/.test(bloc);
+  const cesseDAccepter = /req\.(destroy|pause)\(\)/.test(bloc);
+  const fermee = /req\.destroy\(\)/.test(bloc)
+    || /res\.on\(\s*["']finish["'][\s\S]{0,300}?(?:req|socket|res)\.(?:destroy|end)\(\)/.test(source);
+  return { plafond, fluxCoupe: cesseDAccepter && fermee };
 }
 
 /* ────────────────────────────────────────────────────────────────────────────
@@ -197,6 +218,24 @@ export function temoins(): string[] {
   const v = (quoi: string, obtenu: unknown, attendu: unknown) => {
     if (JSON.stringify(obtenu) !== JSON.stringify(attendu)) r.push(`${quoi} → ${JSON.stringify(obtenu)}, attendu ${JSON.stringify(attendu)}`);
   };
+
+  /*
+   * LA BORNE DU CORPS — élargie, donc éprouvée dans les deux sens le même jour.
+   * Les deux premières disent que la forme neuve est acceptée ; la TROISIÈME est celle qui
+   * compte : un plafond avec `pause()` et aucune fermeture nulle part doit rester refusé.
+   * Sans elle, l'élargissement aurait ouvert un faux vert sans rien fermer.
+   */
+  const HANDLER = (dedans: string, ailleurs = "") =>
+    `req.on("data", (b) => { total += b.length; if (total > 50000) { ${dedans} } });\n${ailleurs}`;
+  v("borne coupée sur place", bornePosee(HANDLER("req.destroy();")), { plafond: true, fluxCoupe: true });
+  v("borne coupée après la réponse",
+    bornePosee(HANDLER("req.pause();", `res.on("finish", () => req.destroy());`)),
+    { plafond: true, fluxCoupe: true });
+  v("PAUSE SANS FERMETURE — doit rester refusée",
+    bornePosee(HANDLER("req.pause();")), { plafond: true, fluxCoupe: false });
+  v("plafond sans rien couper", bornePosee(HANDLER("rendre(400);")), { plafond: true, fluxCoupe: false });
+  v("aucun plafond",
+    bornePosee(`req.on("data", (b) => { morceaux.push(b); });`), { plafond: false, fluxCoupe: false });
 
   /* Un secret planté DOIT sortir. Sinon le zéro du scan n'a aucune valeur. */
   v("clé AWS plantée", secretsDans("const k = 'AKIAIOSFODNN7EXAMPLE';"), ["clé AWS"]);
