@@ -36,10 +36,54 @@ type Releve = { measuredAt: string; extraction: Record<string, Record<string, Ce
 
 const RACINE = fileURLToPath(new URL("..", import.meta.url));
 
+/**
+ * LES RELEVÉS, DANS L'ORDRE OÙ ILS ONT ÉTÉ MESURÉS — PAS DANS CELUI DE LEURS NOMS.
+ *
+ * Ils étaient triés par NOM de fichier, et « les deux plus récents » étaient les deux
+ * derniers de ce tri. Mesuré le 27 août 2026 sur les cinq relevés livrés :
+ *
+ *   par nom    coeur-rendu (10:40)  ->  un-coeur-pris (09:52)     l'après précède l'avant
+ *   par date   coeur-rendu (10:40)  ->  charge-8 (18:38)          la vraie paire
+ *
+ * Deux défauts, pas un. La paire par défaut est INVERSÉE — un outil vendu comme garde de
+ * régression rendait donc les gains pour des pertes — et le relevé réellement le plus récent,
+ * `charge-8`, n'était jamais comparé : son nom le place au milieu. Même inversion sur la
+ * paire du 19, où `-remesure` précède son propre original tout en le suivant de neuf heures.
+ *
+ * L'outil imprimait « 10:40 -> 09:52 » dans sa propre sortie. Les deux dates étaient là,
+ * dans le bon ordre pour être lues à l'envers, et rien ne s'y opposait.
+ *
+ * Un relevé sans `measuredAt` ne se trie pas : il se REFUSE. Sans date, il atterrirait à une
+ * extrémité de l'ordre et déciderait de la paire par défaut sans que personne ne l'ait voulu.
+ */
+/**
+ * L'ordre lui-même, séparé de la lecture du disque : un témoin peut alors lui présenter la
+ * date manquante, que le vrai dossier ne porte pas aujourd'hui — et qu'on ne va pas y écrire
+ * pour l'éprouver.
+ */
+export function ordonnerParMesure(entrees: { nom: string; measuredAt?: unknown }[]): string[] {
+  for (const e of entrees) {
+    if (typeof e.measuredAt !== "string" || !e.measuredAt) {
+      throw new Error(
+        `${e.nom} carries no measuredAt, so there is no telling when it was measured.\n`
+        + "  These records are ordered by measurement time, not by file name: an undated one\n"
+        + "  would land at one end of that order and silently decide which pair gets compared.\n"
+        + "  Re-seal it with \u201cnpm run sceller\u201d, or move it out of this directory.");
+    }
+  }
+  return [...entrees]
+    .sort((x, y) => (String(x.measuredAt) < String(y.measuredAt) ? -1
+      : String(x.measuredAt) > String(y.measuredAt) ? 1 : 0))
+    .map((e) => e.nom);
+}
+
 export function relevesDisponibles(): string[] {
-  return readdirSync(RACINE)
+  return ordonnerParMesure(readdirSync(RACINE)
     .filter((f) => /^profiles-.*\.json$/.test(f))
-    .sort();
+    .map((nom) => {
+      try { return { nom, measuredAt: (JSON.parse(readFileSync(join(RACINE, nom), "utf8")) as { measuredAt?: unknown }).measuredAt }; }
+      catch { return { nom }; }
+    }));
 }
 
 export type Ecart = {
@@ -94,6 +138,25 @@ export function comparer(a: Releve, b: Releve): Comparaison {
       }
     }
   }
+  /*
+   * CE QUI N'EXISTE QUE DANS LE SECOND RELEVÉ DISPARAISSAIT SANS UN MOT.
+   *
+   * La boucle ci-dessus parcourt les clés du PREMIER relevé. Une cellule absente du premier
+   * — un palier ajouté, un champ nouveau — n'est donc jamais visitée : elle n'est ni comparée
+   * ni écartée, elle n'existe pas. L'outil rend « n cellules comparées » sans dire qu'il en a
+   * ignoré une, et c'est précisément la cellule neuve qu'on voulait regarder.
+   *
+   * Le sens inverse, lui, était déjà dit : « absente du second relevé ». Une garde qui ne
+   * couvre qu'une direction se lit comme si elle couvrait les deux, parce que son nom parle
+   * des deux.
+   */
+  for (const palier of Object.keys(b.extraction).sort()) {
+    for (const champ of Object.keys(b.extraction[palier] ?? {}).sort()) {
+      if (a.extraction[palier]?.[champ]) continue;
+      ecartees.push({ cellule: `${palier}/${champ}`, pourquoi: "absente du premier relevé" });
+    }
+  }
+
   return { avant: a.measuredAt, apres: b.measuredAt, cellulesComparees: cellules,
     cellulesEcartees: ecartees, casCompares: cas, gagnes: gTot, perdus: pTot, ecarts };
 }
@@ -112,7 +175,32 @@ if (isMain(import.meta)) {
     process.exit(2);
   }
   const [fa, fb] = args.length >= 2 ? [args[0]!, args[1]!] : [dispo.at(-2)!, dispo.at(-1)!];
-  const r = comparer(lire(fa), lire(fb));
+  const ra = lire(fa), rb = lire(fb);
+
+  /*
+   * UN « APRÈS » ANTÉRIEUR À SON « AVANT » RETOURNE TOUS LES SIGNES.
+   *
+   * L'ordre par défaut est réparé plus haut, mais deux fichiers peuvent aussi être nommés à
+   * la main dans le mauvais sens. Le refus ne porte donc pas sur la SÉLECTION, il porte sur
+   * la paire : chaque cas gagné devient un cas perdu, et l'outil dont tout l'argument est
+   * « un agrégat qui monte peut cacher des cas perdus » rapporterait exactement l'inverse
+   * de ce qui s'est passé.
+   *
+   * Il refuse au lieu de réordonner tout seul : deux relevés à comparer dans un ordre précis
+   * est une intention, et la corriger en silence rendrait un verdict que personne n'a demandé.
+   */
+  if (rb.measuredAt < ra.measuredAt) {
+    console.error(`\n  ${fb} was measured BEFORE ${fa}.`);
+    console.error(`    ${fa}  ${ra.measuredAt}`);
+    console.error(`    ${fb}  ${rb.measuredAt}`);
+    console.error("\n  Comparing them in this order flips every sign: each case gained would be");
+    console.error("  reported as a case lost. This tool exists to say what a rising aggregate hides,");
+    console.error("  and in this order it would say the opposite of what happened.");
+    console.error(`\n  → node src/diff.ts ${fb} ${fa}\n`);
+    process.exit(2);
+  }
+
+  const r = comparer(ra, rb);
 
   console.log(`\n  ${fa}  ->  ${fb}`);
   console.log(`  ${r.avant.slice(0, 16)}  ->  ${r.apres.slice(0, 16)}\n`);

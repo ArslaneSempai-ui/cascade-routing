@@ -67,6 +67,11 @@ if [ -z "$NOMS" ]; then
   exit 1
 fi
 
+# L'ENTRÉE SE LIT UNE FOIS. Deux boucles la consomment maintenant, et la seconde recevait un
+# flux vide — donc « rien à signaler » sans avoir rien lu.
+PORTEES=$(mktemp)
+cat > "$PORTEES"
+
 TROUVES=""
 while read -r ref_local sha_local ref_dist sha_dist; do
   [ "$sha_local" = "0000000000000000000000000000000000000000" ] && continue   # suppression
@@ -80,7 +85,7 @@ while read -r ref_local sha_local ref_dist sha_dist; do
       TROUVES="$TROUVES\n    src/$n  (dans $ref_local)"
     fi
   done
-done
+done < "$PORTEES"
 
 if [ -n "$TROUVES" ]; then
   echo "" >&2
@@ -92,6 +97,56 @@ if [ -n "$TROUVES" ]; then
   echo "" >&2
   echo "  → ne poussez PAS cette branche. Poussez « main », qui n'en porte aucun." >&2
   echo "  → ou réécrivez l'historique de la branche avant de la pousser." >&2
+  echo "  → git push --no-verify   passe outre, et publie. Il n'y a pas de retour." >&2
+  exit 1
+fi
+
+# ─── RIEN D'IGNORÉ NE PART, ET LA LISTE VIENT DE `.gitignore` ───
+#
+# `.stryker-tmp/sandbox-mPFFL7/` — cent cinquante-neuf fichiers, une copie entière du dépôt
+# laissée par une passe de mutation — vit dans l'historique de deux branches de sauvegarde,
+# avec un lien symbolique `node_modules` qui pointe vers le chemin absolu du disque de
+# l'auteur. Rien de tout ça n'est publié aujourd'hui : ces commits ne sont atteignables ni
+# depuis `origin/main` ni depuis aucune référence du distant. **Un `git push --all` les
+# publierait**, et retirer un fichier de HEAD ne le retire pas du dépôt.
+#
+# LA RÈGLE SE DÉDUIT, ELLE NE S'ÉCRIT PAS ICI : ce que `.gitignore` refuse n'a rien à faire
+# dans un historique public. Une liste de motifs tapée dans ce crochet oublierait le dossier
+# de demain, et c'est la faute que ce dépôt passe ses journées à corriger.
+#
+# Mesuré avant de poser la garde : sur les 179 chemins que l'historique de `origin/main` a
+# jamais ajoutés, **zéro** est ignoré aujourd'hui. Elle ne bloque donc rien de ce qui se
+# pousse normalement.
+IGNORES=""
+while read -r ref_local sha_local ref_dist sha_dist; do
+  [ "$sha_local" = "0000000000000000000000000000000000000000" ] && continue
+  case "$sha_dist" in
+    0000000000000000000000000000000000000000) PORTEE="$sha_local --not --remotes" ;;
+    *) PORTEE="$sha_dist..$sha_local" ;;
+  esac
+  AJOUTES=$(git log $PORTEE --pretty=format: --name-only --diff-filter=A 2>/dev/null | sort -u | grep -v '^$')
+  [ -z "$AJOUTES" ] && continue
+  # `--no-index` N'EST PAS UN DÉTAIL : sans lui, `check-ignore` répond « pas ignoré » pour
+  # tout fichier SUIVI — et un bac commité par erreur est suivi, par définition. Le contrôle
+  # rendait donc zéro sur le cas exact qu'il vise. Mesuré sur un dépôt fabriqué.
+  VUS=$(printf '%s\n' "$AJOUTES" | git check-ignore --no-index --stdin 2>/dev/null | head -20)
+  if [ -n "$VUS" ]; then
+    IGNORES="$IGNORES\n  dans $ref_local :\n$(printf '%s\n' "$VUS" | sed 's/^/    /')"
+  fi
+done < "$PORTEES"
+rm -f "$PORTEES"
+
+if [ -n "$IGNORES" ]; then
+  echo "" >&2
+  echo "  POUSSÉE REFUSÉE — des fichiers que .gitignore refuse sont dans ce qui partirait." >&2
+  printf "%b\n" "$IGNORES" >&2
+  echo "" >&2
+  echo "  Ce dépôt est public. Un dossier ignoré qui a été commité une fois reste dans les" >&2
+  echo "  objets : retirer le fichier de HEAD ne le retire pas du dépôt, et un bac de mutation" >&2
+  echo "  porte des chemins absolus — donc le nom de l'utilisateur de la machine." >&2
+  echo "" >&2
+  echo "  → poussez la branche qui n'en porte pas (souvent « main »)." >&2
+  echo "  → ou réécrivez l'historique de celle-ci avant de la pousser." >&2
   echo "  → git push --no-verify   passe outre, et publie. Il n'y a pas de retour." >&2
   exit 1
 fi
