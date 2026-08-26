@@ -30,6 +30,40 @@ export function routesPost(src: string): string[] {
   return [...src.matchAll(/url\.pathname === "([^"]+)"\s*&&\s*req\.method === "POST"/g)].map((m) => m[1]!);
 }
 
+/*
+ * UN PORT DEMANDÉ À L'OS, PLUTÔT QU'UN PORT QU'ON ESPÈRE LIBRE.
+ *
+ * Les trois cas qui lancent un serveur prenaient un port fixe décalé par `NODE_UNIQUE_ID` —
+ * une variable de `node:cluster` que rien ne définit ici. Vérifié : elle est absente, donc le
+ * décalage vaut TOUJOURS zéro. Le schéma a la forme d'une parade aux collisions et n'en évite
+ * aucune : deux passes du même fichier réclament exactement les mêmes trois ports.
+ *
+ * CE QUI EST MESURÉ, ET RIEN DE PLUS. « la borne de corps compte des octets » est tombé une
+ * fois sur trois passes complètes, sur « le serveur n'a pas démarré », puis une fois lancé
+ * seul. Avec le port demandé à l'OS : quatre passes d'affilée vertes, et deux passes
+ * SIMULTANÉES vertes toutes les deux.
+ *
+ * CE QUI NE L'EST PAS, et que j'ai cru avant de le vérifier. J'ai supposé qu'un serveur
+ * étranger tenant le port ferait passer le cas contre LUI, en silence, au vert. Éprouvé deux
+ * fois — un vrai `server.ts` sur le port, puis un imposteur qui accepte tout et devrait donc
+ * faire tomber les assertions — le cas est resté vert dans les deux sens, ce qui CONTREDIT
+ * l'hypothèse au lieu de la soutenir. Le mécanisme exact de l'échec d'origine n'est donc pas
+ * établi, et ce commentaire ne prétend pas le connaître.
+ *
+ * Le port demandé à l'OS reste juste indépendamment : il retire une ressource partagée entre
+ * passes, et une ressource partagée est ce qui rend un rouge intermittent.
+ */
+async function portLibre(): Promise<number> {
+  return await new Promise<number>((resoudre, rejeter) => {
+    const s = createServer();
+    s.on("error", rejeter);
+    s.listen(0, "127.0.0.1", () => {
+      const p = (s.address() as AddressInfo).port;
+      s.close(() => resoudre(p));
+    });
+  });
+}
+
 test("la liste des routes POST se dérive du routeur, et elle n'est pas vide", () => {
   const routes = routesPost(source);
   assert.ok(routes.length >= 3,
@@ -48,7 +82,7 @@ test("la liste des routes POST se dérive du routeur, et elle n'est pas vide", (
 
 test("chaque route POST refuse un corps au-delà de la borne", { timeout: 120_000 }, async () => {
   const routes = routesPost(source);
-  const port = 4790 + Math.floor(Number(process.env.NODE_UNIQUE_ID ?? 0));
+  const port = await portLibre();
   const base = `http://127.0.0.1:${port}`;
   const serveur = spawn("node", [fileURLToPath(new URL("./server.ts", import.meta.url))],
     { env: { ...process.env, PORT: String(port) }, stdio: "ignore" });
@@ -99,7 +133,7 @@ test("chaque route POST refuse un corps au-delà de la borne", { timeout: 120_00
  * et c'est en isolant avec un corps valide sur une route réelle que le défaut apparaît.
  */
 test("la borne de corps compte des octets, pas des unités UTF-16", { timeout: 120_000 }, async () => {
-  const port = 4990 + Math.floor(Number(process.env.NODE_UNIQUE_ID ?? 0));
+  const port = await portLibre();
   const base = `http://127.0.0.1:${port}`;
   const serveur = spawn("node", [fileURLToPath(new URL("./server.ts", import.meta.url))],
     { env: { ...process.env, PORT: String(port) }, stdio: "ignore" });
@@ -152,7 +186,7 @@ test("la politique de contenu est stricte ET la page reste exécutable", { timeo
    * viderait la protection : elle est refusée ici aussi. On ne peut donc pas faire passer ce
    * cas en affaiblissant la politique — la seule sortie est un jeton correct.
    */
-  const port = 4830 + Math.floor(Number(process.env.NODE_UNIQUE_ID ?? 0));
+  const port = await portLibre();
   const base = `http://127.0.0.1:${port}`;
   const serveur = spawn("node", [fileURLToPath(new URL("./server.ts", import.meta.url))],
     { env: { ...process.env, PORT: String(port) }, stdio: "ignore" });
