@@ -114,6 +114,26 @@ const etat = () => {
     prochainGain: budgetShadowPrice(profils, hypotheses),
     hypotheses,
     bornes: BOUNDS,
+    /*
+     * LES TAILLES D'ÉCHANTILLON VOYAGENT AVEC LES TAUX.
+     *
+     * La légende de la figure de routage annonçait 120 documents pour les sept paliers,
+     * alors que quatre sont mesurés sur mille. Elle le tapait à la main parce que rien
+     * dans l'état ne le portait. On le porte.
+     *
+     * Un même palier a la même taille sur les cinq champs — c'est une propriété de la
+     * mesure, pas une hypothèse : items sort du même relevé pour tous les champs d'un
+     * palier. On lit donc le premier champ, et le cas legende-figure.test.ts refuse si
+     * un palier porte deux tailles différentes selon le champ.
+     *
+     * DEUX CONTRAINTES D'ÉCRITURE ICI, et je les ai cassées toutes les deux avant de les
+     * lire. (1) Aucun accent grave : ce bloc vit dans un gabarit, et un seul le refermerait
+     * au milieu — l'en-tête du fichier le dit. (2) Aucune syntaxe TypeScript : ce corps est
+     * ÉMIS TEL QUEL dans la page, donc un !  de non-nullité y devient une erreur de syntaxe
+     * dans le navigateur. tsc compilait ; c'est le vérificateur d'écran qui l'a vue, en
+     * rendant la page.
+     */
+    echantillons: Object.fromEntries(TIERS.map((e) => [e, profils.extraction[e][FIELDS[0]].items])),
     mesureLe: profils.measuredAt,
   };
 };

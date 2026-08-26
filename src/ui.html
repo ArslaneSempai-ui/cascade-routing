@@ -73,7 +73,30 @@ const T = {
 
   titreRoutage: "One field, one tier",
   routageQuoi: "Every cell is a measured pair: how often that tier gets that field right. The bar is the accuracy, the outline is what the optimiser would take. Take a cell to move the field.",
-  figRoutageTitre: (n) => `Accuracy of each tier on each field, measured on ${n} held-out records`,
+  /*
+   * LA LÉGENDE PORTAIT UN 120 ÉCRIT À LA MAIN DEVANT DEUX POPULATIONS.
+   *
+   * La figure montre sept paliers. Quatre — rules, small, large, human — sont mesurés sur
+   * mille documents ; les trois génératifs sur cent vingt. Un seul dénominateur était
+   * annoncé pour les deux, et c'était celui du plus petit : un lecteur qui calculait un
+   * intervalle depuis cette légende l'obtenait huit fois trop large sur quatre paliers sur
+   * sept, et concluait « ce n'est pas séparable » sur une mesure qui sépare.
+   *
+   * L'étiquette d'accessibilité juste au-dessous a déjà fait exactement ça avec le nombre
+   * de paliers — quatre annoncés devant sept affichés. Le remède est le même : le chiffre
+   * se dérive de ce qui est affiché, il ne se tape pas.
+   *
+   * Trois formes, et la première est celle qui compte : quand la taille d'échantillon
+   * n'est pas connue, la légende ne l'invente pas.
+   */
+  figRoutageTitre: (groupes) => !groupes || !groupes.length
+    ? "Accuracy of each tier on each field. This build does not carry the sample size "
+      + "behind each cell, so none is stated here."
+    : groupes.length === 1
+      ? `Accuracy of each tier on each field, measured on ${groupes[0].n} held-out records.`
+      : "Accuracy of each tier on each field, measured on "
+        + groupes.map((g) => `${g.n} held-out records for ${g.paliers}`).join("; and on ")
+        + ".",
   /* L'ÉTIQUETTE D'ACCESSIBILITÉ COMPTAIT AUSSI À LA MAIN — et personne ne la relit, puisque
      personne ne la voit. Elle annonçait quatre paliers devant une figure qui en montre sept :
      un lecteur d'écran recevait un chiffre faux, en silence, plus longtemps que les voyants. */
@@ -147,6 +170,26 @@ function blocVerdict() {
   if (b) b.onclick = () => envoyer("/api/optimum", {});
 }
 
+/*
+ * Les paliers regroupés par taille d'échantillon, dans l'ordre où la figure les montre.
+ * Rend une liste vide quand l'état ne porte pas les tailles — la légende dit alors qu'elle
+ * ne les connaît pas, au lieu d'en inventer une.
+ */
+function groupesEchantillons(L) {
+  const e = etat.echantillons;
+  if (!e) return [];
+  const par = new Map();
+  for (const p of etat.paliers) {
+    const n = e[p];
+    if (!Number.isFinite(n) || n <= 0) return [];
+    if (!par.has(n)) par.set(n, []);
+    par.get(n).push(L.paliers[p] ?? p);
+  }
+  return [...par.entries()]
+    .sort((a, b) => b[0] - a[0])
+    .map(([n, paliers]) => ({ n: nb(n), paliers: paliers.join(", ") }));
+}
+
 function blocRoutage() {
   const L = t();
   $("#titreRoutage").textContent = L.titreRoutage;
@@ -174,7 +217,7 @@ function blocRoutage() {
 
   $("#routage").innerHTML = `<section class="feuillet"><div class="corps">
     <div class="quoi">${esc(L.routageQuoi)}</div>
-    <div class="titre-fig">${esc(L.figRoutageTitre(nb(120)))}</div>${fig}
+    <div class="titre-fig">${esc(L.figRoutageTitre(groupesEchantillons(L)))}</div>${fig}
   </div></section>`;
 
   brancher($("#routage"));
