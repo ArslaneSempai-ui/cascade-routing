@@ -25,6 +25,9 @@ import { loadGeneratifs, extract, correct } from "./tiers.ts";
 import type { TierName } from "./paliers.ts";
 import type { Field } from "./corpus.ts";
 import { fileURLToPath } from "node:url";
+/* La garde était écrite ici ET dans l'autre commande, et son commentaire disait déjà que sa
+   place n'était pas la copie. Six autres commandes n'en avaient aucune : voir cas-demandes.ts. */
+import { casDemandes } from "./cas-demandes.ts";
 
 const FICHIER = fileURLToPath(new URL("../data/fuite.json", import.meta.url));
 
@@ -58,36 +61,6 @@ export async function mesurerFuite(palier: TierName, combien = 120) {
   return { palier, mesureLe: new Date().toISOString(), champs };
 }
 
-/**
- * UNE CHAÎNE VIDE N'EST PAS UN NOMBRE, ET `??` NE LA RATTRAPE PAS.
- *
- * `--cases=` rend la chaîne vide. Elle n'est pas nullish, donc le défaut ne se déclenche
- * pas ; et `Number("")` vaut **0**, pas NaN. La passe tournait donc sur zéro dossier,
- * affichait « 0 cas sur chaque moitié », et **écrivait son fichier de sortie** — daté,
- * complet, ressemblant à une mesure. `--cases=abc` donnait NaN, et `generateRecords` rend
- * zéro dossier pour NaN comme pour 0 comme pour -5.
- *
- * Le refus est ici, AVANT toute mesure, pour que rien ne soit écrit. `reportable: false`
- * arrivait trop tard : le champ existe, mais l'artefact aussi, et on lit rarement les deux.
- * **Un artefact qui n'établit rien ne doit pas exister.**
- *
- * (Écrite deux fois, ici et dans l'autre commande qui prend `--cases=`. Sa vraie place est
- *  la couche partagée ; l'y mettre propage à six dépôts, ce qui est une décision de
- *  propagation et pas la mienne. Signalé plutôt que tranché tout seul.)
- */
-function casDemandes(defaut: number): number {
-  const brut = process.argv.find((a) => a.startsWith("--cases="))?.split("=")[1];
-  if (brut === undefined || brut.trim() === "") return defaut;
-  const n = Number(brut);
-  if (!Number.isFinite(n) || !Number.isInteger(n) || n <= 0) {
-    process.stderr.write(
-      `\n  --cases=${brut} is not a number of records.\n`
-      + `  Il en faut un entier strictement positif. Une mesure sur zéro dossier n'est pas\n`
-      + `  une mesure, et elle laisserait derrière elle un fichier qui en a l'air.\n\n`);
-    process.exit(1);
-  }
-  return n;
-}
 
 if (isMain(import.meta)) {
 

@@ -41,6 +41,7 @@ import { FIELDS, generateRecords } from "./corpus.ts";
 
 import type { Field } from "./corpus.ts";
 import { fileURLToPath } from "node:url";
+import { casDemandes } from "./cas-demandes.ts";
 
 /** Le partiel porte un nom distinct : aucune garde ne doit le confondre avec le relevé. */
 const PARTIEL = fileURLToPath(new URL("../contrainte-partiel.json", import.meta.url));
@@ -157,7 +158,7 @@ async function appeler(tag: string, invite: string, avecSchema: boolean) {
 if (isMain(import.meta)) {
 
   refuserDrapeauxInconnus(["--cases", "--passes"]);
-  const cas = Number(process.argv.find((a) => a.startsWith("--cases="))?.split("=")[1] ?? 4);
+  const cas = casDemandes(4);
   const passes = Number(process.argv.find((a) => a.startsWith("--passes="))?.split("=")[1] ?? 2);
   const dossiers = generateRecords(cas, "dev");
   const paliers = ["gen-0.6b", "gen-4b", "gen-8b"] as const;

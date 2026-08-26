@@ -27,13 +27,14 @@ import type { NomPrompt } from "./tiers.ts";
 import type { TierName } from "./paliers.ts";
 import type { Field } from "./corpus.ts";
 import { fileURLToPath } from "node:url";
+import { casDemandes } from "./cas-demandes.ts";
 
 const SORTIE = fileURLToPath(new URL("../apparie-prompt.json", import.meta.url));
 const PALIERS = ["gen-4b", "gen-8b"] as TierName[];
 const FORMULATIONS = ["reference", "A-sans-exemple"] as NomPrompt[];
 
 if (isMain(import.meta)) {
-  const cas = Number(process.argv.find((a) => a.startsWith("--cases="))?.split("=")[1] ?? 120);
+  const cas = casDemandes(120);
   const dossiers = generateRecords(cas, "dev");   // l'observation vient de `dev` ; on y reste
 
   const version = (() => {

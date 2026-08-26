@@ -30,6 +30,7 @@ import { loadExtractors, extract, correct, ENCODEURS } from "./tiers.ts";
 import { lire, texte as texteDesBlocs, ceQuiManque } from "./ocr.ts";
 import { rate, writeRate, distinguishable } from "./interval.ts";
 import type { TierName } from "./paliers.ts";
+import { casDemandes } from "./cas-demandes.ts";
 
 const SORTIE = fileURLToPath(new URL("../ocr.json", import.meta.url));
 /* EXPORTÉ POUR QU'IL N'Y AIT QU'UNE SEULE VÉRITÉ. Un cas qui doit se sauter faute de moteur de
@@ -264,7 +265,7 @@ export async function mesurer(
 }
 
 if (isMain(import.meta)) {
-  const combien = Number(process.argv.find((a) => a.startsWith("--cases="))?.split("=")[1] ?? 120);
+  const combien = casDemandes(120);
   try {
     const r = await mesurer(combien);
     console.log(`\n  Transcription fidelity: `

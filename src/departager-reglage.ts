@@ -32,6 +32,7 @@ import type { NomPrompt } from "./tiers.ts";
 import type { TierName } from "./paliers.ts";
 import type { Field } from "./corpus.ts";
 import { fileURLToPath } from "node:url";
+import { casDemandes } from "./cas-demandes.ts";
 
 const REGLAGE = fileURLToPath(new URL("../prompts-par-palier.json", import.meta.url));
 const SORTIE = fileURLToPath(new URL("../departage-reglage.json", import.meta.url));
@@ -52,7 +53,7 @@ export function pairesADepartager(surDev: Record<string, Record<string, number>>
 }
 
 if (isMain(import.meta)) {
-  const cas = Number(process.argv.find((a) => a.startsWith("--cases="))?.split("=")[1] ?? 120);
+  const cas = casDemandes(120);
   const dossiers = generateRecords(cas, "dev");
 
   const version = (() => {

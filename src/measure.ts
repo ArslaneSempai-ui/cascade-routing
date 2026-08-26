@@ -23,6 +23,7 @@ import { TIERS, ENCODEURS, GENERATIFS, loadExtractors, loadClassifiers, loadGene
 import type { TierName } from "./tiers.ts";
 import type { Field } from "./corpus.ts";
 import { fileURLToPath } from "node:url";
+import { casDemandes } from "./cas-demandes.ts";
 
 const FICHIER = fileURLToPath(new URL("../data/profiles.json", import.meta.url));
 
@@ -741,7 +742,7 @@ if (isMain(import.meta)) {
   const llm = process.argv.includes("--llm");
   /* `--cases=N` : la taille d'échantillon est un réglage, pas une constante. À 120 cas le
      plus petit écart détectable est d'environ dix-huit points ; à 1 000, de six. */
-  const cases = Number(process.argv.find((a) => a.startsWith("--cases="))?.split("=")[1] ?? 120);
+  const cases = casDemandes(120);
   if (!Number.isFinite(cases) || cases < 20) {
     console.error("--cases must be at least 20: below that, a rate is not reportable.");
     process.exit(1);

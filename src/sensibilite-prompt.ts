@@ -32,12 +32,13 @@ import { readProfiles } from "./measure.ts";
 
 import type { Field } from "./corpus.ts";
 import { fileURLToPath } from "node:url";
+import { casDemandes } from "./cas-demandes.ts";
 
 const SORTIE = fileURLToPath(new URL("../prompts-2026-08-20.json", import.meta.url));
 const PALIER = "gen-4b" as const;
 
 if (isMain(import.meta)) {
-  const cas = Number(process.argv.find((a) => a.startsWith("--cases="))?.split("=")[1] ?? 120);
+  const cas = casDemandes(120);
   const dossiers = generateRecords(cas, "heldout");
   const noms = Object.keys(PROMPTS) as NomPrompt[];
 
