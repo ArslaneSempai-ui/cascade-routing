@@ -2,7 +2,7 @@
  "quoi": "Chaque garde du dépôt, retirée une par une. Un SURVIVANT est une garde dont le retrait ne fait tomber aucun cas : elle est peut-être juste, et rien ne le vérifie.",
  "mesureLe": "2026-08-26",
  "code": {
-  "commit": "a861065dc25d4c3d145956638b9730aff1c2fbee"
+  "commit": "717eeb600ab3069c1243a06e6d4679f15fe82047"
  },
  "cle": "fichier + forme + n, où n est l'index de la forme dans le CODE, commentaires et chaînes exclus",
  "formes": [
@@ -10,14 +10,18 @@
   "exit"
  ],
  "comptes": {
+  "par commit": {
+   "717eeb6": 88,
+   "?": 98
+  },
   "par forme": {
-   "throw": 0,
+   "throw": 88,
    "exit": 98
   },
   "par etat": {
-   "SURVIVANT": 63,
-   "attrapé": 17,
-   "tenu par le typage": 16,
+   "SURVIVANT": 72,
+   "attrapé": 81,
+   "tenu par le typage": 31,
    "tenu par un document engendré": 2
   }
  },
@@ -805,6 +809,798 @@
    "ligne": 1589,
    "etat": "attrapé",
    "ou": "cas"
+  },
+  {
+   "fichier": "assumptions.ts",
+   "forme": "throw",
+   "n": 0,
+   "ligne": 215,
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "assumptions.ts",
+   "forme": "throw",
+   "n": 1,
+   "ligne": 270,
+   "etat": "tenu par le typage",
+   "ou": "typage",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "capturer.mjs",
+   "forme": "throw",
+   "n": 0,
+   "ligne": 239,
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "capturer.mjs",
+   "forme": "throw",
+   "n": 1,
+   "ligne": 447,
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "clone-neuf.mjs",
+   "forme": "throw",
+   "n": 0,
+   "ligne": 187,
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "corpus-dur.ts",
+   "forme": "throw",
+   "n": 0,
+   "ligne": 78,
+   "etat": "SURVIVANT",
+   "ou": "cas",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "corpus-dur.ts",
+   "forme": "throw",
+   "n": 1,
+   "ligne": 81,
+   "etat": "SURVIVANT",
+   "ou": "cas",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "corpus-dur.ts",
+   "forme": "throw",
+   "n": 2,
+   "ligne": 83,
+   "etat": "SURVIVANT",
+   "ou": "cas",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "corpus-dur.ts",
+   "forme": "throw",
+   "n": 3,
+   "ligne": 140,
+   "etat": "SURVIVANT",
+   "ou": "cas",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "corpus-dur.ts",
+   "forme": "throw",
+   "n": 4,
+   "ligne": 144,
+   "etat": "SURVIVANT",
+   "ou": "cas",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "corpus-dur.ts",
+   "forme": "throw",
+   "n": 5,
+   "ligne": 146,
+   "etat": "SURVIVANT",
+   "ou": "cas",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "diff.ts",
+   "forme": "throw",
+   "n": 0,
+   "ligne": 103,
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "egress.ts",
+   "forme": "throw",
+   "n": 0,
+   "ligne": 153,
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "egress.ts",
+   "forme": "throw",
+   "n": 1,
+   "ligne": 160,
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "figures.ts",
+   "forme": "throw",
+   "n": 0,
+   "ligne": 42,
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "interval.ts",
+   "forme": "throw",
+   "n": 0,
+   "ligne": 49,
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "interval.ts",
+   "forme": "throw",
+   "n": 1,
+   "ligne": 170,
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "journal.ts",
+   "forme": "throw",
+   "n": 0,
+   "ligne": 428,
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "landing.ts",
+   "forme": "throw",
+   "n": 0,
+   "ligne": 1153,
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "landing.ts",
+   "forme": "throw",
+   "n": 1,
+   "ligne": 1202,
+   "etat": "tenu par le typage",
+   "ou": "typage",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "landing.ts",
+   "forme": "throw",
+   "n": 2,
+   "ligne": 1209,
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "landing.ts",
+   "forme": "throw",
+   "n": 3,
+   "ligne": 1215,
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "measure.ts",
+   "forme": "throw",
+   "n": 0,
+   "ligne": 310,
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "measure.ts",
+   "forme": "throw",
+   "n": 1,
+   "ligne": 316,
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "measure.ts",
+   "forme": "throw",
+   "n": 2,
+   "ligne": 346,
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "measure.ts",
+   "forme": "throw",
+   "n": 3,
+   "ligne": 351,
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "menace.ts",
+   "forme": "throw",
+   "n": 0,
+   "ligne": 571,
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "menace.ts",
+   "forme": "throw",
+   "n": 1,
+   "ligne": 612,
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "menace.ts",
+   "forme": "throw",
+   "n": 2,
+   "ligne": 614,
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "menace.ts",
+   "forme": "throw",
+   "n": 3,
+   "ligne": 617,
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "mesurer-dur.ts",
+   "forme": "throw",
+   "n": 0,
+   "ligne": 44,
+   "etat": "tenu par le typage",
+   "ou": "typage",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "mesurer-ocr.ts",
+   "forme": "throw",
+   "n": 0,
+   "ligne": 129,
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "mesurer-ocr.ts",
+   "forme": "throw",
+   "n": 1,
+   "ligne": 132,
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "mesurer-ocr.ts",
+   "forme": "throw",
+   "n": 2,
+   "ligne": 144,
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "mesurer-ocr.ts",
+   "forme": "throw",
+   "n": 3,
+   "ligne": 163,
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "mesurer-ocr.ts",
+   "forme": "throw",
+   "n": 4,
+   "ligne": 176,
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "ocr.ts",
+   "forme": "throw",
+   "n": 0,
+   "ligne": 89,
+   "etat": "SURVIVANT",
+   "ou": "cas",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "ocr.ts",
+   "forme": "throw",
+   "n": 1,
+   "ligne": 107,
+   "etat": "tenu par le typage",
+   "ou": "typage",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "ocr.ts",
+   "forme": "throw",
+   "n": 2,
+   "ligne": 115,
+   "etat": "SURVIVANT",
+   "ou": "cas",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "ocr.ts",
+   "forme": "throw",
+   "n": 3,
+   "ligne": 118,
+   "etat": "tenu par le typage",
+   "ou": "typage",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "pages.ts",
+   "forme": "throw",
+   "n": 0,
+   "ligne": 193,
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "poids.ts",
+   "forme": "throw",
+   "n": 0,
+   "ligne": 143,
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "poids.ts",
+   "forme": "throw",
+   "n": 1,
+   "ligne": 155,
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "poids.ts",
+   "forme": "throw",
+   "n": 2,
+   "ligne": 180,
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "poids.ts",
+   "forme": "throw",
+   "n": 3,
+   "ligne": 214,
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "premiere-reponse.mjs",
+   "forme": "throw",
+   "n": 0,
+   "ligne": 37,
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "premiere-reponse.mjs",
+   "forme": "throw",
+   "n": 1,
+   "ligne": 59,
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "premiere-reponse.mjs",
+   "forme": "throw",
+   "n": 2,
+   "ligne": 62,
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "premiere-reponse.mjs",
+   "forme": "throw",
+   "n": 3,
+   "ligne": 85,
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "premiere-reponse.mjs",
+   "forme": "throw",
+   "n": 4,
+   "ligne": 92,
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "readme.ts",
+   "forme": "throw",
+   "n": 0,
+   "ligne": 999,
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "readme.ts",
+   "forme": "throw",
+   "n": 1,
+   "ligne": 1084,
+   "etat": "tenu par le typage",
+   "ou": "typage",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "readme.ts",
+   "forme": "throw",
+   "n": 2,
+   "ligne": 1113,
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "readme.ts",
+   "forme": "throw",
+   "n": 3,
+   "ligne": 1168,
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "readme.ts",
+   "forme": "throw",
+   "n": 4,
+   "ligne": 1239,
+   "etat": "SURVIVANT",
+   "ou": "cas",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "readme.ts",
+   "forme": "throw",
+   "n": 5,
+   "ligne": 1252,
+   "etat": "tenu par le typage",
+   "ou": "typage",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "readme.ts",
+   "forme": "throw",
+   "n": 6,
+   "ligne": 1309,
+   "etat": "tenu par le typage",
+   "ou": "typage",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "readme.ts",
+   "forme": "throw",
+   "n": 7,
+   "ligne": 1393,
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "readme.ts",
+   "forme": "throw",
+   "n": 8,
+   "ligne": 1430,
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "server.ts",
+   "forme": "throw",
+   "n": 0,
+   "ligne": 32,
+   "etat": "tenu par le typage",
+   "ou": "typage",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "server.ts",
+   "forme": "throw",
+   "n": 1,
+   "ligne": 425,
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "tiers.ts",
+   "forme": "throw",
+   "n": 0,
+   "ligne": 405,
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "tiers.ts",
+   "forme": "throw",
+   "n": 1,
+   "ligne": 526,
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "tiers.ts",
+   "forme": "throw",
+   "n": 2,
+   "ligne": 547,
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "tiers.ts",
+   "forme": "throw",
+   "n": 3,
+   "ligne": 622,
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "tiers.ts",
+   "forme": "throw",
+   "n": 4,
+   "ligne": 632,
+   "etat": "tenu par le typage",
+   "ou": "typage",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "verifier-ecran.mjs",
+   "forme": "throw",
+   "n": 0,
+   "ligne": 336,
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "your-cases.ts",
+   "forme": "throw",
+   "n": 0,
+   "ligne": 150,
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "your-cases.ts",
+   "forme": "throw",
+   "n": 1,
+   "ligne": 475,
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "your-cases.ts",
+   "forme": "throw",
+   "n": 2,
+   "ligne": 487,
+   "etat": "tenu par le typage",
+   "ou": "typage",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "your-cases.ts",
+   "forme": "throw",
+   "n": 3,
+   "ligne": 510,
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "your-cases.ts",
+   "forme": "throw",
+   "n": 4,
+   "ligne": 552,
+   "etat": "tenu par le typage",
+   "ou": "typage",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "your-cases.ts",
+   "forme": "throw",
+   "n": 5,
+   "ligne": 711,
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "your-cases.ts",
+   "forme": "throw",
+   "n": 6,
+   "ligne": 720,
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "your-cases.ts",
+   "forme": "throw",
+   "n": 7,
+   "ligne": 729,
+   "etat": "tenu par le typage",
+   "ou": "typage",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "your-cases.ts",
+   "forme": "throw",
+   "n": 8,
+   "ligne": 734,
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "your-cases.ts",
+   "forme": "throw",
+   "n": 9,
+   "ligne": 738,
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "your-cases.ts",
+   "forme": "throw",
+   "n": 10,
+   "ligne": 743,
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "your-cases.ts",
+   "forme": "throw",
+   "n": 11,
+   "ligne": 761,
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "your-cases.ts",
+   "forme": "throw",
+   "n": 12,
+   "ligne": 768,
+   "etat": "tenu par le typage",
+   "ou": "typage",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "your-cases.ts",
+   "forme": "throw",
+   "n": 13,
+   "ligne": 778,
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "your-cases.ts",
+   "forme": "throw",
+   "n": 14,
+   "ligne": 834,
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "your-cases.ts",
+   "forme": "throw",
+   "n": 15,
+   "ligne": 839,
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "your-cases.ts",
+   "forme": "throw",
+   "n": 16,
+   "ligne": 852,
+   "etat": "tenu par le typage",
+   "ou": "typage",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "your-cases.ts",
+   "forme": "throw",
+   "n": 17,
+   "ligne": 858,
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "your-cases.ts",
+   "forme": "throw",
+   "n": 18,
+   "ligne": 866,
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "your-cases.ts",
+   "forme": "throw",
+   "n": 19,
+   "ligne": 870,
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "717eeb6"
+  },
+  {
+   "fichier": "your-cases.ts",
+   "forme": "throw",
+   "n": 20,
+   "ligne": 1167,
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "717eeb6"
   }
  ]
 }
