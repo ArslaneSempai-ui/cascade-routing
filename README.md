@@ -131,7 +131,7 @@ several scripts chain shell commands, which hold under Git Bash and not under `c
 <!-- /figures:documents -->
 
 <!-- figures:tests -->
-**469 tests** across 52 files, counted from the sources rather than typed here.
+**473 tests** across 53 files, counted from the sources rather than typed here.
 <!-- /figures:tests -->
 
 Everything runs locally. No API key, nothing leaves the machine, and anyone who clones this
