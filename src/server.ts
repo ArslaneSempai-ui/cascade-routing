@@ -214,6 +214,17 @@ function calculerEtat() {
     prochainGain: budgetShadowPrice(profils, hypotheses),
     hypotheses,
     bornes: BOUNDS,
+    /*
+     * L'ÉCHANTILLON DERRIÈRE CHAQUE CASE, ET IL DOIT RESTER DE MÊME FORME QUE `pages.ts`.
+     *
+     * Deux constructeurs d'état alimentent le même écran : celui-ci pour la démonstration
+     * qui tourne, `pages.ts` pour la page publiée. L'en-tête de `ui.html` le dit : dès qu'ils
+     * divergent, un correctif porté sur l'un laisse l'autre écran mentir. La légende de la
+     * figure de routage tapait 120 pour sept paliers qui n'ont pas le même dénominateur ;
+     * elle le dérive maintenant de cette entrée, et sans elle l'écran local annonce qu'il ne
+     * connaît pas ses tailles d'échantillon.
+     */
+    echantillons: Object.fromEntries(TIERS.map((e) => [e, profils.extraction[e][FIELDS[0]!].items])),
     mesureLe: profils.measuredAt,
   };
 }
