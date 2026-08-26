@@ -108,6 +108,28 @@ export function lire(chemin: string): Bloc[] {
       : `the image reader failed on ${chemin} saying nothing (code ${err.status}).`);
   }
 
+  return interpreter(sortie, chemin);
+}
+
+/**
+ * Ce que le binaire a rendu, lu — ou la panne, nommée.
+ *
+ * ─── POURQUOI C'EST UNE FONCTION À PART ───
+ *
+ * Le refus « this is not a list » était une garde survivante : retirée, aucun cas ne bougeait.
+ * Pas parce qu'elle est inutile — parce qu'elle n'était atteignable qu'en faisant rendre au
+ * binaire autre chose qu'une liste, ce qu'aucun cas ne peut demander. Sortir l'interprétation
+ * de la sortie la rend éprouvable avec une chaîne, sans processus et sans binaire.
+ *
+ * ─── CE QUE LA GARDE ÉVITE, ET CE N'EST PAS UNE PLANTAGE ───
+ *
+ * Sans elle, `JSON.parse("{}")` rend un objet, `Array.isArray` n'est pas consulté, et l'objet
+ * repart comme une liste de blocs. Les appelants itèrent dessus : zéro bloc, aucune erreur,
+ * **un document lu comme s'il était vide**. Une image dont le texte n'a pas été reconnu et une
+ * image sans texte se rapporteraient identiquement — et c'est précisément la distinction que le
+ * commentaire ci-dessous protège.
+ */
+export function interpreter(sortie: string, chemin: string): Bloc[] {
   /* Un tableau vide est un FAIT — « j'ai regardé, il n'y a pas de texte ». Une sortie qui ne
      se parse pas est une panne, et les deux ne doivent pas se rapporter pareil. */
   try {
@@ -115,8 +137,9 @@ export function lire(chemin: string): Bloc[] {
     if (!Array.isArray(blocs)) throw new Error("this is not a list");
     return blocs;
   } catch (e) {
-    throw new Error(`the image reader returned ${sortie.length} character(s) that cannot be `
-      + `read (${(e as Error).message}): ${JSON.stringify(sortie.slice(0, 120))}`);
+    throw new Error(`the image reader failed on ${chemin}: returned ${sortie.length} `
+      + `character(s) that cannot be read (${(e as Error).message}): `
+      + `${JSON.stringify(sortie.slice(0, 120))}`);
   }
 }
 
