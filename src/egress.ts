@@ -121,9 +121,56 @@ export function verdictEgress(o: { releves: number; connexions: { hote: string; 
   };
 }
 
-function connexions(pid: number): { hote: string; port: string; etat: string }[] {
+/**
+ * TOUS LES PROCESSUS DE LA PASSE, PAS SEULEMENT CELUI QU'ON A LANCÉ.
+ *
+ * `lsof -p <pid>` ne regarde qu'un processus. Une commande qui lance un fils sortait donc
+ * du champ de l'observation sans que rien ne le dise, et l'outil publiait « No connection
+ * outside this machine. The sentence "nothing leaves the machine" holds as written for this
+ * run. » pendant que le fils tenait une connexion établie.
+ *
+ * Fabriqué et mesuré le 26 août 2026 : un script qui `spawn`e un fils, lequel ouvre une
+ * connexion TCP vers une adresse non-bouclée pendant quatre secondes. Trente relevés, code
+ * de sortie 0, verdict « aucune connexion » — et le serveur d'en face a journalisé la
+ * connexion pendant cette passe exacte. Le même script, la connexion ouverte par le PÈRE :
+ * l'hôte est rapporté, vu 27 fois sur 32.
+ *
+ * La descendance se recalcule à CHAQUE relevé : un fils qui naît après le premier coup
+ * d'œil doit entrer dans le champ, sinon on a déplacé l'angle mort au lieu de le fermer.
+ *
+ * Le fichier déclarait déjà une limite — l'échantillonnage ne voit pas un envoi bref entre
+ * deux relevés — et c'est ce qui rendait celle-ci invisible : une limite écrite se lit comme
+ * LA limite.
+ */
+export function pidsSurveilles(racine: number): number[] {
+  const vus = new Set<number>([racine]);
   try {
-    const sortie = execFileSync("lsof", ["-nP", "-i", "-a", "-p", String(pid)],
+    const sortie = execFileSync("ps", ["-Ao", "pid=,ppid="],
+      { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
+    const enfantsDe = new Map<number, number[]>();
+    for (const l of sortie.split("\n")) {
+      const [pid, ppid] = l.trim().split(/\s+/).map(Number);
+      if (!Number.isFinite(pid!) || !Number.isFinite(ppid!)) continue;
+      if (!enfantsDe.has(ppid!)) enfantsDe.set(ppid!, []);
+      enfantsDe.get(ppid!)!.push(pid!);
+    }
+    const pile = [racine];
+    while (pile.length) {
+      for (const e of enfantsDe.get(pile.pop()!) ?? []) {
+        if (vus.has(e)) continue;   /* une table de processus incohérente ne doit pas boucler */
+        vus.add(e); pile.push(e);
+      }
+    }
+  } catch {
+    /* `ps` a échoué : on surveille au moins la racine, et le compte de PID publié le dira. */
+  }
+  return [...vus];
+}
+
+export function connexions(pids: number[]): { hote: string; port: string; etat: string }[] {
+  if (pids.length === 0) return [];
+  try {
+    const sortie = execFileSync("lsof", ["-nP", "-i", "-a", "-p", pids.join(",")],
       { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
     return sortie.split("\n").slice(1).filter(Boolean).map((l) => {
       const champs = l.trim().split(/\s+/);
@@ -272,10 +319,15 @@ function commandePubliable(c: readonly string[]): string {
 const enfant = spawn("node", commande, { stdio: ["ignore", "ignore", "ignore"] });
   const vues = new Map<string, Connexion>();
   let releves = 0;
+  /* Combien de processus la passe a comptés au plus : « 1 » dit au lecteur que la commande
+     n'a jamais eu de fils, donc que l'angle mort d'origine ne pouvait pas jouer ici. */
+  let pidsMax = 0;
 
   const minuteur = setInterval(() => {
     releves++;
-    for (const c of connexions(enfant.pid!)) {
+    const pids = pidsSurveilles(enfant.pid!);
+    pidsMax = Math.max(pidsMax, pids.length);
+    for (const c of connexions(pids)) {
       const cle = `${c.hote}:${c.port}`;
       const deja = vues.get(cle);
       if (deja) deja.vu++;
@@ -334,6 +386,11 @@ const enfant = spawn("node", commande, { stdio: ["ignore", "ignore", "ignore"] }
        moment pour l'exiger. */
     code: { commit: commitCourant() },
     releves, intervalleMs: intervalle, codeSortie: code,
+    /* COMBIEN DE PROCESSUS ONT ÉTÉ REGARDÉS. « 1 » dit que la commande n'a jamais eu de fils
+       — donc que l'angle mort d'origine ne pouvait pas jouer sur cette passe-là. Sans ce
+       nombre, un lecteur ne peut pas distinguer « aucun fils » de « fils non regardés », et
+       c'est exactement la distinction que ce fichier existe pour tenir. */
+    processusRegardes: pidsMax,
     connexions: sorties,
     bouclesLocales: locales,
     verdict: sorties.length === 0
@@ -343,12 +400,14 @@ const enfant = spawn("node", commande, { stdio: ["ignore", "ignore", "ignore"] }
       : `${sorties.length} host(s) outside this machine were contacted`,
     limite: "Sampling sees the connections open at the instants it looks; it does not rule "
       + "out a short send between two samples. What it establishes is a floor, not a proof — "
-      + "and the floor is what a buyer can check for themselves by re-running it.",
+      + "and the floor is what a buyer can check for themselves by re-running it. The whole "
+      + "process tree is watched, recomputed at every sample, and processusRegardes says how "
+      + "many were found: a child process used to fall outside the observation in silence.",
   };
   mkdirSync(dirname(FICHIER), { recursive: true });
   writeFileSync(FICHIER, JSON.stringify(releve, null, 2));
 
-  console.log(`${releves} samples, exit code ${code}.\n`);
+  console.log(`${releves} samples over ${pidsMax} process(es), exit code ${code}.\n`);
   if (locales.length) {
     console.log("To this machine — nothing leaves through these:");
     for (const c of locales) console.log(`  ${c.hote}:${c.port}  seen ${c.vu} times  (${c.etat})`);

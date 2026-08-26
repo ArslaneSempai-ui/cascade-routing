@@ -5,6 +5,7 @@ import { mkdtempSync, mkdirSync, copyFileSync, writeFileSync, chmodSync, existsS
 import { join, dirname } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
+import { pidsSurveilles, connexions } from "./egress.ts";
 
 /*
  * LA GARDE QUI EMPÊCHE « rien vu » DE SE FAIRE PASSER POUR « rien ».
@@ -232,5 +233,98 @@ test("`lsof` qui répond n'importe quoi : la commande refuse aussi, et dit quel 
       "la commande sort en 0 après une observation qui n'a pas eu lieu.");
   } finally {
     rmSync(b.tmp, { recursive: true, force: true });
+  }
+});
+
+/*
+ * L'OBSERVATION NE REGARDAIT QU'UN PROCESSUS, ET LA PROMESSE PORTE SUR LA MACHINE.
+ *
+ * `lsof -p <pid>` ne voit qu'un processus. Une commande qui lance un fils sortait donc du
+ * champ sans que rien ne le dise, et l'outil publiait « No connection outside this machine.
+ * The sentence "nothing leaves the machine" holds as written for this run. » pendant que le
+ * fils tenait une connexion établie.
+ *
+ * Fabriqué le 26 août 2026, hors suite parce qu'il demande une adresse non-bouclée : un
+ * script qui `spawn`e un fils, lequel ouvre une connexion TCP de quatre secondes vers
+ * l'adresse LAN de la machine. Trente relevés, code de sortie 0, verdict « aucune connexion »
+ * — pendant que le serveur d'en face journalisait la connexion. Le même script, la connexion
+ * ouverte par le PÈRE : l'hôte rapporté, vu 27 fois sur 32. Après correctif : « 20 samples
+ * over 2 process(es) », l'hôte rapporté 17 fois.
+ *
+ * Les deux cas ci-dessous tiennent la même chose sans dépendre du réseau de la machine : ils
+ * regardent QUELS PROCESSUS sont surveillés, et vérifient de bout en bout sur la boucle
+ * locale — dont l'outil se moque pour son verdict, mais qui prouve que le fils est bien lu.
+ */
+test("la surveillance couvre la descendance, pas seulement le processus lancé", async () => {
+  const dossier = mkdtempSync(join(tmpdir(), "egress-descendance-"));
+  writeFileSync(join(dossier, "fils.mjs"), "setTimeout(() => {}, 8000);\n");
+  writeFileSync(join(dossier, "pere.mjs"),
+    "import { spawn } from 'node:child_process';\n"
+    + "import { fileURLToPath } from 'node:url';\n"
+    + "spawn(process.execPath, [fileURLToPath(new URL('./fils.mjs', import.meta.url))], { stdio: 'ignore' });\n"
+    + "setTimeout(() => {}, 8000);\n");
+
+  const pere = spawn(process.execPath, [join(dossier, "pere.mjs")], { stdio: "ignore" });
+  try {
+    /* Le fils naît APRÈS le père : attendre qu'il existe, sinon le cas mesure une course. */
+    let pids: number[] = [];
+    for (let i = 0; i < 40 && pids.length < 2; i++) {
+      await new Promise((r) => setTimeout(r, 100));
+      pids = pidsSurveilles(pere.pid!);
+    }
+
+    assert.ok(pids.includes(pere.pid!), "le processus lancé lui-même a disparu du champ.");
+    assert.ok(pids.length >= 2,
+      `seul ${pids.length} processus surveillé après quatre secondes : le fils n'est jamais\n`
+      + "  entré dans le champ. Une commande qui lance un fils publierait « rien ne sort »\n"
+      + "  sans avoir regardé là où ça sort.");
+
+    /* CONTRE-ÉPREUVE : la descendance ne doit pas se confondre avec « tous les processus ».
+       Un relevé qui rendrait la table entière passerait le cas ci-dessus sans rien tenir. */
+    assert.ok(!pids.includes(process.pid),
+      "le processus de test est dans la descendance du script lancé : le relevé ne remonte\n"
+      + "  pas un arbre, il ramasse la machine.");
+  } finally {
+    pere.kill();
+    rmSync(dossier, { recursive: true, force: true });
+  }
+});
+
+test("une connexion tenue par le FILS est lue, et elle ne l'était pas avant", async () => {
+  const { createServer } = await import("node:net");
+  const serveur = createServer((s) => { s.on("data", () => {}); });
+  await new Promise<void>((r) => serveur.listen(0, "127.0.0.1", r));
+  const port = (serveur.address() as { port: number }).port;
+
+  const dossier = mkdtempSync(join(tmpdir(), "egress-fils-connecte-"));
+  writeFileSync(join(dossier, "fils.mjs"),
+    `import { connect } from 'node:net';\n`
+    + `const s = connect(${port}, '127.0.0.1', () => s.write('x'));\n`
+    + `setTimeout(() => { s.end(); }, 8000);\n`);
+  writeFileSync(join(dossier, "pere.mjs"),
+    "import { spawn } from 'node:child_process';\n"
+    + "import { fileURLToPath } from 'node:url';\n"
+    + "spawn(process.execPath, [fileURLToPath(new URL('./fils.mjs', import.meta.url))], { stdio: 'ignore' });\n"
+    + "setTimeout(() => {}, 8000);\n");
+
+  const pere = spawn(process.execPath, [join(dossier, "pere.mjs")], { stdio: "ignore" });
+  try {
+    let avecArbre: ReturnType<typeof connexions> = [];
+    for (let i = 0; i < 40 && avecArbre.length === 0; i++) {
+      await new Promise((r) => setTimeout(r, 100));
+      avecArbre = connexions(pidsSurveilles(pere.pid!)).filter((c) => c.port === String(port));
+    }
+    assert.ok(avecArbre.length > 0,
+      `aucune connexion vers le port ${port} n'a été lue en quatre secondes, alors que le fils\n`
+      + "  en tient une. C'est le défaut d'origine, et ce cas est le seul à le voir.");
+
+    /* CE QUE VOYAIT L'ANCIEN CODE, exactement : le PID lancé, et lui seul. */
+    const sansArbre = connexions([pere.pid!]).filter((c) => c.port === String(port));
+    assert.equal(sansArbre.length, 0,
+      "le père tient lui-même la connexion : ce cas ne prouve alors rien sur la descendance.");
+  } finally {
+    pere.kill();
+    serveur.close();
+    rmSync(dossier, { recursive: true, force: true });
   }
 });
