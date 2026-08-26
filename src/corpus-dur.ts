@@ -78,14 +78,41 @@ function cellule(brut: string, ligne: number, fichier: string): Attendu {
     throw new CorpusIllisible(`${fichier}:${ligne} : « ${t} » mêle une barre nue et un séparateur.`);
   }
   const lectures = t.split(" / ").map((x) => x.trim()).filter((x) => x.length > 0);
+  /*
+   * INATTEIGNABLE, ET C'EST MESURÉ — PAS DÉDUIT.
+   *
+   * Aucune entrée ne fait tomber ce refus. Une cellule qui se réduit à rien après découpage
+   * est déjà partie plus haut : `t === ""` la renvoie comme un vide reconnu. Et toute chaîne
+   * non vide, une fois découpée sur « espace-barre-espace », garde au moins un morceau non
+   * vide — `t` est déjà `trim()`é, donc elle ne peut ni commencer ni finir par un séparateur.
+   *
+   * Vérifié par force brute le 26 août 2026 sur toutes les chaînes de longueur ≤ 4 tirées de
+   * { espace, /, a, - } : aucune ne l'atteint. Écrire un témoin pour cette ligne rendrait un
+   * vert qui ne regarde rien.
+   *
+   * Elle reste, parce qu'elle coûte une ligne et qu'un changement du découpage la rendrait
+   * atteignable sans prévenir. Mais elle est déclarée survivante expliquée, pour qu'un
+   * balayage ne la resignale pas chaque nuit à quelqu'un qui refera cette analyse.
+   */
+  /* survivant:ok inatteignable — le vide est capté plus haut par `t === ""`, et une chaîne
+     trimée non vide rend toujours au moins une lecture. Force brute, 26 août 2026. */
   if (lectures.length === 0) throw new CorpusIllisible(`${fichier}:${ligne} : cellule vide non reconnue.`);
   if (lectures.some((x) => x.includes("**") || x.includes("*(")))
     throw new CorpusIllisible(`${fichier}:${ligne} : « ${t} » porte un balisage non interprété.`);
   return { lectures, silence: false };
 }
 
-export function lireFichier(fichier: string): CasDur[] {
-  const lignes = readFileSync(join(DOSSIER, fichier), "utf8").split("\n");
+/**
+ * Un fichier du corpus dur, lu et validé.
+ *
+ * `dossier` existe pour que les REFUS de ce fichier soient éprouvables. Ils rejettent un corpus
+ * mal écrit ; les éprouver demande donc d'en écrire un mal, et l'écrire dans `corpus-dur/`
+ * casserait la mesure de tout le monde le temps du cas. Un balayage des gardes les a trouvés
+ * survivants — retirés, aucun cas ne bougeait — et la raison n'était pas qu'ils sont inutiles :
+ * c'est qu'aucune couture ne permettait de leur présenter une entrée fautive.
+ */
+export function lireFichier(fichier: string, dossier: string = DOSSIER): CasDur[] {
+  const lignes = readFileSync(join(dossier, fichier), "utf8").split("\n");
   const cas: CasDur[] = [];
   let courant: CasDur | null = null;
   let dansCode = false, texte: string[] = [], texteFige = false;
@@ -128,11 +155,11 @@ export function lireFichier(fichier: string): CasDur[] {
 }
 
 /** Les trente cas tabulaires — malformés et écritures non latines. */
-export function corpusDur(): CasDur[] {
-  const fichiers = readdirSync(DOSSIER)
+export function corpusDur(dossier: string = DOSSIER): CasDur[] {
+  const fichiers = readdirSync(dossier)
     .filter((n) => n === "documents-malformes.md" || n === "ecritures-non-latines.md")
     .sort();
-  const cas = fichiers.flatMap(lireFichier);
+  const cas = fichiers.flatMap((f) => lireFichier(f, dossier));
   /* Deux cas ne peuvent pas partager leur clé : la collision serait silencieuse et chiffrée. */
   const vues = new Map<string, string>();
   for (const c of cas) {
