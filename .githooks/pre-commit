@@ -187,10 +187,21 @@ if ! sortie=$(env -u GIT_INDEX_FILE node --test src/*.test.ts src/*.test.mjs 2>&
     # le sien. LE CHEMIN DE DIAGNOSTIC EST CELUI QU'ON N'EMPRUNTE QUE QUAND ÇA VA DÉJÀ MAL,
     # donc celui qu'on éprouve le moins, donc celui où une protection manque sans se voir.
     if seul=$(env -u GIT_INDEX_FILE node --test $fichiers 2>&1); then
-      printf '\n  LA SUITE A MENTI SOUS CHARGE %s.\n\n' "$CHARGE"
+      printf '\n  LA SUITE A MENTI — DEUX CAUSES POSSIBLES, ET ELLES NE SE SOIGNENT PAS PAREIL.\n\n'
       printf '%s\n' "$sortie" | grep -E '^✖' | head -4 | sed 's/^/    /'
-      printf '\n  Relancés seuls, ces fichiers passent. Le commit continue, mais aucune mesure de\n'
-      printf '  temps prise pendant cette fenêtre ne vaut quoi que ce soit.\n\n'
+      printf '  Relancés seuls, ces fichiers passent. Le commit continue — mais LISEZ CECI avant\n'
+      printf '  de conclure à la charge : trois sessions ont couru après la mauvaise cause.\n\n'
+      printf '    CHARGE (ici %s) : ne fait tomber que des cas qui COMPTENT UN TEMPS RÉEL.\n' "$CHARGE"
+      printf '      Aucune durée mesurée pendant cette fenêtre ne vaut quoi que ce soit.\n\n'
+      printf '    ÉTAT PARTAGÉ : node --test lance les fichiers en PROCESSUS PARALLÈLES. Un cas qui\n'
+      printf '      écrit dans l arbre vivant — un relevé, un fichier de données, un port fixe — le\n'
+      printf '      donne à tous les autres pendant sa fenêtre, même s il restaure ensuite.\n\n'
+      printf '  LE SIGNE QUI LES SÉPARE : un cas tombé qui ne compte AUCUN temps accuse un état\n'
+      printf '  partagé, jamais la charge. Mesuré le 26 août 2026 : releve-scelle.test.ts écrivait\n'
+      printf '  data/profiles.json à la racine et faisait tomber seuil.test.ts, qui ne fait que lire\n'
+      printf '  et calculer — trois cas différents selon l instant, à s y méprendre avec la charge.\n'
+      printf '  La charge se soigne par le seuil ; l état partagé par un bac à sable par cas, et\n'
+      printf '  lui ne guérira pas tout seul.\n\n'
       ignores=$(printf '%s' "$seul" | grep -oE '^# skipped [0-9]+' | grep -oE '[0-9]+')
       [ "${ignores:-0}" != "0" ] && printf '  %s cas ignoré(s).\n' "$ignores"
       exit 0
