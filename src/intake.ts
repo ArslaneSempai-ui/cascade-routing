@@ -105,8 +105,28 @@ export function lire(r: Reponses): Lecture {
     bloquant.push("no set with the expected answers: there is nothing to measure, and the first honest "
       + "piece of work is to build one");
   }
-  if (r.paliersDisponibles && r.paliersDisponibles.length < 2) {
-    bloquant.push("only one callable tier: there is no routing to optimise");
+  /*
+   * UNE CHAÎNE A UNE LONGUEUR, ELLE AUSSI — ET C'EST COMME ÇA QU'ON CONTOURNE LE BLOCAGE.
+   *
+   * `"paliersDisponibles": "rules"` — la faute de frappe naturelle, sans les crochets — vaut
+   * cinq caractères, donc `length < 2` est faux, donc « un seul palier appelable » ne se
+   * déclenche pas. Le client répond honnêtement qu'il n'a qu'un palier et le questionnaire
+   * lui dit que tout va bien. L'inverse existe aussi : `"a"` déclencherait le blocage pour
+   * une raison qui n'est pas la sienne.
+   *
+   * `.length` répond sur trop de choses pour qu'on le lise sans avoir vérifié la FORME. La
+   * lecture ne devine pas l'intention : elle refuse, en nommant ce qu'elle a reçu.
+   */
+  if (r.paliersDisponibles !== undefined) {
+    const v = r.paliersDisponibles as unknown;
+    if (!Array.isArray(v) || v.some((x) => typeof x !== "string")) {
+      refus.push(`"paliersDisponibles" must be a list of tier names, and this is `
+        + `${typeof v === "string" ? `the string ${JSON.stringify(v)}` : `a ${Array.isArray(v) ? "list with a non-string in it" : typeof v}`}`
+        + " — written as a string it has a length, so the \"only one callable tier\" block"
+        + " never fires. Write [\"rules\", \"small\"].");
+    } else if (v.length < 2) {
+      bloquant.push("only one callable tier: there is no routing to optimise");
+    }
   }
 
   return { hypotheses, fournies, defauts, refus, bloquant };

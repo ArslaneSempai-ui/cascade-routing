@@ -30,7 +30,7 @@ import { optimiseExtraction, evaluer, paliersMesures, pricePerThousandDocuments,
 import "./figer.ts";  /* pose la table figée : voir figer.ts */
 import { rate, CONFIANCE, distinguishable, pairedVerdict } from "./interval.ts";
 import { versLeBas } from "./sensitivity.ts";
-import { journaux, lireJournal } from "./journal.ts";
+import { journaux, lireJournal, lireJournalEprouve } from "./journal.ts";
 import { lireDerivees, perime, FICHIER as FIGE } from "./derivees.ts";
 
 /**
@@ -395,7 +395,7 @@ export function compositionDepuisJournal() {
       why: "aucun journal de tentatives : les relevés du corpus propre sont antérieurs au format "
         + "qui enregistre chaque durée, donc l'écart n'est pas calculable depuis eux." };
   }
-  const { tentatives } = lireJournal(f);
+  const { tentatives } = lireJournalEprouve(f, "npm run dur");
   const q = (v: number[], part: number) => {
     const t = [...v].sort((a, b) => a - b);
     return t.length ? t[Math.min(t.length - 1, Math.floor(part * t.length))]! : NaN;
@@ -506,7 +506,7 @@ export function gainDeCountryDepuisJournal(p: Profiles, optimum: ReturnType<type
   if (!f) return { measured: false, why: "aucun journal du corpus dur : `data/` n'est pas versionné, "
     + "donc un clone frais n'a pas les tentatives d'où ce gain se calcule. `npm run dur` les produit." };
 
-  const { tentatives } = lireJournal(f);
+  const { tentatives } = lireJournalEprouve(f, "npm run dur");
   const rep = new Map(tentatives.map((t) => [`${t.tier}|${t.caseId}|${t.field}`, t]));
   const complets = corpusDur()
     .filter((c) => Object.keys(c.attendus).length === FIELDS.length).map((c) => c.cle);
@@ -574,7 +574,7 @@ export function abstentionDepuisJournal(p: Profiles, optimum: ReturnType<typeof 
   if (!f) return { measured: false, why: "aucun journal du corpus dur : `data/` n'est pas versionné. "
     + "`npm run dur` le produit, `npm run abstention` en tire ce bloc." };
 
-  const { tentatives } = lireJournal(f);
+  const { tentatives } = lireJournalEprouve(f, "npm run dur");
   const rep = new Map(tentatives.map((t) => [`${t.tier}|${t.caseId}|${t.field}`, t]));
   const durs = corpusDur().filter((c) => Object.keys(c.attendus).length === FIELDS.length);
   const textes = new Map(durs.map((c) => [c.cle, c.texte]));

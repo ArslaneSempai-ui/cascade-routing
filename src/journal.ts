@@ -263,6 +263,49 @@ export function lireJournal(chemin: string) {
   return { conditions, tentatives, complet, tronquees, fin, notes };
 }
 
+/**
+ * LE JOURNAL DONT ON SE SERT POUR CONCLURE, ET CE QUI LE DISQUALIFIE.
+ *
+ * `lireJournal` calcule déjà `complet` — la ligne `fin` est-elle là — et `tronquees` — combien
+ * de lignes n'ont pas pu être relues. **Aucun des consommateurs ne les regardait.** Mesuré le
+ * 27 août 2026 : `escalade`, `abstention`, `signal` et les trois lectures de `landing`
+ * prennent `{ tentatives }` et jettent le reste. Une passe tuée au milieu — pas de ligne
+ * `fin`, dernière ligne coupée en deux — alimentait donc quatre analyses, dont celle qui
+ * écrit un document publié, sans que rien ne le dise.
+ *
+ * Le tort n'est pas de lire un journal partiel : c'est de rendre un chiffre qui en vient sans
+ * porter qu'il en vient. Un journal interrompu n'est pas « moins de cas », c'est un
+ * échantillon dont on ne sait pas ce qu'il a écarté — les tentatives manquantes ne sont pas
+ * tirées au hasard, ce sont les DERNIÈRES, donc les plus lentes ou celles qui ont fait
+ * tomber la passe.
+ *
+ * `src/tentatives.ts` les lisait déjà, lui. La garde existait, à un seul endroit, et les six
+ * autres n'en avaient pas — la forme exacte qu'on passe la journée à corriger ailleurs.
+ */
+export function lireJournalEprouve(chemin: string, relancer: string) {
+  const j = lireJournal(chemin);
+  if (!j.complet || j.tronquees > 0) {
+    /* En anglais : ce message sort de commandes déjà rendues à l'acheteur, et le dépôt y
+       refuse le français. Les deux causes sont nommées SÉPARÉMENT — une passe interrompue et
+       une ligne illisible ne se corrigent pas pareil. */
+    const quoi = [
+      j.complet ? null : "it carries no `fin` line, so the pass was interrupted",
+      j.tronquees > 0 ? `${j.tronquees} line(s) could not be read back` : null,
+    ].filter(Boolean).join(", and ");
+    throw new Error(
+      `${chemin.split("/").pop()} is not a finished journal: ${quoi}.
+`
+      + `  It carries ${j.tentatives.length} attempt(s), and what is missing from it is not a
+`
+      + `  random sample: it is the END of the pass — the slowest cases, or the ones that
+`
+      + `  brought it down. A figure drawn from it would look like a measurement.
+`
+      + `  → ${relancer}`);
+  }
+  return j;
+}
+
 export function journaux(): string[] {
   if (!existsSync(DOSSIER)) return [];
   return readdirSync(DOSSIER).filter((n) => n.endsWith(".jsonl")).sort().map((n) => join(DOSSIER, n));

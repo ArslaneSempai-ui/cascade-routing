@@ -166,7 +166,23 @@ export function racineServie(source: string): { liste: string[]; construitDepuis
 /** Les hôtes qu'une page livrée contacte. `w3.org` est l'espace de noms SVG, pas une requête. */
 const HOTES_INOFFENSIFS = new Set(["www.w3.org", "www.w3.org/2000/svg"]);
 export function hotesExternes(html: string): string[] {
-  const trouves = [...html.matchAll(/\bhttps?:\/\/([a-zA-Z0-9.-]+)/g)].map((m) => m[1]!);
+  /*
+   * `//cdn.example.com` EST UNE URL, ET ELLE N'A PAS DE PROTOCOLE À CHERCHER.
+   *
+   * Le motif exigeait `http:` ou `https:`. Une balise `<script src="//cdn.example.com/x.js">`
+   * — la forme relative au protocole, courante et parfaitement fonctionnelle — passait donc
+   * sans être vue, et la page livrée pouvait charger un tiers pendant que le contrôle
+   * publiait « aucun hôte externe ».
+   *
+   * La forme sans protocole n'est reconnue que dans un ATTRIBUT ou un `url(...)`, pas
+   * n'importe où : `// voir example.com/doc` dans un commentaire JavaScript ressemble à une
+   * URL sans en être une, et un contrôle qui refuse sur un commentaire se fait retirer.
+   */
+  const trouves = [
+    ...[...html.matchAll(/\bhttps?:\/\/([a-zA-Z0-9.-]+)/g)].map((m) => m[1]!),
+    ...[...html.matchAll(/\b(?:src|href|srcset|action|poster|data-src|content)\s*=\s*["']\s*\/\/([a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)+)/gi)].map((m) => m[1]!),
+    ...[...html.matchAll(/\burl\(\s*["']?\s*\/\/([a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)+)/gi)].map((m) => m[1]!),
+  ];
   return [...new Set(trouves)].filter((h) => !HOTES_INOFFENSIFS.has(h)).sort();
 }
 
@@ -595,8 +611,31 @@ export type LanceurGit = (args: string[]) => { error?: Error; status: number | n
  */
 const PLAFOND_SORTIE_GIT = 400 * 1024 * 1024;
 
+/**
+ * `cwd` NE DÉSIGNE PAS LE DÉPÔT QUAND `GIT_DIR` EST LÀ — ET IL L'EST PENDANT `npm test`.
+ *
+ * Git exporte `GIT_DIR`, `GIT_WORK_TREE` et `GIT_INDEX_FILE` à ses crochets. Le crochet de
+ * pré-commit lance la suite, donc tout `git` lancé sous elle hérite de ces variables, et
+ * `GIT_DIR` l'emporte sur `cwd` : la fonction à qui l'on passe une racine regarde ailleurs.
+ *
+ * Mesuré le 27 août 2026 : le témoin du clone superficiel passait au vert lancé à la main et
+ * rougissait sous le crochet, parce que `merge-base` répondait sur le dépôt courant et non
+ * sur le clone qu'on lui avait donné. Le défaut n'est pas dans le témoin — une commande qui
+ * reçoit une racine et interroge une autre est fausse partout, y compris quand elle publie
+ * « ce commit n'est pas atteignable ».
+ *
+ * Le crochet de ce dépôt se protège déjà par `env -u GIT_INDEX_FILE` pour ses propres
+ * commandes ; ce qu'il LANCE, personne ne l'avait protégé.
+ */
+const SANS_ENV_GIT = (): NodeJS.ProcessEnv => {
+  const e = { ...process.env };
+  for (const v of ["GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_OBJECT_DIRECTORY",
+    "GIT_COMMON_DIR", "GIT_ALTERNATE_OBJECT_DIRECTORIES", "GIT_PREFIX"]) delete e[v];
+  return e;
+};
+
 const gitReel = (racine: string): LanceurGit => (args) =>
-  spawnSync("git", args, { cwd: racine, encoding: "utf8", maxBuffer: PLAFOND_SORTIE_GIT });
+  spawnSync("git", args, { cwd: racine, encoding: "utf8", maxBuffer: PLAFOND_SORTIE_GIT, env: SANS_ENV_GIT() });
 
 export function balayerLHistorique(racine: string, lancer: LanceurGit = gitReel(racine)): ReleveHistorique {
   const TEMOINS = "AKIAIOSFODNN7EXAMPLE\nhf_aBcDeFgHiJkLmNoPqRsTuVwXyZ0123456789\n";
@@ -625,7 +664,20 @@ export function balayerLHistorique(racine: string, lancer: LanceurGit = gitReel(
    * quelques trouvailles vues deux fois : la carte des trouvailles les dédoublonne déjà par
    * forme, fichier et empreinte, et lire deux fois coûte moins cher que ne pas lire.
    */
-  const patch = lancer(["log", "-p", "-m", "--all", "--no-color"]);
+  /*
+   * LE FORMAT DU DIFF SE FORCE, IL NE SE DEVINE PAS.
+   *
+   * L'analyse plus bas lit `--- a/X` et `+++ b/X` pour savoir de quel fichier vient une ligne
+   * ajoutée. Ces préfixes sont une CONFIGURATION : `diff.noprefix=true` les supprime,
+   * `diff.mnemonicPrefix=true` les remplace par `i/`, `w/`, `c/`, `o/`. Chez un lecteur qui a
+   * l'une des deux dans son `~/.gitconfig`, le nom de fichier reste « ? » sur toutes les
+   * trouvailles — le balayage trouve toujours les secrets, mais ne sait plus dire où.
+   *
+   * On les impose sur la commande plutôt que d'apprendre à l'analyse toutes les variantes :
+   * une garde qui reconnaît quatre formes en oublie une cinquième au prochain réglage.
+   */
+  const patch = lancer(["-c", "diff.noprefix=false", "-c", "diff.mnemonicPrefix=false",
+    "log", "-p", "-m", "--all", "--no-color", "--no-ext-diff"]);
   /*
    * DEUX PANNES, UN SEUL REFUS — mais pas le même diagnostic.
    *
@@ -724,8 +776,24 @@ export function balayerLHistorique(racine: string, lancer: LanceurGit = gitReel(
    * atteignable depuis HEAD : « le clone de l'acheteur la contient » et « elle dort dans une
    * branche de sauvegarde chez moi » n'appellent ni la même urgence ni la même correction.
    */
+  /*
+   * SI CETTE COMMANDE ÉCHOUE, TOUT DEVIENT « NON PUBLIÉ » — ET C'EST LE SENS RASSURANT.
+   *
+   * `(… .stdout || "")` transformait un échec en ensemble vide, donc en « aucune trouvaille
+   * n'est atteignable depuis HEAD », donc en « rien n'est publié ». Un secret réellement en
+   * ligne se serait affiché comme dormant dans une branche locale. L'absence de mesure ne
+   * doit jamais rendre le même résultat que la mesure qui rassure.
+   */
+  const teteRev = lancer(["rev-list", "HEAD"]);
+  if (teteRev.status !== 0 || !teteRev.stdout.trim()) {
+    throw new Error(
+      `git rev-list HEAD failed (status ${teteRev.status}): the sweep cannot tell which\n`
+      + `  findings are PUBLISHED and which only sleep in a local branch. Empty output here\n`
+      + `  would mark every one of them as unpublished, which is the reassuring answer.\n`
+      + `  ${teteRev.error?.message ?? ""}`);
+  }
   const atteignables = new Set(
-    (lancer(["rev-list", "HEAD"]).stdout || "").split("\n").map((l) => l.trim()).filter(Boolean));
+    teteRev.stdout.split("\n").map((l) => l.trim()).filter(Boolean));
   const trouvailles = new Map<string, Trouvaille>();
   const commitsLus = new Set<string>();
   let fichier = "?", sha = "";
@@ -811,12 +879,31 @@ export function balayerLHistorique(racine: string, lancer: LanceurGit = gitReel(
  * ne trouvera. Le contrôle ne vaut donc que s'il exige l'ACCESSIBILITÉ depuis une référence,
  * pas la simple existence de l'objet.
  */
-export function empreinteScelleeAtteignable(racine: string, commit: string): boolean {
-  if (!/^[0-9a-f]{7,40}$/.test(commit)) return false;
+/**
+ * TROIS RÉPONSES, PAS DEUX — ET LA TROISIÈME EST CELLE D'UN ACHETEUR.
+ *
+ * Sur un clone superficiel (`git clone --depth=1`), l'historique s'arrête au dernier commit :
+ * le commit scellé n'y est pas, `merge-base --is-ancestor` rend « non », et `npm test`
+ * accusait alors une réécriture d'historique QUI N'A PAS EU LIEU. Le premier écran d'un
+ * acheteur qui clone vite était le dépôt s'accusant lui-même d'avoir effacé sa preuve.
+ *
+ * « Je ne peux pas conclure » n'est pas « c'est faux ». Un clone tronqué n'a pas assez
+ * d'historique pour répondre, et le dire coûte une ligne.
+ */
+export type VerdictScelle = "atteignable" | "absent" | "historique tronqué";
+
+export function empreinteScelleeAtteignable(racine: string, commit: string): VerdictScelle {
+  if (!/^[0-9a-f]{7,40}$/.test(commit)) return "absent";
   /* `--all` restreint aux commits atteignables depuis une référence : c'est exactement ce
      qu'un clone recevra. `cat-file -t` répondrait « commit » sur un objet orphelin. */
-  const r = spawnSync("git", ["merge-base", "--is-ancestor", commit, "HEAD"], { cwd: racine, encoding: "utf8" });
-  return r.status === 0;
+  const r = spawnSync("git", ["merge-base", "--is-ancestor", commit, "HEAD"],
+    { cwd: racine, encoding: "utf8", env: SANS_ENV_GIT() });
+  if (r.status === 0) return "atteignable";
+  /* La question se pose APRÈS l'échec : un dépôt superficiel qui contient quand même le
+     commit doit répondre « atteignable », pas « on ne sait pas ». */
+  const superficiel = spawnSync("git", ["rev-parse", "--is-shallow-repository"],
+    { cwd: racine, encoding: "utf8", env: SANS_ENV_GIT() });
+  return superficiel.stdout.trim() === "true" ? "historique tronqué" : "absent";
 }
 
 function lireDeclarations(racine: string): Trouvaille[] {
@@ -872,7 +959,16 @@ function principal() {
    * sur « Not a valid object name ». Un scellé invérifiable est pire qu'aucun scellé : il
    * affirme une vérification que personne ne peut refaire.
    */
-  if (historique && !empreinteScelleeAtteignable(racine, historique.commit)) {
+  const verdictScelle = historique ? empreinteScelleeAtteignable(racine, historique.commit) : "atteignable";
+  if (verdictScelle === "historique tronqué") {
+    /* Un avis, pas un refus : le dépôt n'a rien à se reprocher, c'est le clone qui est court. */
+    console.error(
+      `\n  This clone is shallow, so the seal at \`${historique!.commit}\` cannot be checked here.\n`
+      + `  That is not a claim that it is missing — a truncated history simply does not reach\n`
+      + `  back far enough to answer.\n`
+      + `  → git fetch --unshallow   to check it.\n`);
+  }
+  if (historique && verdictScelle === "absent") {
     console.error(
       `SECURITE.md seals the secret sweep at \`${historique.commit}\`, which is NOT reachable `
       + `from HEAD.\n\n`

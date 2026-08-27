@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import { temoins, controles, secretsDans, racineServie, adresseDEcoute, bornePosee, document,
-  balayerLHistorique, type Controle } from "./menace.ts";
+  balayerLHistorique, type Controle, hotesExternes, empreinteScelleeAtteignable } from "./menace.ts";
 
 const racine = fileURLToPath(new URL("..", import.meta.url));
 
@@ -253,13 +253,24 @@ function lancerAvecGitDePaille(mode: "revlist" | "status" | "court") {
     mkdirSync(join(tmp, "bin"));
     copyFileSync(join(racine, "src/menace.ts"), join(tmp, "src/menace.ts"));
     const paille = join(tmp, "bin/git");
+    /*
+     * LA PAILLE CHERCHE LA SOUS-COMMANDE, ELLE NE SUPPOSE PAS QU'ELLE EST EN PREMIER.
+     *
+     * Elle lisait `$1`. Le jour où le balayage a dû imposer son format de diff — `git -c
+     * diff.noprefix=false log …` — `$1` est devenu `-c`, la paille est tombée dans son cas
+     * par défaut, et les trois cas ont accusé une AUTRE garde que celle qu'ils éprouvent.
+     * Un bouchon qui suppose la forme de la commande qu'il intercepte se périme au premier
+     * drapeau ajouté, et son rouge désigne alors le mauvais endroit.
+     */
     writeFileSync(paille,
       "#!/bin/sh\n"
-      + 'case "$1" in\n'
-      + '  rev-list) [ "$MODE" = revlist ] && exit 0; echo 12 ;;\n'
-      + '  log)      [ "$MODE" = status ] && exit 3; echo court ;;\n'
-      + "  *) exit 0 ;;\n"
-      + "esac\n", { mode: 0o755 });
+      + 'for a in "$@"; do\n'
+      + '  case "$a" in\n'
+      + '    rev-list) [ "$MODE" = revlist ] && exit 0; echo 12; exit 0 ;;\n'
+      + '    log)      [ "$MODE" = status ] && exit 3; echo court; exit 0 ;;\n'
+      + "  esac\n"
+      + "done\n"
+      + "exit 0\n", { mode: 0o755 });
     chmodSync(paille, 0o755);
     const r = spawnSync(process.execPath, [join(tmp, "src/menace.ts"), "--historique"], {
       cwd: tmp, encoding: "utf8", timeout: 60_000,
@@ -382,4 +393,145 @@ test("un historique entièrement lu passe — sinon la garde ci-dessus refuse to
   assert.equal(r.temoins, 2,
     "les leurres doivent être retrouvés DANS le flux : c'est ce qui prouve que la boucle est "
     + "passée sur ce qu'on lui a donné, et non sur un littéral");
+});
+
+/*
+ * QUATRE TROUVAILLES DE L'AUDIT DU 27 AOÛT, ÉPROUVÉES UNE PAR UNE.
+ */
+
+test("une URL sans protocole est un hôte externe, et un commentaire n'en est pas un", () => {
+  /*
+   * `<script src="//cdn.example.com/x.js">` est la forme relative au protocole : elle
+   * fonctionne parfaitement et le motif ne cherchait que `http:` ou `https:`. La page livrée
+   * pouvait donc charger un tiers pendant que le contrôle publiait « aucun hôte externe ».
+   */
+  assert.deepEqual(hotesExternes('<script src="//cdn.example.com/x.js"></script>'), ["cdn.example.com"],
+    "un script relatif au protocole n'est pas vu : le contrôle publierait « aucun hôte externe »\n"
+    + "  sur une page qui en contacte un.");
+  assert.deepEqual(hotesExternes('<link href="//fonts.example.org/c.css">'), ["fonts.example.org"]);
+  assert.deepEqual(hotesExternes("<style>body{background:url(//img.example.net/a.png)}</style>"), ["img.example.net"]);
+
+  /* Ce qui marchait doit continuer. */
+  assert.deepEqual(hotesExternes('<img src="https://tiers.example.com/a.png">'), ["tiers.example.com"]);
+  assert.deepEqual(hotesExternes('<svg xmlns="http://www.w3.org/2000/svg">'), [],
+    "l'espace de noms SVG est redevenu un hôte contacté.");
+
+  /*
+   * ET CE QUI NE DOIT PAS SE DÉCLENCHER. Un contrôle qui refuse sur un commentaire se fait
+   * retirer, et on perd aussi ce qu'il gardait vraiment.
+   */
+  assert.deepEqual(hotesExternes("<script>// voir example.com/doc pour la suite\n</script>"), [],
+    "un commentaire JavaScript est pris pour une URL : la garde refuserait une page saine.");
+  assert.deepEqual(hotesExternes("<p>50//50 partout</p>"), []);
+});
+
+test("le balayage impose le format du diff au lieu de le supposer", () => {
+  /*
+   * L'analyse lit `--- a/X` et `+++ b/X`. Ces préfixes sont une CONFIGURATION :
+   * `diff.noprefix=true` chez un lecteur les supprime et le nom du fichier reste « ? » sur
+   * toutes les trouvailles. Le balayage trouve alors les secrets sans savoir dire où.
+   *
+   * Ce cas regarde ce que la commande DEMANDE, parce que c'est là qu'est la décision : le
+   * réglage vient de la machine du lecteur, et aucun flux fabriqué ici ne le reproduirait.
+   */
+  const vus: string[][] = [];
+  const tous = Array.from({ length: 300 }, (_, i) =>
+    `commit ${String(i).padStart(40, "0")}\n+++ b/f.txt\n+ligne ${i} ${"-".repeat(220)}`).join("\n");
+  balayerLHistorique(racine, (args) => {
+    vus.push(args);
+    return args.includes("rev-list") ? { status: 0, stdout: "300\n" } : { status: 0, stdout: tous };
+  });
+
+  const log = vus.find((a) => a.includes("log"));
+  assert.ok(log, "aucune commande `log` n'a été lancée : ce cas ne garde plus rien.");
+  assert.ok(log!.includes("diff.noprefix=false"),
+    `la commande de balayage ne force plus les préfixes : ${log!.join(" ")}\n`
+    + "  Chez un lecteur qui a `diff.noprefix=true`, tout ce que le balayage trouve est attribué\n"
+    + "  au fichier « ? ».");
+  assert.ok(log!.includes("diff.mnemonicPrefix=false"),
+    "`diff.mnemonicPrefix=true` remplace `a/` et `b/` par `i/`, `w/`, `c/`, `o/` : même défaut.");
+});
+
+test("un `rev-list HEAD` en échec fait REFUSER, il ne rend pas « rien n'est publié »", () => {
+  /*
+   * `(…stdout || "")` transformait un échec en ensemble vide, donc en « aucune trouvaille
+   * n'est atteignable depuis HEAD », donc en « rien n'est publié ». Un secret réellement en
+   * ligne se serait affiché comme dormant dans une branche locale.
+   */
+  const tous = Array.from({ length: 300 }, (_, i) =>
+    `commit ${String(i).padStart(40, "0")}\n+++ b/f.txt\n+ligne ${i} ${"-".repeat(220)}`).join("\n");
+  const lanceur = (reponseHead: { status: number | null; stdout: string }) => (args: string[]) =>
+    args.includes("rev-list") && args.includes("HEAD") ? reponseHead
+      : args.includes("rev-list") ? { status: 0, stdout: "300\n" }
+      : { status: 0, stdout: tous };
+
+  assert.throws(() => balayerLHistorique(racine, lanceur({ status: 128, stdout: "" })),
+    /cannot tell which/,
+    "un `rev-list HEAD` en échec est absorbé : toutes les trouvailles deviennent « non\n"
+    + "  publiées », qui est la réponse rassurante.");
+  assert.throws(() => balayerLHistorique(racine, lanceur({ status: 0, stdout: "  \n" })),
+    /cannot tell which/,
+    "une sortie vide en code 0 passe : un dépôt sans commit atteignable n'existe pas, c'est\n"
+    + "  la commande qui n'a rien rendu.");
+
+  /* TÉMOIN POSITIF : la réponse normale doit traverser. */
+  const ok = balayerLHistorique(racine, lanceur({ status: 0, stdout: `${"0".repeat(40)}\n` }));
+  assert.equal(ok.commits, 300, "le cas nominal ne passe plus : la garde refuse tout.");
+});
+
+test("un clone superficiel ne peut pas conclure, et ne doit pas accuser une réécriture", () => {
+  /*
+   * `git clone --depth=1` arrête l'historique au dernier commit. Le commit scellé n'y est
+   * pas, `merge-base --is-ancestor` rend « non », et `npm test` accusait alors une réécriture
+   * d'historique QUI N'A PAS EU LIEU : le premier écran d'un acheteur pressé était le dépôt
+   * s'accusant lui-même d'avoir effacé sa preuve.
+   *
+   * « Je ne peux pas conclure » n'est pas « c'est faux ».
+   */
+  const envPropre = { ...process.env };
+  for (const v of ["GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_OBJECT_DIRECTORY",
+    "GIT_COMMON_DIR", "GIT_ALTERNATE_OBJECT_DIRECTORIES", "GIT_PREFIX"]) delete envPropre[v];
+
+  const bac = realpathSync(mkdtempSync(join(tmpdir(), "menace-superficiel-")));
+  const source = join(bac, "source");
+  const git = (cwd: string, ...a: string[]) => spawnSync("git", a, { cwd, encoding: "utf8", env: envPropre });
+  try {
+    mkdirSync(source);
+    git(source, "init", "-q");
+    git(source, "config", "user.email", "t@t"); git(source, "config", "user.name", "t");
+
+    /* Le bac est-il bien un dépôt à lui ? Sinon tout ce qui suit s'écrit dans celui qu'on
+       éprouve — `GIT_DIR` gagne sur `cwd`, et un crochet en exporte un. */
+    const vu = git(source, "rev-parse", "--absolute-git-dir").stdout.trim();
+    assert.ok(vu.startsWith(source), `le bac n'est pas isolé : git répond « ${vu} ».`);
+
+    const shas: string[] = [];
+    for (const n of [1, 2, 3]) {
+      writeFileSync(join(source, `f${n}.txt`), `${n}\n`);
+      git(source, "add", `f${n}.txt`); git(source, "commit", "-qm", `c${n}`);
+      shas.push(git(source, "rev-parse", "HEAD").stdout.trim());
+    }
+
+    const entier = join(bac, "entier"), court = join(bac, "court");
+    git(bac, "clone", "-q", source, entier);
+    git(bac, "clone", "-q", "--depth", "1", `file://${source}`, court);
+    assert.equal(git(court, "rev-parse", "--is-shallow-repository").stdout.trim(), "true",
+      "le clone n'est pas superficiel : ce cas ne reproduit pas la situation qu'il vise.");
+
+    /* Le clone ENTIER répond, dans les deux sens — sinon « tronqué » ne voudrait rien dire. */
+    assert.equal(empreinteScelleeAtteignable(entier, shas[0]!), "atteignable",
+      "un commit ancien d'un clone complet n'est plus vu comme atteignable.");
+    assert.equal(empreinteScelleeAtteignable(entier, "0".repeat(40)), "absent",
+      "un commit qui n'existe pas est vu comme atteignable : la garde ne garde plus rien.");
+
+    /* Le clone COURT : il porte HEAD, et pas le premier commit. */
+    assert.equal(empreinteScelleeAtteignable(court, shas[2]!), "atteignable",
+      "un clone superficiel qui contient le commit doit répondre « atteignable », pas « on ne\n"
+      + "  sait pas » : sinon la nuance sert d'excuse à ne jamais conclure.");
+    assert.equal(empreinteScelleeAtteignable(court, shas[0]!), "historique tronqué",
+      "un clone superficiel accuse une réécriture qui n'a pas eu lieu. Un acheteur qui clone\n"
+      + "  vite lit le dépôt s'accusant d'avoir effacé sa propre preuve.");
+  } finally {
+    rmSync(bac, { recursive: true, force: true });
+  }
 });

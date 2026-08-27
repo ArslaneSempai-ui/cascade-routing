@@ -20,7 +20,7 @@ import { writeFileSync } from "node:fs";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { isMain } from "./cli.ts";
-import { journaux, lireJournal } from "./journal.ts";
+import { journaux, lireJournal, lireJournalEprouve } from "./journal.ts";
 import { normaliserReponse, GENERATIFS_PUBLICS } from "./tiers.ts";
 import { rate, ENOUGH } from "./interval.ts";
 import { draw } from "./corpus.ts";
@@ -282,7 +282,7 @@ if (isMain(import.meta)) {
     console.error(`\n  The hard-corpus journal is missing  →  npm run dur\n`);
     process.exit(1);
   }
-  const { tentatives } = lireJournal(f);
+  const { tentatives } = lireJournalEprouve(f, "npm run dur");
   const textes = new Map([...corpusDur(), ...casAmbigus()].map((c) => [c.cle, c.texte]));
 
   /* La pluralité des autres paliers sur le même (cas, champ). */

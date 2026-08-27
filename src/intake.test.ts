@@ -22,6 +22,7 @@ import { readFileSync, writeFileSync, mkdtempSync, rmSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { lire } from "./intake.ts";
 
 const ICI = fileURLToPath(new URL(".", import.meta.url));
 const RACINE = fileURLToPath(new URL("..", import.meta.url));
@@ -99,4 +100,42 @@ test("un JSON illisible se dit sans trace d'appel", () => {
   } finally {
     rmSync(dossier, { recursive: true, force: true });
   }
+});
+
+/*
+ * UNE CHAÎNE A UNE LONGUEUR, ET C'EST COMME ÇA QU'ON CONTOURNAIT LE BLOCAGE.
+ *
+ * `"paliersDisponibles": "rules"` — la faute de frappe naturelle, sans les crochets — vaut
+ * cinq caractères, donc `length < 2` est faux, donc « un seul palier appelable » ne se
+ * déclenchait pas. Le client répond honnêtement qu'il n'a qu'un palier, et le questionnaire
+ * lui répond que tout va bien.
+ */
+test("un palier écrit comme une chaîne est refusé, pas compté en caractères", () => {
+  const chaine = lire({ paliersDisponibles: "rules" } as never);
+  assert.equal(chaine.bloquant.length, 0,
+    "le blocage se déclenche sur une valeur de forme inconnue : il dirait la bonne chose pour\n"
+    + "  la mauvaise raison, et un `\"a\"` le déclencherait aussi.");
+  assert.ok(chaine.refus.some((x: string) => /paliersDisponibles/.test(x)),
+    "« rules » écrit comme une chaîne passe sans un mot. Cinq caractères ne sont pas cinq\n"
+    + "  paliers, et le client qui n'en a qu'un s'entend dire que son routage est optimisable.");
+  assert.ok(chaine.refus.some((x: string) => /\["rules", "small"\]/.test(x)),
+    "le refus ne montre pas la forme attendue : un refus sans issue se fait contourner.");
+
+  /* Les autres formes tordues, toutes silencieuses avant. */
+  for (const v of [42, true, { rules: 1 }, ["rules", 7]]) {
+    const r = lire({ paliersDisponibles: v } as never);
+    assert.ok(r.refus.some((x: string) => /paliersDisponibles/.test(x)),
+      `${JSON.stringify(v)} traverse la lecture sans être signalé.`);
+  }
+
+  /* TÉMOINS POSITIFS, dans les deux sens : la bonne forme passe, et le blocage reste
+     atteignable — une garde qui refuserait tout serait retirée avec ce qu'elle gardait. */
+  const deux = lire({ paliersDisponibles: ["rules", "small"] });
+  assert.deepEqual(deux.refus.filter((x: string) => /paliersDisponibles/.test(x)), []);
+  assert.equal(deux.bloquant.length, 0);
+
+  const un = lire({ paliersDisponibles: ["rules"] });
+  assert.deepEqual(un.refus.filter((x: string) => /paliersDisponibles/.test(x)), []);
+  assert.ok(un.bloquant.some((x: string) => /one callable tier/.test(x)),
+    "un seul palier ne bloque plus : c'est la situation que ce champ existe pour attraper.");
 });

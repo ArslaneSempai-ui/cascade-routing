@@ -19,7 +19,7 @@
 
 import { writeFileSync } from "node:fs";
 import { isMain } from "./cli.ts";
-import { journaux, lireJournal } from "./journal.ts";
+import { journaux, lireJournal, lireJournalEprouve } from "./journal.ts";
 import { normaliserReponse } from "./tiers.ts";
 import { corpusDur } from "./corpus-dur.ts";
 import { casAmbigus } from "./mesurer-dur.ts";
@@ -138,7 +138,7 @@ if (isMain(import.meta)) {
     console.error(`  landing.json and do not need this journal to be quoted.\n`);
     process.exit(1);
   })();
-  const { tentatives } = lireJournal(f);
+  const { tentatives } = lireJournalEprouve(f, "npm run dur");
   const rep = new Map(tentatives.map((t) => [`${t.tier}|${t.caseId}|${t.field}`, t]));
   const textes = new Map([...corpusDur(), ...casAmbigus()].map((c) => [c.cle, c.texte]));
   const optimum = optimiseExtraction(p, ASSUMPTIONS);
