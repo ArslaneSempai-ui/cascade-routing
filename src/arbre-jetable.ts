@@ -38,7 +38,7 @@ import { execFileSync } from "node:child_process";
  * défaut a été corrigé partout SAUF ici, dans l'outil construit pour s'en protéger. Trouvé par
  * l'audit du 27 août.
  */
-const envGitPropre = (): NodeJS.ProcessEnv => {
+export const envGitPropre = (): NodeJS.ProcessEnv => {
   const env = { ...process.env };
   delete env.GIT_INDEX_FILE; delete env.GIT_DIR; delete env.GIT_WORK_TREE; delete env.GIT_PREFIX;
   return env;
@@ -87,7 +87,22 @@ export function arbreJetable(prefixe: string, racineTemporaire: string = tmpdir(
    */
   const gitDir = execFileSync("git", ["-C", chemin, "rev-parse", "--absolute-git-dir"],
     { env: envGitPropre(), encoding: "utf8" }).trim();
-  if (!gitDir.startsWith(join(RACINE, ".git"))) {
+  /*
+   * LA RÉFÉRENCE EST LE DÉPÔT COMMUN, PAS `RACINE/.git`.
+   *
+   * Comparé à `join(RACINE, ".git")`, ce contrôle criait au détournement dès que `RACINE`
+   * était un worktree LIÉ — et c'est le cas de toutes les sessions qui travaillent ici.
+   * Depuis un worktree lié, `RACINE/.git` est un FICHIER qui pointe ailleurs, et
+   * `git worktree add` range l'administration du bac sous le dépôt COMMUN. Le bac était
+   * parfaitement isolé, l'assertion regardait le mauvais chemin — et son message accusait
+   * exactement le défaut qu'elle venait fermer, ce qui est la pire forme de faux positif.
+   *
+   * Le dépôt commun est ce que tous les worktrees d'un même dépôt partagent : c'est la
+   * propriété qu'on veut, et elle se demande à git plutôt que de se composer à la main.
+   */
+  const commun = execFileSync("git", ["-C", RACINE, "rev-parse", "--path-format=absolute", "--git-common-dir"],
+    { env: envGitPropre(), encoding: "utf8" }).trim();
+  if (!gitDir.startsWith(commun)) {
     throw new Error(`the sandbox answers from ANOTHER repository: ${gitDir}\n`
       + `  A write here would land in someone else's repo — the diversion that carried away\n`
       + `  two sessions' uncommitted work on 27 August 2026 (inherited GIT_DIR wins over cwd).`);
