@@ -445,19 +445,32 @@ test("une commande surveillée TUÉE par un signal se dit, et la passe n'établi
   /* On ATTEND l'enfant au lieu de dormir un temps fixe : sous charge, 2,5 s ne suffisaient
      pas toujours et ce cas rougissait par intermittence — la famille que le crochet doit
      ensuite trancher. Un scrutin borné ne rougit que si l'enfant n'arrive JAMAIS. */
+  /* `pgrep -P` ramène TOUS les enfants d'egress — y compris un `lsof` ou un `ps`
+     d'échantillonnage en vol. Un SIGKILL qui balaye tout tue parfois L'OBSERVATEUR : egress
+     meurt alors fatalement (à raison — un observateur abattu ne conclut jamais), mais ce
+     n'est pas le scénario éprouvé ici, qui est « la COMMANDE SURVEILLÉE est tuée ». On ne
+     vise donc que les fils dont la commande est `node`. Rouge 1 fois sur ~6 en suite pleine. */
+  const filsSurveilles = () => {
+    let brut = "";
+    try {
+      brut = execFileSync("pgrep", ["-P", String(egress.pid)], { encoding: "utf8" });
+    } catch { return []; }
+    return brut.trim().split("\n").filter(Boolean).map(Number).filter((pid) => {
+      try {
+        return execFileSync("ps", ["-o", "comm=", "-p", String(pid)], { encoding: "utf8" })
+          .trim().endsWith("node");
+      } catch { return false; }
+    });
+  };
   await (async () => {
     const fin = Date.now() + 12_000;
     for (;;) {
-      try {
-        execFileSync("pgrep", ["-P", String(egress.pid)], { stdio: "pipe" });
-        return;
-      } catch { /* pas encore de fils */ }
+      if (filsSurveilles().length >= 1) return;
       if (Date.now() > fin) return;
       await new Promise((r) => setTimeout(r, 200));
     }
   })();
-  const fils = execFileSync("pgrep", ["-P", String(egress.pid)], { encoding: "utf8" })
-    .trim().split("\n").filter(Boolean).map(Number);
+  const fils = filsSurveilles();
   assert.ok(fils.length >= 1, "le montage est faux : rien à tuer.");
   for (const pid of fils) process.kill(pid, "SIGKILL");
   /* `close`, pas `exit` : `exit` se résout AVANT que les flux stdio soient vidés — sous le

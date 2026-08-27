@@ -361,7 +361,18 @@ const enfant = spawn("node", commande, { stdio: ["ignore", "ignore", "ignore"] }
      n'a jamais eu de fils, donc que l'angle mort d'origine ne pouvait pas jouer ici. */
   let pidsMax = 0;
 
+  let fini = false;
   const minuteur = setInterval(() => {
+    /*
+     * NE PAS ÉCHANTILLONNER APRÈS LA MORT DE L'ENFANT. `clearInterval` n'arrivait qu'APRÈS le
+     * `await` de la sortie ; entre la mort de l'enfant et là, le minuteur tirait un dernier
+     * relevé sur des pids morts, `lsof` échouait « code inconnu », et cette exception — juste
+     * quand `lsof` est vraiment interrogé sur du vide — abattait egress avant que le message
+     * du signal sorte. Le drapeau `fini` est posé DANS le gestionnaire de sortie, synchrone,
+     * donc aucun échantillon ne suit la mort. Les cas qui EXIGENT qu'un lsof cassé fasse
+     * échouer la passe le gardent : eux tuent lsof pendant que l'enfant vit. Audit du 27/08/2026.
+     */
+    if (fini) return;
     releves++;
     const pids = pidsSurveilles(enfant.pid!);
     pidsMax = Math.max(pidsMax, pids.length);
@@ -382,7 +393,7 @@ const enfant = spawn("node", commande, { stdio: ["ignore", "ignore", "ignore"] }
    * le signal en toutes lettres. Audit du 27 août 2026.
    */
   const fin = await new Promise<{ code: number; signal: string | null }>((r) =>
-    enfant.on("exit", (c, sig) => r({ code: c ?? (sig ? 128 + 15 : 0), signal: sig })));
+    enfant.on("exit", (c, sig) => { fini = true; clearInterval(minuteur); r({ code: c ?? (sig ? 128 + 15 : 0), signal: sig }); }));
   const code = fin.code;
   if (fin.signal) {
     console.error(`\nthe watched command was KILLED by ${fin.signal} — the watch is incomplete.`);
