@@ -179,9 +179,9 @@ test("le taux du client porte sur les cas appariés, jamais sur les nôtres", as
 
 test("une durée déclarée porte sa marque, et une durée absente ne devient pas zéro", async () => {
   const { ecrireMs } = await import("./your-cases.ts");
-  assert.equal(ecrireMs(480, true), "480 ms (déclaré)");
+  assert.equal(ecrireMs(480, true), "480 ms (declared)");
   assert.equal(ecrireMs(480, false), "480 ms");
-  assert.equal(ecrireMs(Number.NaN, true), "durée non déclarée",
+  assert.equal(ecrireMs(Number.NaN, true), "no declared duration",
     "une latence non déclarée doit se dire, jamais s'afficher comme instantanée —\n"
     + "  zéro milliseconde est faux dans la seule direction qui avantage le client.");
 });
@@ -1102,4 +1102,20 @@ test("une cellule démesurée est lue vite, et sa cause probable est nommée", (
   const r2 = lireCsv(reparti);
   assert.equal(r2.demesurees.length, 0, "un fichier long mais normal ne déclenche aucun avertissement");
   assert.equal(r2.cas.length, 30_000);
+});
+
+test("une cellule démesurée s'évalue en OCTETS réels, pas en unités UTF-16", () => {
+  /*
+   * Le champ s'appelle `octets` et s'imprime en Mo — et il comptait des unités UTF-16. Une
+   * cellule cyrillique de 600 000 caractères pèse 1,2 Mo réels et n'était PAS signalée : la
+   * garde ratait précisément les écritures non latines que le produit met en avant.
+   * Audit du 27 août 2026.
+   */
+  const cyrillique = "д".repeat(600_000);   // 600 000 unités UTF-16 · 1 200 000 octets
+  const { demesurees } = lireCsv(`id,text,name\n1,"${cyrillique}",Anna\n`);
+  assert.equal(demesurees.length, 1,
+    "1,2 Mo réels de cyrillique ne sont pas signalés : la garde compte des unités UTF-16\n"
+    + "  en promettant des octets, et rate les écritures non latines.");
+  assert.equal(demesurees[0]!.octets, 1_200_000,
+    `le compte annoncé doit être en octets réels : ${demesurees[0]!.octets}`);
 });

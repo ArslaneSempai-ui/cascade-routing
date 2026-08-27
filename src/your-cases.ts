@@ -35,7 +35,7 @@ import { isMain } from "./cli.ts";
 import { ouvrirJournal, issue } from "./journal.ts";
 import { normaliserReponse } from "./tiers.ts";
 import { loadExtractors, loadClassifiers, loadGeneratifs, extract, correct, classerParmi, MODELES_LOCAUX, questionPour } from "./tiers.ts";
-import { ENCODEURS, GENERATIFS } from "./paliers.ts";
+import { TIERS, ENCODEURS, GENERATIFS } from "./paliers.ts";
 import { rate, writeRate, cellulesDeTaux, distinguishable, CONFIANCE, ENOUGH } from "./interval.ts";
 import { evaluerRegles, direLesRefus, type ReglesEvaluees } from "./regles-bornees.ts";
 import { table } from "./figures.ts";
@@ -411,6 +411,11 @@ export function bornerTexte(texte: string): { texte: string; ecarte: number } {
 
 export function lireCsv(texte: string): Lecture {
   const lignes: string[][] = [];
+  /* Le VRAI numéro de ligne du fichier, par ligne parsée. Un texte cité sur trois lignes
+     décale tous les index : « line 7 » désignait la ligne 9 du fichier, et le client cherchait
+     au mauvais endroit dans son propre export. Audit du 27 août 2026. */
+  const numeros: number[] = [];
+  let debutDeLigne = 1;
   let ligne: string[] = [], guillemets = false;
   /* Où la guillemet encore ouverte a été ouverte. Sans elle, le refus dirait « quelque part
      dans votre fichier », ce qui est inutilisable sur cinq mille lignes. */
@@ -443,7 +448,13 @@ export function lireCsv(texte: string): Lecture {
     const queue = texte.slice(debut, fin);
     const v = morceaux === null ? queue : (morceaux.push(queue), morceaux.join(""));
     morceaux = null;
-    if (v.length >= DEMESUREE) demesurees.push({ ligne: numeroDeLigne, octets: v.length, ouvertureLigne });
+    /* Des OCTETS réels, pas des unités UTF-16 : le champ s'appelle `octets` et s'imprime en
+       Mo. Une cellule cyrillique de 900 000 caractères pèse ~1,8 Mo réels et n'était PAS
+       signalée — la garde ratait précisément les écritures non latines que le produit met en
+       avant. `Buffer.byteLength` mesure ce que le nom promet. */
+    const octetsReels = Buffer.byteLength(v);
+    if (octetsReels >= DEMESUREE) demesurees.push({ ligne: numeroDeLigne, octets: octetsReels,
+      ouvertureLigne: guillemets ? ouvertureLigne : debutDeLigne });
     return v;
   };
 
@@ -466,7 +477,8 @@ export function lireCsv(texte: string): Lecture {
       if (c === "\r" && texte[i + 1] === "\n") i++;
       debut = i + 1;
       numeroDeLigne++;
-      if (ligne.some((x) => x.trim() !== "")) lignes.push(ligne);
+      if (ligne.some((x) => x.trim() !== "")) { lignes.push(ligne); numeros.push(debutDeLigne); }
+      debutDeLigne = numeroDeLigne;
       ligne = [];
     }
   }
@@ -480,9 +492,10 @@ export function lireCsv(texte: string): Lecture {
       + `  To write a quote INSIDE a cell, double it: "he said ""hello""".\n`
       + `  To find the offending line: sed -n '${ouvertureLigne}p' <your file>`);
   }
-  if (cellule !== "" || ligne.length) { ligne.push(cellule); if (ligne.some((x) => x.trim() !== "")) lignes.push(ligne); }
+  if (cellule !== "" || ligne.length) { ligne.push(cellule); if (ligne.some((x) => x.trim() !== "")) { lignes.push(ligne); numeros.push(debutDeLigne); } }
 
   const entete = lignes.shift();
+  numeros.shift();   /* la ligne de l'en-tête part avec lui : numeros[i] suit lignes[i] */
   if (!entete || entete.length < 2) {
     throw new Error(
       `Your file has ${entete?.length ?? 0} column(s). It needs at least two: the input text, and\n`
@@ -591,14 +604,14 @@ export function lireCsv(texte: string): Lecture {
      * correspondent à aucune colonne. Écartée, nommée par son numéro de ligne.
      */
     if (l.length > noms.length) {
-      ecartees.push({ ligne: i + 2, champs: l.length });
+      ecartees.push({ ligne: numeros[i] ?? i + 2, champs: l.length });
       return;
     }
-    if (l.length < noms.length) courtes.push({ ligne: i + 2, champs: l.length });
+    if (l.length < noms.length) courtes.push({ ligne: numeros[i] ?? i + 2, champs: l.length });
     cas.push({
       /* `ligne-N` et non `N` : un id de secours nu peut collisionner avec un id réel plus
          loin dans le fichier, et la collision devenait un doublon silencieux. */
-      id: colId >= 0 ? ((l[colId] ?? "").trim() || `ligne-${i + 2}`) : `ligne-${i + 2}`,
+      id: colId >= 0 ? ((l[colId] ?? "").trim() || `ligne-${numeros[i] ?? i + 2}`) : `ligne-${numeros[i] ?? i + 2}`,
       text: l[colTexte] ?? "",
       truth: Object.fromEntries(colChamps.map((c) => [noms[c]!, (l[c] ?? "").trim()])),
     });
@@ -620,7 +633,7 @@ export function lireCsv(texte: string): Lecture {
   const lignesParId = new Map<string, number[]>();
   cas.forEach((c, k) => {
     const l = lignesParId.get(c.id) ?? [];
-    l.push(k + 2);
+    l.push(numeros[k] ?? k + 2);
     lignesParId.set(c.id, l);
   });
   const idsEnDouble = [...lignesParId.entries()].filter(([, lignes]) => lignes.length > 1);
@@ -700,8 +713,8 @@ export const ISSUES_VALIDES: IssueClient[] = ["clean", "wrong", "blank"];
  * qu'on lit une fois.
  */
 export function ecrireMs(ms: number, declaree: boolean): string {
-  if (!Number.isFinite(ms)) return "durée non déclarée";
-  return declaree ? `${ms.toFixed(0)} ms (déclaré)` : `${ms.toFixed(0)} ms`;
+  if (!Number.isFinite(ms)) return "no declared duration";
+  return declaree ? `${ms.toFixed(0)} ms (declared)` : `${ms.toFixed(0)} ms`;
 }
 
 /**
@@ -795,6 +808,33 @@ export function chargerSorties(chemin: string): SortiesFournies {
       + `  that it receives none. Grade on your side and send only the outcomes:\n`
       + `  { "nom": "…", "issues": { "<champ>": { "<id>": "clean" | "wrong" | "blank" } },\n`
       + `    "notePar": { "outil": "cascade", "version": "<commit>" } }`);
+  }
+  /*
+   * UN NOM DE CHAÎNE ÉGAL À UN NOM DE PALIER EFFACE LA COLONNE DU CLIENT. « small » est un nom
+   * parfaitement naturel pour « ma chaîne au petit modèle » — et la boucle des paliers écrivait
+   * `releve[champ]["small"]` PAR-DESSUS sa ligne : sa chaîne disparaissait du tableau sans un
+   * mot, et trois comparaisons `palier === sorties.nom` devenaient vraies pour le mauvais
+   * objet. Audit du 27 août 2026.
+   */
+  if (typeof brut.nom === "string" && (TIERS as readonly string[]).includes(brut.nom)) {
+    throw new Error(`${chemin}: "nom" is "${brut.nom}", which is one of our tier names.\n`
+      + `  The results table indexes rows by name: your pipeline's row would be OVERWRITTEN by\n`
+      + `  the "${brut.nom}" tier's measurements, and disappear without a word. Name it after\n`
+      + `  your system — "my-chain", "prod-v2" — and run again. Nothing was measured.`);
+  }
+  /*
+   * LES CHIFFRES DÉCLARÉS SONT VALIDÉS À L'ENTRÉE, PAS DÉCOUVERTS À L'AFFICHAGE. Un
+   * `"msParDocument": "45"` — chaîne, JSON écrit à la main — faisait dire à l'en-tête
+   * « declared by you » pendant que chaque ligne du tableau imprimait « no declared
+   * duration » : deux lecteurs du même champ, deux verdicts. Audit du 27 août 2026.
+   */
+  if (brut.declares !== undefined) {
+    for (const [cle, v] of Object.entries(brut.declares)) {
+      if (v !== undefined && (typeof v !== "number" || !Number.isFinite(v))) {
+        throw new Error(`${chemin}: declares.${cle} is ${JSON.stringify(v)}, not a finite number.\n`
+          + `  JSON numbers carry no quotes: write ${cle}: 45, not "${String(v)}". Nothing was measured.`);
+      }
+    }
   }
   if (!brut.issues || typeof brut.issues !== "object") {
     throw new Error(`${chemin}: no \`issues\` key. Expected shape:\n`
@@ -1121,7 +1161,10 @@ export async function classerVosCas(
     const durees: number[] = [];
     for (const c of cas) {
       const t0 = performance.now();
-      const got = await classerParmi(palier, c.text, etiquettes);
+      /* La MÊME borne qu'en mode extract : une cellule de 20 Mo — un guillemet refermé mille
+         lignes plus loin — coûte ~44 Mo de RAM par Mo de texte (SIGABRT mesuré). Le mode
+         classify passait le texte ENTIER. Audit du 27 août 2026. */
+      const got = await classerParmi(palier, bornerTexte(c.text).texte, etiquettes);
       durees.push(performance.now() - t0);
       if (got === c.truth[colonne]) bons++;
     }
@@ -1147,8 +1190,9 @@ The CSV wants an id, the input text, then one column per field to extract:
   1,"Anna Petrova — dob 3 May 1990",Anna Petrova,3 May 1990
 
 --rules  a JSON of { "field": "regular expression" }, so your own free tier is measured too.
---sorties  a JSON of what YOUR OWN chain produced: { "nom": "…", "valeurs": { "<field>":
-         { "<case id>": "<what your chain returned>" } }, "declares": { "coutParMilleDocuments":
+--sorties  a JSON of the OUTCOMES your own chain was graded to, never the values it
+         produced — grade on your side, send only issues: { "nom": "…", "issues": { "<field>":
+         { "<case id>": "clean" | "wrong" | "blank" } }, "notePar": { "outil": …, "version": … }, "declares": { "coutParMilleDocuments":
          …, "msParDocument": … } }. Your chain runs on your machine; we never see its code, and
          nothing here executes anything you supply. We score its accuracy against your own
          answers — that is measured. Its cost and latency are the ones you give us: assumed,

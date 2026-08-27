@@ -111,3 +111,46 @@ test("une cellule id manquante reçoit un id qui ne peut PAS collisionner avec u
   assert.doesNotMatch(r.texte, /duplicate case identifier/,
     "la lecture fabrique elle-même un doublon : l'id de secours collisionne avec un id réel.");
 });
+
+test("un nom de chaîne égal à un nom de palier est refusé — sa ligne serait écrasée", () => {
+  /* « small » est un nom naturel pour « ma chaîne au petit modèle » — et la boucle des paliers
+     écrivait releve[champ]["small"] PAR-DESSUS la ligne du client : sa chaîne disparaissait du
+     tableau sans un mot. */
+  const d = bac();
+  const f = join(d, "cas.csv");
+  writeFileSync(f, 'id,text,name\n1,"Anna Petrova",Anna\n');
+  const so = join(d, "sorties.json");
+  writeFileSync(so, JSON.stringify({ nom: "small", issues: { name: { "1": "clean" } } }));
+  exigerRefus(lancer([CMD, `--cases=${f}`, `--sorties=${so}`]),
+    /"nom" is "small", which is one of our tier names/,
+    "un nom qui collisionne avec un palier doit être refusé");
+});
+
+test("un chiffre déclaré en chaîne est refusé à l'entrée, pas découvert à l'affichage", () => {
+  /* "msParDocument": "45" — JSON écrit à la main — faisait dire « declared by you » à
+     l'en-tête pendant que chaque ligne imprimait « no declared duration » : deux lecteurs du
+     même champ, deux verdicts. */
+  const d = bac();
+  const f = join(d, "cas.csv");
+  writeFileSync(f, 'id,text,name\n1,"Anna Petrova",Anna\n');
+  const so = join(d, "sorties.json");
+  writeFileSync(so, JSON.stringify({ nom: "ma-chaine", issues: { name: { "1": "clean" } },
+    declares: { msParDocument: "45" } }));
+  const r = lancer([CMD, `--cases=${f}`, `--sorties=${so}`]);
+  exigerRefus(r, /declares\.msParDocument is "45", not a finite number/,
+    "une durée déclarée en chaîne doit être refusée en nommant le champ");
+  assert.match(r.texte, /write msParDocument: 45/,
+    "le refus ne montre pas la forme juste : un refus sans issue se contourne.");
+});
+
+test("les numéros de ligne annoncés sont ceux du FICHIER, pas des index de parseur", () => {
+  /* Un texte cité sur trois lignes décale tous les index : « line 7 » désignait la ligne 9 du
+     fichier, et le client cherchait au mauvais endroit dans son propre export. */
+  const d = bac();
+  const f = join(d, "multi.csv");
+  writeFileSync(f, 'id,text,name,extra\n1,"ligne un\nligne deux\nligne trois",Anna\n2,"court",Boris,Trop,DeColonnes\n');
+  const r = lancer([CMD, `--cases=${f}`], { msMax: 15_000 });
+  assert.match(r.texte, /row 5|line 5|ligne 5/i,
+    `la ligne écartée est à la ligne 5 du fichier (après un texte cité de 3 lignes) :\n`
+    + `  ${JSON.stringify(r.texte.match(/.{0,60}(row|line|ligne) \d+.{0,20}/i)?.[0] ?? r.texte.slice(0, 200))}`);
+});
