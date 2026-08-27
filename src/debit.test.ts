@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { compter, oublierLesRequetes, PLAFOND_REQUETES, FENETRE_MS } from "./server.ts";
+import { createServer, type Server } from "node:http";
+import { compter, oublierLesRequetes, PLAFOND_REQUETES, FENETRE_MS, creerEcouteur } from "./server.ts";
 
 /*
  * LE PLAFOND SE MESURE SUR SON HORLOGE, PAS SUR L'ATTENTE.
@@ -56,4 +57,58 @@ test("la carte des adresses ne grossit pas sans borne", () => {
      avec son plafond entier, ce qui n'est vrai que si son historique a disparu. */
   assert.equal(compter("172.16.0.0", t + FENETRE_MS + 2), PLAFOND_REQUETES - 1,
     "l'historique d'une adresse hors fenêtre est encore là : la carte grossit sans borne");
+});
+
+/*
+ * LES CINQ CAS CI-DESSUS ÉPROUVENT UNE FONCTION QUE LE ROUTEUR PEUT NE PLUS APPELER.
+ *
+ * Ils importent `compter` et lui passent leur propre instant. Aucun ne traverse le serveur.
+ * Décrocher l'appel du routeur — remplacer sa valeur par une constante — les laisse tous les
+ * cinq au vert, et la totalité des cas qui touchent le serveur avec eux : mesuré, 132 cas
+ * verts sous la mutation. La fonction est irréprochable et son branchement n'est tenu par
+ * personne.
+ *
+ * Le témoin ci-dessous ne doit donc PAS appeler `compter`. Il franchit la couture : il parle
+ * au serveur par la socket et exige que le refus ARRIVE. Un second cas qui éprouverait encore
+ * la fonction resterait vert sous la même mutation, et n'aurait rien ajouté.
+ */
+test("le plafond est BRANCHÉ sur le routeur : le refus arrive par la socket", async () => {
+  oublierLesRequetes();
+  const s: Server = createServer(creerEcouteur());
+  await new Promise<void>((ok) => s.listen(0, "127.0.0.1", ok));
+  const port = (s.address() as { port: number }).port;
+  const base = `http://127.0.0.1:${port}`;
+
+  try {
+    const statuts: number[] = [];
+    let entete: string | null = null;
+    for (let i = 0; i < PLAFOND_REQUETES + 5; i++) {
+      const r = await fetch(`${base}/api/etat`);
+      statuts.push(r.status);
+      if (r.status === 429 && entete === null) entete = r.headers.get("retry-after");
+    }
+
+    /*
+     * TÉMOIN DE NON-VACUITÉ, AVANT LE VERDICT. Un serveur qui refuserait tout dès la première
+     * requête satisfait « il y a des 429 » sans rien dire du plafond : le cas passerait au
+     * vert sur un serveur cassé.
+     */
+    assert.equal(statuts[0], 200,
+      "la première requête est déjà refusée : ce cas ne mesure plus un plafond mais une panne.");
+    assert.equal(statuts.slice(0, PLAFOND_REQUETES).filter((c) => c !== 200).length, 0,
+      "une requête sous le plafond a été refusée : le compte du routeur n'est pas celui de la fonction.");
+
+    const nb429 = statuts.filter((c) => c === 429).length;
+    assert.ok(nb429 > 0,
+      `${PLAFOND_REQUETES + 5} requêtes envoyées, plafond de ${PLAFOND_REQUETES}, et pas un seul 429 :\n`
+      + "  le compteur n'est plus branché sur le routeur. La fonction peut être juste — les cas\n"
+      + "  ci-dessus le disent — sans que rien ne l'appelle sur le chemin d'une vraie requête.");
+
+    /* Et le refus est CELUI de la limite de débit, pas un autre 429 qui passerait par là. */
+    assert.equal(entete, String(Math.ceil(FENETRE_MS / 1000)),
+      "le 429 ne porte pas le délai que la branche de débit écrit : le refus vient d'ailleurs.");
+  } finally {
+    await new Promise<void>((ok) => { s.close(() => ok()); });
+    oublierLesRequetes();
+  }
 });

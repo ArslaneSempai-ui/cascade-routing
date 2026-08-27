@@ -4,7 +4,7 @@ import { createServer } from "node:http";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { AddressInfo } from "node:net";
+import { connect, type AddressInfo } from "node:net";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { creerEcouteur, PLAFOND_CORPS } from "./server.ts";
@@ -344,4 +344,78 @@ test("un script EXTERNE de même origine n'est pas un script nu", { timeout: 30_
       + "La garde lit l'effet du remplacement au lieu de l'invariant, qui est : aucun script EN "
       + "LIGNE ne reste nu.");
   } finally { fermer(); }
+});
+
+/*
+ * LE DÉCODAGE UNIQUE N'AVAIT PAS DE TÉMOIN, ET C'EST LUI QUI FAIT LA JUSTESSE.
+ *
+ * Le corps s'accumule en `Buffer` et se décode UNE fois, à la fin. Revenir à un décodage par
+ * morceau — `b.toString("utf8")` sur chaque paquet — laisserait le comptage d'octets intact,
+ * donc la borne intacte, donc les six cas ci-dessus verts : un caractère multi-octets coupé
+ * entre deux paquets TCP rendrait deux caractères de remplacement, et rien ne le dirait.
+ *
+ * `fetch` ne peut pas fabriquer cette coupure : il remet le corps d'un bloc. Ce cas descend
+ * donc à la socket et écrit lui-même les deux moitiés, séparées d'un aller-retour de la
+ * boucle d'événements et avec Nagle désactivé — sans quoi la pile recollerait les deux
+ * écritures en un seul segment et le cas passerait au vert sans avoir rien coupé.
+ */
+async function reponseBrute(port: number, tete: string, moitie1: Buffer, moitie2: Buffer): Promise<string> {
+  return await new Promise<string>((resoudre, rejeter) => {
+    const s = connect(port, "127.0.0.1", () => {
+      s.setNoDelay(true);
+      s.write(tete);
+      s.write(moitie1);
+      /* Le délai est ce qui fait DEUX paquets. Sans lui il n'y a rien à éprouver. */
+      setTimeout(() => s.write(moitie2), 40);
+    });
+    const morceaux: Buffer[] = [];
+    s.on("data", (b: Buffer) => morceaux.push(b));
+    s.on("error", rejeter);
+    s.on("close", () => resoudre(Buffer.concat(morceaux).toString("utf8")));
+  });
+}
+
+test("un caractère coupé entre deux paquets arrive entier", async () => {
+  const s = createServer(creerEcouteur());
+  await new Promise<void>((ok) => s.listen(0, "127.0.0.1", ok));
+  const port = (s.address() as AddressInfo).port;
+
+  try {
+    /* Un nom de champ inconnu, pour que le serveur le RÉPÈTE dans son refus : c'est le seul
+       moyen de lire ce qu'il a décodé. Le « é » y tient sur deux octets. */
+    const nom = "naéme";
+    const corpsTexte = JSON.stringify({ champ: nom, palier: "large" });
+    const corpsOctets = Buffer.from(corpsTexte, "utf8");
+
+    /* La coupure se calcule sur les OCTETS : le premier octet non-ASCII, puis on coupe juste
+       après lui, au milieu du caractère. */
+    const debutMulti = corpsOctets.findIndex((o) => o >= 0x80);
+    assert.ok(debutMulti > 0,
+      "le corps de ce cas ne porte plus de caractère multi-octets : il n'y a rien à couper, "
+      + "et le cas passerait au vert sans éprouver le décodage.");
+    const coupure = debutMulti + 1;
+    assert.ok(coupure < corpsOctets.length,
+      "la coupure tombe à la fin du corps : les deux moitiés ne seraient pas deux paquets.");
+
+    const tete = `POST /api/routage HTTP/1.1\r\nHost: 127.0.0.1\r\n`
+      + `Content-Type: application/json\r\nContent-Length: ${corpsOctets.length}\r\n`
+      + `Connection: close\r\n\r\n`;
+    const brut = await reponseBrute(port, tete,
+      corpsOctets.subarray(0, coupure), corpsOctets.subarray(coupure));
+
+    /* TÉMOIN DE NON-VACUITÉ : le serveur a bien répondu, et il a bien refusé. Une socket
+       coupée rendrait une chaîne vide, qui ne contient aucun caractère de remplacement et
+       satisferait le verdict ci-dessous sans rien prouver. */
+    assert.match(brut, /^HTTP\/1\.1 400 /,
+      `le serveur n'a pas rendu de refus à ce corps (${brut.slice(0, 60) || "réponse vide"}) : `
+      + "ce cas ne lit plus ce qu'il a décodé.");
+
+    assert.ok(!brut.includes("�"),
+      "le caractère coupé entre deux paquets est arrivé en morceaux : le corps est décodé "
+      + "paquet par paquet au lieu de l'être une fois assemblé.");
+    assert.ok(brut.includes(nom),
+      `le refus ne répète pas « ${nom} » tel qu'il a été envoyé : le décodage l'a abîmé.`);
+  } finally {
+    await new Promise<void>((ok) => { s.close(() => ok()); });
+  }
 });

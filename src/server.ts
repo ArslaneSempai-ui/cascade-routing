@@ -148,6 +148,43 @@ function corps(req: IncomingMessage): Promise<Record<string, unknown>> {
  * On exige donc le type que l'écran envoie déjà, et on NOMME ce qu'on a refusé — ignorer en
  * silence est ce qui a rendu ce défaut invisible pendant tout ce temps.
  */
+
+/*
+ * NOMMER CE QUI A ÉTÉ ENVOYÉ — LES DEUX CONVERSIONS QUI MENTAIENT.
+ *
+ * Deux refus corrects nommaient leur valeur par une conversion qui la détruit :
+ *
+ *   `JSON.stringify(v)` rend la chaîne « null » pour Infinity, -Infinity ET NaN. Un nombre
+ *     trop grand — `1e400`, que `JSON.parse` rend déjà comme Infinity — se lisait donc
+ *     exactement comme un champ absent. Le client va chercher une valeur manquante là où il
+ *     a envoyé un dépassement.
+ *
+ *   `String(x)` rend « [object Object] » pour un objet et « 1,2 » pour un tableau. Le client
+ *     lit une représentation interne de JavaScript comme si c'était ce qu'il avait tapé —
+ *     alors que le contrôle de forme du corps, dix lignes plus haut, fait exactement
+ *     l'inverse et décrit ce qui a été reçu.
+ *
+ * DEUX SITES, DEUX PRÉSENTATIONS, ET C'EST VOULU. Le refus d'hypothèse écrit `cle=valeur` et
+ * garde la forme JSON — `volume="abc"` avec ses guillemets était DÉJÀ juste et le reste. Le
+ * refus de champ écrit `field "…"`, déjà entre guillemets : y remettre ceux de JSON en
+ * ajouterait une paire. Un seul assistant pour les deux aurait cassé le cas correct pour
+ * réparer l'autre.
+ */
+
+/** Pour `cle=valeur` : la forme JSON, sauf les non-finis que JSON écrase tous sur « null ». */
+export function nommerValeurJson(x: unknown): string {
+  if (typeof x === "number" && !Number.isFinite(x)) return String(x);
+  return JSON.stringify(x) ?? String(x);
+}
+
+/** Pour `field "…"` : ce qui a été envoyé, jamais sa coercition en chaîne. */
+export function nommerValeurNue(x: unknown): string {
+  if (x === undefined || x === null) return "(absent)";
+  if (typeof x === "string") return x || "(absent)";
+  if (typeof x === "number") return String(x);
+  return JSON.stringify(x) ?? String(x);
+}
+
 export function appliquerHypotheses(
   recu: Record<string, unknown>, actuelles: Assumptions,
 ): { hypotheses: Assumptions; refuses: string[] } {
@@ -160,7 +197,7 @@ export function appliquerHypotheses(
     if (typeof v === "number" && Number.isFinite(v)) {
       hypotheses = { ...hypotheses, [cle]: Math.min(haut, Math.max(bas, v)) };
     } else {
-      refuses.push(`${cle}=${JSON.stringify(v)}`);
+      refuses.push(`${cle}=${nommerValeurJson(v)}`);
     }
   }
   return { hypotheses, refuses };
@@ -564,14 +601,16 @@ async function ecouteur(req: IncomingMessage, res: ServerResponse, cheminUi: str
        * Le refus nomme ce qui est accepté : sur cinq champs et sept paliers, « valeur
        * inconnue » n'aide personne.
        */
-      const champ = String(recu.champ ?? "");
-      const palier = String(recu.palier ?? "") as TierName;
+      /* Seule une chaîne peut NOMMER un champ ; tout le reste est refusé, et nommé pour ce
+         qu'il est plutôt que pour ce que `String()` en fait. */
+      const champ = typeof recu.champ === "string" ? recu.champ : "";
+      const palier = (typeof recu.palier === "string" ? recu.palier : "") as TierName;
       const mauvais: string[] = [];
       if (!FIELDS.includes(champ as never)) {
-        mauvais.push(`field "${champ || "(absent)"}" — accepted: ${FIELDS.join(", ")}`);
+        mauvais.push(`field "${nommerValeurNue(recu.champ)}" — accepted: ${FIELDS.join(", ")}`);
       }
       if (!TIERS.includes(palier)) {
-        mauvais.push(`tier "${palier || "(absent)"}" — accepted: ${TIERS.join(", ")}`);
+        mauvais.push(`tier "${nommerValeurNue(recu.palier)}" — accepted: ${TIERS.join(", ")}`);
       }
       if (mauvais.length > 0) {
         return json(res, {

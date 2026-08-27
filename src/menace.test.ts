@@ -538,3 +538,112 @@ test("un clone superficiel ne peut pas conclure, et ne doit pas accuser une ré�
     rmSync(bac, { recursive: true, force: true });
   }
 });
+
+/*
+ * LE `-m` EST DANS LA COMMANDE ET AUCUN CAS NE L'ÉPROUVE.
+ *
+ * `git log -p` n'affiche AUCUN diff pour un commit de fusion. Un secret introduit dans la
+ * RÉSOLUTION d'un conflit — donc présent dans l'arbre, donc dans ce que reçoit un clone —
+ * n'apparaît alors nulle part dans le flux balayé, et `SECURITE.md` publie son zéro sans
+ * avoir lu une seule fusion. Le drapeau a été ajouté ; retirer `"-m"` de la commande laisse
+ * la suite entièrement verte. C'est le défaut d'origine reporté d'un cran, de la commande
+ * vers son témoin.
+ *
+ * Ce cas fabrique donc un dépôt qui porte le secret UNIQUEMENT dans la résolution, et il le
+ * prouve avant de conclure : il lance lui-même `git log -p` sans `-m` et exige que le secret
+ * n'y soit PAS. Sans cette vérification, un dépôt mal fabriqué — secret visible des deux
+ * façons — rendrait ce cas vert sur une commande sans `-m`.
+ *
+ * Le second secret, posé dans un commit ordinaire, est le contrôle positif : il reste trouvé
+ * quand `-m` disparaît. C'est lui qui distingue « le balayage ne lit pas les fusions » de
+ * « le balayage ne lit plus rien ».
+ *
+ * Les deux clés sont ASSEMBLÉES à l'exécution. Écrites en toutes lettres, elles entreraient
+ * dans l'historique de CE dépôt et le balayage les y trouverait — il faudrait alors les
+ * déclarer comme leurres, c'est-à-dire ajouter du bruit permanent pour un cas jetable.
+ */
+test("un secret introduit dans la résolution d'une fusion est balayé", () => {
+  const envPropre = { ...process.env };
+  for (const v of ["GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_OBJECT_DIRECTORY",
+    "GIT_COMMON_DIR", "GIT_ALTERNATE_OBJECT_DIRECTORIES", "GIT_PREFIX"]) delete envPropre[v];
+
+  const bac = realpathSync(mkdtempSync(join(tmpdir(), "menace-fusion-")));
+  const depot = join(bac, "depot");
+  const git = (...a: string[]) => spawnSync("git", a, { cwd: depot, encoding: "utf8", env: envPropre });
+  /* Le plancher du balayage vaut 200 octets par commit : des fichiers d'une ligne le feraient
+     refuser pour une raison qui n'a rien à voir avec ce qu'on éprouve. */
+  const remplissage = (quoi: string) => `${quoi}\n`.repeat(60);
+
+  try {
+    mkdirSync(depot);
+    git("init", "-q");
+    git("config", "user.email", "t@t");
+    git("config", "user.name", "t");
+
+    /* Le bac est-il bien un dépôt à lui ? Sinon tout ce qui suit s'écrit dans celui qu'on
+       éprouve — `GIT_DIR` gagne sur `cwd`. */
+    const vu = git("rev-parse", "--absolute-git-dir").stdout.trim();
+    assert.ok(vu.startsWith(depot), `le bac n'est pas isolé : git répond « ${vu} ».`);
+
+    const cleOrdinaire = ["AKIA", "ZXCVBNMLKJHGFDSA"].join("");
+    const cleDeFusion = ["AKIA", "QWERTYUIOPASDFGH"].join("");
+
+    writeFileSync(join(depot, "a.txt"), remplissage("a"));
+    git("add", "."); git("commit", "-qm", "c1");
+    const principale = git("rev-parse", "--abbrev-ref", "HEAD").stdout.trim();
+
+    writeFileSync(join(depot, "ordinaire.txt"), remplissage("o") + cleOrdinaire + "\n");
+    git("add", "."); git("commit", "-qm", "c2");
+
+    git("checkout", "-qb", "cote");
+    writeFileSync(join(depot, "partage.txt"), remplissage("cote"));
+    git("add", "."); git("commit", "-qm", "c3");
+
+    git("checkout", "-q", principale);
+    writeFileSync(join(depot, "partage.txt"), remplissage("principal"));
+    git("add", "."); git("commit", "-qm", "c4");
+
+    git("merge", "--no-commit", "cote");            /* conflit attendu : code non nul */
+    writeFileSync(join(depot, "partage.txt"), remplissage("resolu") + cleDeFusion + "\n");
+    git("add", "partage.txt");
+    git("commit", "-qm", "fusion");
+
+    /*
+     * LE DÉPÔT FABRIQUÉ ÉPROUVE-T-IL BIEN CE QU'ON CROIT ? Trois vérifications avant de
+     * conclure quoi que ce soit du balayage.
+     */
+    const fusions = git("rev-list", "--merges", "--all").stdout.trim().split("\n").filter(Boolean);
+    assert.equal(fusions.length, 1,
+      `${fusions.length} fusion(s) dans le dépôt fabriqué : il n'y a rien à lire de particulier, `
+      + "et ce cas passerait au vert sans éprouver le drapeau.");
+
+    const sansM = git("log", "-p", "--all", "--no-color").stdout;
+    assert.ok(!sansM.includes(cleDeFusion),
+      "le secret de la résolution est déjà visible SANS `-m` : le dépôt fabriqué ne cache rien, "
+      + "et ce cas resterait vert sur une commande qui ne lit pas les fusions.");
+    assert.ok(sansM.includes(cleOrdinaire),
+      "le secret ordinaire est introuvable même sans `-m` : le dépôt est mal fabriqué et le "
+      + "contrôle positif ne contrôle rien.");
+
+    const r = balayerLHistorique(depot);
+
+    /* Le balayage a bien lu le flux qu'on lui a donné, avant qu'on juge ce qu'il y a trouvé. */
+    assert.equal(r.temoins, 2,
+      `${r.temoins} leurre(s) retrouvé(s) sur 2 : la boucle n'a pas parcouru le flux, et ce `
+      + "qu'elle n'y a pas trouvé ne veut rien dire.");
+
+    const fichiers = r.reels.map((t) => t.fichier);
+    assert.ok(fichiers.includes("ordinaire.txt"),
+      `contrôle positif en échec : le secret d'un commit ORDINAIRE n'est pas trouvé `
+      + `(fichiers vus : ${fichiers.join(", ") || "aucun"}). Le balayage ne lit plus rien du tout, `
+      + "et le verdict ci-dessous ne dirait pas ce qu'il prétend dire.");
+
+    assert.ok(fichiers.includes("partage.txt"),
+      `le secret introduit dans la RÉSOLUTION de la fusion n'est pas trouvé `
+      + `(fichiers vus : ${fichiers.join(", ") || "aucun"}).\n`
+      + "  `git log -p` sans `-m` ne rend aucun diff pour un commit de fusion : le secret est\n"
+      + "  dans l'arbre, donc dans le clone, et le balayage publie « aucun secret » sans l'avoir vu.");
+  } finally {
+    rmSync(bac, { recursive: true, force: true });
+  }
+});
