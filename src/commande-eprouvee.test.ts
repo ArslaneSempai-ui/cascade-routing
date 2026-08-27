@@ -88,12 +88,23 @@ test("mesurer sur un arbre modifié est refusé, et le refus dit quoi faire", { 
 
   /* CONTRÔLE POSITIF D'ABORD : sur l'arbre propre, la garde ne doit PAS parler. Sans lui, le
      refus mesuré ensuite pourrait venir de n'importe quoi — un import cassé, par exemple. */
+  /*
+   * LE MOTIF VISE LA CAUSE, PAS LA FORMULATION. Il cherchait « Modified tree: commit before
+   * measuring », la phrase d'`apparier-prompt` quand chaque commande avait sa propre copie de
+   * la garde. Les huit copies ont été réunies dans `arbre-propre.ts` le 27 août 2026, et le
+   * refus dit maintenant la CONSÉQUENCE — un relevé non reproductible — en nommant les
+   * fichiers et l'issue. « uncommitted changes » est ce que les sept commandes partagent.
+   */
   const propre = lancer(cmd, { cwd: clone, msMax: 20_000 });
-  assert.doesNotMatch(propre.texte, /Modified tree/,
+  assert.doesNotMatch(propre.texte, /uncommitted changes/,
     "la garde parle sur un arbre PROPRE : elle ne mesure donc pas ce qu'elle prétend.\n"
     + `  ${JSON.stringify(propre.texte.slice(0, 200))}`);
 
   writeFileSync(join(clone, "src", "sonde.ts"), "export const x = 1;\n");
-  exigerRefus(lancer(cmd, { cwd: clone, msMax: 20_000 }), /Modified tree: commit before measuring/,
-    "un arbre modifié doit être refusé");
+  const refus = lancer(cmd, { cwd: clone, msMax: 20_000 });
+  exigerRefus(refus, /uncommitted changes/, "un arbre modifié doit être refusé");
+  /* Et l'issue doit être là : c'est ce que la réunion des huit copies avait pour but. */
+  assert.match(refus.texte, /--allow-dirty/,
+    "le refus ne dit plus comment passer outre : cinq commandes refusaient sans issue, et\n"
+    + "  c'est précisément ce qui a été corrigé.");
 });
