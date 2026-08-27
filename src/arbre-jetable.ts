@@ -62,13 +62,36 @@ export function arbreJetable(prefixe: string, racineTemporaire: string = tmpdir(
    */
   const chemin = mkdtempSync(join(racineTemporaire, `${prefixe}-`));
   if (chemin.includes("/Documents/")) {
-    throw new Error(`terrain d'essai dans le vrai arbre : ${chemin}`);
+    throw new Error(`test sandbox inside the real tree: ${chemin}`);
   }
+  /*
+   * L'AUTO-NETTOYAGE D'ABORD. Un cas qui échoue ou meurt ne retire jamais son arbre : mesuré
+   * le 27 août 2026, QUARANTE-NEUF arbres jetables traînaient dans `git worktree list`, et
+   * 801 commits orphelins « état du disque » noyaient la section « travail perdu » de l'outil
+   * de reprise — un vrai commit perdu y serait devenu invisible. `prune` ramasse les arbres
+   * dont le dossier temporaire a disparu ; il coûte quelques millisecondes et rend chaque
+   * création auto-réparante au lieu d'exiger une intendance que personne ne fera.
+   */
+  git(["-C", RACINE, "worktree", "prune"]);
   git(["-C", RACINE, "worktree", "add", "--detach", "-q", chemin, "HEAD"]);
   /* `node_modules` est LIÉ, jamais installé : le dépôt y garde plus d'un gigaoctet de modèles
      en cache, et les commandes ne démarrent pas sans lui. */
   symlinkSync(join(RACINE, "node_modules"), join(chemin, "node_modules"));
   cpSync(join(RACINE, "src"), join(chemin, "src"), { recursive: true });
+  /*
+   * NETTOYER LES VARIABLES EST UNE INTENTION ; VÉRIFIER EST UN FAIT. Deux sessions ont observé
+   * indépendamment le même détournement — GIT_DIR hérité gagne sur le dossier courant, et les
+   * commits du bac atterrissent dans le dépôt de l'appelant. Avant la PREMIÈRE écriture, on
+   * exige donc que git réponde depuis l'intérieur du bac. Si une huitième variable apparaît un
+   * jour, cette assertion la trouvera sans qu'on la connaisse.
+   */
+  const gitDir = execFileSync("git", ["-C", chemin, "rev-parse", "--absolute-git-dir"],
+    { env: envGitPropre(), encoding: "utf8" }).trim();
+  if (!gitDir.startsWith(join(RACINE, ".git"))) {
+    throw new Error(`the sandbox answers from ANOTHER repository: ${gitDir}\n`
+      + `  A write here would land in someone else's repo — the diversion that carried away\n`
+      + `  two sessions' uncommitted work on 27 August 2026 (inherited GIT_DIR wins over cwd).`);
+  }
   git(["-C", chemin, "add", "-A"]);
   git(["-C", chemin, "-c", "user.name=t", "-c", "user.email=t@t",
     "commit", "-q", "--no-verify", "--allow-empty", "-m", "état du disque, figé pour ce cas"]);

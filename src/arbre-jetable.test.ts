@@ -13,6 +13,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
+import { execFileSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import { join } from "node:path";
 import { arbreJetable } from "./arbre-jetable.ts";
 
@@ -23,7 +25,7 @@ test("un bac à sable sous /Documents/ est refusé, et le refus nomme le chemin"
   const faux = join(mkdtempSync(join(tmpdir(), "faux-")), "Documents", "cascade");
   mkdirSync(faux, { recursive: true });
   try {
-    assert.throws(() => arbreJetable("essai", faux), /terrain d'essai dans le vrai arbre/,
+    assert.throws(() => arbreJetable("essai", faux), /test sandbox inside the real tree/,
       "un bac à sable créé sous /Documents/ n'a PAS été refusé : il copie et efface des\n"
       + "  répertoires entiers, donc il effacerait du travail réel.");
   } finally {
@@ -65,4 +67,37 @@ test("un GIT_INDEX_FILE hérité ne touche pas l'index de l'appelant", () => {
     else process.env.GIT_INDEX_FILE = avant;
     if (chemin) rmSync(chemin, { recursive: true, force: true });
   }
+});
+
+test("un GIT_DIR hérité ne détourne pas les commits du bac vers le dépôt de l'appelant", () => {
+  /*
+   * La variable qui a réellement frappé : pendant un `git commit`, le crochet lance la suite
+   * et git exporte GIT_DIR — qui GAGNE sur le dossier courant. Le figeage de l'arbre jetable
+   * a alors commité dans le worktree de l'appelant : cinq commits « état du disque » y ont
+   * emporté du travail non commité sous un message étranger, le 27 août 2026. Le témoin pose
+   * GIT_DIR sur un dépôt appât et exige qu'il ne reçoive AUCUN commit.
+   */
+  const appat = mkdtempSync(join(tmpdir(), "appat-"));
+  execFileSync("git", ["init", "-q", appat], { env: { ...process.env, GIT_DIR: undefined } as NodeJS.ProcessEnv });
+  const compter = () => {
+    try {
+      return execFileSync("git", ["-C", appat, "rev-list", "--all", "--count"],
+        { encoding: "utf8" }).trim();
+    } catch { return "0"; }
+  };
+  assert.equal(compter(), "0", "le montage est faux : l'appât porte déjà un commit.");
+  const avant = process.env.GIT_DIR;
+  process.env.GIT_DIR = join(appat, ".git");
+  let chemin = "";
+  try {
+    chemin = arbreJetable("essai-gitdir");
+  } finally {
+    if (avant === undefined) delete process.env.GIT_DIR;
+    else process.env.GIT_DIR = avant;
+    if (chemin) rmSync(chemin, { recursive: true, force: true });
+    execFileSync("git", ["-C", fileURLToPath(new URL("..", import.meta.url)), "worktree", "prune"]);
+  }
+  assert.equal(compter(), "0",
+    "UN COMMIT DU BAC A ATTERRI DANS LE DÉPÔT DE L'APPELANT : c'est le détournement qui a\n"
+    + "  emporté le travail d'une session le 27 août — GIT_DIR gagne sur le dossier courant.");
 });
