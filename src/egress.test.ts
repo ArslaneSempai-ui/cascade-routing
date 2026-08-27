@@ -460,7 +460,10 @@ test("une commande surveillée TUÉE par un signal se dit, et la passe n'établi
     .trim().split("\n").filter(Boolean).map(Number);
   assert.ok(fils.length >= 1, "le montage est faux : rien à tuer.");
   for (const pid of fils) process.kill(pid, "SIGKILL");
-  const code = await new Promise<number>((r) => egress.on("exit", (c) => r(c ?? -1)));
+  /* `close`, pas `exit` : `exit` se résout AVANT que les flux stdio soient vidés — sous le
+     crochet, `dit` arrivait vide et le cas rougissait en 272 ms en accusant le message. `close`
+     attend la fermeture des flux, donc tout ce que le processus a dit est là. */
+  const code = await new Promise<number>((r) => egress.on("close", (c) => r(c ?? -1)));
   assert.match(dit, /KILLED by SIGKILL/,
     "une surveillance interrompue par un signal ne le dit pas : elle se lirait comme une\n"
     + "  passe normale, dans le relevé qui adosse « nothing leaves the machine ».");
