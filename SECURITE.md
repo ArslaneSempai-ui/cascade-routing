@@ -38,12 +38,19 @@ in any file.
 
 ## Secrets in the history
 
-**0 undeclared secrets in the published history** across 744 commits — swept on 2026-08-27, sealed at `8a454e4`.
+**0 undeclared secrets reachable from `HEAD`** — swept on 2026-08-27, sealed at `14ae54d`.
 
-The sweep reads `--all`, which on the author's machine also covers backup branches and
-the `refs/original/` a history rewrite leaves behind. 10 matches sit there and **are not in
-what you cloned** — reachability from `HEAD` is checked per match rather than assumed. They are
-named rather than dropped, because a ref nobody pushes today can be pushed tomorrow.
+**Two denominators, because they do not measure the same thing.** The sweep read 633 commits —
+`--all`, every ref this machine carries. Of those, 442 are reachable from `HEAD`;
+the remaining 191 sit in local backup branches and in the `refs/original/` a history
+rewrite leaves behind, which nobody clones. This page used to print the first number under the
+words "in the published history", which invited you to read it as the count you can clone; it
+never was. Reading wider than what ships is deliberate, so the gap runs in the reassuring
+direction: the sweep covered MORE than the published history, never less.
+
+10 matches sit on those unpublished refs and **are not in what you
+cloned** — reachability from `HEAD` is checked per match rather than assumed. They are named
+rather than dropped, because a ref nobody pushes today can be pushed tomorrow.
 
 Read that as **none among the 20 shapes this sweep looks for**, which is the only
 claim it can make. A pattern written for one era stops seeing the next one in silence, and its

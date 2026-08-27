@@ -14,9 +14,11 @@
  * efface des répertoires entiers ; posé dans le dossier des dépôts, une interruption au mauvais
  * moment les abîme. Une garde du dépôt refuse d'ailleurs tout cas qui écrit là-haut.
  *
- * **Il porte le code du disque, pas celui de HEAD.** `git worktree add` extrait HEAD : un cas
+ * **Il porte l'état du disque, pas celui de HEAD.** `git worktree add` extrait HEAD : un cas
  * bâti dessus resterait vert alors qu'on vient de casser la garde dans le fichier de travail.
  * Une suite lancée avant un commit doit juger ce qui va PARTIR, pas ce qui est déjà parti.
+ * « L'état du disque » a longtemps voulu dire « `src/` du disque, le reste depuis HEAD » —
+ * une paire qui n'existe dans aucun commit. Il couvre désormais tout ce qui diffère de HEAD.
  *
  * **Et le commit qui fige la copie est `--allow-empty`.** Sans ça, le jour où le disque est
  * identique à HEAD — c'est-à-dire dès que le travail est committé — `git commit` échoue en
@@ -24,9 +26,9 @@
  * tant qu'on travaille, rouge une fois le travail rangé : l'ordre exact où personne ne
  * soupçonne le harnais.
  */
-import { cpSync, mkdtempSync, rmSync, symlinkSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, rmSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { execFileSync } from "node:child_process";
 
 /*
@@ -104,8 +106,47 @@ export function arbreJetable(prefixe: string, racineTemporaire: string = tmpdir(
    * fichier que le commit à venir n'aura pas, et une suite verte sur le bac ne prouvait rien
    * du commit. On efface src/ extrait avant de copier. Audit du 27 août 2026.
    */
-  rmSync(join(chemin, "src"), { recursive: true, force: true });
-  cpSync(join(RACINE, "src"), join(chemin, "src"), { recursive: true });
+  /*
+   * ─── « L'ÉTAT DU DISQUE » NE COUVRAIT QUE `src/`, ET LE COMMIT DISAIT LE CONTRAIRE ───
+   *
+   * Le bac copiait `src/` par-dessus HEAD, puis figeait le tout sous le message « état du
+   * disque ». Tout le RESTE venait de HEAD : les relevés scellés de la racine
+   * (`menace-historique.json`, `sbom.json`, `LICENCES.md`…) que les commandes LISENT. Un bac
+   * portait donc du code neuf et un relevé ancien — une paire qui n'existe dans aucun commit
+   * et chez aucun client.
+   *
+   * Mesuré le 27 août 2026 : en ajoutant un champ au relevé de `menace`, le contrôle POSITIF
+   * de `detecteurs-eprouves` est tombé — non parce que la garde était fausse, mais parce que
+   * le bac avait fabriqué une combinaison impossible. Et comme la suite tourne au crochet de
+   * pré-commit, l'artefact ne pouvait plus JAMAIS être commité : le bac interdisait le commit
+   * qui l'aurait réparé.
+   *
+   * On applique donc l'état du disque pour TOUT ce qui diffère de HEAD, pas pour un dossier
+   * choisi à la main. La liste se DÉDUIT de git — une liste écrite ici oublierait le prochain
+   * artefact, exactement comme celle-ci avait oublié la racine.
+   */
+  const zSplit = (s: string): string[] => s.split("\0").filter(Boolean);
+  /* Ce qui diffère de HEAD (modifié, ajouté, supprimé, renommé — les deux côtés d'un rename
+     y figurent), plus ce qui n'est pas encore suivi et n'est pas ignoré. */
+  const differents = zSplit(execFileSync("git",
+    ["-C", RACINE, "diff", "--name-only", "-z", "HEAD"],
+    { env: envGitPropre(), encoding: "utf8", maxBuffer: 1 << 28 }));
+  const nonSuivis = zSplit(execFileSync("git",
+    ["-C", RACINE, "ls-files", "--others", "--exclude-standard", "-z"],
+    { env: envGitPropre(), encoding: "utf8", maxBuffer: 1 << 28 }));
+  for (const relatif of new Set([...differents, ...nonSuivis])) {
+    const source = join(RACINE, relatif);
+    const cible = join(chemin, relatif);
+    /* PRÉSENT SUR LE DISQUE → il part avec le commit ; ABSENT → il n'en fera pas partie.
+       Tester l'existence couvre suppressions et renommages sans lire les codes d'état, qui
+       ont huit formes et dont on en oublierait une. */
+    if (existsSync(source)) {
+      mkdirSync(dirname(cible), { recursive: true });
+      cpSync(source, cible, { recursive: true });
+    } else {
+      rmSync(cible, { recursive: true, force: true });
+    }
+  }
   /*
    * NETTOYER LES VARIABLES EST UNE INTENTION ; VÉRIFIER EST UN FAIT. Deux sessions ont observé
    * indépendamment le même détournement — GIT_DIR hérité gagne sur le dossier courant, et les

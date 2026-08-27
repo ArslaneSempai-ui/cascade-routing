@@ -353,7 +353,7 @@ test("un compteur qui ne reconnaît pas sa commande REFUSE, il ne rend pas zéro
   const dossier = fileURLToPath(new URL(".", import.meta.url));
 
   assert.throws(() => fichiersDeCas(dossier, "tsc --noEmit && node src/readme.ts --check"),
-    /aucun fichier de cas atteint/,
+    /no case file reached/,
     "un script qui ne lance aucun cas sous une forme reconnaissable doit faire REFUSER. "
     + "Rendre zéro publierait « 0 tests » comme une mesure, et un chiffre affiché n'est pas "
     + "revérifié.");

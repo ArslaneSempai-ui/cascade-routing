@@ -1,6 +1,7 @@
 {
-  "commits": 744,
+  "commits": 633,
   "temoins": 2,
+  "commitsAtteignables": 442,
   "trouves": 25,
   "declares": 15,
   "reels": [
@@ -66,5 +67,5 @@
     }
   ],
   "date": "2026-08-27",
-  "commit": "8a454e4"
+  "commit": "14ae54d"
 }

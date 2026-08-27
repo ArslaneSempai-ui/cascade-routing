@@ -6,13 +6,59 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import { temoins, controles, secretsDans, racineServie, adresseDEcoute, bornePosee, document,
-  balayerLHistorique, type Controle, hotesExternes, empreinteScelleeAtteignable } from "./menace.ts";
+  balayerLHistorique, type Controle, hotesExternes, empreinteScelleeAtteignable,
+  exigerReleveComplet } from "./menace.ts";
 
 const racine = fileURLToPath(new URL("..", import.meta.url));
 
 test("les détecteurs de sécurité reconnaissent encore ce qu'ils prétendent reconnaître", () => {
   assert.deepEqual(temoins(), [],
     "un détecteur a changé de réponse : le relevé de sécurité est sans valeur tant qu'il n'est pas réparé.");
+});
+
+/*
+ * menace.ts — UN RELEVÉ SCELLÉ AVANT L'AJOUT D'UN CHAMP
+ *
+ * Le relevé n'est réécrit que par `--historique` ; la page se rend à chaque `npm test`. Un
+ * champ ajouté au relevé est donc absent de tout enregistrement plus ancien, et un gabarit
+ * n'a aucune raison de s'en plaindre : il imprime `undefined`, et la soustraction imprime
+ * `NaN`. C'est arrivé le 27 août 2026 sur `SECURITE.md`, en ajoutant `commitsAtteignables`.
+ *
+ * Le cas éprouve la garde ET le trou qu'elle bouche : sans elle, `document()` rend bien la
+ * page cassée. Une garde dont on ne montre pas ce qu'elle empêche peut protéger de rien.
+ */
+test("un relevé scellé sans ses champs numériques fait REFUSER, au lieu d'imprimer undefined dans SECURITE.md", () => {
+  const complet = {
+    commits: 633, commitsAtteignables: 442, trouves: 25, declares: 15, temoins: 2,
+    reels: [], date: "2026-08-27", commit: "14ae54d",
+  };
+
+  /* LE TROU EST RÉEL : sans la garde, la page de sécurité s'imprime avec `undefined`/`NaN`. */
+  const { commitsAtteignables: _, ...perime } = complet;
+  const pageCassee = document([], perime as never);
+  assert.match(pageCassee, /undefined of those are reachable|Of those, undefined are reachable/,
+    "le gabarit doit bien produire `undefined` sur un relevé périmé — sinon ce cas éprouve une garde qui ne protège de rien.");
+  assert.match(pageCassee, /NaN/,
+    "la soustraction sur un champ absent doit bien produire `NaN` : c'est le second symptôme que la garde empêche.");
+
+  /* LA GARDE : elle refuse, elle nomme le champ, et elle nomme la commande qui répare. */
+  assert.throws(() => exigerReleveComplet(perime, "menace-historique.json"),
+    (e: Error) => {
+      assert.match(e.message, /commitsAtteignables/, "le refus doit NOMMER le champ absent.");
+      assert.match(e.message, /--historique/,
+        "un refus sans issue se contourne en effaçant le fichier : il doit citer la commande qui répare.");
+      return true;
+    },
+    "un relevé amputé d'un champ numérique doit faire refuser le rendu.");
+
+  /* LA CONTRE-ÉPREUVE : la garde ne refuse pas tout. */
+  assert.equal(exigerReleveComplet(complet, "x.json"), complet,
+    "un relevé complet doit passer inchangé, sinon la garde refuserait le cas nominal.");
+
+  /* `--check` NE PEUT PAS attraper ça : il compare la page au même rendu cassé. */
+  assert.equal(document([], perime as never), pageCassee,
+    "le rendu d'un relevé périmé est stable, donc `--check` le déclare à jour : c'est pourquoi "
+    + "la garde vit à la LECTURE du relevé et non dans la comparaison de la page.");
 });
 
 test("aucun contrôle de sécurité n'est non tenu", () => {

@@ -515,12 +515,19 @@ in any file.
 ## Secrets in the history
 
 ${secretsHistorique
-  ? `**${secretsHistorique.reels.filter((t) => t.publie).length} undeclared secret${secretsHistorique.reels.filter((t) => t.publie).length === 1 ? "" : "s"} in the published history** across ${secretsHistorique.commits} commits — swept on ${secretsHistorique.date}, sealed at \`${secretsHistorique.commit}\`.${
+  ? `**${secretsHistorique.reels.filter((t) => t.publie).length} undeclared secret${secretsHistorique.reels.filter((t) => t.publie).length === 1 ? "" : "s"} reachable from \`HEAD\`** — swept on ${secretsHistorique.date}, sealed at \`${secretsHistorique.commit}\`.
+
+**Two denominators, because they do not measure the same thing.** The sweep read ${secretsHistorique.commits} commits —
+\`--all\`, every ref this machine carries. Of those, ${secretsHistorique.commitsAtteignables} are reachable from \`HEAD\`;
+the remaining ${secretsHistorique.commits - secretsHistorique.commitsAtteignables} sit in local backup branches and in the \`refs/original/\` a history
+rewrite leaves behind, which nobody clones. This page used to print the first number under the
+words "in the published history", which invited you to read it as the count you can clone; it
+never was. Reading wider than what ships is deliberate, so the gap runs in the reassuring
+direction: the sweep covered MORE than the published history, never less.${
   secretsHistorique.reels.some((t) => !t.publie)
-    ? `\n\nThe sweep reads \`--all\`, which on the author's machine also covers backup branches and
-the \`refs/original/\` a history rewrite leaves behind. ${secretsHistorique.reels.filter((t) => !t.publie).length} match${secretsHistorique.reels.filter((t) => !t.publie).length === 1 ? " sits" : "es sit"} there and **${secretsHistorique.reels.filter((t) => !t.publie).length === 1 ? "is" : "are"} not in
-what you cloned** — reachability from \`HEAD\` is checked per match rather than assumed. They are
-named rather than dropped, because a ref nobody pushes today can be pushed tomorrow.`
+    ? `\n\n${secretsHistorique.reels.filter((t) => !t.publie).length} match${secretsHistorique.reels.filter((t) => !t.publie).length === 1 ? " sits" : "es sit"} on those unpublished refs and **${secretsHistorique.reels.filter((t) => !t.publie).length === 1 ? "is" : "are"} not in what you
+cloned** — reachability from \`HEAD\` is checked per match rather than assumed. They are named
+rather than dropped, because a ref nobody pushes today can be pushed tomorrow.`
     : ""}
 
 Read that as **none among the ${FORMES_DE_SECRET.length} shapes this sweep looks for**, which is the only
@@ -575,7 +582,28 @@ export type Trouvaille = { forme: string; fichier: string; empreinte: string;
   /** Atteignable depuis HEAD, donc présent dans ce que reçoit un clone. Absent = local seulement. */
   publie?: boolean };
 export type ReleveHistorique = {
-  commits: number; trouves: number; declares: number; reels: Trouvaille[];
+  /**
+   * Ce que le balayage a LU : `rev-list --all`, donc toutes les références de la machine.
+   *
+   * Ce n'est PAS ce qui est publié, et la nuance a été publiée de travers. La page annonçait
+   * « 0 undeclared secrets in the published history across N commits » avec ce N-là : un
+   * lecteur comprend « les N commits que je peux cloner », alors que N compte en plus les
+   * branches de sauvegarde locales et les `refs/original/` d'une réécriture, qui ne sont chez
+   * personne. Mesuré le 27 août 2026 : 744 ici contre 442 sur `origin/main`.
+   *
+   * L'affirmation n'était pas fausse — le balayage a bien couvert les 744 — mais elle ne
+   * disait pas ce qu'elle mesurait, et l'écart joue EN NOTRE FAVEUR : on lit plus large que ce
+   * qu'on publie. Un qualificatif qui dessert par imprécision une mesure qui avantage est le
+   * pire des deux mondes. Les deux comptes voyagent donc ensemble, et aucun ne se tape.
+   */
+  commits: number;
+  /**
+   * Les commits atteignables depuis `HEAD` — le MÊME ensemble qui décide, trouvaille par
+   * trouvaille, si elle est `publie`. Il est dérivé de cet ensemble et non recompté, pour
+   * qu'un dénominateur publié ne puisse pas diverger du critère qu'il est censé résumer.
+   */
+  commitsAtteignables: number;
+  trouves: number; declares: number; reels: Trouvaille[];
   temoins: number; date: string; commit: string;
 };
 
@@ -857,12 +885,50 @@ export function balayerLHistorique(racine: string, lancer: LanceurGit = gitReel(
   const tete = lancer(["rev-parse", "--short", "HEAD"]);
   return {
     commits, temoins,
+    /* Dérivé de l'ensemble qui décide `publie`, jamais recompté : voir `ReleveHistorique`. */
+    commitsAtteignables: atteignables.size,
     trouves: trouvailles.size,
     declares: trouvailles.size - reels.length,
     reels: reels.sort((a, b) => (a.fichier + a.forme).localeCompare(b.fichier + b.forme)),
     date: new Date().toISOString().slice(0, 10),
     commit: tete.stdout.trim(),
   };
+}
+
+/**
+ * UN RELEVÉ SCELLÉ PLUS VIEUX QUE SON LECTEUR REND `undefined`, ET LA PAGE L'IMPRIME.
+ *
+ * `menace-historique.json` n'est réécrit que par `--historique` ; le rendu, lui, tourne à
+ * chaque `npm test`. Le jour où le relevé gagne un champ, tout enregistrement écrit avant
+ * ce jour-là en est dépourvu — et un gabarit ne se plaint pas d'un champ absent : il écrit
+ * `undefined`, et `a - undefined` écrit `NaN`. Mesuré le 27 août 2026 en ajoutant
+ * `commitsAtteignables` : `SECURITE.md` s'est régénéré en annonçant « undefined of those are
+ * reachable from HEAD » et « the remaining NaN » — sur la page de SÉCURITÉ, celle qu'un
+ * acheteur lit pour décider s'il nous fait confiance.
+ *
+ * Aucun contrôle ne l'a vu. `--check` compare le fichier au rendu : les deux portaient le
+ * même `NaN`, donc ils correspondaient. **Un contrôle d'égalité entre une sortie et
+ * elle-même valide n'importe quoi** — c'est le vert vide, appliqué à sa propre page.
+ *
+ * Le refus nomme la commande qui répare, sinon il se contourne en effaçant le fichier.
+ */
+export function exigerReleveComplet(brut: unknown, chemin: string): ReleveHistorique {
+  const r = brut as Partial<ReleveHistorique> | null;
+  /* Les champs NUMÉRIQUES, parce que ce sont eux qui s'impriment en `undefined`/`NaN` sans
+     que rien ne rougisse. Un tableau absent casse bruyamment au premier `.filter`. */
+  const attendus = ["commits", "commitsAtteignables", "trouves", "declares", "temoins"] as const;
+  const manquants = r && typeof r === "object"
+    ? attendus.filter((c) => !Number.isFinite(r[c]))
+    : [...attendus];
+  if (manquants.length > 0) {
+    throw new Error(
+      `${chemin} is missing ${manquants.length} numeric field(s): ${manquants.join(", ")}.\n`
+      + "  This record was sealed by an older version of the sweep. Rendering it would print\n"
+      + "  `undefined` and `NaN` into SECURITE.md — and `--check` would not catch it, because it\n"
+      + "  compares the page to that same broken render.\n"
+      + "  → npm run menace -- --historique   (re-sweeps and re-seals the record)");
+  }
+  return r as ReleveHistorique;
 }
 
 /**
@@ -949,7 +1015,7 @@ function principal() {
     }
   }
   const historique = existsSync(relevé)
-    ? JSON.parse(readFileSync(relevé, "utf8")) as ReleveHistorique : null;
+    ? exigerReleveComplet(JSON.parse(readFileSync(relevé, "utf8")), relevé) : null;
 
   /*
    * LE SCELLÉ PUBLIÉ DOIT ÊTRE REJOUABLE PAR CELUI QUI LIT LA PAGE.

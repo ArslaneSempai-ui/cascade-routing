@@ -4499,6 +4499,11 @@ test("un relevé publié porte les paramètres sous lesquels le code le prendrai
        traversé. Qualifiés par leur fichier, comme le reste. */
     "menace-historique.json:commits", "menace-historique.json:trouves",
     "menace-historique.json:temoins", "menace-historique.json:declares",
+    /* `commitsAtteignables` est le SECOND dénominateur de la même passe : combien des commits
+       balayés sont atteignables depuis `HEAD`. Un compte, comme `commits` — il dit ce que la
+       passe a couvert, pas comment elle était réglée. Les deux voyagent ensemble parce que
+       publier le premier seul laissait lire « ce que tu peux cloner ». */
+    "menace-historique.json:commitsAtteignables",
     /* Le relevé de sortie réseau : `releves` est le nombre d'échantillons de SA passe et
        `codeSortie` celui de la commande observée — deux comptes, pas des réglages.
        `processusRegardes` est le MAXIMUM de processus vus pendant la passe — un compte lui

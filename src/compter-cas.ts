@@ -68,12 +68,12 @@ export function fichiersDeCas(dossier: string, scriptTest: string): string[] {
 
   if (scriptTest.trim() !== "" && fichiers.length === 0) {
     throw new Error(
-      `aucun fichier de cas atteint dans ${dossier}.\n`
-      + `  Suffixes déduits du script \`test\` : ${suffixes.length ? suffixes.join(", ") : "aucun"}\n`
-      + `  Script lu : ${scriptTest}\n`
-      + "  Un compteur qui ne reconnaît pas la forme qu'on lui donne doit REFUSER : rendre zéro\n"
-      + "  publierait « 0 tests » comme une mesure. → étendre la lecture du script, ou corriger\n"
-      + "  le script s'il ne lance vraiment aucun cas.");
+      `no case file reached in ${dossier}.\n`
+      + `  Suffixes deduced from the \`test\` script: ${suffixes.length ? suffixes.join(", ") : "none"}\n`
+      + `  Script read: ${scriptTest}\n`
+      + "  A counter that does not recognise the shape it is handed must REFUSE: returning zero\n"
+      + "  would publish \"0 tests\" as a measurement. → widen how the script is read, or fix the\n"
+      + "  script if it really runs no cases.");
   }
   return fichiers;
 }
