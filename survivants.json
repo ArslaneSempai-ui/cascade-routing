@@ -1,8 +1,8 @@
 {
  "quoi": "Chaque garde du dépôt, retirée une par une. Un SURVIVANT est une garde dont le retrait ne fait tomber aucun cas : elle est peut-être juste, et rien ne le vérifie.",
- "mesureLe": "2026-08-26",
+ "mesureLe": "2026-08-27",
  "code": {
-  "commit": "717eeb600ab3069c1243a06e6d4679f15fe82047"
+  "commit": "469223fac2a13b82f89429c00a8271f116c44be5"
  },
  "cle": "fichier + forme + n, où n est l'index de la forme dans le CODE, commentaires et chaînes exclus",
  "formes": [
@@ -11,975 +11,319 @@
  ],
  "comptes": {
   "par commit": {
-   "717eeb6": 88,
-   "?": 98
+   "469223f": 97,
+   "a2083b7": 93
   },
   "par forme": {
-   "throw": 88,
-   "exit": 98
+   "throw": 93,
+   "exit": 97
   },
   "par etat": {
-   "SURVIVANT": 72,
-   "attrapé": 81,
-   "tenu par le typage": 31,
+   "SURVIVANT": 51,
+   "attrapé": 113,
+   "rouge instable": 2,
+   "survivant expliqué": 1,
+   "tenu hors des cas": 2,
+   "tenu par le typage": 19,
    "tenu par un document engendré": 2
   }
  },
  "sites": [
   {
-   "fichier": "abstention.ts",
-   "forme": "exit",
+   "fichier": "arbre-jetable.ts",
+   "forme": "throw",
    "n": 0,
-   "ligne": 139,
-   "etat": "tenu par le typage",
-   "ou": "typage"
-  },
-  {
-   "fichier": "abstention.ts",
-   "forme": "exit",
-   "n": 1,
-   "ligne": 145,
-   "etat": "tenu par le typage",
-   "ou": "typage"
-  },
-  {
-   "fichier": "apparier-prompt.ts",
-   "forme": "exit",
-   "n": 0,
-   "ligne": 48,
+   "ligne": 39,
    "etat": "SURVIVANT",
-   "ou": "cas"
-  },
-  {
-   "fichier": "capturer.mjs",
-   "forme": "exit",
-   "n": 0,
-   "ligne": 61,
-   "etat": "attrapé",
-   "ou": "cas"
-  },
-  {
-   "fichier": "capturer.mjs",
-   "forme": "exit",
-   "n": 1,
-   "ligne": 525,
-   "etat": "attrapé",
-   "ou": "cas"
-  },
-  {
-   "fichier": "capturer.mjs",
-   "forme": "exit",
-   "n": 2,
-   "ligne": 579,
-   "etat": "attrapé",
-   "ou": "cas"
-  },
-  {
-   "fichier": "capturer.mjs",
-   "forme": "exit",
-   "n": 3,
-   "ligne": 672,
-   "etat": "attrapé",
-   "ou": "cas"
-  },
-  {
-   "fichier": "charger.mjs",
-   "forme": "exit",
-   "n": 0,
-   "ligne": 65,
-   "etat": "SURVIVANT",
-   "ou": "cas"
-  },
-  {
-   "fichier": "charger.mjs",
-   "forme": "exit",
-   "n": 1,
-   "ligne": 71,
-   "etat": "SURVIVANT",
-   "ou": "cas"
-  },
-  {
-   "fichier": "clone-neuf.mjs",
-   "forme": "exit",
-   "n": 0,
-   "ligne": 261,
-   "etat": "SURVIVANT",
-   "ou": "cas"
-  },
-  {
-   "fichier": "departager-reglage.ts",
-   "forme": "exit",
-   "n": 0,
-   "ligne": 67,
-   "etat": "SURVIVANT",
-   "ou": "cas"
-  },
-  {
-   "fichier": "diff.ts",
-   "forme": "exit",
-   "n": 0,
-   "ligne": 112,
-   "etat": "SURVIVANT",
-   "ou": "cas"
-  },
-  {
-   "fichier": "diff.ts",
-   "forme": "exit",
-   "n": 1,
-   "ligne": 127,
-   "etat": "SURVIVANT",
-   "ou": "cas"
-  },
-  {
-   "fichier": "diff.ts",
-   "forme": "exit",
-   "n": 2,
-   "ligne": 132,
-   "etat": "SURVIVANT",
-   "ou": "cas"
-  },
-  {
-   "fichier": "diff.ts",
-   "forme": "exit",
-   "n": 3,
-   "ligne": 147,
-   "etat": "SURVIVANT",
-   "ou": "cas"
-  },
-  {
-   "fichier": "dossier.ts",
-   "forme": "exit",
-   "n": 0,
-   "ligne": 528,
-   "etat": "tenu par le typage",
-   "ou": "typage"
-  },
-  {
-   "fichier": "dossier.ts",
-   "forme": "exit",
-   "n": 1,
-   "ligne": 550,
-   "etat": "tenu par un document engendré",
-   "ou": "document engendré"
-  },
-  {
-   "fichier": "dossier.ts",
-   "forme": "exit",
-   "n": 2,
-   "ligne": 554,
-   "etat": "SURVIVANT",
-   "ou": "cas"
-  },
-  {
-   "fichier": "egress.ts",
-   "forme": "exit",
-   "n": 0,
-   "ligne": 226,
-   "etat": "SURVIVANT",
-   "ou": "cas"
-  },
-  {
-   "fichier": "egress.ts",
-   "forme": "exit",
-   "n": 1,
-   "ligne": 238,
-   "etat": "SURVIVANT",
-   "ou": "cas"
-  },
-  {
-   "fichier": "egress.ts",
-   "forme": "exit",
-   "n": 2,
-   "ligne": 321,
-   "etat": "SURVIVANT",
-   "ou": "cas"
-  },
-  {
-   "fichier": "escalade.ts",
-   "forme": "exit",
-   "n": 0,
-   "ligne": 126,
-   "etat": "tenu par le typage",
-   "ou": "typage"
-  },
-  {
-   "fichier": "escalade.ts",
-   "forme": "exit",
-   "n": 1,
-   "ligne": 153,
-   "etat": "tenu par le typage",
-   "ou": "typage"
-  },
-  {
-   "fichier": "figures.ts",
-   "forme": "exit",
-   "n": 0,
-   "ligne": 102,
-   "etat": "attrapé",
-   "ou": "cas"
-  },
-  {
-   "fichier": "fuite.ts",
-   "forme": "exit",
-   "n": 0,
-   "ligne": 87,
-   "etat": "SURVIVANT",
-   "ou": "cas"
-  },
-  {
-   "fichier": "hostile.ts",
-   "forme": "exit",
-   "n": 0,
-   "ligne": 284,
-   "etat": "attrapé",
-   "ou": "cas"
-  },
-  {
-   "fichier": "hostile.ts",
-   "forme": "exit",
-   "n": 1,
-   "ligne": 303,
-   "etat": "SURVIVANT",
-   "ou": "cas"
-  },
-  {
-   "fichier": "intake.ts",
-   "forme": "exit",
-   "n": 0,
-   "ligne": 135,
-   "etat": "SURVIVANT",
-   "ou": "cas"
-  },
-  {
-   "fichier": "intake.ts",
-   "forme": "exit",
-   "n": 1,
-   "ligne": 140,
-   "etat": "SURVIVANT",
-   "ou": "cas"
-  },
-  {
-   "fichier": "intake.ts",
-   "forme": "exit",
-   "n": 2,
-   "ligne": 165,
-   "etat": "tenu par le typage",
-   "ou": "typage"
-  },
-  {
-   "fichier": "intake.ts",
-   "forme": "exit",
-   "n": 3,
-   "ligne": 181,
-   "etat": "SURVIVANT",
-   "ou": "cas"
-  },
-  {
-   "fichier": "intake.ts",
-   "forme": "exit",
-   "n": 4,
-   "ligne": 190,
-   "etat": "SURVIVANT",
-   "ou": "cas"
-  },
-  {
-   "fichier": "intake.ts",
-   "forme": "exit",
-   "n": 5,
-   "ligne": 195,
-   "etat": "attrapé",
-   "ou": "cas"
-  },
-  {
-   "fichier": "intake.ts",
-   "forme": "exit",
-   "n": 6,
-   "ligne": 267,
-   "etat": "attrapé",
-   "ou": "cas"
-  },
-  {
-   "fichier": "landing.ts",
-   "forme": "exit",
-   "n": 0,
-   "ligne": 1238,
-   "etat": "tenu par le typage",
-   "ou": "typage"
-  },
-  {
-   "fichier": "landing.ts",
-   "forme": "exit",
-   "n": 1,
-   "ligne": 1276,
-   "etat": "SURVIVANT",
-   "ou": "cas"
-  },
-  {
-   "fichier": "landing.ts",
-   "forme": "exit",
-   "n": 2,
-   "ligne": 1289,
-   "etat": "attrapé",
-   "ou": "cas"
-  },
-  {
-   "fichier": "landing.ts",
-   "forme": "exit",
-   "n": 3,
-   "ligne": 1303,
-   "etat": "SURVIVANT",
-   "ou": "cas"
-  },
-  {
-   "fichier": "licences.ts",
-   "forme": "exit",
-   "n": 0,
-   "ligne": 272,
-   "etat": "SURVIVANT",
-   "ou": "cas"
-  },
-  {
-   "fichier": "licences.ts",
-   "forme": "exit",
-   "n": 1,
-   "ligne": 276,
-   "etat": "SURVIVANT",
-   "ou": "cas"
-  },
-  {
-   "fichier": "licences.ts",
-   "forme": "exit",
-   "n": 2,
-   "ligne": 292,
-   "etat": "SURVIVANT",
-   "ou": "cas"
-  },
-  {
-   "fichier": "measure.ts",
-   "forme": "exit",
-   "n": 0,
-   "ligne": 739,
-   "etat": "SURVIVANT",
-   "ou": "cas"
-  },
-  {
-   "fichier": "measure.ts",
-   "forme": "exit",
-   "n": 1,
-   "ligne": 747,
-   "etat": "SURVIVANT",
-   "ou": "cas"
-  },
-  {
-   "fichier": "measure.ts",
-   "forme": "exit",
-   "n": 2,
-   "ligne": 759,
-   "etat": "SURVIVANT",
-   "ou": "cas"
-  },
-  {
-   "fichier": "measure.ts",
-   "forme": "exit",
-   "n": 3,
-   "ligne": 769,
-   "etat": "SURVIVANT",
-   "ou": "cas"
-  },
-  {
-   "fichier": "measure.ts",
-   "forme": "exit",
-   "n": 4,
-   "ligne": 833,
-   "etat": "SURVIVANT",
-   "ou": "cas"
-  },
-  {
-   "fichier": "measure.ts",
-   "forme": "exit",
-   "n": 5,
-   "ligne": 849,
-   "etat": "SURVIVANT",
-   "ou": "cas"
-  },
-  {
-   "fichier": "measure.ts",
-   "forme": "exit",
-   "n": 6,
-   "ligne": 861,
-   "etat": "SURVIVANT",
-   "ou": "cas"
-  },
-  {
-   "fichier": "menace.ts",
-   "forme": "exit",
-   "n": 0,
-   "ligne": 752,
-   "etat": "SURVIVANT",
-   "ou": "cas"
-  },
-  {
-   "fichier": "menace.ts",
-   "forme": "exit",
-   "n": 1,
-   "ligne": 760,
-   "etat": "SURVIVANT",
-   "ou": "cas"
-  },
-  {
-   "fichier": "menace.ts",
-   "forme": "exit",
-   "n": 2,
-   "ligne": 777,
-   "etat": "SURVIVANT",
-   "ou": "cas"
-  },
-  {
-   "fichier": "menace.ts",
-   "forme": "exit",
-   "n": 3,
-   "ligne": 801,
-   "etat": "SURVIVANT",
-   "ou": "cas"
-  },
-  {
-   "fichier": "menace.ts",
-   "forme": "exit",
-   "n": 4,
-   "ligne": 810,
-   "etat": "SURVIVANT",
-   "ou": "cas"
-  },
-  {
-   "fichier": "menace.ts",
-   "forme": "exit",
-   "n": 5,
-   "ligne": 816,
-   "etat": "SURVIVANT",
-   "ou": "cas"
-  },
-  {
-   "fichier": "mesurer-dur.ts",
-   "forme": "exit",
-   "n": 0,
-   "ligne": 84,
-   "etat": "SURVIVANT",
-   "ou": "cas"
-  },
-  {
-   "fichier": "mesurer-dur.ts",
-   "forme": "exit",
-   "n": 1,
-   "ligne": 125,
-   "etat": "SURVIVANT",
-   "ou": "cas"
-  },
-  {
-   "fichier": "mesurer-dur.ts",
-   "forme": "exit",
-   "n": 2,
-   "ligne": 261,
-   "etat": "SURVIVANT",
-   "ou": "cas"
-  },
-  {
-   "fichier": "mesurer-ocr.ts",
-   "forme": "exit",
-   "n": 0,
-   "ligne": 292,
-   "etat": "SURVIVANT",
-   "ou": "cas"
-  },
-  {
-   "fichier": "mur.ts",
-   "forme": "exit",
-   "n": 0,
-   "ligne": 67,
-   "etat": "tenu par le typage",
-   "ou": "typage"
-  },
-  {
-   "fichier": "optimise.ts",
-   "forme": "exit",
-   "n": 0,
-   "ligne": 486,
-   "etat": "tenu par le typage",
-   "ou": "typage"
-  },
-  {
-   "fichier": "optimise.ts",
-   "forme": "exit",
-   "n": 1,
-   "ligne": 495,
-   "etat": "tenu par le typage",
-   "ou": "typage"
-  },
-  {
-   "fichier": "pages.ts",
-   "forme": "exit",
-   "n": 0,
-   "ligne": 53,
-   "etat": "attrapé",
-   "ou": "cas"
-  },
-  {
-   "fichier": "poids.ts",
-   "forme": "exit",
-   "n": 0,
-   "ligne": 291,
-   "etat": "SURVIVANT",
-   "ou": "cas"
-  },
-  {
-   "fichier": "poids.ts",
-   "forme": "exit",
-   "n": 1,
-   "ligne": 298,
-   "etat": "SURVIVANT",
-   "ou": "cas"
-  },
-  {
-   "fichier": "poids.ts",
-   "forme": "exit",
-   "n": 2,
-   "ligne": 305,
-   "etat": "SURVIVANT",
-   "ou": "cas"
-  },
-  {
-   "fichier": "poids.ts",
-   "forme": "exit",
-   "n": 3,
-   "ligne": 322,
-   "etat": "SURVIVANT",
-   "ou": "cas"
-  },
-  {
-   "fichier": "premiere-reponse.mjs",
-   "forme": "exit",
-   "n": 0,
-   "ligne": 148,
-   "etat": "attrapé",
-   "ou": "cas"
-  },
-  {
-   "fichier": "readme.ts",
-   "forme": "exit",
-   "n": 0,
-   "ligne": 40,
-   "etat": "tenu par le typage",
-   "ou": "typage"
-  },
-  {
-   "fichier": "regler-prompt.ts",
-   "forme": "exit",
-   "n": 0,
-   "ligne": 93,
-   "etat": "SURVIVANT",
-   "ou": "cas"
-  },
-  {
-   "fichier": "regler-prompt.ts",
-   "forme": "exit",
-   "n": 1,
-   "ligne": 117,
-   "etat": "SURVIVANT",
-   "ou": "cas"
-  },
-  {
-   "fichier": "sceller.ts",
-   "forme": "exit",
-   "n": 0,
-   "ligne": 37,
-   "etat": "SURVIVANT",
-   "ou": "cas"
-  },
-  {
-   "fichier": "sceller.ts",
-   "forme": "exit",
-   "n": 1,
-   "ligne": 50,
-   "etat": "SURVIVANT",
-   "ou": "cas"
-  },
-  {
-   "fichier": "sceller.ts",
-   "forme": "exit",
-   "n": 2,
-   "ligne": 59,
-   "etat": "SURVIVANT",
-   "ou": "cas"
-  },
-  {
-   "fichier": "sensibilite-prompt.ts",
-   "forme": "exit",
-   "n": 0,
-   "ligne": 57,
-   "etat": "SURVIVANT",
-   "ou": "cas"
-  },
-  {
-   "fichier": "sensitivity.ts",
-   "forme": "exit",
-   "n": 0,
-   "ligne": 221,
-   "etat": "tenu par le typage",
-   "ou": "typage"
-  },
-  {
-   "fichier": "server.ts",
-   "forme": "exit",
-   "n": 0,
-   "ligne": 541,
-   "etat": "SURVIVANT",
-   "ou": "cas"
-  },
-  {
-   "fichier": "server.ts",
-   "forme": "exit",
-   "n": 1,
-   "ligne": 546,
-   "etat": "SURVIVANT",
-   "ou": "cas"
-  },
-  {
-   "fichier": "signal.ts",
-   "forme": "exit",
-   "n": 0,
-   "ligne": 283,
-   "etat": "tenu par le typage",
-   "ou": "typage"
-  },
-  {
-   "fichier": "sonde.ts",
-   "forme": "exit",
-   "n": 0,
-   "ligne": 349,
-   "etat": "tenu par le typage",
-   "ou": "typage"
-  },
-  {
-   "fichier": "sonde.ts",
-   "forme": "exit",
-   "n": 1,
-   "ligne": 357,
-   "etat": "tenu par un document engendré",
-   "ou": "document engendré"
-  },
-  {
-   "fichier": "sonde.ts",
-   "forme": "exit",
-   "n": 2,
-   "ligne": 361,
-   "etat": "SURVIVANT",
-   "ou": "cas"
-  },
-  {
-   "fichier": "tentatives.ts",
-   "forme": "exit",
-   "n": 0,
-   "ligne": 35,
-   "etat": "SURVIVANT",
-   "ou": "cas"
-  },
-  {
-   "fichier": "verifier-ecran.mjs",
-   "forme": "exit",
-   "n": 0,
-   "ligne": 384,
-   "etat": "attrapé",
-   "ou": "cas"
-  },
-  {
-   "fichier": "verifier-ecran.mjs",
-   "forme": "exit",
-   "n": 1,
-   "ligne": 396,
-   "etat": "attrapé",
-   "ou": "cas"
-  },
-  {
-   "fichier": "verifier-ecran.mjs",
-   "forme": "exit",
-   "n": 2,
-   "ligne": 470,
-   "etat": "attrapé",
-   "ou": "cas"
-  },
-  {
-   "fichier": "verifier-rapport.mjs",
-   "forme": "exit",
-   "n": 0,
-   "ligne": 215,
-   "etat": "SURVIVANT",
-   "ou": "cas"
-  },
-  {
-   "fichier": "verifier-rapport.mjs",
-   "forme": "exit",
-   "n": 1,
-   "ligne": 223,
-   "etat": "SURVIVANT",
-   "ou": "cas"
-  },
-  {
-   "fichier": "verifier-rapport.mjs",
-   "forme": "exit",
-   "n": 2,
-   "ligne": 245,
-   "etat": "SURVIVANT",
-   "ou": "cas"
-  },
-  {
-   "fichier": "verifier-rapport.mjs",
-   "forme": "exit",
-   "n": 3,
-   "ligne": 260,
-   "etat": "attrapé",
-   "ou": "cas"
-  },
-  {
-   "fichier": "verifier-rapport.mjs",
-   "forme": "exit",
-   "n": 4,
-   "ligne": 266,
-   "etat": "SURVIVANT",
-   "ou": "cas"
-  },
-  {
-   "fichier": "your-cases.ts",
-   "forme": "exit",
-   "n": 0,
-   "ligne": 1138,
-   "etat": "tenu par le typage",
-   "ou": "typage"
-  },
-  {
-   "fichier": "your-cases.ts",
-   "forme": "exit",
-   "n": 1,
-   "ligne": 1140,
-   "etat": "SURVIVANT",
-   "ou": "cas"
-  },
-  {
-   "fichier": "your-cases.ts",
-   "forme": "exit",
-   "n": 2,
-   "ligne": 1200,
-   "etat": "SURVIVANT",
-   "ou": "cas"
-  },
-  {
-   "fichier": "your-cases.ts",
-   "forme": "exit",
-   "n": 3,
-   "ligne": 1206,
-   "etat": "tenu par le typage",
-   "ou": "typage"
-  },
-  {
-   "fichier": "your-cases.ts",
-   "forme": "exit",
-   "n": 4,
-   "ligne": 1213,
-   "etat": "SURVIVANT",
-   "ou": "cas"
-  },
-  {
-   "fichier": "your-cases.ts",
-   "forme": "exit",
-   "n": 5,
-   "ligne": 1262,
-   "etat": "attrapé",
-   "ou": "cas"
-  },
-  {
-   "fichier": "your-cases.ts",
-   "forme": "exit",
-   "n": 6,
-   "ligne": 1328,
-   "etat": "SURVIVANT",
-   "ou": "cas"
-  },
-  {
-   "fichier": "your-cases.ts",
-   "forme": "exit",
-   "n": 7,
-   "ligne": 1589,
-   "etat": "attrapé",
-   "ou": "cas"
+   "ou": "cas",
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "assumptions.ts",
    "forme": "throw",
    "n": 0,
    "ligne": 215,
+   "attrapePar": [
+    "la page publiée porte le code du dépôt, pas celui d'un commit passé",
+    "la page publiée porte le code du dépôt, pas celui d'un commit passé"
+   ],
    "etat": "attrapé",
    "ou": "cas",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "assumptions.ts",
    "forme": "throw",
    "n": 1,
    "ligne": 270,
-   "etat": "tenu par le typage",
-   "ou": "typage",
-   "mesureA": "717eeb6"
+   "attrapePar": [
+    "rules cost nothing, a human costs the most, a local tier is billed by the clock",
+    "aucun module Node ne traverse le paquet compilé pour le navigateur",
+    "la page publiée porte le code du dépôt, pas celui d'un commit passé"
+   ],
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "capturer.mjs",
    "forme": "throw",
    "n": 0,
    "ligne": 239,
+   "attrapePar": [
+    "une valeur de plan est un nombre fini, ou elle est refusée",
+    "une valeur de plan est un nombre fini, ou elle est refusée"
+   ],
    "etat": "attrapé",
    "ou": "cas",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "capturer.mjs",
    "forme": "throw",
    "n": 1,
    "ligne": 447,
+   "attrapePar": [
+    "servir refuse quand le port est tenu par un serveur étranger",
+    "servir refuse quand le port est tenu par un serveur étranger"
+   ],
    "etat": "attrapé",
    "ou": "cas",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "clone-neuf.mjs",
    "forme": "throw",
    "n": 0,
    "ligne": 187,
+   "attrapePar": [
+    "un clone qui porte déjà node_modules est refusé AVANT npm ci, et l'étape le nomme",
+    "un clone qui porte déjà node_modules est refusé AVANT npm ci, et l'étape le nomme"
+   ],
    "etat": "attrapé",
    "ou": "cas",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
+  },
+  {
+   "fichier": "commande-eprouvee.ts",
+   "forme": "throw",
+   "n": 0,
+   "ligne": 84,
+   "attrapePar": [
+    "une commande qui RÉUSSIT là où on attend un refus est dénoncée",
+    "une commande qui RÉUSSIT là où on attend un refus est dénoncée"
+   ],
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "a2083b7"
+  },
+  {
+   "fichier": "commande-eprouvee.ts",
+   "forme": "throw",
+   "n": 1,
+   "ligne": 89,
+   "attrapePar": [
+    "un échec pour la MAUVAISE raison est dénoncé, et c'est le cœur de l'aide",
+    "un échec pour la MAUVAISE raison est dénoncé, et c'est le cœur de l'aide"
+   ],
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "a2083b7"
+  },
+  {
+   "fichier": "commande-eprouvee.ts",
+   "forme": "throw",
+   "n": 2,
+   "ligne": 106,
+   "attrapePar": [
+    "le contrôle positif tombe quand la commande ne marche pas dans l'état sain",
+    "le contrôle positif tombe quand la commande ne marche pas dans l'état sain"
+   ],
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "corpus-dur.ts",
    "forme": "throw",
    "n": 0,
    "ligne": 78,
-   "etat": "SURVIVANT",
+   "attrapePar": [
+    "une barre nue mêlée à un séparateur est refusée, en nommant fichier et ligne",
+    "une barre nue mêlée à un séparateur est refusée, en nommant fichier et ligne"
+   ],
+   "etat": "attrapé",
    "ou": "cas",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "corpus-dur.ts",
    "forme": "throw",
    "n": 1,
-   "ligne": 81,
-   "etat": "SURVIVANT",
+   "ligne": 99,
+   "explique": "inatteignable — le vide est capté plus haut par `t === \"\"`, et une chaîne",
+   "etat": "survivant expliqué",
    "ou": "cas",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "corpus-dur.ts",
    "forme": "throw",
    "n": 2,
-   "ligne": 83,
-   "etat": "SURVIVANT",
+   "ligne": 101,
+   "attrapePar": [
+    "un balisage non interprété est refusé plutôt que pris pour une valeur",
+    "un balisage non interprété est refusé plutôt que pris pour une valeur"
+   ],
+   "etat": "attrapé",
    "ou": "cas",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "corpus-dur.ts",
    "forme": "throw",
    "n": 3,
-   "ligne": 140,
-   "etat": "SURVIVANT",
+   "ligne": 167,
+   "attrapePar": [
+    "deux cas ne peuvent pas partager une clé, et le refus nomme les deux sources",
+    "deux cas ne peuvent pas partager une clé, et le refus nomme les deux sources"
+   ],
+   "etat": "attrapé",
    "ou": "cas",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "corpus-dur.ts",
    "forme": "throw",
    "n": 4,
-   "ligne": 144,
-   "etat": "SURVIVANT",
+   "ligne": 171,
+   "attrapePar": [
+    "un cas sans document est refusé — il compterait comme une réponse manquée",
+    "un cas sans document est refusé — il compterait comme une réponse manquée"
+   ],
+   "etat": "attrapé",
    "ou": "cas",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "corpus-dur.ts",
    "forme": "throw",
    "n": 5,
-   "ligne": 146,
-   "etat": "SURVIVANT",
+   "ligne": 173,
+   "attrapePar": [
+    "un champ absent est refusé, et le refus dit LEQUEL",
+    "un champ absent est refusé, et le refus dit LEQUEL"
+   ],
+   "etat": "attrapé",
    "ou": "cas",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "diff.ts",
    "forme": "throw",
    "n": 0,
    "ligne": 103,
+   "attrapePar": [
+    "comparer un relevé qui n'existe pas est refusé, et le refus nomme ce qui existe",
+    "comparer un relevé qui n'existe pas est refusé, et le refus nomme ce qui existe"
+   ],
    "etat": "attrapé",
    "ou": "cas",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "egress.ts",
    "forme": "throw",
    "n": 0,
-   "ligne": 153,
+   "ligne": 200,
+   "attrapePar": [
+    "`lsof` qui disparaît EN COURS DE PASSE : la commande refuse de conclure au lieu de publier « rien vu »",
+    "`lsof` qui disparaît EN COURS DE PASSE : la commande refuse de conclure au lieu de publier « rien vu »"
+   ],
    "etat": "attrapé",
    "ou": "cas",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "egress.ts",
    "forme": "throw",
    "n": 1,
-   "ligne": 160,
+   "ligne": 207,
+   "attrapePar": [
+    "`lsof` qui répond n'importe quoi : la commande refuse aussi, et dit quel code elle a reçu",
+    "`lsof` qui répond n'importe quoi : la commande refuse aussi, et dit quel code elle a reçu"
+   ],
    "etat": "attrapé",
    "ou": "cas",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "figures.ts",
    "forme": "throw",
    "n": 0,
    "ligne": 42,
+   "attrapePar": [
+    "les couches partagées sont bien celles d'identite",
+    "les couches partagées sont bien celles d'identite"
+   ],
    "etat": "attrapé",
    "ou": "cas",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "interval.ts",
    "forme": "throw",
    "n": 0,
    "ligne": 49,
+   "attrapePar": [
+    "la galerie versionnée porte encore la clé que le code produit",
+    "un compte de succès hors de [0, n] est refusé, pas absorbé",
+    "la page publiée porte le code du dépôt, pas celui d'un commit passé"
+   ],
    "etat": "attrapé",
    "ou": "cas",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "interval.ts",
    "forme": "throw",
    "n": 1,
    "ligne": 170,
+   "attrapePar": [
+    "la galerie versionnée porte encore la clé que le code produit",
+    "comparer l'incomparable est un refus, pas un « équivalents »",
+    "la page publiée porte le code du dépôt, pas celui d'un commit passé"
+   ],
    "etat": "attrapé",
    "ou": "cas",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "journal.ts",
    "forme": "throw",
    "n": 0,
    "ligne": 428,
+   "attrapePar": [
+    "la galerie versionnée porte encore la clé que le code produit",
+    "des latences de deux machines sont refusées, pas moyennées",
+    "la galerie versionnée porte encore la clé que le code produit"
+   ],
    "etat": "attrapé",
    "ou": "cas",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "landing.ts",
    "forme": "throw",
    "n": 0,
    "ligne": 1153,
+   "attrapePar": [
+    "une médiane de latence incohérente avec le chiffre publié est refusée",
+    "une médiane de latence incohérente avec le chiffre publié est refusée"
+   ],
    "etat": "attrapé",
    "ou": "cas",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "landing.ts",
@@ -988,97 +332,154 @@
    "ligne": 1202,
    "etat": "tenu par le typage",
    "ou": "typage",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "landing.ts",
    "forme": "throw",
    "n": 2,
    "ligne": 1209,
+   "attrapePar": [
+    "un seuil qui n'encadre pas la bascule est refusé",
+    "un seuil qui n'encadre pas la bascule est refusé"
+   ],
    "etat": "attrapé",
    "ou": "cas",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "landing.ts",
    "forme": "throw",
    "n": 3,
    "ligne": 1215,
+   "attrapePar": [
+    "un seuil qui annonce un mouvement que la bascule ne produit pas est refusé",
+    "un seuil qui annonce un mouvement que la bascule ne produit pas est refusé"
+   ],
    "etat": "attrapé",
    "ou": "cas",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "measure.ts",
    "forme": "throw",
    "n": 0,
-   "ligne": 310,
+   "ligne": 311,
+   "attrapePar": [
+    "un relevé de travail sans scellé est refusé, et le refus nomme le fichier et l'issue",
+    "le relevé du client sans empreinte est refusé",
+    "un relevé de travail sans scellé est refusé, et le refus nomme le fichier et l'issue"
+   ],
    "etat": "attrapé",
    "ou": "cas",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "measure.ts",
    "forme": "throw",
    "n": 1,
-   "ligne": 316,
+   "ligne": 317,
+   "attrapePar": [
+    "un relevé de travail dont l'empreinte ne correspond plus est refusé, et le refus donne les deux valeurs",
+    "le relevé du client dont l'empreinte ne correspond plus est refusé",
+    "un relevé de travail dont l'empreinte ne correspond plus est refusé, et le refus donne les deux valeurs"
+   ],
    "etat": "attrapé",
    "ou": "cas",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "measure.ts",
    "forme": "throw",
    "n": 2,
-   "ligne": 346,
+   "ligne": 347,
+   "attrapePar": [
+    "le relevé qu'un clone neuf lit est refusé s'il ne porte pas de scellé",
+    "le relevé de référence du dépôt sans empreinte est refusé",
+    "le relevé qu'un clone neuf lit est refusé s'il ne porte pas de scellé"
+   ],
    "etat": "attrapé",
    "ou": "cas",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "measure.ts",
    "forme": "throw",
    "n": 3,
-   "ligne": 351,
+   "ligne": 352,
+   "attrapePar": [
+    "le relevé qu'un clone neuf lit est refusé si son contenu a bougé depuis son scellé",
+    "le relevé de référence du dépôt altéré est refusé",
+    "le relevé qu'un clone neuf lit est refusé si son contenu a bougé depuis son scellé"
+   ],
    "etat": "attrapé",
    "ou": "cas",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "menace.ts",
    "forme": "throw",
    "n": 0,
-   "ligne": 571,
+   "ligne": 608,
+   "attrapePar": [
+    "le balayage refuse de publier un compte de commits que git n'a pas rendu",
+    "le balayage refuse de publier un compte de commits que git n'a pas rendu"
+   ],
    "etat": "attrapé",
    "ou": "cas",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "menace.ts",
    "forme": "throw",
    "n": 1,
-   "ligne": 612,
+   "ligne": 649,
+   "attrapePar": [
+    "le balayage refuse de publier quand `git log` n'a pas pu être lancé",
+    "le balayage refuse de publier quand `git log` n'a pas pu être lancé"
+   ],
    "etat": "attrapé",
    "ou": "cas",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "menace.ts",
    "forme": "throw",
    "n": 2,
-   "ligne": 614,
+   "ligne": 651,
+   "attrapePar": [
+    "le balayage refuse de publier quand `git log` sort en erreur",
+    "le balayage refuse de publier quand `git log` sort en erreur"
+   ],
    "etat": "attrapé",
    "ou": "cas",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "menace.ts",
    "forme": "throw",
    "n": 3,
-   "ligne": 617,
+   "ligne": 654,
+   "attrapePar": [
+    "le balayage refuse une sortie trop courte pour être l'historique",
+    "le balayage refuse une sortie trop courte pour être l'historique"
+   ],
    "etat": "attrapé",
    "ou": "cas",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
+  },
+  {
+   "fichier": "menace.ts",
+   "forme": "throw",
+   "n": 4,
+   "ligne": 773,
+   "attrapePar": [
+    "un flux qui franchit le plancher mais s'arrête à mi-historique est refusé",
+    "un flux qui franchit le plancher mais s'arrête à mi-historique est refusé"
+   ],
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "mesurer-dur.ts",
@@ -1087,52 +488,73 @@
    "ligne": 44,
    "etat": "tenu par le typage",
    "ou": "typage",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "mesurer-ocr.ts",
    "forme": "throw",
    "n": 0,
-   "ligne": 129,
+   "ligne": 130,
+   "attrapePar": [
+    "l'étage de lecture manquant arrête la passe, et sa raison arrive intacte",
+    "l'étage de lecture manquant arrête la passe, et sa raison arrive intacte"
+   ],
    "etat": "attrapé",
    "ou": "cas",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "mesurer-ocr.ts",
    "forme": "throw",
    "n": 1,
-   "ligne": 132,
+   "ligne": 133,
+   "attrapePar": [
+    "sans le moteur de rendu, la mesure refuse au lieu de mesurer le vide",
+    "sans le moteur de rendu, la mesure refuse au lieu de mesurer le vide"
+   ],
    "etat": "attrapé",
    "ou": "cas",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "mesurer-ocr.ts",
    "forme": "throw",
    "n": 2,
-   "ligne": 144,
+   "ligne": 145,
+   "attrapePar": [
+    "un arbre modifié arrête la mesure, et le refus porte son issue",
+    "un arbre modifié arrête la mesure, et le refus porte son issue"
+   ],
    "etat": "attrapé",
    "ou": "cas",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "mesurer-ocr.ts",
    "forme": "throw",
    "n": 3,
-   "ligne": 163,
+   "ligne": 164,
+   "attrapePar": [
+    "l'étage de lecture manquant arrête la passe, et sa raison arrive intacte",
+    "sans le moteur de rendu, la mesure refuse au lieu de mesurer le vide",
+    "un arbre modifié arrête la mesure, et le refus porte son issue"
+   ],
    "etat": "attrapé",
    "ou": "cas",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "mesurer-ocr.ts",
    "forme": "throw",
    "n": 4,
-   "ligne": 176,
+   "ligne": 177,
+   "attrapePar": [
+    "aucun palier ne lit le document : la mesure refuse au lieu de publier des zéros",
+    "aucun palier ne lit le document : la mesure refuse au lieu de publier des zéros"
+   ],
    "etat": "attrapé",
    "ou": "cas",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "ocr.ts",
@@ -1141,133 +563,192 @@
    "ligne": 89,
    "etat": "SURVIVANT",
    "ou": "cas",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "ocr.ts",
    "forme": "throw",
    "n": 1,
    "ligne": 107,
-   "etat": "tenu par le typage",
-   "ou": "typage",
-   "mesureA": "717eeb6"
+   "attrapePar": [
+    "le lecteur d'image distingue ses pannes, et une page sans texte n'en est pas une",
+    "le lecteur d'images refuse en nommant ce qui manque, ou nomme ses pannes",
+    "le lecteur d'image distingue ses pannes, et une page sans texte n'en est pas une"
+   ],
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "ocr.ts",
    "forme": "throw",
    "n": 2,
-   "ligne": 115,
-   "etat": "SURVIVANT",
+   "ligne": 137,
+   "attrapePar": [
+    "un objet qui n'est pas une liste est REFUSÉ, pas rendu comme une liste vide",
+    "un objet qui n'est pas une liste est REFUSÉ, pas rendu comme une liste vide"
+   ],
+   "etat": "attrapé",
    "ou": "cas",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "ocr.ts",
    "forme": "throw",
    "n": 3,
-   "ligne": 118,
-   "etat": "tenu par le typage",
-   "ou": "typage",
-   "mesureA": "717eeb6"
+   "ligne": 140,
+   "attrapePar": [
+    "un objet qui n'est pas une liste est REFUSÉ, pas rendu comme une liste vide",
+    "une sortie qui ne se parse pas est une panne, et le refus montre ce qui a été reçu",
+    "un objet qui n'est pas une liste est REFUSÉ, pas rendu comme une liste vide"
+   ],
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "pages.ts",
    "forme": "throw",
    "n": 0,
-   "ligne": 193,
+   "ligne": 239,
+   "attrapePar": [
+    "la page contrôlée est celle que les sources produisent aujourd'hui",
+    "la page publiée porte le code du dépôt, pas celui d'un commit passé",
+    "la page contrôlée est celle que les sources produisent aujourd'hui"
+   ],
    "etat": "attrapé",
    "ou": "cas",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "poids.ts",
    "forme": "throw",
    "n": 0,
-   "ligne": 143,
+   "ligne": 144,
+   "attrapePar": [
+    "un dossier sans manifeste dit ce qu'il faut lancer, et où",
+    "un dossier sans manifeste dit ce qu'il faut lancer, et où"
+   ],
    "etat": "attrapé",
    "ou": "cas",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "poids.ts",
    "forme": "throw",
    "n": 1,
-   "ligne": 155,
+   "ligne": 156,
+   "attrapePar": [
+    "exporter depuis un cache vide refuse au lieu d'écrire un export vide",
+    "exporter depuis un cache vide refuse au lieu d'écrire un export vide"
+   ],
    "etat": "attrapé",
    "ou": "cas",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "poids.ts",
    "forme": "throw",
    "n": 2,
-   "ligne": 180,
+   "ligne": 181,
+   "attrapePar": [
+    "un import qui trouve un grief n'écrit rien du tout",
+    "un import qui trouve un grief n'écrit rien du tout"
+   ],
    "etat": "attrapé",
    "ou": "cas",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "poids.ts",
    "forme": "throw",
    "n": 3,
-   "ligne": 214,
+   "ligne": 215,
+   "attrapePar": [
+    "hors ligne, un modèle absent est refusé AVANT tout téléchargement, avec sa sortie",
+    "hors ligne, un modèle absent est refusé AVANT tout téléchargement, avec sa sortie"
+   ],
    "etat": "attrapé",
    "ou": "cas",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "premiere-reponse.mjs",
    "forme": "throw",
    "n": 0,
    "ligne": 37,
+   "attrapePar": [
+    "LA PREMIÈRE RÉPONSE NE DEMANDE AUCUNE INSTALLATION",
+    "LA PREMIÈRE RÉPONSE NE DEMANDE AUCUNE INSTALLATION"
+   ],
    "etat": "attrapé",
    "ou": "cas",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "premiere-reponse.mjs",
    "forme": "throw",
    "n": 1,
    "ligne": 59,
+   "attrapePar": [
+    "un relevé incohérent fait refuser, pas inventer",
+    "un relevé incohérent fait refuser, pas inventer"
+   ],
    "etat": "attrapé",
    "ou": "cas",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "premiere-reponse.mjs",
    "forme": "throw",
    "n": 2,
    "ligne": 62,
+   "attrapePar": [
+    "un relevé incohérent fait refuser, pas inventer",
+    "un relevé incohérent fait refuser, pas inventer"
+   ],
    "etat": "attrapé",
    "ou": "cas",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "premiere-reponse.mjs",
    "forme": "throw",
    "n": 3,
    "ligne": 85,
+   "attrapePar": [
+    "un relevé incohérent fait refuser, pas inventer",
+    "un relevé incohérent fait refuser, pas inventer"
+   ],
    "etat": "attrapé",
    "ou": "cas",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "premiere-reponse.mjs",
    "forme": "throw",
    "n": 4,
    "ligne": 92,
+   "attrapePar": [
+    "un relevé incohérent fait refuser, pas inventer",
+    "un relevé incohérent fait refuser, pas inventer"
+   ],
    "etat": "attrapé",
    "ou": "cas",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "readme.ts",
    "forme": "throw",
    "n": 0,
    "ligne": 999,
+   "attrapePar": [
+    "sans ocr.json, l'étage de lecture REFUSE au lieu de publier un tableau vide",
+    "sans ocr.json, l'étage de lecture REFUSE au lieu de publier un tableau vide"
+   ],
    "etat": "attrapé",
    "ou": "cas",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "readme.ts",
@@ -1276,25 +757,33 @@
    "ligne": 1084,
    "etat": "tenu par le typage",
    "ou": "typage",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "readme.ts",
    "forme": "throw",
    "n": 2,
    "ligne": 1113,
+   "attrapePar": [
+    "sans exposition.json, le bloc du coût d'avoir tort REFUSE de s'écrire",
+    "sans exposition.json, le bloc du coût d'avoir tort REFUSE de s'écrire"
+   ],
    "etat": "attrapé",
    "ou": "cas",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "readme.ts",
    "forme": "throw",
    "n": 3,
    "ligne": 1168,
+   "attrapePar": [
+    "sans document.json, le taux par dossier REFUSE de s'écrire",
+    "sans document.json, le taux par dossier REFUSE de s'écrire"
+   ],
    "etat": "attrapé",
    "ou": "cas",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "readme.ts",
@@ -1303,7 +792,7 @@
    "ligne": 1239,
    "etat": "SURVIVANT",
    "ou": "cas",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "readme.ts",
@@ -1312,7 +801,7 @@
    "ligne": 1252,
    "etat": "tenu par le typage",
    "ou": "typage",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "readme.ts",
@@ -1321,25 +810,33 @@
    "ligne": 1309,
    "etat": "tenu par le typage",
    "ou": "typage",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "readme.ts",
    "forme": "throw",
    "n": 7,
    "ligne": 1393,
+   "attrapePar": [
+    "si le compte de tests s'effondre, le README REFUSE de publier le chiffre",
+    "si le compte de tests s'effondre, le README REFUSE de publier le chiffre"
+   ],
    "etat": "attrapé",
    "ou": "cas",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "readme.ts",
    "forme": "throw",
    "n": 8,
    "ligne": 1430,
+   "attrapePar": [
+    "si aucun document livré n'est trouvé, le tableau REFUSE de proclamer leur absence",
+    "si aucun document livré n'est trouvé, le tableau REFUSE de proclamer leur absence"
+   ],
    "etat": "attrapé",
    "ou": "cas",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "server.ts",
@@ -1348,259 +845,1488 @@
    "ligne": 32,
    "etat": "tenu par le typage",
    "ou": "typage",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "server.ts",
    "forme": "throw",
    "n": 1,
-   "ligne": 425,
+   "ligne": 513,
+   "attrapePar": [
+    "une balise en ligne que le jeton ne marque pas refuse la page, et le DIT",
+    "une balise en ligne que le jeton ne marque pas refuse la page, et le DIT"
+   ],
    "etat": "attrapé",
    "ou": "cas",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "tiers.ts",
    "forme": "throw",
    "n": 0,
    "ligne": 405,
+   "attrapePar": [
+    "la galerie versionnée porte encore la clé que le code produit",
+    "un model.onnx tronqué fait refuser AVANT pipeline(), et le refus nomme le fichier et les deux tailles",
+    "la galerie versionnée porte encore la clé que le code produit"
+   ],
    "etat": "attrapé",
    "ou": "cas",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "tiers.ts",
    "forme": "throw",
    "n": 1,
    "ligne": 526,
+   "attrapePar": [
+    "la galerie versionnée porte encore la clé que le code produit",
+    "un document ne part pas vers un hôte qui n'est pas cette machine",
+    "le refus dit ce qui partirait, et comment consentir"
+   ],
    "etat": "attrapé",
    "ou": "cas",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "tiers.ts",
    "forme": "throw",
    "n": 2,
    "ligne": 547,
+   "attrapePar": [
+    "la galerie versionnée porte encore la clé que le code produit",
+    "un palier génératif sans modèle déclaré est refusé PAR SON NOM",
+    "la galerie versionnée porte encore la clé que le code produit"
+   ],
    "etat": "attrapé",
    "ou": "cas",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "tiers.ts",
    "forme": "throw",
    "n": 3,
    "ligne": 622,
+   "attrapePar": [
+    "la galerie versionnée porte encore la clé que le code produit",
+    "un modèle déjà chargé qui ne répond plus est nommé comme tel, pas comme un serveur injoignable",
+    "la galerie versionnée porte encore la clé que le code produit"
+   ],
    "etat": "attrapé",
    "ou": "cas",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "tiers.ts",
    "forme": "throw",
    "n": 4,
    "ligne": 632,
-   "etat": "tenu par le typage",
-   "ou": "typage",
-   "mesureA": "717eeb6"
+   "attrapePar": [
+    "la galerie versionnée porte encore la clé que le code produit",
+    "aucun module Node ne traverse le paquet compilé pour le navigateur",
+    "la galerie versionnée porte encore la clé que le code produit"
+   ],
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "verifier-ecran.mjs",
    "forme": "throw",
    "n": 0,
    "ligne": 336,
+   "attrapePar": [
+    "les couches partagées sont bien celles d'identite",
+    "les couches partagées sont bien celles d'identite"
+   ],
    "etat": "attrapé",
    "ou": "cas",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "your-cases.ts",
    "forme": "throw",
    "n": 0,
    "ligne": 150,
+   "attrapePar": [
+    "--sample n'est pas ignoré en silence quand il n'est pas un nombre de cas",
+    "le programme lui-même refuse l'option inconnue et la tâche inconnue",
+    "--sample n'est pas ignoré en silence quand il n'est pas un nombre de cas"
+   ],
    "etat": "attrapé",
    "ou": "cas",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "your-cases.ts",
    "forme": "throw",
    "n": 1,
    "ligne": 475,
+   "attrapePar": [
+    "un CSV client dont une guillemet reste ouverte est refusé, pas rétréci en silence",
+    "un CSV client dont une guillemet reste ouverte est refusé, pas rétréci en silence"
+   ],
    "etat": "attrapé",
    "ou": "cas",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "your-cases.ts",
    "forme": "throw",
    "n": 2,
    "ligne": 487,
-   "etat": "tenu par le typage",
-   "ou": "typage",
-   "mesureA": "717eeb6"
+   "attrapePar": [
+    "un fichier à une seule colonne est refusé, avec une raison",
+    "un fichier à une seule colonne est refusé, avec une raison"
+   ],
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "your-cases.ts",
    "forme": "throw",
    "n": 3,
    "ligne": 510,
+   "attrapePar": [
+    "un en-tête qui nomme deux fois la même colonne est refusé, pas deviné",
+    "un en-tête qui nomme deux fois la même colonne est refusé, pas deviné"
+   ],
    "etat": "attrapé",
    "ou": "cas",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "your-cases.ts",
    "forme": "throw",
    "n": 4,
    "ligne": 552,
-   "etat": "tenu par le typage",
-   "ou": "typage",
-   "mesureA": "717eeb6"
+   "attrapePar": [
+    "trois colonnes sans « text » sont refusées, deux colonnes sans « text » ne le sont pas",
+    "trois colonnes sans « text » sont refusées, deux colonnes sans « text » ne le sont pas"
+   ],
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "your-cases.ts",
    "forme": "throw",
    "n": 5,
    "ligne": 711,
+   "attrapePar": [
+    "une option mal orthographiée est refusée, pas laissée tomber",
+    "le programme lui-même refuse l'option inconnue et la tâche inconnue",
+    "une option mal orthographiée est refusée, pas laissée tomber"
+   ],
    "etat": "attrapé",
    "ou": "cas",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "your-cases.ts",
    "forme": "throw",
    "n": 6,
    "ligne": 720,
+   "attrapePar": [
+    "--task=xyz ne retombe plus sur extract en silence",
+    "le programme lui-même refuse l'option inconnue et la tâche inconnue",
+    "--task=xyz ne retombe plus sur extract en silence"
+   ],
    "etat": "attrapé",
    "ou": "cas",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "your-cases.ts",
    "forme": "throw",
    "n": 7,
    "ligne": 729,
-   "etat": "tenu par le typage",
-   "ou": "typage",
-   "mesureA": "717eeb6"
+   "attrapePar": [
+    "le nom de la chaîne du client est une entrée, pas une chaîne de confiance",
+    "chargerSorties fait passer le nom par la validation, et pas seulement le fichier",
+    "le nom de la chaîne du client est une entrée, pas une chaîne de confiance"
+   ],
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "your-cases.ts",
    "forme": "throw",
    "n": 8,
    "ligne": 734,
+   "attrapePar": [
+    "le nom de la chaîne du client est une entrée, pas une chaîne de confiance",
+    "le nom de la chaîne du client est une entrée, pas une chaîne de confiance"
+   ],
    "etat": "attrapé",
    "ou": "cas",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "your-cases.ts",
    "forme": "throw",
    "n": 9,
    "ligne": 738,
+   "attrapePar": [
+    "le nom de la chaîne du client est une entrée, pas une chaîne de confiance",
+    "chargerSorties fait passer le nom par la validation, et pas seulement le fichier",
+    "le nom de la chaîne du client est une entrée, pas une chaîne de confiance"
+   ],
    "etat": "attrapé",
    "ou": "cas",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "your-cases.ts",
    "forme": "throw",
    "n": 10,
    "ligne": 743,
+   "attrapePar": [
+    "le nom de la chaîne du client est une entrée, pas une chaîne de confiance",
+    "chargerSorties fait passer le nom par la validation, et pas seulement le fichier",
+    "le nom de la chaîne du client est une entrée, pas une chaîne de confiance"
+   ],
    "etat": "attrapé",
    "ou": "cas",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "your-cases.ts",
    "forme": "throw",
    "n": 11,
    "ligne": 761,
+   "attrapePar": [
+    "aucune valeur extraite n'entre : seules les issues sont acceptées",
+    "aucune valeur extraite n'entre : seules les issues sont acceptées"
+   ],
    "etat": "attrapé",
    "ou": "cas",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "your-cases.ts",
    "forme": "throw",
    "n": 12,
    "ligne": 768,
-   "etat": "tenu par le typage",
-   "ou": "typage",
-   "mesureA": "717eeb6"
+   "attrapePar": [
+    "aucune valeur extraite n'entre : seules les issues sont acceptées",
+    "aucune valeur extraite n'entre : seules les issues sont acceptées"
+   ],
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "your-cases.ts",
    "forme": "throw",
    "n": 13,
    "ligne": 778,
+   "attrapePar": [
+    "aucune valeur extraite n'entre : seules les issues sont acceptées",
+    "aucune valeur extraite n'entre : seules les issues sont acceptées"
+   ],
    "etat": "attrapé",
    "ou": "cas",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "your-cases.ts",
    "forme": "throw",
    "n": 14,
    "ligne": 834,
+   "attrapePar": [
+    "un JSON illisible ne sort pas en message d'analyseur nu",
+    "un JSON illisible ne sort pas en message d'analyseur nu"
+   ],
    "etat": "attrapé",
    "ou": "cas",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "your-cases.ts",
    "forme": "throw",
    "n": 15,
    "ligne": 839,
+   "attrapePar": [
+    "un tableau JSON passé à --rules est refusé, pas lu comme des colonnes « 0 » et « 1 »",
+    "un tableau JSON passé à --rules est refusé, pas lu comme des colonnes « 0 » et « 1 »"
+   ],
    "etat": "attrapé",
    "ou": "cas",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "your-cases.ts",
    "forme": "throw",
    "n": 16,
    "ligne": 852,
-   "etat": "tenu par le typage",
-   "ou": "typage",
-   "mesureA": "717eeb6"
+   "attrapePar": [
+    "une règle qui n'est pas une chaîne est refusée, et non transformée en motif",
+    "une règle qui n'est pas une chaîne est refusée, et non transformée en motif"
+   ],
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "your-cases.ts",
    "forme": "throw",
    "n": 17,
    "ligne": 858,
+   "attrapePar": [
+    "un motif invalide nomme le champ, pas seulement le motif",
+    "un motif invalide nomme le champ, pas seulement le motif"
+   ],
    "etat": "attrapé",
    "ou": "cas",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "your-cases.ts",
    "forme": "throw",
    "n": 18,
    "ligne": 866,
+   "attrapePar": [
+    "un fichier de règles vide est refusé plutôt que lu comme « aucune règle »",
+    "un fichier de règles vide est refusé plutôt que lu comme « aucune règle »"
+   ],
    "etat": "attrapé",
    "ou": "cas",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "your-cases.ts",
    "forme": "throw",
    "n": 19,
    "ligne": 870,
+   "attrapePar": [
+    "des règles qui ne nomment aucune colonne existante sont refusées",
+    "des règles qui ne nomment aucune colonne existante sont refusées"
+   ],
    "etat": "attrapé",
    "ou": "cas",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
   },
   {
    "fichier": "your-cases.ts",
    "forme": "throw",
    "n": 20,
    "ligne": 1167,
+   "attrapePar": [
+    "un CSV réduit à sa ligne d'en-tête ne rend pas un document qui ressemble à un audit",
+    "un CSV réduit à sa ligne d'en-tête ne rend pas un document qui ressemble à un audit"
+   ],
    "etat": "attrapé",
    "ou": "cas",
-   "mesureA": "717eeb6"
+   "mesureA": "a2083b7"
+  },
+  {
+   "fichier": "abstention.ts",
+   "forme": "exit",
+   "n": 0,
+   "ligne": 139,
+   "empreinte": "1f053de419f565bc",
+   "etat": "tenu par le typage",
+   "ou": "typage",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "abstention.ts",
+   "forme": "exit",
+   "n": 1,
+   "ligne": 145,
+   "empreinte": "1f053de419f565bc",
+   "etat": "tenu par le typage",
+   "ou": "typage",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "apparier-prompt.ts",
+   "forme": "exit",
+   "n": 0,
+   "ligne": 49,
+   "empreinte": "465a8e2aebc2ab54",
+   "attrapePar": [
+    "les trois commandes refusent de mesurer sur un arbre modifié",
+    "les trois commandes refusent de mesurer sur un arbre modifié"
+   ],
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "capturer.mjs",
+   "forme": "exit",
+   "n": 0,
+   "ligne": 61,
+   "empreinte": "c11762fbd578dcec",
+   "attrapePar": [
+    "les couches partagées sont bien celles d'identite",
+    "les couches partagées sont bien celles d'identite"
+   ],
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "capturer.mjs",
+   "forme": "exit",
+   "n": 1,
+   "ligne": 525,
+   "empreinte": "c11762fbd578dcec",
+   "attrapePar": [
+    "les couches partagées sont bien celles d'identite",
+    "les couches partagées sont bien celles d'identite"
+   ],
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "capturer.mjs",
+   "forme": "exit",
+   "n": 2,
+   "ligne": 579,
+   "empreinte": "c11762fbd578dcec",
+   "attrapePar": [
+    "les couches partagées sont bien celles d'identite",
+    "les couches partagées sont bien celles d'identite"
+   ],
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "capturer.mjs",
+   "forme": "exit",
+   "n": 3,
+   "ligne": 672,
+   "empreinte": "c11762fbd578dcec",
+   "attrapePar": [
+    "les couches partagées sont bien celles d'identite",
+    "les couches partagées sont bien celles d'identite"
+   ],
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "cas-demandes.ts",
+   "forme": "exit",
+   "n": 0,
+   "ligne": 42,
+   "empreinte": "44a5b5308287077a",
+   "attrapePar": [
+    "la galerie versionnée porte encore la clé que le code produit",
+    "aucun module Node ne traverse le paquet compilé pour le navigateur",
+    "la galerie versionnée porte encore la clé que le code produit"
+   ],
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "charger.mjs",
+   "forme": "exit",
+   "n": 0,
+   "ligne": 74,
+   "empreinte": "7429e8e0efa03639",
+   "etat": "SURVIVANT",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "charger.mjs",
+   "forme": "exit",
+   "n": 1,
+   "ligne": 80,
+   "empreinte": "7429e8e0efa03639",
+   "etat": "SURVIVANT",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "clone-neuf.mjs",
+   "forme": "exit",
+   "n": 0,
+   "ligne": 261,
+   "empreinte": "b82de9770865d56b",
+   "etat": "SURVIVANT",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "departager-reglage.ts",
+   "forme": "exit",
+   "n": 0,
+   "ligne": 68,
+   "empreinte": "b1778d534006a852",
+   "attrapePar": [
+    "les trois commandes refusent de mesurer sur un arbre modifié",
+    "les trois commandes refusent de mesurer sur un arbre modifié"
+   ],
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "diff.ts",
+   "forme": "exit",
+   "n": 0,
+   "ligne": 112,
+   "empreinte": "db611a3c5800e37b",
+   "etat": "SURVIVANT",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "diff.ts",
+   "forme": "exit",
+   "n": 1,
+   "ligne": 127,
+   "empreinte": "db611a3c5800e37b",
+   "attrapePar": [
+    "rien de comparé n'est PAS rien de changé, et le code de sortie le dit",
+    "rien de comparé n'est PAS rien de changé, et le code de sortie le dit"
+   ],
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "diff.ts",
+   "forme": "exit",
+   "n": 2,
+   "ligne": 132,
+   "empreinte": "db611a3c5800e37b",
+   "etat": "SURVIVANT",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "diff.ts",
+   "forme": "exit",
+   "n": 3,
+   "ligne": 147,
+   "empreinte": "db611a3c5800e37b",
+   "attrapePar": [
+    "des cas PERDUS sortent en 1 — c'est ce qui doit arrêter une chaîne",
+    "des cas PERDUS sortent en 1 — c'est ce qui doit arrêter une chaîne"
+   ],
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "dossier.ts",
+   "forme": "exit",
+   "n": 0,
+   "ligne": 639,
+   "empreinte": "4f74ed02d7f8a855",
+   "etat": "tenu par le typage",
+   "ou": "typage",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "dossier.ts",
+   "forme": "exit",
+   "n": 1,
+   "ligne": 661,
+   "empreinte": "4f74ed02d7f8a855",
+   "etat": "tenu par un document engendré",
+   "ou": "document engendré",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "dossier.ts",
+   "forme": "exit",
+   "n": 2,
+   "ligne": 665,
+   "empreinte": "4f74ed02d7f8a855",
+   "etat": "SURVIVANT",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "egress.ts",
+   "forme": "exit",
+   "n": 0,
+   "ligne": 273,
+   "empreinte": "d683106b36911a34",
+   "etat": "SURVIVANT",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "egress.ts",
+   "forme": "exit",
+   "n": 1,
+   "ligne": 285,
+   "empreinte": "d683106b36911a34",
+   "etat": "SURVIVANT",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "egress.ts",
+   "forme": "exit",
+   "n": 2,
+   "ligne": 385,
+   "empreinte": "d683106b36911a34",
+   "etat": "SURVIVANT",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "escalade.ts",
+   "forme": "exit",
+   "n": 0,
+   "ligne": 126,
+   "empreinte": "8af4c7ac6846ef85",
+   "etat": "tenu par le typage",
+   "ou": "typage",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "escalade.ts",
+   "forme": "exit",
+   "n": 1,
+   "ligne": 153,
+   "empreinte": "8af4c7ac6846ef85",
+   "etat": "tenu par le typage",
+   "ou": "typage",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "figures.ts",
+   "forme": "exit",
+   "n": 0,
+   "ligne": 102,
+   "empreinte": "035195cb4cf4fa13",
+   "confirmePar": "graphe complet, et les étapes hors cas — typage, documents engendrés — passées à part",
+   "etat": "tenu hors des cas",
+   "ou": "avant les cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "hostile.ts",
+   "forme": "exit",
+   "n": 0,
+   "ligne": 284,
+   "empreinte": "701dd7299cded2b2",
+   "attrapePar": [
+    "--check REFUSE une page qui a dérivé, et le refuse en s'arrêtant",
+    "--check REFUSE une page qui a dérivé, et le refuse en s'arrêtant"
+   ],
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "hostile.ts",
+   "forme": "exit",
+   "n": 1,
+   "ligne": 303,
+   "empreinte": "701dd7299cded2b2",
+   "etat": "SURVIVANT",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "intake.ts",
+   "forme": "exit",
+   "n": 0,
+   "ligne": 135,
+   "empreinte": "eda52ac42f9a4c73",
+   "attrapePar": [
+    "un chemin passé sans --file= est refusé, et le fichier N'EST PAS touché",
+    "un chemin passé sans --file= est refusé, et le fichier N'EST PAS touché"
+   ],
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "intake.ts",
+   "forme": "exit",
+   "n": 1,
+   "ligne": 140,
+   "empreinte": "eda52ac42f9a4c73",
+   "etat": "SURVIVANT",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "intake.ts",
+   "forme": "exit",
+   "n": 2,
+   "ligne": 165,
+   "empreinte": "eda52ac42f9a4c73",
+   "etat": "tenu par le typage",
+   "ou": "typage",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "intake.ts",
+   "forme": "exit",
+   "n": 3,
+   "ligne": 181,
+   "empreinte": "eda52ac42f9a4c73",
+   "etat": "SURVIVANT",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "intake.ts",
+   "forme": "exit",
+   "n": 4,
+   "ligne": 190,
+   "empreinte": "eda52ac42f9a4c73",
+   "etat": "SURVIVANT",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "intake.ts",
+   "forme": "exit",
+   "n": 5,
+   "ligne": 195,
+   "empreinte": "eda52ac42f9a4c73",
+   "attrapePar": [
+    "un JSON illisible se dit sans trace d'appel",
+    "un JSON illisible se dit sans trace d'appel"
+   ],
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "intake.ts",
+   "forme": "exit",
+   "n": 6,
+   "ligne": 267,
+   "empreinte": "eda52ac42f9a4c73",
+   "attrapePar": [
+    "un refus sort en code non nul, un succès en zéro",
+    "un refus sort en code non nul, un succès en zéro"
+   ],
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "landing.ts",
+   "forme": "exit",
+   "n": 0,
+   "ligne": 1238,
+   "empreinte": "a598ea69cf59dbe4",
+   "etat": "tenu par le typage",
+   "ou": "typage",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "landing.ts",
+   "forme": "exit",
+   "n": 1,
+   "ligne": 1276,
+   "empreinte": "a598ea69cf59dbe4",
+   "etat": "SURVIVANT",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "landing.ts",
+   "forme": "exit",
+   "n": 2,
+   "ligne": 1289,
+   "empreinte": "a598ea69cf59dbe4",
+   "attrapePar": [
+    "un produit plus ancien que sa source arrête le contrôle au lieu de l'avertir",
+    "un produit plus ancien que sa source arrête le contrôle au lieu de l'avertir"
+   ],
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "landing.ts",
+   "forme": "exit",
+   "n": 3,
+   "ligne": 1303,
+   "empreinte": "a598ea69cf59dbe4",
+   "etat": "SURVIVANT",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "licences.ts",
+   "forme": "exit",
+   "n": 0,
+   "ligne": 316,
+   "empreinte": "f8b383e16cd8f5ac",
+   "etat": "SURVIVANT",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "licences.ts",
+   "forme": "exit",
+   "n": 1,
+   "ligne": 320,
+   "empreinte": "f8b383e16cd8f5ac",
+   "etat": "SURVIVANT",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "licences.ts",
+   "forme": "exit",
+   "n": 2,
+   "ligne": 365,
+   "empreinte": "f8b383e16cd8f5ac",
+   "etat": "SURVIVANT",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "measure.ts",
+   "forme": "exit",
+   "n": 0,
+   "ligne": 740,
+   "empreinte": "b204ebc4a6a5e02f",
+   "etat": "SURVIVANT",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "measure.ts",
+   "forme": "exit",
+   "n": 1,
+   "ligne": 748,
+   "empreinte": "b204ebc4a6a5e02f",
+   "etat": "SURVIVANT",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "measure.ts",
+   "forme": "exit",
+   "n": 2,
+   "ligne": 760,
+   "empreinte": "b204ebc4a6a5e02f",
+   "etat": "SURVIVANT",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "measure.ts",
+   "forme": "exit",
+   "n": 3,
+   "ligne": 770,
+   "empreinte": "b204ebc4a6a5e02f",
+   "etat": "SURVIVANT",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "measure.ts",
+   "forme": "exit",
+   "n": 4,
+   "ligne": 834,
+   "empreinte": "b204ebc4a6a5e02f",
+   "etat": "SURVIVANT",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "measure.ts",
+   "forme": "exit",
+   "n": 5,
+   "ligne": 850,
+   "empreinte": "b204ebc4a6a5e02f",
+   "etat": "SURVIVANT",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "measure.ts",
+   "forme": "exit",
+   "n": 6,
+   "ligne": 862,
+   "empreinte": "b204ebc4a6a5e02f",
+   "etat": "SURVIVANT",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "menace.ts",
+   "forme": "exit",
+   "n": 0,
+   "ligne": 836,
+   "empreinte": "d794c763caf39c30",
+   "attrapePar": [
+    "menace refuse de publier quand un de ses détecteurs a cessé de détecter",
+    "menace refuse de publier quand un de ses détecteurs a cessé de détecter"
+   ],
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "menace.ts",
+   "forme": "exit",
+   "n": 1,
+   "ligne": 844,
+   "empreinte": "d794c763caf39c30",
+   "etat": "SURVIVANT",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "menace.ts",
+   "forme": "exit",
+   "n": 2,
+   "ligne": 861,
+   "empreinte": "d794c763caf39c30",
+   "etat": "SURVIVANT",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "menace.ts",
+   "forme": "exit",
+   "n": 3,
+   "ligne": 885,
+   "empreinte": "d794c763caf39c30",
+   "etat": "SURVIVANT",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "menace.ts",
+   "forme": "exit",
+   "n": 4,
+   "ligne": 894,
+   "empreinte": "d794c763caf39c30",
+   "etat": "SURVIVANT",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "menace.ts",
+   "forme": "exit",
+   "n": 5,
+   "ligne": 900,
+   "empreinte": "d794c763caf39c30",
+   "etat": "SURVIVANT",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "mesurer-dur.ts",
+   "forme": "exit",
+   "n": 0,
+   "ligne": 84,
+   "empreinte": "8eb66fa670ed6651",
+   "attrapePar": [
+    "les trois commandes refusent de mesurer sur un arbre modifié",
+    "les trois commandes refusent de mesurer sur un arbre modifié"
+   ],
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "mesurer-dur.ts",
+   "forme": "exit",
+   "n": 1,
+   "ligne": 125,
+   "empreinte": "8eb66fa670ed6651",
+   "etat": "SURVIVANT",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "mesurer-dur.ts",
+   "forme": "exit",
+   "n": 2,
+   "ligne": 261,
+   "empreinte": "8eb66fa670ed6651",
+   "etat": "SURVIVANT",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "mesurer-ocr.ts",
+   "forme": "exit",
+   "n": 0,
+   "ligne": 293,
+   "empreinte": "2a0acd37d9c73592",
+   "etat": "SURVIVANT",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "mur.ts",
+   "forme": "exit",
+   "n": 0,
+   "ligne": 67,
+   "empreinte": "e47f73e9f73e3263",
+   "etat": "tenu par le typage",
+   "ou": "typage",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "optimise.ts",
+   "forme": "exit",
+   "n": 0,
+   "ligne": 486,
+   "empreinte": "ce4fcb59a89f77a8",
+   "attrapePar": [
+    "aucun module Node ne traverse le paquet compilé pour le navigateur",
+    "la page publiée porte le code du dépôt, pas celui d'un commit passé",
+    "aucun module Node ne traverse le paquet compilé pour le navigateur"
+   ],
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "optimise.ts",
+   "forme": "exit",
+   "n": 1,
+   "ligne": 495,
+   "empreinte": "ce4fcb59a89f77a8",
+   "attrapePar": [
+    "aucun module Node ne traverse le paquet compilé pour le navigateur",
+    "la page publiée porte le code du dépôt, pas celui d'un commit passé",
+    "aucun module Node ne traverse le paquet compilé pour le navigateur"
+   ],
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "pages.ts",
+   "forme": "exit",
+   "n": 0,
+   "ligne": 53,
+   "empreinte": "87c18cf4cfd06559",
+   "attrapePar": [
+    "la page contrôlée est celle que les sources produisent aujourd'hui",
+    "la page publiée porte le code du dépôt, pas celui d'un commit passé",
+    "la page contrôlée est celle que les sources produisent aujourd'hui"
+   ],
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "poids.ts",
+   "forme": "exit",
+   "n": 0,
+   "ligne": 298,
+   "empreinte": "551e23667af8a1ff",
+   "attrapePar": [
+    "--export sans dossier est refusé, et le refus nomme l'option",
+    "--export sans dossier est refusé, et le refus nomme l'option"
+   ],
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "poids.ts",
+   "forme": "exit",
+   "n": 1,
+   "ligne": 305,
+   "empreinte": "551e23667af8a1ff",
+   "attrapePar": [
+    "une option inconnue est refusée, et les options connues sont dites",
+    "une option inconnue est refusée, et les options connues sont dites"
+   ],
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "poids.ts",
+   "forme": "exit",
+   "n": 2,
+   "ligne": 312,
+   "empreinte": "551e23667af8a1ff",
+   "attrapePar": [
+    "--export et --import ensemble sont refusés : ce sont deux machines",
+    "--export et --import ensemble sont refusés : ce sont deux machines"
+   ],
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "poids.ts",
+   "forme": "exit",
+   "n": 3,
+   "ligne": 329,
+   "empreinte": "551e23667af8a1ff",
+   "attrapePar": [
+    "un dossier sans manifeste fait sortir la COMMANDE en erreur, pas seulement lever",
+    "un dossier sans manifeste fait sortir la COMMANDE en erreur, pas seulement lever"
+   ],
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "premiere-reponse.mjs",
+   "forme": "exit",
+   "n": 0,
+   "ligne": 148,
+   "empreinte": "7df4f81423988ace",
+   "attrapePar": [
+    "LA PREMIÈRE RÉPONSE NE DEMANDE AUCUNE INSTALLATION",
+    "LA PREMIÈRE RÉPONSE NE DEMANDE AUCUNE INSTALLATION"
+   ],
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "readme.ts",
+   "forme": "exit",
+   "n": 0,
+   "ligne": 40,
+   "empreinte": "0829adb1b3055f9d",
+   "etat": "tenu par le typage",
+   "ou": "typage",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "regler-prompt.ts",
+   "forme": "exit",
+   "n": 0,
+   "ligne": 90,
+   "empreinte": "3b7e9693766be7c6",
+   "etat": "SURVIVANT",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "sceller.ts",
+   "forme": "exit",
+   "n": 0,
+   "ligne": 37,
+   "empreinte": "cc5ab0be9b3a3de8",
+   "etat": "SURVIVANT",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "sceller.ts",
+   "forme": "exit",
+   "n": 1,
+   "ligne": 50,
+   "empreinte": "cc5ab0be9b3a3de8",
+   "attrapePar": [
+    "`lsof` qui répond pendant toute la passe : la commande CONCLUT, elle ne refuse pas",
+    "`lsof` qui répond pendant toute la passe : la commande CONCLUT, elle ne refuse pas"
+   ],
+   "etat": "rouge instable",
+   "ou": "cas puis vert",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "sceller.ts",
+   "forme": "exit",
+   "n": 2,
+   "ligne": 59,
+   "empreinte": "cc5ab0be9b3a3de8",
+   "etat": "SURVIVANT",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "sensibilite-prompt.ts",
+   "forme": "exit",
+   "n": 0,
+   "ligne": 58,
+   "empreinte": "b838cffe90a411e3",
+   "etat": "SURVIVANT",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "sensitivity.ts",
+   "forme": "exit",
+   "n": 0,
+   "ligne": 221,
+   "empreinte": "61f098580544128f",
+   "confirmePar": "graphe complet, et les étapes hors cas — typage, documents engendrés — passées à part",
+   "etat": "tenu hors des cas",
+   "ou": "avant les cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "server.ts",
+   "forme": "exit",
+   "n": 0,
+   "ligne": 633,
+   "empreinte": "8139926d1ee93da6",
+   "etat": "SURVIVANT",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "server.ts",
+   "forme": "exit",
+   "n": 1,
+   "ligne": 638,
+   "empreinte": "8139926d1ee93da6",
+   "etat": "SURVIVANT",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "signal.ts",
+   "forme": "exit",
+   "n": 0,
+   "ligne": 283,
+   "empreinte": "78e6e12b3bcbab24",
+   "etat": "tenu par le typage",
+   "ou": "typage",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "sonde.ts",
+   "forme": "exit",
+   "n": 0,
+   "ligne": 349,
+   "empreinte": "e6827b5ef325c166",
+   "etat": "tenu par le typage",
+   "ou": "typage",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "sonde.ts",
+   "forme": "exit",
+   "n": 1,
+   "ligne": 357,
+   "empreinte": "e6827b5ef325c166",
+   "etat": "tenu par un document engendré",
+   "ou": "document engendré",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "sonde.ts",
+   "forme": "exit",
+   "n": 2,
+   "ligne": 361,
+   "empreinte": "e6827b5ef325c166",
+   "etat": "SURVIVANT",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "tentatives.ts",
+   "forme": "exit",
+   "n": 0,
+   "ligne": 35,
+   "empreinte": "fb5a079d2514df17",
+   "etat": "SURVIVANT",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "verifier-ecran.mjs",
+   "forme": "exit",
+   "n": 0,
+   "ligne": 384,
+   "empreinte": "ae6cc5b9fa84503a",
+   "attrapePar": [
+    "les couches partagées sont bien celles d'identite",
+    "les couches partagées sont bien celles d'identite"
+   ],
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "verifier-ecran.mjs",
+   "forme": "exit",
+   "n": 1,
+   "ligne": 396,
+   "empreinte": "ae6cc5b9fa84503a",
+   "attrapePar": [
+    "les couches partagées sont bien celles d'identite",
+    "les couches partagées sont bien celles d'identite"
+   ],
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "verifier-ecran.mjs",
+   "forme": "exit",
+   "n": 2,
+   "ligne": 470,
+   "empreinte": "ae6cc5b9fa84503a",
+   "attrapePar": [
+    "les couches partagées sont bien celles d'identite",
+    "les couches partagées sont bien celles d'identite"
+   ],
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "verifier-rapport.mjs",
+   "forme": "exit",
+   "n": 0,
+   "ligne": 216,
+   "empreinte": "443dd45168dbdda1",
+   "etat": "SURVIVANT",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "verifier-rapport.mjs",
+   "forme": "exit",
+   "n": 1,
+   "ligne": 224,
+   "empreinte": "443dd45168dbdda1",
+   "etat": "SURVIVANT",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "verifier-rapport.mjs",
+   "forme": "exit",
+   "n": 2,
+   "ligne": 246,
+   "empreinte": "443dd45168dbdda1",
+   "attrapePar": [
+    "`lsof` qui répond pendant toute la passe : la commande CONCLUT, elle ne refuse pas",
+    "`lsof` qui répond pendant toute la passe : la commande CONCLUT, elle ne refuse pas"
+   ],
+   "etat": "rouge instable",
+   "ou": "cas puis vert",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "verifier-rapport.mjs",
+   "forme": "exit",
+   "n": 3,
+   "ligne": 261,
+   "empreinte": "443dd45168dbdda1",
+   "attrapePar": [
+    "« rien n'a été vérifié » rend 2, et ne se confond pas avec un refus",
+    "« rien n'a été vérifié » rend 2, et ne se confond pas avec un refus"
+   ],
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "verifier-rapport.mjs",
+   "forme": "exit",
+   "n": 4,
+   "ligne": 267,
+   "empreinte": "443dd45168dbdda1",
+   "etat": "SURVIVANT",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "your-cases.ts",
+   "forme": "exit",
+   "n": 0,
+   "ligne": 1138,
+   "empreinte": "ef515206a175f2fb",
+   "etat": "tenu par le typage",
+   "ou": "typage",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "your-cases.ts",
+   "forme": "exit",
+   "n": 1,
+   "ligne": 1140,
+   "empreinte": "ef515206a175f2fb",
+   "etat": "SURVIVANT",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "your-cases.ts",
+   "forme": "exit",
+   "n": 2,
+   "ligne": 1200,
+   "empreinte": "ef515206a175f2fb",
+   "etat": "SURVIVANT",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "your-cases.ts",
+   "forme": "exit",
+   "n": 3,
+   "ligne": 1206,
+   "empreinte": "ef515206a175f2fb",
+   "etat": "tenu par le typage",
+   "ou": "typage",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "your-cases.ts",
+   "forme": "exit",
+   "n": 4,
+   "ligne": 1213,
+   "empreinte": "ef515206a175f2fb",
+   "etat": "SURVIVANT",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "your-cases.ts",
+   "forme": "exit",
+   "n": 5,
+   "ligne": 1262,
+   "empreinte": "ef515206a175f2fb",
+   "attrapePar": [
+    "au-dessus du plafond d'appels, la commande refuse de démarrer et n'écrit rien",
+    "le plafond d'appels refuse le fichier qui occupe la machine sans prévenir",
+    "au-dessus du plafond d'appels, la commande refuse de démarrer et n'écrit rien"
+   ],
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "your-cases.ts",
+   "forme": "exit",
+   "n": 6,
+   "ligne": 1328,
+   "empreinte": "ef515206a175f2fb",
+   "etat": "SURVIVANT",
+   "ou": "cas",
+   "mesureA": "469223f"
+  },
+  {
+   "fichier": "your-cases.ts",
+   "forme": "exit",
+   "n": 7,
+   "ligne": 1589,
+   "empreinte": "ef515206a175f2fb",
+   "attrapePar": [
+    "un fichier sans enregistrement est refusé — un taux sur zéro dossier n'existe pas",
+    "un CSV réduit à sa ligne d'en-tête ne rend pas un document qui ressemble à un audit",
+    "le programme lui-même refuse l'option inconnue et la tâche inconnue"
+   ],
+   "etat": "attrapé",
+   "ou": "cas",
+   "mesureA": "469223f"
   }
  ]
 }
