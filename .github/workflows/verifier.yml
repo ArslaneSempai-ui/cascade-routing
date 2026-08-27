@@ -85,6 +85,20 @@ jobs:
 
       - run: npm install
 
+      # ─── LES POIDS S'AMORCENT HORS DÉLAI DE CAS ───
+      #
+      # Œuf-et-poule mesuré le 27/08/2026 : le cache `poids-*` n'a JAMAIS existé, parce que
+      # `actions/cache` ne sauve qu'en fin de job réussi et qu'aucun job n'avait jamais réussi.
+      # Le premier téléchargement (496,6 Mo pour `large`) se faisait tuer par le délai du CAS
+      # qui le déclenchait, laissait un model.onnx à 52,3 Mo, et la garde des poids — qui fait
+      # son travail — refusait la suite entière en désignant le fichier coupé.
+      #
+      # `--prime` purge les tronqués puis télécharge, sous un délai de PAS et non de cas. Le
+      # premier tour vert sauve enfin le cache ; les suivants ne paient que la vérification.
+      - name: amorcer les poids
+        run: node src/poids.ts --prime
+        timeout-minutes: 25
+
       # `npm test` rend 0 quand des cas s'ignorent. On lit le compte et on refuse : un cas qui
       # n'a pas regardé ne doit pas compter comme un cas qui a regardé, et une construction
       # verte sur un contrôle qui ne s'est pas exécuté est exactement ce qu'on passe la journée

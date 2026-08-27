@@ -36,11 +36,12 @@
  *      déjà pour diagnostiquer. Réparer un trou en creusant l'autre n'est pas une réparation.
  */
 import { createHash } from "node:crypto";
-import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, relative, sep } from "node:path";
 
 import { isMain } from "./cli.ts";
-import { exigerModelesEntiers, POIDS_MODELES, racineDesPoids, type CleModele } from "./tiers.ts";
+import { exigerModelesEntiers, loadClassifiers, loadExtractors, modelesTronques,
+  POIDS_MODELES, racineDesPoids, type CleModele, type EtatModele } from "./tiers.ts";
 
 /** Le nom du manifeste dans le dossier d'export. Un dossier sans lui n'est pas un export. */
 export const NOM_MANIFESTE = "cascade-weights.json";
@@ -298,7 +299,33 @@ export function rapport(racine?: string): string {
  * le fichier de test qui l'importe.
  */
 
+/**
+ * PURGER AVANT DE RE-TÉLÉCHARGER : un fichier tronqué ne guérit jamais tout seul.
+ *
+ * La bibliothèque regarde si le fichier EXISTE, pas s'il est entier — un `model.onnx` coupé
+ * reste en place à chaque lancement et abat le processus nativement. On retire le dossier du
+ * modèle entier, pas le seul fichier mesuré : le contrôle de taille ne porte que sur
+ * `model.onnx`, or l'interruption a pu couper n'importe quel voisin.
+ */
+export function purgerTronques(cles: readonly CleModele[], racine?: string): EtatModele[] {
+  const abimes = modelesTronques(cles, racine);
+  const base = racineDesPoids(racine);
+  for (const a of abimes) rmSync(join(base, POIDS_MODELES[a.cle].depot), { recursive: true, force: true });
+  return abimes;
+}
+
 if (isMain(import.meta)) {
+  /*
+   * PAS D'`await` AU NIVEAU DU MODULE, ET LA BOUCLE EST PRÉCISE. `chargerAvecFilet` dans
+   * `tiers.ts` fait `await import("./poids.ts")` — différé exprès, son commentaire le dit,
+   * parce que ce fichier importe `tiers.ts`. Or un import dynamique attend la FIN de
+   * l'évaluation du module visé. Un `await` de niveau module ici suspend cette évaluation
+   * pendant qu'elle appelle `loadExtractors`, qui attend l'import, qui attend l'évaluation :
+   * interblocage. Node imprime « unsettled top-level await » et sort AVANT le téléchargement
+   * que `--prime` devait faire. Mesuré le 27/08/2026 au premier essai réel. Tout vit donc
+   * dans une fonction asynchrone ordinaire, lancée puis attrapée.
+   */
+  const principal = async (): Promise<void> => {
   const args = process.argv.slice(2);
   const modeles = Object.keys(POIDS_MODELES) as CleModele[];
   const valeur = (nom: string): string | undefined => {
@@ -311,9 +338,9 @@ if (isMain(import.meta)) {
     }
     return v;
   };
-  const inconnu = args.find((a) => a.startsWith("--") && a !== "--export" && a !== "--import");
+  const inconnu = args.find((a) => a.startsWith("--") && a !== "--export" && a !== "--import" && a !== "--prime");
   if (inconnu !== undefined) {
-    console.error(`Unknown option ${inconnu}. Use --export <dir>, --import <dir>, or no option to report.\n`);
+    console.error(`Unknown option ${inconnu}. Use --export <dir>, --import <dir>, --prime, or no option to report.\n`);
     process.exit(2);
   }
   try {
@@ -327,6 +354,33 @@ if (isMain(import.meta)) {
       const octets = m.entrees.reduce((s, e) => s + e.octets, 0);
       console.log(`\n${m.entrees.length} file(s), ${enMo(octets)}, written to ${aExporter}`);
       console.log(`Carry that whole directory, then run there:\n  npm run poids -- --import <directory>\n`);
+    } else if (args.includes("--prime")) {
+      /*
+       * LE REFUS HORS-LIGNE VIENT EN PREMIER, avant la purge : sur une machine isolée,
+       * purger puis refuser de télécharger transformerait « tronqué » en « absent » — le
+       * même trou creusé un cran plus loin. L'issue y est l'import, pas le réseau.
+       *
+       * Pourquoi cette option existe : sur l'intégration continue, le PREMIER téléchargement
+       * se faisait tuer par le délai du cas qui le déclenchait, laissait un model.onnx coupé,
+       * et la garde des poids refusait la suite entière (mesuré le 27/08/2026 : 52,3 Mo sur
+       * 496,6). Amorcer hors délai de cas ferme l'œuf-et-poule ; les tours suivants ne
+       * paient que la vérification.
+       */
+      if (process.env.CASCADE_OFFLINE === "1") {
+        throw new Error(
+          "CASCADE_OFFLINE=1 refuses the network, and priming is a download.\n"
+          + "On an isolated machine, carry the weights instead:\n"
+          + "  npm run poids -- --import <directory>\n");
+      }
+      const purges = purgerTronques(modeles);
+      for (const t of purges) {
+        console.log(`  removed ${join(racineDesPoids(), POIDS_MODELES[t.cle].depot)}`);
+        console.log(`    its model.onnx was ${enMo(t.taille)} of ${enMo(t.attendu)} — an interrupted download never heals on its own.`);
+      }
+      await loadExtractors();
+      await loadClassifiers();
+      exigerModelesEntiers(modeles);
+      console.log("\n" + rapport());
     } else if (aImporter !== undefined) {
       const { ecrits, octets } = importer(aImporter);
       console.log(`\n${ecrits} file(s), ${enMo(octets)}, verified and placed in the cache.`);
@@ -334,10 +388,13 @@ if (isMain(import.meta)) {
     } else {
       console.log("\n" + rapport());
       console.log(`  --export <dir>   copy these weights out, with a sha256 for each file`);
-      console.log(`  --import <dir>   verify such a directory and place it in the cache\n`);
+      console.log(`  --import <dir>   verify such a directory and place it in the cache`);
+      console.log(`  --prime          download what is missing, replacing any truncated file first\n`);
     }
   } catch (e) {
     console.error("\n" + (e instanceof Error ? e.message : String(e)));
     process.exit(1);
   }
+  };
+  void principal();
 }

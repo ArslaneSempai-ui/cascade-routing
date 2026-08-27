@@ -11,13 +11,19 @@
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, readdirSync, rmSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, readdirSync, realpathSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+
+/* `realpathSync` : la garde isMain compare des chemins résolus, et /var n'est pas
+   /private/var — un chemin non résolu lance un processus qui ne fait RIEN et sort en 0. */
+const CMD_POIDS = realpathSync(fileURLToPath(new URL("./poids.ts", import.meta.url)));
 import {
   NOM_MANIFESTE, construireManifeste, verifierExport, exporter, importer, lireManifeste,
   exigerPoidsSurPlace, messageDeTelechargement, ressembleAUnEchecReseau, rapport, fichiersSous,
-  type Manifeste,
+  purgerTronques, type Manifeste,
 } from "./poids.ts";
 import { POIDS_MODELES } from "./tiers.ts";
 
@@ -223,4 +229,41 @@ test("un modèle tronqué dans le cache fait refuser l'EXPORT, pas seulement le 
     "un cache dont le modèle n'a pas la taille attendue doit faire refuser l'export :\n"
     + "  exporté, il voyagerait avec un manifeste cohérent et serait « vérifié » à l'arrivée.");
   nettoyer(source, dossier);
+});
+
+test("la purge retire un modèle tronqué — et NE TOUCHE PAS un modèle simplement absent", () => {
+  /*
+   * Les deux états n'appellent pas le même geste : tronqué ne guérit jamais tout seul (la
+   * bibliothèque regarde si le fichier existe, pas s'il est entier), absent guérit au premier
+   * téléchargement. Une purge qui les confondrait effacerait un cache sain pour rien — et une
+   * purge qui ne retirerait que `model.onnx` laisserait les voisins d'un téléchargement coupé.
+   */
+  const base = cacheFactice();   // model.onnx factice : présent, taille ≠ octets déclarés
+  const purges = purgerTronques(["small", "large"], base);
+  assert.equal(purges.length, 1, "un seul modèle est tronqué dans ce cache : small.");
+  assert.equal(purges[0]!.cle, "small");
+  assert.equal(existsSync(join(base, POIDS_MODELES.small.depot)), false,
+    "le DOSSIER du modèle tronqué doit disparaître, pas seulement model.onnx : \n"
+    + "  l'interruption a pu couper n'importe quel voisin, et lui n'est pas mesuré.");
+  assert.equal(existsSync(join(base, POIDS_MODELES.large.depot)), false,
+    "large n'a jamais existé dans ce cache : la purge n'a rien à y créer ni à y faire.");
+  const rien = purgerTronques(["small", "large"], base);
+  assert.deepEqual(rien, [], "après purge, plus rien n'est tronqué — tout est absent.");
+  nettoyer(base);
+});
+
+test("--prime hors ligne refuse AVANT de purger, et nomme l'issue : l'import", () => {
+  /*
+   * Sur une machine isolée, purger puis refuser de télécharger transformerait « tronqué » en
+   * « absent » — le même trou, creusé un cran plus loin, et cette fois sans diagnostic de
+   * taille. Le refus doit donc venir en premier, et pointer le geste qui marche là-bas.
+   * Témoin au point d'appel : c'est la COMMANDE qu'on éprouve, pas une réécriture de sa règle.
+   */
+  const r = spawnSync(process.execPath, [CMD_POIDS, "--prime"], {
+    encoding: "utf8", timeout: 60_000,
+    env: { ...process.env, CASCADE_OFFLINE: "1" },
+  });
+  assert.equal(r.status, 1, `hors ligne, --prime doit refuser (code ${r.status}).`);
+  assert.match(r.stderr, /--import/,
+    "le refus hors-ligne ne nomme pas l'issue : sur la machine isolée, c'est l'import.");
 });
