@@ -18,7 +18,7 @@ pas. Le détail va dans le message de commit, qui voyage avec la ligne qu'il exp
 - [ ] Trier les trouvailles du balayage — le compte vit dans `~/Documents/rapports/2026-08-25-tri-des-47.md`, jamais ici
 - [x] `regles-bornees.ts` : le chemin d'erreur du Worker est couvert — ouvrier injectable, témoin prouvé ROUGE
 - [x] Le balayage couvre `throw` ET `process.exit`, mesurés avec le même outil — comptes et taux dans `survivants.json`, jamais recopiés ici. `terminate()` reste écarté : son neutraliseur ne compilerait pas, ce qui fabriquerait un faux « attrapé »
-- [ ] `regles-bornees.ts` : retirer `terminate()` laisse la suite VERTE et le programme ne rend jamais la main
+- [x] ~~`regles-bornees.ts` : retirer `terminate()` laisse la suite VERTE~~ — **fermé le 25/08**, vérifié le 27/08 par mutation : `terminate()` retiré rend ROUGE (borne de 20 s atteinte), restauré 8/8. Le cas est lui-même borné, sinon la suite pendrait ; les six autres cas ne le voyaient pas parce qu'ils lisent la valeur de RETOUR, juste sans `terminate()`.
 - [x] Les alertes CodeQL : **déposées le 26 août 2026**, aucune ouverte — vérifiable par `gh api …/code-scanning/alerts`. Les `js/redos` en `used in tests`, les XSS et la fuite de trace en faux positif, textes vérifiés sur l'état publié
 - [x] `knip` : refermé et **vérifié dans le code**, pas dans le rapport — `fast-check` absent de `package.json`, 2 devDependencies, 81 paquets au verrou, `MUST_DECLARE` disparu
 - [x] `dependency-cruiser` : mesuré sans rien installer par `equipe/scripts/cycles.mjs` — **0 cycle statique**, 1 cycle fermé par un `await import()` (bénin : résolu à l'appel), 0 module mort. Les 12 non importés sont 11 points d'entrée npm et `charger.mjs`, cité par un relevé publié
