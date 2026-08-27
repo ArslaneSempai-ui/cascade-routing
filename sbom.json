@@ -208,7 +208,7 @@
     {
       "type": "library",
       "name": "@types/node",
-      "version": "24.13.3",
+      "version": "26.2.0",
       "licenses": [
         {
           "license": {
@@ -216,7 +216,7 @@
           }
         }
       ],
-      "purl": "pkg:npm/%40types/node@24.13.3"
+      "purl": "pkg:npm/%40types/node@26.2.0"
     },
     {
       "type": "library",
@@ -702,7 +702,7 @@
     {
       "type": "library",
       "name": "undici-types",
-      "version": "7.18.2",
+      "version": "8.3.0",
       "licenses": [
         {
           "license": {
@@ -710,7 +710,7 @@
           }
         }
       ],
-      "purl": "pkg:npm/undici-types@7.18.2"
+      "purl": "pkg:npm/undici-types@8.3.0"
     },
     {
       "type": "library",
