@@ -32,7 +32,7 @@
  *     npm run contrainte
  */
 
-import { writeFileSync, existsSync, rmSync, renameSync } from "node:fs";
+import { writeFileSync, existsSync, readFileSync, rmSync, renameSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { loadavg, cpus } from "node:os";
 import { isMain, refuserDrapeauxInconnus } from "./cli.ts";
@@ -86,7 +86,41 @@ export function memoireDisponibleMo(sortieVmStat: string): number {
     (lire("Pages free") + lire("Pages speculative") + lire("Pages inactive")) / 1e6);
 }
 
+/**
+ * L'analogue Linux, depuis `/proc/meminfo` : `MemAvailable` est le calcul du NOYAU pour
+ * « utilisable sans échanger » — libre + le récupérable immédiatement, exactement le
+ * raisonnement qui a fait compter l'inactif sur macOS, mais tenu par le noyau lui-même
+ * depuis la 3.14. Sortie en fonction pure pour la même raison que sa jumelle : le témoin.
+ *
+ * Un `MemAvailable` absent REFUSE au lieu de rendre zéro : zéro se lirait « machine
+ * pleine », et une garde qui crie à tort finit ignorée avec les vraies alertes.
+ */
+export function memoireDisponibleMoLinux(meminfo: string): number {
+  const m = /MemAvailable:\s+(\d+) kB/.exec(meminfo);
+  if (!m) {
+    throw new Error("MemAvailable is missing from /proc/meminfo: this reading cannot "
+      + "measure here, and a zero would read as a machine with no memory left.");
+  }
+  return Math.round(Number(m[1]) * 1024 / 1e6);
+}
+
 export function etatMachine() {
+  const commun = {
+    chargeParCoeur: Number((loadavg()[0]! / cpus().length).toFixed(2)),
+    charge: Number(loadavg()[0]!.toFixed(2)),
+    coeurs: cpus().length,
+  };
+  /* `vm_stat` n'existe que sur macOS — mesuré le 27/08/2026 sur le runner Ubuntu :
+     `spawnSync vm_stat ENOENT`, et le cas qui confronte la fonction pure à la vraie
+     machine tombait. Chaque plateforme lit sa propre source ; aucune n'invente. */
+  if (process.platform === "linux") {
+    const libreMo = memoireDisponibleMoLinux(readFileSync("/proc/meminfo", "utf8"));
+    /* `pswpout` est cumulatif comme le « Swapouts » de vm_stat : c'est la dérive entre
+       deux relevés qui parle, pas la valeur seule. */
+    const swapouts = Number(/(?:^|\n)pswpout (\d+)/.exec(readFileSync("/proc/vmstat", "utf8"))?.[1] ?? 0);
+    return { ...commun, memoireLibreMo: libreMo, swapouts,
+      dureesTransportables: libreMo >= MEMOIRE_LIBRE_MINIMALE_MO };
+  }
   const vm = execFileSync("vm_stat", { encoding: "utf8" });
   const taillePage = Number(/page size of (\d+) bytes/.exec(vm)?.[1] ?? 4096);
   const lire = (nom: string) => {
@@ -94,14 +128,8 @@ export function etatMachine() {
     return m ? Number(m[1]) * taillePage : 0;
   };
   const libreMo = memoireDisponibleMo(vm);
-  return {
-    chargeParCoeur: Number((loadavg()[0]! / cpus().length).toFixed(2)),
-    charge: Number(loadavg()[0]!.toFixed(2)),
-    coeurs: cpus().length,
-    memoireLibreMo: libreMo,
-    swapouts: lire("Swapouts") / 4096,
-    dureesTransportables: libreMo >= MEMOIRE_LIBRE_MINIMALE_MO,
-  };
+  return { ...commun, memoireLibreMo: libreMo, swapouts: lire("Swapouts") / 4096,
+    dureesTransportables: libreMo >= MEMOIRE_LIBRE_MINIMALE_MO };
 }
 
 /**

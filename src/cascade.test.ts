@@ -31,7 +31,7 @@ import { rapportPourLeClient } from "./your-cases.ts";
 import { elaguer as elaguerInterne } from "./journal.ts";
 import { estBoucleLocale, verdictEgress, ASSEZ_DE_RELEVES as ASSEZ_INTERNE } from "./egress.ts";
 import { PROMPTS as PROMPTS_INTERNES, questionPour as questionPourInterne } from "./tiers.ts";
-import { memoireDisponibleMo, etatMachine as etatMachineInterne,
+import { memoireDisponibleMo, memoireDisponibleMoLinux, etatMachine as etatMachineInterne,
   PLAFOND_JETONS as PLAFOND_JETONS_INTERNE,
   MEMOIRE_LIBRE_MINIMALE_MO as MEMOIRE_MINIMALE_INTERNE } from "./contrainte.ts";
 
@@ -4340,11 +4340,26 @@ test("la mémoire disponible se lit avec la taille de page annoncée, inactif co
     `l'inactif n'est plus compté : ${avecInactif} Mo avec 20 000 pages inactives contre `
     + `${sansInactif} sans, alors qu'elles sont réutilisables immédiatement.`);
 
-  /* ET LA VRAIE MACHINE EST D'ACCORD AVEC LA FONCTION PURE — sinon l'une des deux lit autre
-     chose, et c'est celle qui décide en production qui aurait tort. */
+  /* LA JUMELLE LINUX LIT `MemAvailable` — le calcul du noyau pour « utilisable sans
+     échanger », le même raisonnement que l'inactif ci-dessus mais tenu par le noyau. Et un
+     fichier qui ne le porte pas fait REFUSER : un zéro se lirait « machine pleine », et une
+     garde qui crie à tort finit ignorée avec les vraies alertes. */
+  const meminfo = "MemTotal:       16384000 kB\nMemFree:         1000000 kB\n"
+    + "MemAvailable:    8192000 kB\nBuffers:          200000 kB\n";
+  assert.equal(memoireDisponibleMoLinux(meminfo), Math.round(8_192_000 * 1024 / 1e6),
+    "la lecture Linux ne rend pas MemAvailable en Mo.");
+  assert.throws(() => memoireDisponibleMoLinux("MemTotal:       16384000 kB\n"),
+    /MemAvailable/,
+    "sans MemAvailable, la lecture doit refuser en le nommant, pas rendre un zéro qui se\n"
+    + "  lirait comme une machine pleine.");
+
+  /* ET LA VRAIE MACHINE EST D'ACCORD AVEC LES FONCTIONS PURES — sinon l'une des deux lit
+     autre chose, et c'est celle qui décide en production qui aurait tort. Ce relevé passe
+     par la branche de LA plateforme qui exécute : vm_stat ici, /proc/meminfo sur un runner. */
   const reelle = etatMachineInterne();
   assert.ok(reelle.memoireLibreMo > 0,
-    "la lecture réelle rend zéro : `vm_stat` n'a pas été lu, et le zéro se lirait comme une machine pleine.");
+    "la lecture réelle rend zéro : la source mémoire de cette plateforme n'a pas été lue, et\n"
+    + "  le zéro se lirait comme une machine pleine.");
 });
 
 test("le rapport que le client garde porte la réserve, pas seulement le terminal", () => {
