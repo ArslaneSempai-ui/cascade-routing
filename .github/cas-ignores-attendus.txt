@@ -14,9 +14,38 @@
 #
 # Ces six cas S'EXÉCUTENT sur la machine de développement, où la suite exige toujours
 # zéro ignoré local.
+#
+# ─── POURQUOI LA COUCHE PARTAGÉE NE SE MET PAS EN CHAÎNE, ET QUE PERSONNE NE LE RETENTE ───
+#
+# La question a été posée et tranchée le 27/08/2026, à l'échelle du portfolio. Le montage est
+# faisable : cloner `identite` à une révision ÉPINGLÉE, poser `IDENTITE`, retirer cette ligne
+# de la liste. Il a été écrit et éprouvé. Il ne sera pas posé, et voici la raison qui décide.
+#
+# L'ÉPINGLE REND LA CHAÎNE AVEUGLE AU SEUL DÉFAUT QUI SE PRODUIT. Une épingle est un fichier
+# versionné : elle ne monte que lorsqu'une diffusion la fait monter. Dans l'état qui arrive
+# vraiment — la source avance, les copies restent — elle nomme encore l'ancienne révision, les
+# copies lui correspondent, et la chaîne est VERTE pendant que le dépôt est en retard. C'est
+# exactement la panne du 27/08, et c'est celle que le montage ne peut pas voir. L'épingler sur
+# une branche est pire : un rouge dont la cause a déjà changé quand on vient le lire.
+#
+# CE QUE LA CHAÎNE AJOUTERAIT EST DÉJÀ COUVERT. Le crochet de pré-commit lance la suite
+# ENTIÈRE avant chaque commit ; sur toute machine portant `identite` — c'est-à-dire toute
+# machine qui peut légitimement toucher la couche, puisqu'elle se diffuse et ne s'édite pas sur
+# place — ce contrôle tourne déjà. Il ne resterait à la chaîne que la copie commitée en
+# `--no-verify`, ou depuis une machine sans `identite` : deux cas où l'auteur ne pouvait pas
+# modifier la couche légitimement de toute façon.
+#
+# ET ELLE Y TOURNERAIT DÉGRADÉE. Mesuré : sans dépôts voisins, aucune exception déclarée n'est
+# jugeable. La chaîne obtiendrait un contrôle plus faible que le local, contre un secret
+# permanent dans un dépôt public dont la chaîne tourne aussi sur `pull_request`, et un mode de
+# panne à l'expiration qui rend un rouge dont la cause n'est pas dans le code.
+#
+# Le domicile de ce contrôle est le pré-commit. Rouvrir demande une mesure qui contredise
+# celle-ci, pas une intuition — et la première à produire serait : un défaut de couche partagée
+# qui ait atteint un commit depuis une machine portant `identite`.
 le lecteur d'image distingue ses pannes, et une page sans texte n'en est pas une
 les couches partagées sont bien celles d'identite
-trois compilations simultanées laissent UN binaire entier, et rien d'autre
+3 compilations simultanées laissent UN binaire entier, et rien d'autre
 un binaire de zéro octet est recompilé, pas accepté pour toujours
 un palier qui lit vraiment traverse la sélection, et la passe va jusqu'au bout
 une compilation qui échoue ne se fait pas passer pour un swiftc absent
