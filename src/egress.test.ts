@@ -456,11 +456,30 @@ test("une commande surveillée TUÉE par un signal se dit, et la passe n'établi
       brut = execFileSync("pgrep", ["-P", String(egress.pid)], { encoding: "utf8" });
     } catch { return []; }
     return brut.trim().split("\n").filter(Boolean).map(Number).filter((pid) => {
+      /* Par ARGUMENTS, pas par nom de commande : `setTimeout` n'appartient qu'à la commande
+         surveillée, jamais à un `lsof` ou un `ps` d'échantillonnage. Un filtre par `comm`
+         est revenu vide sur le runner Ubuntu (27/08/2026) sans qu'on ait pu établir pourquoi
+         depuis un Mac — le message d'échec ci-dessous photographie désormais ce que la
+         machine voit, pour que le prochain rouge se diagnostique tout seul. */
       try {
-        return execFileSync("ps", ["-o", "comm=", "-p", String(pid)], { encoding: "utf8" })
-          .trim().endsWith("node");
+        return execFileSync("ps", ["-o", "args=", "-p", String(pid)], { encoding: "utf8" })
+          .includes("setTimeout");
       } catch { return false; }
     });
+  };
+  /* La photographie de l'instant de l'échec : les fils bruts et leurs arguments, et le
+     stderr d'egress lui-même — si egress est mort au démarrage, sa dernière parole est là. */
+  const instantane = () => {
+    let fils: string;
+    try {
+      const brut = execFileSync("pgrep", ["-P", String(egress.pid)], { encoding: "utf8" }).trim();
+      fils = brut.split("\n").filter(Boolean).map((pid) => {
+        try {
+          return `${pid}: ${execFileSync("ps", ["-o", "args=", "-p", pid], { encoding: "utf8" }).trim()}`;
+        } catch { return `${pid}: (mort entre pgrep et ps)`; }
+      }).join("\n    ") || "(pgrep ne rend rien)";
+    } catch { fils = "(pgrep refuse : aucun fils)"; }
+    return `fils vus :\n    ${fils}\n  stderr d'egress : ${dit.trim() || "(rien)"}`;
   };
   await (async () => {
     const fin = Date.now() + 12_000;
@@ -471,7 +490,7 @@ test("une commande surveillée TUÉE par un signal se dit, et la passe n'établi
     }
   })();
   const fils = filsSurveilles();
-  assert.ok(fils.length >= 1, "le montage est faux : rien à tuer.");
+  assert.ok(fils.length >= 1, `le montage est faux : rien à tuer.\n  ${instantane()}`);
   for (const pid of fils) process.kill(pid, "SIGKILL");
   /* `close`, pas `exit` : `exit` se résout AVANT que les flux stdio soient vidés — sous le
      crochet, `dit` arrivait vide et le cas rougissait en 272 ms en accusant le message. `close`
