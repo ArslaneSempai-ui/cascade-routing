@@ -134,8 +134,11 @@ several scripts chain shell commands, which hold under Git Bash and not under `c
 **580 tests** across 65 files, counted from the sources rather than typed here.
 <!-- /figures:tests -->
 
-Everything runs locally. No API key, nothing leaves the machine, and anyone who clones this
-reproduces the numbers below.
+Everything runs locally, and that is enforced rather than promised. The one call that could
+carry your documents — the generative host — is checked against this machine immediately
+before it is made, on every path that reaches it; a run pointed anywhere else refuses to
+start unless you write `--remote-ollama` in the command yourself. No API key, and anyone who
+clones this reproduces the numbers below.
 
 **What it actually costs you to reproduce it:** about 400 MB of npm packages, then **1.26 GB
 of model weights** on the first `npm run measure` — 474 MB for roberta-base-squad2, 448 MB for
@@ -302,7 +305,8 @@ has three halves, not two: `training` for writing rules, `dev` for tuning prompt
 read once and deciding nothing but the published figure. A test fails if any two of them share
 a phrasing.
 
-And the size of the leak is measured rather than apologised for:
+And the size of the leak is a measurement rather than an apology — `npm run fuite` produces
+it, and until it has been run this page says so instead of guessing:
 
 <!-- figures:fuite -->
 Not measured yet — run `npm run fuite`. Until it is, the generative figures on this page carry a prompt tuned against the half they are scored on, and are optimistic by an unknown amount.
@@ -333,9 +337,12 @@ good many of those rankings are noise. These pairs are **not distinguishable** h
 <!-- /figures:egalites -->
 
 This section exists because it caught me. An earlier headline for this project claimed the
-large model was worse than the small one on the address field. It is — by 4.2 points, with
-intervals that overlap almost completely. The direction was right and the claim was not
-supported, and I would have published it.
+large model was worse than the small one on more fields than the sample could support — the
+retraction table below records what it said. It held on one field, and on the sample measured
+then the gap was 4.2 points with intervals that overlapped almost completely. The direction
+was right, the claim was not supported, and I would have published it. The larger sample has
+since separated that pair, which is the finding reported above — and being right in the end
+is not the same as having been entitled to say it.
 
 The optimiser now applies the same rule rather than merely reporting it: **where two tiers
 cannot be told apart, it takes the cheaper one.** A difference inside the interval is not a
@@ -540,14 +547,15 @@ small · document · fragment   [D-0002]
 
 ---
 
-## Measured on somebody else's data
+## Measuring on somebody else's data
 
 Every other figure on this page comes from a corpus I wrote. That is the fair objection, and
 a held-out split does not answer it: it defends against marking your own homework, it does not
 turn invented documents into real ones.
 
-So the same measurement — same scorer, same intervals, same trivial baselines — runs on a
-public labelled set that somebody else published, with their labels and their oddities.
+So the same measurement — same scorer, same intervals, same trivial baselines — is wired to
+run on a public labelled set that somebody else published, with their labels and their
+oddities. The block below reports it, or says it has not been run:
 
 <!-- figures:public -->
 Not run yet — `npm run benchmark`.
@@ -670,7 +678,8 @@ model holds for mine.
 ```
 src/
   corpus.ts      the two case sets, split into training and held-out halves
-  tiers.ts       four tiers per chain: rules, a small model, a large one, a human
+  tiers.ts       seven tiers per chain: rules, a small model, a large one, three
+                 generative sizes, a human
   measure.ts     measure once, freeze the profile
   assumptions.ts everything that is not measured, and why it cannot be
   optimise.ts    exhaustive routing under budget, and the price of the next step
