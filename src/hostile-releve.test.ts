@@ -5,7 +5,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
-import { page, type Releve } from "./hostile.ts";
+import { page, verifierLeScelle, type Releve } from "./hostile.ts";
+import { empreinteDuReleve } from "./measure.ts";
 
 /*
  * LES TÉMOINS DU RELEVÉ.
@@ -94,4 +95,95 @@ test("--check REFUSE une page qui a dérivé, et le refuse en s'arrêtant", { ti
     "et le refus doit dire ce qui ne correspond plus, sinon le lecteur cherche à l'aveugle.");
 
   rmSync(d, { recursive: true, force: true });
+});
+
+
+/*
+ * LE RELEVÉ COMME LIVRABLE : IL PORTE SON SCELLÉ, OU IL NE SE PUBLIE PAS.
+ *
+ * `--check` refusait une PAGE qui avait dérivé de son relevé. Rien ne disait que le RELEVÉ
+ * n'avait pas bougé : un taux de détournement changé à la main dans le JSON produisait une page
+ * parfaitement cohérente avec lui, et le contrôle la déclarait à jour. Le corpus dur porte ce
+ * scellé depuis longtemps ; celui-ci vivait sans.
+ *
+ * Les trois refus sont éprouvés SÉPARÉMENT, et chacun avec son pendant vert : une garde dont on
+ * n'a jamais vu le vert peut refuser tout, et une garde dont on n'a jamais vu le rouge peut
+ * n'avoir jamais regardé.
+ */
+test("un relevé sans scellé est refusé, et le refus nomme ce qui manque", () => {
+  const r = JSON.parse(readFileSync(RELEVE, "utf8")) as Record<string, unknown>;
+
+  /* TÉMOIN POSITIF D'ABORD : intact, il passe. Sans lui, une garde qui refuse tout satisferait
+     les trois refus ci-dessous sans rien garder. */
+  assert.doesNotThrow(() => verifierLeScelle(r, RELEVE),
+    "le relevé livré est refusé par sa propre garde : elle a coûté la mesure au lieu de la garder.");
+
+  for (const champ of ["empreinte", "mesureLe"] as const) {
+    const ampute = { ...r };
+    delete ampute[champ];
+    assert.throws(() => verifierLeScelle(ampute, RELEVE),
+      (e: Error) => e.message.includes(champ) && /npm run hostile/.test(e.message),
+      `retirer \`${champ}\` doit faire REFUSER, en nommant le champ et en disant quoi lancer — `
+      + "un refus sans issue écrite finit commenté par le premier qui le rencontre.");
+  }
+
+  /* La provenance aussi : un relevé sans commit ne se rejoue pas. */
+  const sansCommit = { ...r, code: { sale: false } };
+  assert.throws(() => verifierLeScelle(sansCommit, RELEVE), /code\.commit/,
+    "un relevé sans commit de provenance doit être refusé : personne ne peut le rejouer.");
+});
+
+test("un relevé modifié après son scellé est refusé, et le refus donne les deux empreintes", () => {
+  const r = JSON.parse(readFileSync(RELEVE, "utf8")) as Releve;
+
+  /* LE DÉFAUT EXACT QUE CECI FERME : un chiffre changé à la main. On prend le plus tentant —
+     un détournement qu'on ferait disparaître avant de montrer la page à un acheteur. */
+  const cible = r.resultats.find((x) => x.detourne);
+  assert.ok(cible, "aucun détournement dans le relevé : ce cas n'a rien à falsifier, et son "
+    + "rouge ne prouverait plus ce qu'il prétend.");
+  cible.detourne = false;
+
+  assert.throws(() => verifierLeScelle(r, RELEVE),
+    (e: Error) => /edited since it was sealed/.test(e.message)
+      && e.message.includes(empreinteDuReleve(r)),
+    "un relevé dont un chiffre a bougé doit être refusé, et le refus doit porter l'empreinte "
+    + "calculée — sans elle, le lecteur ne peut pas savoir laquelle des deux est la sienne.");
+});
+
+test("--check REFUSE un relevé descellé, à la commande et pas seulement en fonction",
+  { timeout: 120_000 }, () => {
+  /*
+   * LE SITE D'APPEL. Les deux cas ci-dessus éprouvent `verifierLeScelle`. Ils resteraient verts
+   * si `--check` cessait de l'appeler — c'est-à-dire si le défaut d'origine revenait : une page
+   * contrôlée contre un relevé que personne ne vérifie. Le refus doit sortir de la COMMANDE.
+   */
+  const cmd = fileURLToPath(new URL("./hostile.ts", import.meta.url));
+  const d = mkdtempSync(join(tmpdir(), "hostile-scelle-"));
+  const releve = join(d, "releve.json");
+  const pageCopie = join(d, "page.md");
+  copyFileSync(RELEVE, releve);
+  copyFileSync(PAGE, pageCopie);
+
+  const lancer = () => spawnSync("node", [cmd, "--check", `--releve=${releve}`, `--page=${pageCopie}`],
+    { encoding: "utf8", timeout: 100_000 });
+
+  try {
+    /* Témoin positif : les copies fidèles passent, scellé compris. */
+    const sain = lancer();
+    assert.equal(sain.status, 0,
+      `des copies fidèles doivent passer. Sortie :\n${(sain.stdout ?? "") + (sain.stderr ?? "")}`);
+
+    /* Le scellé retiré : la commande doit s'arrêter. */
+    const r = JSON.parse(readFileSync(releve, "utf8")) as Record<string, unknown>;
+    delete r["empreinte"];
+    writeFileSync(releve, JSON.stringify(r, null, 2) + "\n");
+    const descelle = lancer();
+    assert.notEqual(descelle.status, 0,
+      "un relevé sans scellé laisse la commande conclure : la page est contrôlée contre un "
+      + `fichier que personne ne vérifie. Sortie :\n${(descelle.stdout ?? "") + (descelle.stderr ?? "")}`);
+    assert.match((descelle.stderr ?? "") + (descelle.stdout ?? ""), /is not sealed/,
+      "et le refus doit dire que le relevé n'est pas scellé, pas planter sur autre chose.");
+  } finally {
+    rmSync(d, { recursive: true, force: true });
+  }
 });

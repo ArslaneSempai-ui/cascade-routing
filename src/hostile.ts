@@ -31,6 +31,7 @@ import type { Field } from "./corpus.ts";
 import { tournuresDInstruction } from "./document-suspect.ts";
 import { estCitation } from "./forme-rendue.ts";
 import { FORME } from "./signal.ts";
+import { empreinteDuReleve } from "./measure.ts";
 import { isMain, refuserDrapeauxInconnus } from "./cli.ts";
 import { ouvrirJournal, issue } from "./journal.ts";
 import { loadavg } from "node:os";
@@ -56,7 +57,60 @@ export type Releve = {
   paliers: string[];
   cas: Array<{ id: string; quoi: string; champ: string; attendu: string; charge: string | null; tournures: string[] }>;
   resultats: Resultat[];
+  /** Le scellé. Absent d'un relevé d'avant son introduction — et c'est ce que la garde refuse. */
+  empreinte?: string;
 };
+
+/**
+ * LE CORPUS HOSTILE COMME LIVRABLE, ET CE QUE ÇA EXIGE DE PLUS.
+ *
+ * Il vivait sans garantie : le relevé portait sa date et sa provenance, et `--check` refusait
+ * une page qui avait dérivé du relevé — mais rien ne disait que le RELEVÉ lui-même n'avait pas
+ * bougé. Un chiffre de détournement modifié à la main dans le JSON produisait une page
+ * parfaitement cohérente avec lui, et `--check` la déclarait à jour. Le corpus dur porte ce
+ * scellé depuis longtemps ; celui-ci ne l'avait pas.
+ *
+ * ON RÉUTILISE `empreinteDuReleve` PLUTÔT QUE D'EN ÉCRIRE UN SECOND. Deux fonctions de scellé
+ * dans un dépôt, c'est deux conventions de sérialisation qui divergeront, et le jour où elles
+ * divergent c'est le contrôle qui a l'air faux. Celle-là sérialise à clés triées et s'exclut
+ * elle-même du calcul, ce qui est exactement ce qu'il faut ici.
+ *
+ * CE QUE LE SCELLÉ PROUVE : que le fichier n'a pas changé depuis qu'il a été posé.
+ * CE QU'IL NE PROUVE PAS : que ce qu'il contenait ce jour-là était juste. Le premier scellé de
+ * ce relevé a été posé sur un fichier DÉJÀ MESURÉ — remesurer demandait les modèles et des
+ * heures — donc il ne dit rien de ce qui l'a précédé. Écrit ici plutôt que laissé à deviner à
+ * qui lit « sealed » dans un livrable.
+ */
+export function verifierLeScelle(brut: unknown, dou: string): Releve {
+  const nom = dou.split("/").pop() ?? dou;
+  const r = brut as Partial<Releve>;
+
+  const manquants: string[] = [];
+  if (typeof r?.mesureLe !== "string" || !/^\d{4}-\d{2}-\d{2}T/.test(r.mesureLe)) manquants.push("mesureLe");
+  if (typeof r?.code?.commit !== "string" || !/^[0-9a-f]{7,40}$/.test(r.code.commit)) manquants.push("code.commit");
+  if (typeof r?.code?.sale !== "boolean") manquants.push("code.sale");
+  if (typeof r?.empreinte !== "string" || r.empreinte.length === 0) manquants.push("empreinte");
+
+  if (manquants.length > 0) {
+    throw new Error(
+      `${nom} is not sealed: ${manquants.join(", ")} missing or malformed.\n`
+      + "  A deliverable record states when it was measured, which commit measured it, and\n"
+      + "  carries a seal so a reader can tell it has not been edited since.\n"
+      + "  → run `npm run hostile` to measure and seal again.");
+  }
+
+  const calculee = empreinteDuReleve(r);
+  if (calculee !== r.empreinte) {
+    throw new Error(
+      `${nom} has been edited since it was sealed: it carries ${r.empreinte}, its contents `
+      + `hash to ${calculee}.\n`
+      + "  Every figure published from this record is therefore unverifiable — a number changed\n"
+      + "  by hand produces a page perfectly consistent with itself.\n"
+      + "  → `git checkout " + nom + "` to restore it, or `npm run hostile` to measure again.");
+  }
+
+  return r as Releve;
+}
 
 /**
  * DÉTOURNÉ : la valeur voulue par l'attaquant se retrouve dans la réponse.
@@ -146,6 +200,13 @@ export function page(r: Releve): string {
   l.push("");
   l.push(`Measured ${r.mesureLe.slice(0, 10)}, code \`${r.code.commit}\`, `
     + `${cas.length} documents × ${r.paliers.length} tiers.`);
+  /* Le scellé sur la PAGE, pas seulement dans le relevé : un lecteur qui n'ouvre que le
+     livrable doit pouvoir le recalculer. Un scellé qu'il faut aller chercher n'est vérifié
+     par personne. */
+  if (r.empreinte) {
+    l.push(`Record sealed \`${r.empreinte}\` — \`npm run hostile -- --check\` refuses this page `
+      + "if the record was edited after the seal was set.");
+  }
   l.push("");
   l.push("A client's document is read by the model. In KYC that document comes from outside the");
   l.push("bank, so whoever supplies it writes part of what the model sees. This page measures");
@@ -276,7 +337,7 @@ async function principal(): Promise<void> {
       process.argv.find((x) => x.startsWith(`--${nom}=`))?.split("=").slice(1).join("=") ?? defaut;
     const releve = chemin("releve", RELEVE);
     const pageLue = chemin("page", PAGE);
-    const r = JSON.parse(readFileSync(releve, "utf8")) as Releve;
+    const r = verifierLeScelle(JSON.parse(readFileSync(releve, "utf8")), releve);
     const attendu = page(r);
     const actuel = readFileSync(pageLue, "utf8");
     if (attendu !== actuel) {
@@ -352,6 +413,7 @@ async function principal(): Promise<void> {
     })),
     resultats,
   };
+  releve.empreinte = empreinteDuReleve(releve);
   writeFileSync(RELEVE, JSON.stringify(releve, null, 2) + "\n");
   writeFileSync(PAGE, page(releve));
 
