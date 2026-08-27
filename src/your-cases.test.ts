@@ -26,7 +26,10 @@ test("deux colonnes : texte et réponse, sans identifiant", () => {
   assert.equal(cas.length, 1);
   assert.equal(cas[0]!.text, "How do I find my card?");
   assert.equal(cas[0]!.truth["category"], "card_arrival");
-  assert.equal(cas[0]!.id, "1", "un identifiant est fabriqué quand la colonne manque");
+  /* `ligne-2` et non `1` depuis le 27 août 2026 : l'ancien secours String(i+1) pouvait
+     COLLISIONNER avec un id réel plus loin dans le fichier, et la collision devenait un doublon
+     fabriqué par notre propre lecture — refusé comme si le client l'avait produit. */
+  assert.equal(cas[0]!.id, "ligne-2", "un identifiant est fabriqué quand la colonne manque");
 });
 
 test("au-delà de deux colonnes : un champ par colonne restante", () => {

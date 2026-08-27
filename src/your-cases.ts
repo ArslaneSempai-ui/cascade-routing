@@ -596,11 +596,43 @@ export function lireCsv(texte: string): Lecture {
     }
     if (l.length < noms.length) courtes.push({ ligne: i + 2, champs: l.length });
     cas.push({
-      id: colId >= 0 ? (l[colId] ?? String(i + 1)).trim() : String(i + 1),
+      /* `ligne-N` et non `N` : un id de secours nu peut collisionner avec un id réel plus
+         loin dans le fichier, et la collision devenait un doublon silencieux. */
+      id: colId >= 0 ? ((l[colId] ?? "").trim() || `ligne-${i + 2}`) : `ligne-${i + 2}`,
       text: l[colTexte] ?? "",
       truth: Object.fromEntries(colChamps.map((c) => [noms[c]!, (l[c] ?? "").trim()])),
     });
   });
+
+  /*
+   * UN IDENTIFIANT EN DOUBLE FAUSSE TOUT CE QUI INDEXE DESSUS, ET TROIS CONSOMMATEURS LE FONT.
+   * Deux lignes d'id « 7 » — un doublon d'export parfaitement ordinaire — comptaient DEUX
+   * verdicts pour UN document (« bons=2/2, every identifier matches »), et casBornes, une Map
+   * par id, écrasait : deux cas tronqués partageant un id s'annonçaient « 1 case cut ».
+   * Aggravant : une cellule id manquante recevait String(i+1), qui peut COLLISIONNER avec un
+   * id réel plus loin dans le fichier — la ligne 3 sans id devenait « 3 », l'id « 3 » existait.
+   *
+   * On refuse en NOMMANT les doublons et leurs lignes : l'exactitude d'une chaîne cliente se
+   * calculerait fausse en silence, et c'est le chiffre que l'acheteur regarde. Les ids de
+   * secours sont préfixés (`ligne-N`) pour ne jamais collisionner avec un id réel.
+   * Audit du 27 août 2026.
+   */
+  const lignesParId = new Map<string, number[]>();
+  cas.forEach((c, k) => {
+    const l = lignesParId.get(c.id) ?? [];
+    l.push(k + 2);
+    lignesParId.set(c.id, l);
+  });
+  const idsEnDouble = [...lignesParId.entries()].filter(([, lignes]) => lignes.length > 1);
+  if (idsEnDouble.length) {
+    throw new Error(
+      `duplicate case identifier(s): `
+      + idsEnDouble.slice(0, 5).map(([id, lignes]) => `"${id}" (rows ${lignes.join(", ")})`).join(", ")
+      + (idsEnDouble.length > 5 ? ` and ${idsEnDouble.length - 5} more` : "") + `.\n`
+      + `  Every rate here is computed per identifier: a duplicate counts one document twice\n`
+      + `  and the accuracy of your pipeline comes out wrong without a word. Deduplicate the\n`
+      + `  export, or give each row its own id, and run again. Nothing was measured.`);
+  }
 
   return { champs, cas, ecartees, courtes, demesurees, lecture: { colTexte, colId, noms } };
 }

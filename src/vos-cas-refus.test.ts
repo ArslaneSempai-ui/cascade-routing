@@ -81,3 +81,33 @@ test("un fichier de questions illisible est refusé, et le refus le nomme", () =
   exigerRefus(lancer([CMD, `--cases=${f}`, "--questions=/tmp/questions-absentes.json"]),
     /no such file|cannot read/, "un fichier de questions absent doit être refusé");
 });
+
+test("deux lignes portant le même identifiant sont refusées, avec leurs numéros de ligne", () => {
+  /*
+   * Un doublon d'export ordinaire comptait DEUX verdicts pour UN document : bons=2/2 sur une
+   * chaîne notée sur un seul cas, « every identifier matches » affiché. L'exactitude d'une
+   * chaîne CLIENTE se calculait fausse en silence — le chiffre que l'acheteur regarde.
+   */
+  const d = bac();
+  const f = join(d, "doublon.csv");
+  writeFileSync(f, 'id,text,name\n7,"Anna Petrova",Anna\n8,"Boris Ivanov",Boris\n7,"Clara Diaz",Clara\n');
+  const r = lancer([CMD, `--cases=${f}`]);
+  exigerRefus(r, /duplicate case identifier.*"7" \(rows 2, 4\)/,
+    "un identifiant en double doit être refusé en nommant l'id ET ses lignes");
+  assert.match(r.texte, /Nothing was measured/,
+    "le refus ne dit pas que rien n'a été mesuré.");
+});
+
+test("une cellule id manquante reçoit un id qui ne peut PAS collisionner avec un id réel", () => {
+  /* Le secours était String(i+1) : la ligne 3 sans id devenait « 3 », et un id réel « 3 »
+     ailleurs dans le fichier en faisait un doublon fabriqué par NOTRE lecture. */
+  const d = bac();
+  const f = join(d, "sans-id.csv");
+  writeFileSync(f, 'id,text,name\n3,"Anna Petrova",Anna\n,"Boris Ivanov",Boris\n');
+  /* Pas de point d'arrêt disponible ici : deux cas passent toutes les gardes et la commande
+     mesurerait. On la borne à 15 s — la lecture du CSV, où vit la garde éprouvée, tient en
+     millisecondes, et on ne regarde que ce qu'elle a DIT. */
+  const r = lancer([CMD, `--cases=${f}`], { msMax: 15_000 });
+  assert.doesNotMatch(r.texte, /duplicate case identifier/,
+    "la lecture fabrique elle-même un doublon : l'id de secours collisionne avec un id réel.");
+});
