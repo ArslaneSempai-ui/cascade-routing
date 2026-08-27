@@ -328,3 +328,51 @@ test("tout fichier de cas est atteint par la commande qui lance la suite", () =>
     `le README publie ${publie[1]} cas dans ${publie[2]} fichiers, la sélection en donne `
     + `${n} dans ${fichiers.length}. → npm run figures`);
 });
+
+
+/*
+ * LE COMPTEUR LUI-MÊME : IL REFUSE, OU IL REND ZÉRO EN SILENCE.
+ *
+ * `compter-cas.ts` a été écrit pour `cascade`, qui liste ses extensions en toutes lettres.
+ * Neuf dépôts voisins écrivent `src/*.test.*`. Sur cette forme, le motif d'origine extrayait
+ * `.test` — une extension qui ne correspond à AUCUN fichier — donc zéro fichier, zéro cas, et
+ * un README qui aurait publié « 0 tests » comme une mesure. Un mode de panne silencieux QUI
+ * PORTE UN CHIFFRE : personne ne va vérifier un nombre qui s'affiche.
+ *
+ * Le fichier ne vit que dans `cascade` aujourd'hui : ce n'était donc pas un défaut, c'était un
+ * piège posé pour la prochaine personne qui le copierait en le croyant sûr — et il porte un
+ * commentaire qui explique pourquoi lister les extensions à la main serait faux, ce qui invite
+ * précisément à le copier.
+ *
+ * LE CORRECTIF EST LE REFUS, PAS L'ÉLARGISSEMENT. Reconnaître l'étoile rattrape une forme
+ * connue ; le motif restera toujours en retard sur celle qu'on n'a pas prévue. Le refus, lui,
+ * les couvre toutes — c'est le zéro qui doit prouver qu'il a regardé, appliqué à notre propre
+ * outil de mesure.
+ */
+test("un compteur qui ne reconnaît pas sa commande REFUSE, il ne rend pas zéro", () => {
+  const dossier = fileURLToPath(new URL(".", import.meta.url));
+
+  assert.throws(() => fichiersDeCas(dossier, "tsc --noEmit && node src/readme.ts --check"),
+    /aucun fichier de cas atteint/,
+    "un script qui ne lance aucun cas sous une forme reconnaissable doit faire REFUSER. "
+    + "Rendre zéro publierait « 0 tests » comme une mesure, et un chiffre affiché n'est pas "
+    + "revérifié.");
+
+  /*
+   * LE PENDANT, SANS LEQUEL « LÈVE TOUJOURS » PASSERAIT. Un compteur qui refuserait sur tout
+   * satisferait l'assertion ci-dessus en n'ayant jamais rien compté.
+   */
+  const explicite = fichiersDeCas(dossier, "node --test src/*.test.ts src/*.test.mjs");
+  assert.ok(explicite.length >= 30,
+    `${explicite.length} fichier(s) atteints par la forme explicite : le compteur refuse ou ne `
+    + "sélectionne presque rien, et le refus ci-dessus ne prouverait rien.");
+
+  /*
+   * ET LA FORME DES VOISINS DOIT DONNER LA MÊME COLLECTION. C'est le vrai contrôle de
+   * l'élargissement : `src/*.test.*` et la liste explicite décrivent le même ensemble ici, donc
+   * un dépôt qui écrit l'une ou l'autre compte la même chose.
+   */
+  assert.deepEqual(fichiersDeCas(dossier, "node --test src/*.test.*"), explicite,
+    "`src/*.test.*` et la forme explicite ne sélectionnent pas les mêmes fichiers : le compteur "
+    + "rendrait deux chiffres différents pour deux façons d'écrire la même commande.");
+});

@@ -20,19 +20,62 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
-/** Les extensions que la commande de suite lance, telles qu'elle les écrit. */
+/**
+ * Les suffixes que la commande de suite lance, tels qu'elle les écrit — `*` compris.
+ *
+ * LE MOTIF EST TOUJOURS EN RETARD SUR UNE FORME QU'ON N'A PAS PRÉVUE. Écrit pour `cascade`,
+ * qui liste ses extensions en toutes lettres, il rendait `[".test"]` sur `src/*.test.*` — la
+ * forme que neuf dépôts voisins emploient. Une extension qui ne correspond à AUCUN fichier :
+ * le compte tombait à zéro, et le zéro se lisait comme un résultat.
+ *
+ * On reconnaît donc l'étoile ; mais ce n'est PAS le correctif, c'est un rattrapage. Le
+ * correctif est le refus de `fichiersDeCas` : il couvre les formes qu'on n'a pas encore vues.
+ */
 export function extensionsLancees(scriptTest: string): string[] {
   return [...new Set(
-    [...scriptTest.matchAll(/src\/\*(\.[A-Za-z0-9.]*[A-Za-z0-9])/g)].map((m) => m[1]!),
+    [...scriptTest.matchAll(/src\/\*(\.[A-Za-z0-9.*]*[A-Za-z0-9*])/g)].map((m) => m[1]!),
   )];
 }
 
-/** Les fichiers de cas que cette commande atteint, dans ce dossier. */
+/** Un nom correspond-il au suffixe lancé ? `*` y vaut une extension non vide. */
+function correspond(nom: string, suffixe: string): boolean {
+  const motif = suffixe.split("").map((c) =>
+    c === "*" ? "[A-Za-z0-9]+" : c === "." ? "\\." : c).join("");
+  return new RegExp(motif + "$").test(nom);
+}
+
+/**
+ * Les fichiers de cas que cette commande atteint, dans ce dossier.
+ *
+ * ─── UN COMPTEUR QUI NE RECONNAÎT PAS SA COMMANDE REFUSE, IL NE REND PAS ZÉRO ───
+ *
+ * C'est la règle que ce dépôt applique à tous ses contrôles, retournée vers son propre outil :
+ * le zéro doit prouver qu'il a regardé. Sans ce refus, ce module copié chez un voisin qui écrit
+ * ses extensions autrement sélectionnait zéro fichier, comptait zéro cas, et le README publiait
+ * « 0 tests » comme une mesure. Le mode de panne est silencieux ET il porte un chiffre, ce qui
+ * est la pire combinaison : personne ne va vérifier un nombre qui s'affiche.
+ *
+ * La condition porte sur le RÉSULTAT, pas sur l'extraction. Sur `src/*.test.*` le motif
+ * d'origine extrayait bien quelque chose — `.test` — qui ne correspondait simplement à aucun
+ * fichier. Un contrôle posé sur « a-t-on extrait une extension » aurait donc passé au vert sur
+ * le cas même qui l'a fait écrire.
+ */
 export function fichiersDeCas(dossier: string, scriptTest: string): string[] {
-  const extensions = extensionsLancees(scriptTest);
-  return readdirSync(dossier)
-    .filter((n: string) => extensions.some((e) => n.endsWith(e)))
+  const suffixes = extensionsLancees(scriptTest);
+  const fichiers = readdirSync(dossier)
+    .filter((n: string) => suffixes.some((e) => correspond(n, e)))
     .sort();
+
+  if (scriptTest.trim() !== "" && fichiers.length === 0) {
+    throw new Error(
+      `aucun fichier de cas atteint dans ${dossier}.\n`
+      + `  Suffixes déduits du script \`test\` : ${suffixes.length ? suffixes.join(", ") : "aucun"}\n`
+      + `  Script lu : ${scriptTest}\n`
+      + "  Un compteur qui ne reconnaît pas la forme qu'on lui donne doit REFUSER : rendre zéro\n"
+      + "  publierait « 0 tests » comme une mesure. → étendre la lecture du script, ou corriger\n"
+      + "  le script s'il ne lance vraiment aucun cas.");
+  }
+  return fichiers;
 }
 
 /**
