@@ -1649,9 +1649,12 @@ test("aucune dépendance n'exécute de code à l'installation, et toutes sont é
       + "aucun sous-processus — lu, pas supposé",
     "node_modules/onnxruntime-node":
       "postinstall qui TÉLÉCHARGE des binaires natifs depuis github.com et le flux Azure de "
-      + "Microsoft, et les extrait par execFileSync. Conditionné à Linux x64, donc inerte sur "
-      + "macOS et actif sur un coureur ubuntu-latest. C'est la seule vraie surface d'exécution "
-      + "à l'installation de ce projet, et elle doit être dite à un acheteur, pas cachée",
+      + "Microsoft, et les extrait — par `adm-zip` depuis la 1.24.3, par execFileSync avant "
+      + "elle (`script/install-utils.js`, « Use adm-zip instead of spawn »). Conditionné à "
+      + "Linux x64, donc inerte sur macOS et actif sur un coureur ubuntu-latest. C'est la "
+      + "seule vraie surface d'exécution à l'installation de ce projet, et elle doit être "
+      + "dite à un acheteur, pas cachée. Le décompacteur qu'elle emploie est donc du code qui "
+      + "tourne vraiment chez nous : voir la garde d'`adm-zip` juste en dessous",
   };
   const inconnus = surLeDisque.filter((k) => !(k in DECLARES));
   assert.deepEqual(inconnus, [],
@@ -1671,6 +1674,79 @@ test("aucune dépendance n'exécute de code à l'installation, et toutes sont é
     `${sansEmpreinte.length} paquet(s) sans empreinte d'intégrité : ${sansEmpreinte.slice(0, 5).join(", ")}\n`
     + "  → « npm ci » ne vérifie que ce que le verrou déclare. Ce qui n'est pas déclaré peut\n"
     + "    être remplacé sur le registre sans que l'installation le refuse.");
+});
+
+/*
+ * ─── UN `overrides` QUI TUE UNE VULNÉRABILITÉ N'A RIEN QUI L'EMPÊCHE DE DISPARAÎTRE ───
+ *
+ * `@huggingface/transformers` 4.2.0 tire `onnxruntime-node` 1.24.3, qui dépend d'`adm-zip`
+ * `^0.5.16`. Tout ce qui satisfait cette borne porte GHSA-xcpc-8h2w-3j85 : une archive
+ * fabriquée y déclenche une allocation de 4 Go. Mesuré le 27 août 2026 — `npm audit` rendait
+ * **trois avis « high »** ; avec l'override sur `^0.6.0`, il en rend **zéro**.
+ *
+ * ET CE DÉCOMPACTEUR TOURNE VRAIMENT CHEZ NOUS. Il n'est pas chargé à l'inférence : il est
+ * requis par `script/install-utils.js`, le postinstall qui télécharge les binaires natifs —
+ * déclaré juste au-dessus, inerte sur macOS et ACTIF sur le coureur Linux. La vulnérabilité
+ * était atteignable, pas théorique.
+ *
+ * L'override est la seule chose qui la tient, et rien ne l'attachait : un `npm install`
+ * malheureux, une montée d'`onnxruntime-node`, une main qui fait le ménage dans
+ * `package.json` — et les trois avis reviennent sans un mot, sur un produit vendu avec une
+ * page de sécurité publique. Une vulnérabilité tuée est une chose ; une vulnérabilité
+ * redevenue invisible en est une autre.
+ *
+ * Le cas regarde le VERROU et non `package.json` : c'est le verrou qui décide ce qui
+ * s'installe. Un override déclaré mais non résolu passerait un contrôle qui lit l'intention.
+ */
+test("adm-zip reste au-dessus du seuil de son avis, et l'override qui l'y tient est déclaré", () => {
+  const racine = fileURLToPath(new URL("..", import.meta.url));
+  const verrou = JSON.parse(readFileSync(join(racine, "package-lock.json"), "utf8")) as {
+    packages: Record<string, { version?: string }>;
+  };
+
+  /* Toutes les résolutions, y compris une copie imbriquée sous un autre paquet : c'est
+     exactement par là qu'une version vulnérable revient sans toucher l'entrée de tête. */
+  const resolutions = Object.entries(verrou.packages)
+    .filter(([k]) => /(^|\/)node_modules\/adm-zip$/.test(k))
+    .map(([k, v]) => ({ chemin: k, version: v.version ?? "?" }));
+
+  /* LE DÉNOMINATEUR : si `adm-zip` disparaît du verrou, ce cas n'a plus rien à garder et
+     doit le DIRE, pas rendre un vert sur une liste vide. */
+  assert.ok(resolutions.length > 0,
+    "adm-zip n'est plus dans package-lock.json. Si onnxruntime-node ne l'utilise plus, retirez\n"
+    + "  l'override de package.json ET ce cas — mais vérifiez-le avant de conclure, parce qu'un\n"
+    + "  zéro obtenu sur une liste vide ressemble exactement à un zéro obtenu sur une garde.");
+
+  const SEUIL = [0, 6, 0];   // GHSA-xcpc-8h2w-3j85 : corrigé à partir de 0.6.0
+  const trop_vieilles = resolutions.filter(({ version }) => {
+    /* La CONVERSION AVANT LA COMPARAISON : une version illisible ne doit pas atterrir du
+       côté rassurant du seuil. Tout ce qui ne se lit pas est traité comme trop vieux. */
+    const n = version.split(".").map((x) => Number.parseInt(x, 10));
+    if (n.length < 3 || n.some((x) => !Number.isInteger(x))) return true;
+    for (let i = 0; i < 3; i++) {
+      if (n[i]! > SEUIL[i]!) return false;
+      if (n[i]! < SEUIL[i]!) return true;
+    }
+    return false;
+  });
+
+  assert.deepEqual(trop_vieilles, [],
+    `adm-zip résolu sous 0.6.0 : ${trop_vieilles.map((r) => `${r.chemin}@${r.version}`).join(", ")}\n`
+    + "  GHSA-xcpc-8h2w-3j85 (high) — une archive fabriquée déclenche une allocation de 4 Go.\n"
+    + "  Ce décompacteur tourne dans le postinstall d'onnxruntime-node, actif sur le coureur\n"
+    + "  Linux : il n'est pas hors de portée.\n"
+    + "  → rétablissez `\"adm-zip\": \"^0.6.0\"` dans `overrides` de package.json, puis\n"
+    + "    `npm install`. NE désactivez PAS l'audit et n'inscrivez PAS d'exception : une\n"
+    + "    vulnérabilité rendue invisible est pire que celle qu'on a vue.");
+
+  /* L'override lui-même, parce que le verrou seul pourrait tomber juste par chance au
+     prochain `npm install` — et retomberait faux au suivant. */
+  const paquet = JSON.parse(readFileSync(join(racine, "package.json"), "utf8")) as {
+    overrides?: Record<string, string>;
+  };
+  assert.equal(paquet.overrides?.["adm-zip"], "^0.6.0",
+    "le verrou est bon mais l'override a disparu de package.json : c'est le hasard de la\n"
+    + "  résolution qui tient la correction, et il ne tiendra pas au prochain `npm install`.");
 });
 
 /*
