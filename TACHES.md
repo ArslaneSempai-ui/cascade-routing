@@ -29,8 +29,18 @@ pas. Le détail va dans le message de commit, qui voyage avec la ligne qu'il exp
 
 - [x] Compter à part les réponses hors forme, sans jamais corriger en silence
 - [x] Refuser une réponse qui n'apparaît nulle part dans le document
-- [ ] Concordance entre paliers — la seule piste qui vise l'injection (session ad)
-- [ ] Contrôle par mot-clé : signaler un document porteur de tournures d'instruction, jamais le refuser
+- [x] ~~Concordance entre paliers~~ — **écartée par mesure**, pas en attente. Le taux de désaccord
+  entre paliers sur des documents SAINS, et le fait que « désaccord ET non cité » n'attrape sur
+  les documents injectés que les cas déjà attrapés par la citation seule, vivent dans l'en-tête
+  de `src/document-suspect.ts` — avec la phrase qui dit que c'est écrit là pour que personne ne
+  le retente en croyant l'inventer. La mécanique existe et reste au banc (`desaccord()` dans
+  `journal.ts`, lue par `tentatives.ts`), **exclue du classement** avec sa raison dans
+  `escalade.ts`. Rouvrir ce choix demande une mesure qui contredise celle-là, pas une intuition
+- [x] Contrôle par mot-clé : signaler un document porteur de tournures d'instruction, jamais le
+  refuser — **livré**, `src/document-suspect.ts` appelé depuis la boucle de mesure de
+  `your-cases.ts`. Le compte figure dans le relevé, la sortie dit qu'elle n'a rien écarté, et le
+  témoin de site d'appel lance la vraie commande (`document-suspect.test.ts`) avec son pendant :
+  un document ordinaire ne fait rien annoncer
 - [ ] Le corpus hostile, gardé comme livrable
 
 ## Produit et vente
