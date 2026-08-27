@@ -37,6 +37,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readdirSync, readFileSync, existsSync } from "node:fs";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 /*
@@ -52,6 +53,27 @@ import { fileURLToPath } from "node:url";
  * qu'il refuse aux autres. Il est donc recopié dans chaque dépôt et regarde le sien.
  */
 const ICI = fileURLToPath(new URL(".", import.meta.url));
+/*
+ * LA RACINE DU DÉPÔT SE CHERCHE, ELLE NE SE DÉDUIT PAS D'UN CRAN.
+ *
+ * Première écriture : `new URL("..")`, en supposant que ce fichier vit dans `src/`. C'est vrai
+ * dans onze dépôts et FAUX dans `identite`, où la couche est à la racine — le cran de trop y
+ * désignait `~/Documents`, donc le balayage serait parti dans les douze dépôts voisins.
+ *
+ * Un `.git` marque une racine de dépôt, et rien d'autre ne le fait. On remonte jusqu'à lui, et
+ * on s'arrête sur le dossier de ce fichier si on n'en trouve aucun — un dossier sans dépôt
+ * n'est pas une raison de balayer son parent.
+ */
+const RACINE_DEPOT = (() => {
+  let d = fileURLToPath(new URL(".", import.meta.url));
+  for (let i = 0; i < 8; i++) {
+    if (existsSync(join(d, ".git"))) return d.endsWith("/") ? d : d + "/";
+    const parent = join(d, "..");
+    if (parent === d) break;
+    d = parent;
+  }
+  return fileURLToPath(new URL(".", import.meta.url));
+})();
 const MARQUE = "liste-figee:";
 
 /** La liste des dépôts vit dans `identite` ; un dépôt cloné seul n'y a pas accès. */
@@ -66,11 +88,6 @@ const depots = new Set(
   existsSync(ICI + "depots.json") ? JSON.parse(readFileSync(ICI + "depots.json", "utf8")).diffusion
   : existsSync(LISTE) ? JSON.parse(readFileSync(LISTE, "utf8")).diffusion
   : []);
-
-/* L'échappement COMPLET d'un littéral pour RegExp. N'échapper que le tiret — ou que le
-   point — laisse la regex se réveiller sur le premier jeton qui porte un autre méta-caractère.
-   La faute était latente sur les jetons d'aujourd'hui ; CodeQL l'a nommée le 27/08/2026. */
-const echapperRegExp = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 test("le relevé porte sur des contrôles — sinon il ne prouve rien", () => {
   assert.ok(tests.length >= 3, `seulement ${tests.length} fichier(s) de test balayé(s) dans ${ICI}`);
@@ -330,7 +347,7 @@ test("aucune classe ni identifiant n'est cherché sans être posé quelque part"
     for (const t of m[1].split(/[ ,]+/).filter(Boolean)) declares.push(t);
   }
   const fantomes = declares.filter((t) =>
-    !new RegExp("[.#]" + echapperRegExp(t) + "\\b").test(styles));
+    !new RegExp("[.#]" + t.replace(/-/g, "\\-") + "\\b").test(styles));
   assert.deepEqual(fantomes, [],
     `${fantomes.join(", ")} : déclaré(s) « contrat-offert » mais stylé(s) nulle part.\n`
     + `  → une déclaration qui ne correspond à aucune règle de style est une faute de frappe,`
@@ -351,7 +368,7 @@ test("aucune classe ni identifiant n'est cherché sans être posé quelque part"
      * Mesuré avant de corriger : aucun jeton ne bascule aujourd'hui dans les six dépôts
      * porteurs, donc la faute est latente et non active. On la retire quand même — elle
      * coûte une ligne, et elle attend un nom composé pour se réveiller. */
-    const borne = (j) => new RegExp("(?<![\\w-])" + echapperRegExp(j) + "(?![\\w-])", "g");
+    const borne = (j) => new RegExp("(?<![\\w-])" + j.replace(/[-]/g, "\\-") + "(?![\\w-])", "g");
     const partout = (corpus.match(borne(t)) ?? []).length;
     let dansLecture = 0;
     for (const m of corpus.matchAll(LECTURE)) {
@@ -487,9 +504,35 @@ test("aucune date de relevé n'est postérieure à aujourd'hui", (t) => {
    * qu'une source a été ouverte le jour dit, mais on peut refuser l'impossible : une date
    * postérieure à aujourd'hui, ou antérieure à l'existence de ces outils.
    */
-  const fichier = ICI + "regulations.ts";
-  if (!existsSync(fichier)) {
-    return t.skip("ce dépôt ne porte pas regulations.ts — rien à vérifier ici");
+  /*
+   * ON CHERCHE LE FICHIER, ON NE SUPPOSE PAS OÙ IL EST.
+   *
+   * Cette garde ne regardait qu'à la racine de la couche. `arbitrage` porte le sien sous
+   * `src/emprunts/economics/regulations.ts` — un module emprunté à un dépôt voisin — donc onze
+   * dates de relevé étaient hors de portée, et le cas se déclarait « ignoré ».
+   *
+   * C'EST LE PIRE DES DEUX SILENCES. Un cas rouge se corrige ; un cas ignoré se lit comme
+   * « rien à vérifier ici », ce qui était faux. Le compte des ignorés d'un dépôt ne dit pas
+   * lequel a cessé de regarder.
+   *
+   * On balaie donc le dépôt et on contrôle TOUTES les copies trouvées. Un `skip` ne subsiste
+   * que si le dépôt n'en porte réellement aucune — et c'est alors une affirmation vérifiée,
+   * pas une supposition sur un chemin.
+   */
+  const trouver = (dossier, vus = []) => {
+    let entrees;
+    try { entrees = readdirSync(dossier, { withFileTypes: true }); } catch { return vus; }
+    for (const e of entrees) {
+      if (e.name === "node_modules" || e.name === ".git" || e.name.startsWith(".")) continue;
+      const chemin = join(dossier, e.name);
+      if (e.isDirectory()) trouver(chemin, vus);
+      else if (e.name === "regulations.ts") vus.push(chemin);
+    }
+    return vus;
+  };
+  const fichiers = trouver(RACINE_DEPOT);
+  if (!fichiers.length) {
+    return t.skip("ce dépôt ne porte aucun regulations.ts — balayé, pas supposé");
   }
   const PLANCHER = "2020-01-01";
   /*
@@ -520,15 +563,22 @@ test("aucune date de relevé n'est postérieure à aujourd'hui", (t) => {
   assert.equal(impossible("2019-12-31"), true, "avant le plancher doit être refusé");
   assert.equal(impossible("pas-une-date"), true, "une non-date doit être refusée");
 
-  const dates = [...readFileSync(fichier, "utf8").matchAll(/retrieved:\s*"([^"]*)"/g)]
-    .map((m) => m[1]);
-  assert.ok(dates.length >= 3,
-    `seulement ${dates.length} date(s) de relevé lue(s) : le motif est périmé`);
-  const fautives = [...new Set(dates.filter((d) => impossible(d)))];
-  assert.deepEqual(fautives, [],
-    `${fautives.join(", ")} : date de relevé impossible. Une citation ne peut pas avoir été `
-    + `relevée dans le futur, et une date au bon format n'est pas une date vraie — c'est `
-    + `précisément ce qu'un contrôle de forme laisse passer.`);
+  /* TOUTES les copies, et le compte est global : un fichier lu, zéro date, doit crier. */
+  const fautives = [];
+  let lues = 0;
+  for (const f of fichiers) {
+    const dates = [...readFileSync(f, "utf8").matchAll(/retrieved:\s*"([^"]*)"/g)].map((m) => m[1]);
+    lues += dates.length;
+    for (const d of dates) if (impossible(d)) fautives.push(`${f.slice(RACINE_DEPOT.length)}: ${d}`);
+  }
+  assert.ok(lues >= 3,
+    `${fichiers.length} fichier(s) regulations.ts trouvé(s) et seulement ${lues} date(s) de `
+    + `relevé lue(s) : le motif est périmé, ou ces fichiers n'en portent plus. `
+    + fichiers.map((f) => f.slice(RACINE_DEPOT.length)).join(", "));
+  assert.deepEqual([...new Set(fautives)], [],
+    `${[...new Set(fautives)].join(" · ")} : date de relevé impossible. Une citation ne peut `
+    + `pas avoir été relevée dans le futur, et une date au bon format n'est pas une date `
+    + `vraie — c'est précisément ce qu'un contrôle de forme laisse passer.`);
 });
 
 test("aucun module compilé pour le navigateur n'importe un module Node", (t) => {
@@ -682,7 +732,7 @@ test("un jeton court n'est pas trouvé à l'intérieur d'un nom composé", () =>
    * « four routes » sur « seventy-four routes », donc un diagnostic qu'on ne pouvait pas
    * retrouver dans le fichier.
    */
-  const borne = (j) => new RegExp("(?<![\\w-])" + echapperRegExp(j) + "(?![\\w-])");
+  const borne = (j) => new RegExp("(?<![\\w-])" + j.replace(/[-]/g, "\\-") + "(?![\\w-])");
   assert.equal(borne("prise").test("carte-prise"), false, "un suffixe ne compte pas comme une pose");
   assert.equal(borne("carte").test("carte-prise"), false, "un préfixe non plus");
   assert.equal(borne("carte-prise").test("carte-prise"), true, "le nom entier, lui, compte");
