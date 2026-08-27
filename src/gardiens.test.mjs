@@ -67,6 +67,11 @@ const depots = new Set(
   : existsSync(LISTE) ? JSON.parse(readFileSync(LISTE, "utf8")).diffusion
   : []);
 
+/* L'échappement COMPLET d'un littéral pour RegExp. N'échapper que le tiret — ou que le
+   point — laisse la regex se réveiller sur le premier jeton qui porte un autre méta-caractère.
+   La faute était latente sur les jetons d'aujourd'hui ; CodeQL l'a nommée le 27/08/2026. */
+const echapperRegExp = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 test("le relevé porte sur des contrôles — sinon il ne prouve rien", () => {
   assert.ok(tests.length >= 3, `seulement ${tests.length} fichier(s) de test balayé(s) dans ${ICI}`);
   assert.ok(reels.size >= 8, `${reels.size} fichier(s) connus dans ${ICI} : le relevé ne lit rien`);
@@ -325,7 +330,7 @@ test("aucune classe ni identifiant n'est cherché sans être posé quelque part"
     for (const t of m[1].split(/[ ,]+/).filter(Boolean)) declares.push(t);
   }
   const fantomes = declares.filter((t) =>
-    !new RegExp("[.#]" + t.replace(/-/g, "\\-") + "\\b").test(styles));
+    !new RegExp("[.#]" + echapperRegExp(t) + "\\b").test(styles));
   assert.deepEqual(fantomes, [],
     `${fantomes.join(", ")} : déclaré(s) « contrat-offert » mais stylé(s) nulle part.\n`
     + `  → une déclaration qui ne correspond à aucune règle de style est une faute de frappe,`
@@ -346,7 +351,7 @@ test("aucune classe ni identifiant n'est cherché sans être posé quelque part"
      * Mesuré avant de corriger : aucun jeton ne bascule aujourd'hui dans les six dépôts
      * porteurs, donc la faute est latente et non active. On la retire quand même — elle
      * coûte une ligne, et elle attend un nom composé pour se réveiller. */
-    const borne = (j) => new RegExp("(?<![\\w-])" + j.replace(/[-]/g, "\\-") + "(?![\\w-])", "g");
+    const borne = (j) => new RegExp("(?<![\\w-])" + echapperRegExp(j) + "(?![\\w-])", "g");
     const partout = (corpus.match(borne(t)) ?? []).length;
     let dansLecture = 0;
     for (const m of corpus.matchAll(LECTURE)) {
@@ -677,7 +682,7 @@ test("un jeton court n'est pas trouvé à l'intérieur d'un nom composé", () =>
    * « four routes » sur « seventy-four routes », donc un diagnostic qu'on ne pouvait pas
    * retrouver dans le fichier.
    */
-  const borne = (j) => new RegExp("(?<![\\w-])" + j.replace(/[-]/g, "\\-") + "(?![\\w-])");
+  const borne = (j) => new RegExp("(?<![\\w-])" + echapperRegExp(j) + "(?![\\w-])");
   assert.equal(borne("prise").test("carte-prise"), false, "un suffixe ne compte pas comme une pose");
   assert.equal(borne("carte").test("carte-prise"), false, "un préfixe non plus");
   assert.equal(borne("carte-prise").test("carte-prise"), true, "le nom entier, lui, compte");

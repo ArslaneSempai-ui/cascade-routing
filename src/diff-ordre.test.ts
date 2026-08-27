@@ -93,7 +93,8 @@ test("un « après » antérieur à son « avant » fait REFUSER la commande, et
     `comparer ${recents[1]} avec ${recents[0]} — l'après avant l'avant — sort en ${r.status}.\n`
     + "  Dans cet ordre chaque cas gagné est rapporté comme un cas perdu.");
   assert.match(r.stderr, /was measured BEFORE/, "le refus ne dit pas ce qu'il refuse.");
-  assert.match(r.stderr, new RegExp(`node src/diff\\.ts ${recents[0]!.replace(/\./g, "\\.")}`),
+  assert.match(r.stderr, new RegExp(
+    `node src/diff\\.ts ${recents[0]!.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\$&")}`),
     "le refus ne donne pas la commande qui répare : un refus sans issue se fait commenter.");
 
   /*

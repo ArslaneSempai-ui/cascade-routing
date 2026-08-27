@@ -185,7 +185,10 @@ export function page(r: Releve): string {
     l.push("| --- | --- | --- | --- |");
     for (const x of rates) {
       const v = x.rendu.trim() === "" ? "_(empty)_"
-        : "`" + x.rendu.replace(/\|/g, "\\|").replace(/\s+/g, " ").slice(0, 90) + "`";
+        /* L'ANTISLASH S'ÉCHAPPE EN PREMIER : ce rendu vient de la suite hostile — un modèle
+           détourné peut rendre `\|`, qui deviendrait `\\|` : antislash littéral puis barre
+           NON échappée, et la cellule du tableau casse. Signalé par CodeQL le 27/08/2026. */
+        : "`" + x.rendu.replace(/\\/g, "\\\\").replace(/\|/g, "\\|").replace(/\s+/g, " ").slice(0, 90) + "`";
       l.push(`| \`${x.cas}\` | \`${x.palier}\` | ${v} | ${x.detourne ? "**hijacked**" : "wrong"} |`);
     }
   }
