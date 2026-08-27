@@ -11,6 +11,7 @@ import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { INVENTORY } from "./inventory.ts";
 import { POIDS_MODELES } from "./tiers.ts";
+import { extensionsLancees, compterLesCas } from "./compter-cas.ts";
 import { markdown } from "./provenance.ts";
 import { optimiseExtraction, budgetShadowPrice, paliersMesures, decompositionDe } from "./optimise.ts";
 import "./figer.ts";  /* pose la table figée : voir figer.ts */
@@ -1394,9 +1395,22 @@ const frontiere = (() => {
 
 const tests = (() => {
   const dossier = fileURLToPath(new URL(".", import.meta.url));
-  const fichiers = readdirSync(dossier).filter((n: string) => n.endsWith(".test.ts"));
-  const n = fichiers.reduce((a: number, f: string) =>
-    a + (readFileSync(join(dossier, f), "utf8").match(/^test\(/gm) ?? []).length, 0);
+  const scriptTest = String(JSON.parse(
+    readFileSync(fileURLToPath(new URL("../package.json", import.meta.url)), "utf8"),
+  ).scripts?.test ?? "");
+
+  /* TÉMOIN AVANT LE COMPTE : si le motif cesse de lire le script, `extensions` serait vide,
+     `fichiers` aussi, et le compte tomberait sur le plancher ci-dessous — mais en accusant la
+     lecture des fichiers alors que c'est la lecture de la COMMANDE qui a lâché. */
+  const extensions = extensionsLancees(scriptTest);
+  if (extensions.length < 2) {
+    throw new Error(
+      `${extensions.length} extension(s) lue(s) dans le script \`test\` de package.json : `
+      + "le motif ne lit plus la commande qui lance la suite, et le compte porterait sur une "
+      + "collection choisie ici plutôt que sur celle qui tourne.");
+  }
+
+  const { n, fichiers } = compterLesCas(dossier, scriptTest);
   if (n < 20) throw new Error(`${n} tests counted across ${fichiers.length} file(s): the reading failed.`);
   return `**${n} tests** across ${fichiers.length} files, counted from the sources rather than typed here.`;
 })();

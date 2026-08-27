@@ -27,6 +27,8 @@ import { readProfiles } from "./measure.ts";
 import { optimiseExtraction } from "./optimise.ts";
 import { ASSUMPTIONS } from "./assumptions.ts";
 import { fileURLToPath } from "node:url";
+import { extensionsLancees, fichiersDeCas, fichiersQuiRessemblentADesCas,
+  compterLesCas } from "./compter-cas.ts";
 
 const racine = fileURLToPath(new URL("..", import.meta.url));
 
@@ -128,8 +130,17 @@ test("si le compte de tests s'effondre, le README REFUSE de publier le chiffre",
      * `describe(...)`, ils s'indentent, le motif cesse de les voir, et le compte tombe à zéro
      * sans qu'un seul test ait disparu. On reproduit exactement ça.
      */
+    /*
+     * LA LISTE À NEUTRALISER VIENT DE LA MÊME SÉLECTION QUE LE COMPTE.
+     *
+     * Elle disait `.test.ts`, écrit à la main — la faute même que le compteur portait. Le jour
+     * où le compteur a cessé d'écarter les `.test.mjs`, ce cas a continué de n'indenter que les
+     * `.test.ts` : trente-quatre cas restaient visibles, le compte ne tombait pas à zéro, et le
+     * refus attendu n'arrivait plus. La garde regardait une collection plus étroite que ce
+     * qu'elle prétendait faire disparaître.
+     */
     const dossier = join(d, "src");
-    const cas = readdirSync(dossier).filter((n) => n.endsWith(".test.ts"));
+    const cas = fichiersQuiRessemblentADesCas(dossier);
     assert.ok(cas.length >= 20,
       `${cas.length} fichier(s) de test dans le bac : il n'y a rien à faire disparaître, et le\n`
       + "  rouge qui suivrait ne prouverait rien.");
@@ -259,4 +270,61 @@ test("le routage « publié » d'exposition.json est celui que le relevé livré
     "exposition.json publie un routage que le relevé livré ne produit plus : le README citerait\n"
     + "  un état révolu comme « publié ». Régénérer exposition.json (cascade-licencie), ou dire\n"
     + "  pourquoi l'écart est voulu — mais pas le laisser diverger en silence.");
+});
+
+
+/*
+ * LE CHIFFRE PUBLIÉ NE DOIT PAS ÉCARTER EN SILENCE.
+ *
+ * Le README a annoncé « 539 tests across 61 files » pendant que la suite en exécutait 573
+ * dans 65 fichiers : le compteur ne lisait que `.test.ts`, la commande lance aussi
+ * `src/*.test.mjs`, et rien nulle part ne disait qu'une extension entière était écartée.
+ * Le chiffre est sur la page d'un produit vendu à des banques, et il sous-vendait.
+ *
+ * Ce cas ne recompte pas le README — `--check` s'en charge. Il garde la SÉLECTION : tout ce
+ * qui ressemble à un fichier de cas doit être atteint par la commande qui lance la suite.
+ * Un fichier ajouté dans une extension que la commande ne lance pas rougit ici, au lieu de
+ * disparaître d'un chiffre publié.
+ */
+test("tout fichier de cas est atteint par la commande qui lance la suite", () => {
+  const dossier = fileURLToPath(new URL(".", import.meta.url));
+  const scriptTest = String(JSON.parse(
+    readFileSync(join(racine, "package.json"), "utf8")).scripts?.test ?? "");
+
+  /* TÉMOIN AVANT LE VERDICT : le motif lit-il encore la commande ? S'il rendait une liste
+     vide, « rien d'écarté » serait vrai par vacuité — les deux collections seraient vides. */
+  const extensions = extensionsLancees(scriptTest);
+  assert.ok(extensions.length >= 2,
+    `${extensions.length} extension(s) lue(s) dans le script \`test\` : le motif ne lit plus la `
+    + "commande, et ce cas comparerait deux collections vides.");
+
+  /* Et il ne doit pas inventer : deux fabrications, dont une sans aucun fichier de cas. */
+  assert.deepEqual(extensionsLancees("node --test src/*.test.mts"), [".test.mts"],
+    "le motif ne reconnaît pas une extension neuve : le jour où la commande en gagne une, "
+    + "le compte publié repartirait à la dérive sans un mot.");
+  assert.deepEqual(extensionsLancees("tsc --noEmit && node src/readme.ts --check"), [],
+    "le motif invente une extension là où la commande n'en lance aucune.");
+
+  const surLeDisque = fichiersQuiRessemblentADesCas(dossier);
+  const atteints = fichiersDeCas(dossier, scriptTest);
+
+  assert.ok(surLeDisque.length >= 20,
+    `${surLeDisque.length} fichier(s) de cas trouvé(s) dans src/ : la lecture du dossier a `
+    + "échoué, et l'égalité ci-dessous ne comparerait rien.");
+
+  const ecartes = surLeDisque.filter((f) => !atteints.includes(f));
+  assert.deepEqual(ecartes, [],
+    `${ecartes.length} fichier(s) de cas ne sont lancés par aucune extension du script \`test\` :\n  `
+    + ecartes.join("\n  ")
+    + `\n  Ils ne tournent pas, et le chiffre publié par le README les écarte sans le dire.\n`
+    + `  → ajouter leur extension au script \`test\` de package.json, ou renommer les fichiers.`);
+
+  /* Le compte publié porte bien sur cette collection-là, et sur rien d'autre. */
+  const { n, fichiers } = compterLesCas(dossier, scriptTest);
+  const publie = readFileSync(join(racine, "README.md"), "utf8")
+    .match(/\*\*(\d+) tests\*\* across (\d+) files/);
+  assert.ok(publie, "le README ne porte plus la phrase du compte : ce cas ne garde plus rien.");
+  assert.deepEqual([Number(publie[1]), Number(publie[2])], [n, fichiers.length],
+    `le README publie ${publie[1]} cas dans ${publie[2]} fichiers, la sélection en donne `
+    + `${n} dans ${fichiers.length}. → npm run figures`);
 });
