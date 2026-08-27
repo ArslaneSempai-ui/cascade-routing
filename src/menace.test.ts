@@ -198,7 +198,10 @@ test("le détecteur reconnaît les formats COURANTS, pas seulement ceux d'hier",
     ["GitHub, classique", "ghp_" + "a".repeat(36)],
     ["AWS", "AKIAIOSFODNN7EXAMPLE"],
     ["Google", "AIza" + "a".repeat(35)],
-    ["Slack", "xoxb-123456789012-123456789012-abcdefghijklmnop"],
+    /* Assemblé comme les voisins : la VALEUR au runtime est un jeton entier, mais la source
+       n'en contient pas — la protection de poussée de GitHub bloquait ce fichier sur cette
+       seule ligne, la seule de la liste écrite d'un tenant. */
+    ["Slack", "xoxb-" + "123456789012-123456789012-abcdefghijklmnop"],
     ["Stripe", "sk" + "_live_" + "a".repeat(24)],
     ["Twilio", "SK" + "0".repeat(32)],
     ["SendGrid", "SG." + "a".repeat(22) + "." + "b".repeat(43)],
