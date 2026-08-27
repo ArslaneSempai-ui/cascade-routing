@@ -47,7 +47,7 @@ pas. Le détail va dans le message de commit, qui voyage avec la ligne qu'il exp
 
 - [x] Dossier fournisseur pré-rempli (session 3c)
 - [x] Licence commerciale, montants posés
-- [ ] Remplir les emplacements restants de la licence : `PAYMENT_TERMS`, `PRICE_INCREASE_CAP`
+- [x] ~~Remplir les emplacements restants de la licence : `PAYMENT_TERMS`, `PRICE_INCREASE_CAP`~~ — **fait le 28/08, et il y en avait bien plus que deux.** Cette ligne n'en nommait que deux ; la licence en portait une vingtaine de décisions de politique. **Toutes sont tranchées** : paiement, plafond de renouvellement, garantie, responsabilité et ses exceptions, remboursement, support, versions majeures, préavis, continuité, séquestre, audit, confidentialité, changement de contrôle, précédence, et les droits sur le résultat. Il ne reste que des champs à remplir à la signature d'un client — noms, adresses, juridiction, nombre de sites. Trois n'étaient pas des décisions du tout : la commande de vérification réseau, la source des poids et le support hors ligne sont des **faits**, lus dans le code plutôt que choisis. Détail dans le dépôt privé du composant licencié
 - [ ] Conversation avec un validateur bancaire — **décidé : après la refonte du design**
 
 ## Après le reste
