@@ -13,6 +13,10 @@
  * Ce cas éprouve les DEUX sorties autonomes : l'échéance, et la disparition du père.
  */
 
+/* piege:ok harnais-sans-remise-a-neuf — les seuls lancements de ce fichier sont `ps` et `pgrep`
+   (lecture pure) et le chargeur lui-meme, lance dans son propre processus. Rien n'ecrit dans
+   l'arbre de travail pendant la boucle, donc aucun verdict ne decide de celui du suivant : le
+   mal que la regle decrit — un banc qui mesure son propre bruit — n'a pas de prise ici. */
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";

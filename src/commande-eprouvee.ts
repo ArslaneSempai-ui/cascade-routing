@@ -100,14 +100,14 @@ export function exigerRefus(
 ): void {
   if (s.code === 0) {
     throw new Error(
-      `${quoi} : la commande a RÉUSSI (code 0) là où elle devait refuser.\n`
-      + `  ce qu'elle a dit : ${JSON.stringify(s.texte.slice(0, 300))}`);
+      `${quoi}: the command SUCCEEDED (exit 0) where it was meant to refuse.\n`
+      + `  what it said: ${JSON.stringify(s.texte.slice(0, 300))}`);
   }
   if (!motif.test(s.texte)) {
     throw new Error(
-      `${quoi} : la commande a bien échoué (code ${s.code}) mais PAS POUR LA RAISON ATTENDUE.\n`
-      + `  attendu : ${motif}\n`
-      + `  reçu    : ${JSON.stringify(s.texte.slice(0, 400))}\n`
+      `${quoi}: the command did fail (exit ${s.code}) but NOT FOR THE EXPECTED REASON.\n`
+      + `  expected: ${motif}\n`
+      + `  got     : ${JSON.stringify(s.texte.slice(0, 400))}\n`
       + `  Un code non nul se produit aussi sur un import cassé ou un module absent ; sans le\n`
       + `  motif, ce cas passerait au vert sur un environnement abîmé plutôt que sur la garde.`);
   }
@@ -122,8 +122,8 @@ export function exigerRefus(
    */
   if (PILE.test(s.texte)) {
     throw new Error(
-      `${quoi} : le refus a été IMPRIMÉ puis la commande a PLANTÉ — ce n'est pas un refus.\n`
-      + `  Le message part avant la sortie, donc un motif satisfait ne prouve rien : il faut\n`
+      `${quoi}: the refusal was PRINTED and then the command CRASHED — that is not a refusal.\n`
+      + `  The message goes out before the exit, so a satisfied pattern proves nothing: the\n`
       + `  que la commande S'ARRÊTE. Mesuré le 27 août 2026 — neutraliser process.exit laisse\n`
       + `  le message s'imprimer, le programme continue et s'écrase sur ce qu'il refusait de\n`
       + `  faire, et le code rendu est celui du plantage. Une quinzaine de gardes que je\n`
@@ -144,7 +144,7 @@ export function exigerRefus(
    */
   if (pasApres && pasApres.test(s.texte)) {
     throw new Error(
-      `${quoi} : le refus attendu est bien là, mais LA COMMANDE A CONTINUÉ — ${pasApres} suit.\n`
+      `${quoi}: the expected refusal is there, but THE COMMAND CARRIED ON — ${pasApres} follows.\n`
       + `  Ce n'est donc pas cette garde-là qui a arrêté la commande, c'est une suivante. Retirée,\n`
       + `  la garde visée laisserait passer sans que ce cas bouge.\n`
       + `  reçu : ${JSON.stringify(s.texte.slice(0, 400))}`);
@@ -160,7 +160,7 @@ export function exigerRefus(
 export function exigerQueCaMarcheSansCa(s: Sortie, quoi: string): void {
   if (s.code !== 0) {
     throw new Error(
-      `${quoi} : le CONTRÔLE POSITIF a échoué — la commande ne réussit pas dans l'état sain,\n`
+      `${quoi}: the POSITIVE CONTROL failed — the command does not succeed in the healthy state,\n`
       + `  donc le refus mesuré à côté ne prouve rien : il pourrait venir de n'importe où.\n`
       + `  code ${s.code} · ${JSON.stringify(s.texte.slice(0, 300))}`);
   }

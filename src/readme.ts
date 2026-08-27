@@ -1405,9 +1405,9 @@ const tests = (() => {
   const extensions = extensionsLancees(scriptTest);
   if (extensions.length < 2) {
     throw new Error(
-      `${extensions.length} extension(s) lue(s) dans le script \`test\` de package.json : `
-      + "le motif ne lit plus la commande qui lance la suite, et le compte porterait sur une "
-      + "collection choisie ici plutôt que sur celle qui tourne.");
+      `${extensions.length} extension(s) read from the \`test\` script in package.json: `
+      + "the pattern no longer reads the command that runs the suite, and the count would be "
+      + "over a set chosen here rather than the one that actually runs.");
   }
 
   const { n, fichiers } = compterLesCas(dossier, scriptTest);

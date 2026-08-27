@@ -23,7 +23,7 @@ const script = (corps: string): string => {
 
 test("une commande qui RÉUSSIT là où on attend un refus est dénoncée", () => {
   const s = lancer([script(`process.exit(0);`)]);
-  assert.throws(() => exigerRefus(s, /peu importe/, "cas"), /a RÉUSSI \(code 0\)/,
+  assert.throws(() => exigerRefus(s, /peu importe/, "cas"), /SUCCEEDED \(exit 0\)/,
     "un cas qui exige un refus doit tomber quand la commande réussit — sinon il ne mesure rien.");
 });
 
@@ -33,7 +33,7 @@ test("un échec pour la MAUVAISE raison est dénoncé, et c'est le cœur de l'ai
      ont été lus comme une garde qui se déclenchait. */
   const s = lancer([join(tmpdir(), "module-qui-nexiste-pas-du-tout.mjs")]);
   assert.notEqual(s.code, 0, "le montage est faux : un module absent devrait faire échouer node.");
-  assert.throws(() => exigerRefus(s, /Modified tree/, "cas"), /PAS POUR LA RAISON ATTENDUE/,
+  assert.throws(() => exigerRefus(s, /Modified tree/, "cas"), /NOT FOR THE EXPECTED REASON/,
     "sans le motif, ce cas passerait au vert sur un environnement abîmé au lieu de la garde.");
 });
 
@@ -45,7 +45,7 @@ test("un refus qui dit ce qu'il doit dire passe", () => {
 
 test("le contrôle positif tombe quand la commande ne marche pas dans l'état sain", () => {
   const s = lancer([script(`process.exit(3);`)]);
-  assert.throws(() => exigerQueCaMarcheSansCa(s, "cas"), /CONTRÔLE POSITIF a échoué/,
+  assert.throws(() => exigerQueCaMarcheSansCa(s, "cas"), /POSITIVE CONTROL failed/,
     "sans lui, un cas qui exige un échec passe d'autant mieux que tout est cassé.");
   exigerQueCaMarcheSansCa(lancer([script(`process.exit(0);`)]), "cas");
 });
