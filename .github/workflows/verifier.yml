@@ -103,34 +103,16 @@ jobs:
       # n'a pas regardé ne doit pas compter comme un cas qui a regardé, et une construction
       # verte sur un contrôle qui ne s'est pas exécuté est exactement ce qu'on passe la journée
       # à corriger ailleurs.
-      - name: suite, et aucun cas ignoré
+      # La porte est NOMINATIVE depuis le 27/08/2026 : six cas s'ignorent structurellement
+      # sur un runner Linux (swiftc et Vision sont macOS, `identite` est un dépôt de
+      # développement), et un simple plafond serait un vert vide — n'importe quel contrôle
+      # pourrait s'éteindre tant qu'un autre se rallume. Le script compare l'ENSEMBLE EXACT
+      # des noms à `.github/cas-ignores-attendus.txt` : un ignoré nouveau est rouge, un
+      # ignoré disparu aussi (la liste ment, on la resserre). Il vit dans un script parce
+      # qu'un pas de workflow ne s'éprouve qu'en poussant — lui a été éprouvé sur fixture,
+      # dans les six directions, avant d'arriver ici.
+      - name: suite, et aucun cas ignoré hors de la liste nominative
         run: |
           set -o pipefail
           npm test 2>&1 | tee /tmp/suite.txt
-          # LE MARQUEUR CHERCHÉ N'A JAMAIS ÉTÉ ÉCRIT PAR CE RAPPORTEUR.
-          #
-          # Ce pas cherchait `^# skipped N`, la forme TAP. `node --test` écrit `ℹ skipped N`
-          # et, par cas, `﹣ nom  # raison`. Mesuré le 26 août 2026 sur une suite portant un
-          # vrai `t.skip()` : zéro correspondance pour les deux motifs. `ignores` retombait
-          # donc sur `${ignores:-0}` à chaque passe, et le refus n'a jamais pu se déclencher.
-          #
-          # Et c'est ce `:-0` qui l'a caché : « ligne introuvable » et « zéro cas ignoré »
-          # rendaient le même chiffre. L'absence de mesure ne doit pas se lire comme une
-          # mesure à zéro — c'est la faute que ce dépôt corrige partout ailleurs.
-          ignores=$(grep -oE '^(ℹ|#) skipped [0-9]+' /tmp/suite.txt | grep -oE '[0-9]+' | head -1)
-          if [ -z "$ignores" ]; then
-            echo ""
-            echo "::error::la ligne de résumé « skipped » est introuvable dans la sortie de la suite."
-            echo "Le rapporteur a changé de forme, ou la suite n'est pas allée jusqu'au résumé."
-            echo "Ce pas ne peut RIEN conclure sur les cas ignorés : il refuse au lieu de compter zéro."
-            exit 1
-          fi
-          if [ "$ignores" != "0" ]; then
-            echo ""
-            echo "::error::$ignores cas ignoré(s) — ils n'ont rien vérifié, et une construction verte le cacherait."
-            grep -E '^﹣ ' /tmp/suite.txt | head -10
-            echo ""
-            echo "Le plus probable : les poids d'encodeur ne sont pas en cache, donc le contrôle"
-            echo "qui garantit qu'aucune valeur du client ne sort ne s'est pas exécuté."
-            exit 1
-          fi
+          sh .github/verifier-ignores.sh /tmp/suite.txt .github/cas-ignores-attendus.txt

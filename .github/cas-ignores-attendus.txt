@@ -1,0 +1,22 @@
+# Les cas que la suite S'ATTEND à voir s'ignorer sur le runner de `verifier` (Ubuntu), un
+# par ligne, au nom exact. Cette liste est la SEULE tolérance de la porte anti-ignorés :
+# un ignoré qui n'y est pas fait échouer la construction (un contrôle vient de s'éteindre),
+# et une ligne dont le cas S'EXÉCUTE désormais la fait échouer aussi (la liste ment — la
+# resserrer, jamais l'inverse).
+#
+# Chaque entrée dit pourquoi elle est structurelle au runner, pas un choix :
+#
+# — La compilation Swift et le cadre Vision n'existent que sur macOS ; le lecteur d'image
+#   est un binaire Swift. Trois cas de compilation et deux cas de lecture s'ignorent donc
+#   sur Linux, en le disant.
+# — `identite` est le dépôt de développement des couches partagées ; il ne vit pas sur un
+#   runner public, et n'a pas à y vivre.
+#
+# Ces six cas S'EXÉCUTENT sur la machine de développement, où la suite exige toujours
+# zéro ignoré local.
+le lecteur d'image distingue ses pannes, et une page sans texte n'en est pas une
+les couches partagées sont bien celles d'identite
+trois compilations simultanées laissent UN binaire entier, et rien d'autre
+un binaire de zéro octet est recompilé, pas accepté pour toujours
+un palier qui lit vraiment traverse la sélection, et la passe va jusqu'au bout
+une compilation qui échoue ne se fait pas passer pour un swiftc absent

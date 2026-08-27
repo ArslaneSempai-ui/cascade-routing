@@ -1228,14 +1228,17 @@ test("le pas qui refuse un cas ignoré cherche ce que le rapporteur écrit vraim
    *
    * Le pas lisait `^# skipped N`, la forme TAP. `node --test` écrit `ℹ skipped N`, et par cas
    * `﹣ nom (durée) # raison`. Mesuré le 26 août 2026 sur une suite portant un vrai
-   * `t.skip()` : zéro correspondance. Le refus n'a jamais pu se déclencher.
+   * `t.skip()` : zéro correspondance. Le refus n'a jamais pu se déclencher. Ce qui l'a caché
+   * est le `${ignores:-0}` : « ligne introuvable » et « zéro cas ignoré » rendaient le même
+   * chiffre. **L'absence de mesure se lisait comme une mesure à zéro.**
    *
-   * Ce qui l'a caché est le `${ignores:-0}` : « ligne introuvable » et « zéro cas ignoré »
-   * rendaient le même chiffre. **L'absence de mesure se lisait comme une mesure à zéro.**
-   *
-   * Ce cas n'inspecte pas le texte du pas : il l'EXÉCUTE, sur trois sorties fabriquées. Un
-   * motif se contrôle en le faisant tourner sur ce qu'il doit reconnaître et sur ce qu'il
-   * doit rejeter ; le relire ne dit rien — c'est en le relisant qu'on l'a écrit faux.
+   * DEPUIS LE 27/08/2026 LA PORTE EST NOMINATIVE et vit dans `.github/verifier-ignores.sh` :
+   * six cas s'ignorent structurellement sur un runner Linux, et l'ensemble EXACT des noms est
+   * comparé à une liste versionnée. Ce cas suit la logique là où elle vit : il exécute le
+   * CORPS DU PAS — qui doit appeler le script, sinon la porte est une couture morte — sur des
+   * sorties fabriquées ET des listes fabriquées, dans les deux sens de l'écart. Un motif se
+   * contrôle en le faisant tourner sur ce qu'il doit reconnaître et sur ce qu'il doit
+   * rejeter ; le relire ne dit rien — c'est en le relisant qu'on l'a écrit faux.
    */
   const f = fileURLToPath(new URL("../.github/workflows/verifier.yml", import.meta.url));
   assert.ok(existsSync(f), ".github/workflows/verifier.yml est absent.");
@@ -1251,38 +1254,53 @@ test("le pas qui refuse un cas ignoré cherche ce que le rapporteur écrit vraim
     if (l.trim() !== "" && !/^\s{10}/.test(l)) break;
     corps.push(l.replace(/^\s{10}/, ""));
   }
+  /* LA COUTURE D'ABORD : un pas qui ne passerait plus par le script rendrait le script et
+     ses six directions décoratifs — la garde vivrait deux fois, ou nulle part. */
+  assert.match(corps.join("\n"), /verifier-ignores\.sh/,
+    "le pas n'appelle plus .github/verifier-ignores.sh : la porte nominative est débranchée.");
+
   /*
    * LE CHEMIN DE TRAVAIL EST PROPRE À CE CAS. Le pas d'intégration écrit dans /tmp/suite.txt,
    * un chemin FIXE : deux `npm test` simultanés — six sessions ici — se marchaient dessus, et
    * l'un lisait le résumé de l'autre. La famille exacte de releve-scelle. On réécrit TOUTES
-   * les occurrences du chemin fixe vers le bac du cas ; sur la machine d'intégration, un seul
-   * lancement tourne à la fois et le chemin fixe y reste correct. Audit du 27 août 2026.
+   * les occurrences du chemin fixe vers le bac du cas, et la liste attendue vers `$2` pour
+   * éprouver les deux sens de l'écart ; sur la machine d'intégration, un seul lancement
+   * tourne à la fois et les chemins fixes y restent corrects. Audit du 27 août 2026.
    */
   const suiteTxt = join(mkdtempSync(join(tmpdir(), "ci-sortie-")), "suite.txt");
   const script = corps.join("\n")
     .replace(/^\s*npm test .*$/m, `cat "$1" > ${suiteTxt}`)
-    .replaceAll("/tmp/suite.txt", suiteTxt);
+    .replaceAll("/tmp/suite.txt", suiteTxt)
+    .replaceAll(".github/cas-ignores-attendus.txt", '"$2"');
   assert.match(script, /cat "\$1"/, "la ligne qui lance la suite n'a pas été trouvée dans le pas.");
-  assert.match(script, /skipped/, "le pas ne cherche plus rien à propos des cas ignorés.");
 
   const tmp = mkdtempSync(join(tmpdir(), "ci-skip-"));
   const ecrire = (nom: string, texte: string) => { const q = join(tmp, nom); writeFileSync(q, texte); return q; };
-  const lancer = (fixture: string) =>
-    spawnSync("sh", ["-c", script.replace(/^\s*set -o pipefail\s*$/m, ""), "sh", fixture],
-      { encoding: "utf8" }).status;
+  /* cwd à la racine du dépôt : le pas référence le script en relatif, comme sur le runner. */
+  const lancer = (fixture: string, liste: string) =>
+    spawnSync("sh", ["-c", script.replace(/^\s*set -o pipefail\s*$/m, ""), "sh", fixture, liste],
+      { encoding: "utf8", cwd: fileURLToPath(new URL("..", import.meta.url)) }).status;
 
   try {
     const propre = ecrire("propre.txt", "✔ un cas (1ms)\nℹ pass 1\nℹ fail 0\nℹ skipped 0\n");
     const ignore = ecrire("ignore.txt", "﹣ un cas (1ms) # exprès\nℹ pass 1\nℹ fail 0\nℹ skipped 1\n");
     const muet = ecrire("muet.txt", "✔ un cas (1ms)\nla suite s'est arrêtée avant son résumé\n");
+    const listeVide = ecrire("liste-vide.txt", "# rien d'attendu\n");
+    const listeUnCas = ecrire("liste-un-cas.txt", "# structurel, dans la fixture\nun cas\n");
 
-    assert.equal(lancer(propre), 0,
-      "une suite sans cas ignoré est refusée : le pas interdirait toute construction verte.");
-    assert.notEqual(lancer(ignore), 0,
-      "UNE SUITE AVEC UN CAS IGNORÉ PASSE. Le pas cherche un marqueur que `node --test`\n"
-      + "  n'écrit pas — il écrit « ℹ skipped N » — donc son refus ne peut jamais se déclencher,\n"
-      + "  et un contrôle qui ne s'est pas exécuté compte comme un contrôle vert.");
-    assert.notEqual(lancer(muet), 0,
+    assert.equal(lancer(propre, listeVide), 0,
+      "une suite sans cas ignoré, sur une liste vide, est refusée : le pas interdirait toute\n"
+      + "  construction verte.");
+    assert.notEqual(lancer(ignore, listeVide), 0,
+      "UN CAS IGNORÉ HORS LISTE PASSE. Un contrôle qui vient de s'éteindre compterait comme\n"
+      + "  un contrôle vert — la faute exacte qui a fait naître cette porte.");
+    assert.equal(lancer(ignore, listeUnCas), 0,
+      "un ignoré NOMMÉ dans la liste est refusé : la tolérance nominative ne traverse pas le\n"
+      + "  pas, et la porte redevient un zéro absolu qui ne peut plus être vert sur un runner.");
+    assert.notEqual(lancer(propre, listeUnCas), 0,
+      "un cas de la liste qui S'EXÉCUTE désormais passe sans un mot : la liste ment, et\n"
+      + "  personne n'est sommé de la resserrer.");
+    assert.notEqual(lancer(muet, listeVide), 0,
       "une sortie SANS ligne de résumé passe : « introuvable » se lit comme « zéro ignoré ».\n"
       + "  L'absence de mesure ne doit pas rendre le même chiffre qu'une mesure à zéro.");
   } finally {
