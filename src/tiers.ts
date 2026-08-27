@@ -17,7 +17,7 @@ import { FIELDS, TYPOLOGIES } from "./corpus.ts";
 import type { Field, ClientFile, Alert, Typology } from "./corpus.ts";
 
 import type { TierName } from "./paliers.ts";
-import { estGeneratif } from "./paliers.ts";
+import { estGeneratif, TIERS } from "./paliers.ts";
 export type { TierName };
 export { TIERS, ENCODEURS, GENERATIFS, estGeneratif } from "./paliers.ts";
 
@@ -872,6 +872,28 @@ export async function extract(
    */
   if (tier === "human") return d.truth[champ];
   if (estGeneratif(tier)) return extraireGeneratif(tier, d.text, champ, prompt, question);
+  /*
+   * UN PALIER INCONNU PARTAIT VERS `large`, EN SILENCE.
+   *
+   * `tier === "small" ? qaSmall : qaLarge` : tout ce qui n'est ni `rules`, ni `human`, ni
+   * génératif, ni `small` prenait le grand encodeur. Une faute de frappe — `npm run dur --
+   * --tiers=gen8b`, le tiret oublié — publie alors dans `dur.json` un palier INVENTÉ portant
+   * les chiffres de `large`. Le relevé est cohérent, plausible, et parle d'un palier qui
+   * n'existe pas ; personne ne peut le rapprocher de quoi que ce soit.
+   *
+   * C'est la même famille que `.length` qui répond sur trop de choses : un `else` qui accepte
+   * tout ce qui reste répond aussi pour ce qu'il n'a jamais vu.
+   */
+  if (tier !== "small" && tier !== "large") {
+    throw new Error(
+      `unknown tier "${tier}" — it is neither rules, human, an encoder (small, large) nor a
+`
+      + `  generative tier (${TIERS.filter((t: TierName) => estGeneratif(t)).join(", ")}).
+`
+      + `  It used to fall through to the large encoder, so a typo published a made-up tier
+`
+      + `  carrying large's figures.`);
+  }
   const qa = tier === "small" ? qaSmall : qaLarge;
   const r = await qa(question ?? questionPour(champ).texte, d.text);
   return String(r?.answer ?? "").trim();

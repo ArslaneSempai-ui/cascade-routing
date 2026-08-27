@@ -32,6 +32,7 @@ import { writeFileSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { isMain } from "./cli.ts";
 import { fileURLToPath } from "node:url";
+import { drapeauEntier } from "./cas-demandes.ts";
 
 /*
  * LE RELEVÉ VA À LA RACINE, PAS DANS `data/`.
@@ -275,7 +276,7 @@ if (isMain(import.meta)) {
   const commande = args;
   /* L'intervalle par défaut est nommé et exporté : un relevé publié porte sa valeur, et une
      garde le confronte au code. Un chiffre de réglage recopié à deux endroits dérive. */
-  const intervalle = Number(process.argv.find((a) => a.startsWith("--every="))?.split("=")[1] ?? INTERVALLE_EGRESS);
+  const intervalle = drapeauEntier("every", INTERVALLE_EGRESS, "a sampling interval in milliseconds");
 
   if (!lsofRepond()) {
     console.error("\n`lsof` is not available: this check can observe nothing, so it does not");

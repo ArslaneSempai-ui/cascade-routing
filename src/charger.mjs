@@ -62,7 +62,28 @@ import { fileURLToPath } from "node:url";
 
 if (isMain(import.meta)) {
   if (process.env.CHARGER_FILS) {
-    for (;;) { /* saturer un cœur */ }
+    /*
+     * UN FILS DE CHARGE NE PEUT PAS COMPTER SUR SON PÈRE POUR MOURIR.
+     *
+     * `for(;;){}` n'atteint jamais la boucle d'événements : aucun signal n'est traité, et la
+     * fermeture du canal IPC ne se voit pas non plus. Le père tue ses fils sur SIGINT, SIGTERM
+     * et à l'échéance — mais s'il est tué en SIGKILL (supervision, OOM, `kill -9`), personne
+     * ne les tue, et N cœurs restent saturés indéfiniment. Sur une machine où six sessions
+     * mesurent des temps réels, c'est une panne qui se paie ailleurs et longtemps.
+     *
+     * Le fils vérifie donc LUI-MÊME, dans sa boucle : son père a-t-il changé — un orphelin
+     * est réattaché au processus 1 — et l'échéance est-elle passée. Le contrôle coûte un
+     * accès de propriété tous les cinq millions de tours, soit indétectable devant la charge
+     * qu'il produit.
+     */
+    const pere = Number(process.env.CHARGER_PERE ?? 0);
+    const fin = Number(process.env.CHARGER_FIN ?? 0);
+    for (let i = 0; ; i++) {
+      if ((i & 0x4fffff) === 0) {
+        if (pere && process.ppid !== pere) process.exit(0);
+        if (fin && Date.now() > fin) process.exit(0);
+      }
+    }
   }
 
   const boucles = Number(process.argv[2] ?? 0);
@@ -75,7 +96,15 @@ if (isMain(import.meta)) {
   }
 
   const fils = Array.from({ length: boucles }, () =>
-    fork(fileURLToPath(new URL(import.meta.url)), { env: { ...process.env, CHARGER_FILS: "1" }, stdio: "ignore" }));
+    fork(fileURLToPath(new URL(import.meta.url)), {
+      /* Le fils reçoit de quoi s'arrêter seul : le pid de son père, et l'échéance s'il y en
+         a une. Sans ça, il dépend d'un père qui peut disparaître sans un mot. */
+      env: {
+        ...process.env, CHARGER_FILS: "1", CHARGER_PERE: String(process.pid),
+        ...(secondes > 0 ? { CHARGER_FIN: String(Date.now() + secondes * 1000) } : {}),
+      },
+      stdio: "ignore",
+    }));
 
   const arreter = () => { for (const f of fils) f.kill("SIGKILL"); process.exit(0); };
   process.on("SIGINT", arreter);

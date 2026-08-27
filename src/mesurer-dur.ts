@@ -70,6 +70,24 @@ export function casAmbigus(): CasDur[] {
 if (isMain(import.meta)) {
   try {
   const demandes = process.argv.find((a) => a.startsWith("--tiers="))?.split("=")[1]?.split(",");
+  /*
+   * LE `as TierName[]` NE VÉRIFIE RIEN — C'EST UNE AFFIRMATION, PAS UN CONTRÔLE.
+   *
+   * `--tiers=gen8b` (le tiret oublié) traversait : le cast tait la question, et `extract()`
+   * envoyait tout palier inconnu vers le grand encodeur. `dur.json` publiait alors un palier
+   * INVENTÉ portant les chiffres de `large` — cohérent, plausible, et impossible à rapprocher
+   * de quoi que ce soit.
+   *
+   * La liste des paliers valides se DEMANDE à `TIERS`, elle ne se récite pas ici.
+   */
+  const inconnus = (demandes ?? []).filter((t) => !(TIERS as readonly string[]).includes(t));
+  if (inconnus.length > 0) {
+    console.error(`\n  unknown tier(s): ${inconnus.join(", ")}`);
+    console.error(`  known tiers: ${TIERS.join(", ")}`);
+    console.error("\n  A tier that does not exist used to reach the large encoder, and its figures");
+    console.error("  were published under the made-up name.\n");
+    process.exit(1);
+  }
   const paliers = (demandes ?? TIERS.filter((t) => t !== "human")) as TierName[];
 
   const version = (() => {

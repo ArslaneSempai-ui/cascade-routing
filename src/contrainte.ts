@@ -32,7 +32,7 @@
  *     npm run contrainte
  */
 
-import { writeFileSync, existsSync, rmSync } from "node:fs";
+import { writeFileSync, existsSync, rmSync, renameSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { loadavg, cpus } from "node:os";
 import { isMain, refuserDrapeauxInconnus } from "./cli.ts";
@@ -239,10 +239,24 @@ if (isMain(import.meta)) {
 
         /* CHAQUE CELLULE FINIE EST ÉCRITE. Une passe tuée à vingt-neuf minutes perdait tout ;
            le partiel porte un nom distinct pour qu'aucune garde ne le prenne pour le relevé. */
-        writeFileSync(PARTIEL, JSON.stringify({
+        /*
+         * « Ctrl-C is safe » NE TIENT PAS SI L'ÉCRITURE EST UNE TRONCATURE.
+         *
+         * `writeFileSync` ouvre en tronquant : entre le `open` et la fin du `write`, le
+         * fichier est vide ou coupé. Un SIGINT dans cette fenêtre — et elle grandit à chaque
+         * cellule, le JSON grossissant à chaque passe — ne coûte pas « la cellule en cours »
+         * comme l'annonce la console : il coûte TOUT ce qui avait été fini.
+         *
+         * On écrit à côté puis on renomme. `rename` est atomique sur le même système de
+         * fichiers : le lecteur voit l'ancien fichier complet ou le nouveau complet, jamais
+         * un demi.
+         */
+        const enCours = `${PARTIEL}.en-cours`;
+        writeFileSync(enCours, JSON.stringify({
           quoi: "Passe de contrainte INCOMPLÈTE — écrite cellule par cellule pour qu'une interruption ne coûte que la cellule en cours.",
           complet: false, faits, totalAppels, lignes,
         }, null, 2) + "\n");
+        renameSync(enCours, PARTIEL);
         const parAppel = (Date.now() - debutTotal) / Math.max(faits, 1);
         const reste = Math.round((totalAppels - faits) * parAppel / 1000);
         console.log(`      ${faits}/${totalAppels} calls · ~${Math.round(parAppel)} ms/call measured here · `

@@ -21,6 +21,42 @@
  * `departager-reglage --cases=` écrasait un relevé versionné par une passe sur zéro dossier.
  */
 
+/**
+ * LE MÊME DÉFAUT SUR UN AUTRE DRAPEAU, ET IL PILONNE LA MACHINE.
+ *
+ * `--every=` sans valeur donnait `Number("") === 0` à `egress`, donc `setInterval(fn, 0)` :
+ * chaque tick lance `ps -Ao` et `lsof` en sous-processus, des centaines par seconde. Le
+ * contrôle de confidentialité mettait la machine à genoux pour observer une passe qu'il
+ * ralentit au point de changer ce qu'il mesure.
+ *
+ * La lecture d'un entier de ligne de commande est la même partout : `--cases`, `--every`, et
+ * le prochain. Elle vit ici une fois, avec le nom du drapeau dans le refus.
+ */
+export function lireDrapeauEntier(
+  argv: readonly string[], drapeau: string, defaut: number, quoi: string,
+): { valeur: number } | { refus: string } {
+  const prefixe = `--${drapeau}=`;
+  const brut = argv.find((a) => a.startsWith(prefixe))?.split("=")[1];
+  /* Le drapeau tapé sans valeur vaut « non précisé » : c'est une frappe interrompue. */
+  if (brut === undefined || brut.trim() === "") return { valeur: defaut };
+  const n = Number(brut);
+  if (!Number.isFinite(n) || !Number.isInteger(n) || n <= 0) {
+    return { refus:
+      `\n  ${prefixe}${brut} is not ${quoi}.\n`
+      + `  It must be a whole number above zero.\n` };
+  }
+  return { valeur: n };
+}
+
+/** Ce qu'appellent les commandes pour un entier : refuse en nommant la cause, et ne mesure rien. */
+export function drapeauEntier(
+  drapeau: string, defaut: number, quoi: string, argv: readonly string[] = process.argv,
+): number {
+  const r = lireDrapeauEntier(argv, drapeau, defaut, quoi);
+  if ("refus" in r) { process.stderr.write(r.refus + "\n"); process.exit(1); }
+  return r.valeur;
+}
+
 /** La lecture pure : ni écriture, ni sortie. Testable sans sous-processus. */
 export function lireCas(argv: readonly string[], defaut: number): { cas: number } | { refus: string } {
   const brut = argv.find((a) => a.startsWith("--cases="))?.split("=")[1];

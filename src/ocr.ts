@@ -26,7 +26,7 @@
  * équivalent, et `npm run ocr` refuse au lieu de rendre un résultat vide.
  */
 import { execFileSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, statSync, renameSync, rmSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 const SOURCE = fileURLToPath(new URL("./ocr/lire.swift", import.meta.url));
@@ -40,21 +40,66 @@ export type Bloc = {
 };
 
 /** Ce qui manque pour lire une image ici, ou `null` si tout est là. */
-export function ceQuiManque(): string | null {
+export function ceQuiManque(
+  /* Les deux chemins sont des PARAMÈTRES pour qu'un témoin puisse compiler ailleurs. Éprouver
+     ceci sur le vrai binaire voudrait dire l'effacer — pendant que les autres fichiers de cas,
+     lancés en parallèle, l'appellent : le défaut même que cette fonction vient de fermer. */
+  binaire: string = BINAIRE, source: string = SOURCE,
+): string | null {
   if (process.platform !== "darwin") {
     return `la reconnaissance de texte employée ici est celle de macOS, et cette machine est `
       + `${process.platform}. Un équivalent existe ailleurs — tesseract, entre autres — mais il `
       + `n'est pas mesuré dans ce dépôt, et publier un chiffre obtenu avec un autre moteur sous `
       + `le même nom serait exactement ce que cet outil refuse.`;
   }
-  if (existsSync(BINAIRE)) return null;
+  /*
+   * TROIS DÉFAUTS DANS QUATRE LIGNES, ET ILS SE PAIENT SUR UN CLONE FRAIS.
+   *
+   * `src/ocr/lire` est ignoré par git, donc absent après un clone. `node --test src/*.test.ts`
+   * lance les fichiers en processus PARALLÈLES, et trois d'entre eux appellent cette fonction.
+   *
+   *   — DEUX COMPILATIONS ÉCRIVENT LE MÊME FICHIER EN MÊME TEMPS. Éprouvé, et **la troncature
+   *     n'a pas pu être observée** : en surveillant la cible toutes les cinq millisecondes
+   *     pendant trois compilations simultanées sur elle, aucune taille intermédiaire n'est
+   *     jamais apparue — `swiftc` publie sa sortie d'un coup. Compiler à côté puis renommer
+   *     ferme donc une CLASSE, pas un défaut mesuré ; c'est dit plutôt que laissé croire.
+   *   — `existsSync` ACCEPTE UN FICHIER DE ZÉRO OCTET. Une compilation tuée en laisse un, et
+   *     il est accepté POUR TOUJOURS : la commande échouera ensuite sur « cannot execute »,
+   *     très loin de la cause, et aucune régénération ne se déclenchera jamais.
+   *   — LE `catch` REBAPTISE TOUTE PANNE en « swiftc introuvable ». Une erreur de compilation
+   *     ou un disque plein envoyait le lecteur lancer `xcode-select --install`, qui ne
+   *     répare rien. Un diagnostic qui désigne la mauvaise cause coûte plus qu'aucun.
+   *
+   * On compile donc VERS UN CHEMIN À SOI, puis on renomme — `rename` est atomique sur le même
+   * système de fichiers, et le dernier arrivé gagne sans jamais laisser un demi-binaire. Et
+   * l'acceptation exige un fichier non vide.
+   */
+  if (existsSync(binaire) && statSync(binaire).size > 0) return null;
+  const provisoire = `${binaire}.${process.pid}`;
   try {
-    execFileSync("swiftc", ["-O", SOURCE, "-o", BINAIRE], { stdio: ["ignore", "ignore", "pipe"] });
+    execFileSync("swiftc", ["-O", source, "-o", provisoire], { stdio: ["ignore", "ignore", "pipe"] });
+    if (!existsSync(provisoire) || statSync(provisoire).size === 0) {
+      return `\`swiftc\` a rendu 0 sans produire de binaire (${provisoire} est vide ou absent). `
+        + `L'étage de lecture ne peut pas être compilé, et cet outil refuse plutôt que de mesurer `
+        + `une chaîne dont il manque le premier maillon.`;
+    }
+    renameSync(provisoire, binaire);
     return null;
-  } catch {
-    return `\`swiftc\` est introuvable : il vient avec les outils de ligne de commande de Xcode `
-      + `(\`xcode-select --install\`). Sans lui, l'étage de lecture ne peut pas être compilé, et `
-      + `cet outil refuse plutôt que de mesurer une chaîne dont il manque le premier maillon.`;
+  } catch (e) {
+    try { rmSync(provisoire, { force: true }); } catch { /* rien à nettoyer */ }
+    /* DEUX CAUSES, DEUX REMÈDES. `ENOENT` sur le lancement veut dire que `swiftc` n'est pas
+       là ; tout le reste est une compilation qui a échoué, et son message est la seule chose
+       qui permette de la corriger. */
+    const err = e as { code?: string; stderr?: Buffer | string };
+    if (err.code === "ENOENT") {
+      return `\`swiftc\` est introuvable : il vient avec les outils de ligne de commande de Xcode `
+        + `(\`xcode-select --install\`). Sans lui, l'étage de lecture ne peut pas être compilé, et `
+        + `cet outil refuse plutôt que de mesurer une chaîne dont il manque le premier maillon.`;
+    }
+    const detail = String(err.stderr ?? "").trim().split("\n").slice(0, 3).join("\n    ");
+    return `la compilation de \`${source}\` a échoué — \`swiftc\` est bien là, c'est le code qui `
+      + `ne passe pas :\n    ${detail || "(aucun message)"}\n  Relancer \`xcode-select --install\` `
+      + `ne répare pas ça.`;
   }
 }
 

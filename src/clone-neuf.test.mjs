@@ -26,11 +26,12 @@
 
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { execFileSync } from "node:child_process";
-import { controle, clonerNeuf } from "./clone-neuf.mjs";
+import { controle, clonerNeuf, envSansGit } from "./clone-neuf.mjs";
 
 /**
  * Lance le contrôle sur un clone fabriqué, et rend ce qu'il a fait, dit et décidé.
@@ -201,4 +202,56 @@ test("un clone n'emporte pas l'index de son appelant", () => {
     { stdio: "pipe", env: { ...process.env, GIT_INDEX_FILE: poison } });
   assert.notEqual(indexe(), "g.txt\nh.txt",
     "le défaut ne se reproduit plus : ce cas ne prouve donc plus rien sur la parade.");
+});
+
+/*
+ * TOUT L'OBJET DE CE FICHIER EST QU'UN CLONE TIENNE SEUL — ET IL NE POUVAIT PAS LE MONTRER.
+ *
+ * `clonerNeuf` retirait `GIT_DIR`, `GIT_INDEX_FILE` et `GIT_WORK_TREE` pour SON `git clone`.
+ * Les étapes suivantes — `rev-parse` dans le clone, `npm ci`, `npm test` — retransmettaient
+ * l'environnement intégral. Lancé depuis un crochet, ce contrôle interrogeait donc le dépôt de
+ * l'APPELANT et faisait tourner la suite sur son index.
+ */
+test("les étapes réelles ne transmettent aucune variable git", () => {
+  /*
+   * LA VÉRIFICATION QUI COMPTE : on lit la SOURCE des étapes par défaut. Les faire tourner
+   * pour de bon demanderait un clone complet et un `npm ci` — plusieurs minutes — et ce qui
+   * décide tient dans ce qu'elles passent à `execFileSync`.
+   *
+   * Un motif sur le texte est une affirmation : celui-ci porte son témoin, puisque
+   * `envSansGit` doit exister et retirer les sept noms, ce que le cas éprouve en dessous.
+   */
+  const src = readFileSync(fileURLToPath(new URL("./clone-neuf.mjs", import.meta.url)), "utf8")
+    .replace(/\/\*[\s\S]*?\*\//g, " ");
+  const appels = [...src.matchAll(/execFileSync\(([\s\S]*?)\n?\s*\);/g)].map((m) => m[0]);
+  assert.ok(appels.length >= 4, `${appels.length} appel(s) trouvé(s) : la lecture a échoué.`);
+  const nus = appels.filter((a) => !/env:\s*envSansGit\(\)/.test(a));
+  assert.deepEqual(nus.map((a) => a.slice(0, 60)), [],
+    "une étape lance une commande sans assainir l'environnement : lancée depuis un crochet,\n"
+    + "  elle regarde le dépôt de l'appelant. `GIT_DIR` l'emporte sur le dossier courant.");
+
+  /*
+   * LES SEPT SONT POSÉES AVANT, ET C'EST TOUT LE CAS.
+   *
+   * Ma première version n'en posait qu'une : les six autres étaient absentes de
+   * `process.env`, donc `e[v]` valait `undefined` de toute façon et l'assertion passait sans
+   * rien regarder. Réduire l'assainissement à trois noms ne la faisait pas rougir. Une
+   * assertion sur une absence ne vaut que si la présence a été fabriquée.
+   */
+  const NOMS = ["GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_OBJECT_DIRECTORY",
+    "GIT_COMMON_DIR", "GIT_ALTERNATE_OBJECT_DIRECTORIES", "GIT_PREFIX"];
+  const avant = Object.fromEntries(NOMS.map((v) => [v, process.env[v]]));
+  for (const v of NOMS) process.env[v] = `/tmp/pas-le-bon-${v}`;
+  try {
+    const e = envSansGit();
+    for (const v of NOMS) {
+      assert.equal(process.env[v], `/tmp/pas-le-bon-${v}`, `le montage est faux : ${v} n'est pas posée.`);
+      assert.equal(e[v], undefined, `${v} traverse l'assainissement.`);
+    }
+    assert.ok(e.PATH, "PATH a été retiré aussi : les commandes ne se lanceraient plus.");
+  } finally {
+    for (const v of NOMS) {
+      if (avant[v] === undefined) delete process.env[v]; else process.env[v] = avant[v];
+    }
+  }
 });

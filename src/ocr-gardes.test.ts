@@ -18,6 +18,11 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { spawn } from "node:child_process";
+import { fileURLToPath } from "node:url";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { mkdtempSync, copyFileSync, writeFileSync, statSync, rmSync, existsSync, readdirSync } from "node:fs";
 import { ceQuiManque, lire } from "./ocr.ts";
 
 test("le lecteur d'images refuse en nommant ce qui manque, ou nomme ses pannes", () => {
@@ -45,4 +50,108 @@ test("le lecteur d'images refuse en nommant ce qui manque, ou nomme ses pannes",
     assert.throws(() => lire(chemin), motif,
       `${chemin} doit produire un refus nommé, jamais un tableau vide`);
   }
+});
+
+/*
+ * TROIS DÉFAUTS DANS LA COMPILATION À LA DEMANDE, ET ILS SE PAIENT SUR UN CLONE FRAIS.
+ *
+ * `src/ocr/lire` est ignoré par git, donc absent après un clone. `node --test src/*.test.ts`
+ * lance les fichiers en processus PARALLÈLES et trois d'entre eux appellent `ceQuiManque()` :
+ * deux compilations écrivaient le MÊME fichier en même temps, `swiftc -o` tronquant sa cible
+ * avant d'écrire. `existsSync` acceptait ensuite un binaire de zéro octet POUR TOUJOURS — la
+ * commande échouait plus tard sur « cannot execute », très loin de la cause. Et le `catch`
+ * rebaptisait toute panne en « swiftc introuvable », envoyant le lecteur lancer
+ * `xcode-select --install`, qui ne répare pas une erreur de compilation.
+ */
+test("un binaire de zéro octet est recompilé, pas accepté pour toujours", { timeout: 120_000 }, (t) => {
+  if (process.platform !== "darwin") return t.skip("la compilation Swift n'existe que sur macOS");
+  const bac = mkdtempSync(join(tmpdir(), "ocr-vide-"));
+  try {
+    const src = join(bac, "lire.swift"), bin = join(bac, "lire");
+    copyFileSync(fileURLToPath(new URL("./ocr/lire.swift", import.meta.url)), src);
+
+    /* Ce que laisse une compilation tuée, ou deux qui se marchent dessus. */
+    writeFileSync(bin, "");
+    assert.equal(statSync(bin).size, 0, "le montage est faux : le binaire n'est pas vide.");
+
+    assert.equal(ceQuiManque(bin, src), null, "la recompilation a échoué pour une autre raison.");
+    assert.ok(statSync(bin).size > 0,
+      "un binaire de zéro octet est accepté tel quel. Rien ne le régénérera jamais, et la\n"
+      + "  commande échouera plus tard sur « cannot execute », loin de la cause.");
+  } finally { rmSync(bac, { recursive: true, force: true }); }
+});
+
+test("une compilation qui échoue ne se fait pas passer pour un swiftc absent", { timeout: 120_000 }, (t) => {
+  if (process.platform !== "darwin") return t.skip("la compilation Swift n'existe que sur macOS");
+  const bac = mkdtempSync(join(tmpdir(), "ocr-casse-"));
+  try {
+    const src = join(bac, "lire.swift"), bin = join(bac, "lire");
+    writeFileSync(src, "ceci n'est pas du Swift\n");
+
+    const r = ceQuiManque(bin, src);
+    assert.ok(r, "une source qui ne compile pas est acceptée : ce cas ne garde plus rien.");
+    /* On vise ce que le message AFFIRME, pas un mot qu'il contient : le refus corrigé cite
+       `xcode-select` précisément pour dire qu'il ne répare RIEN ici. Ma première assertion
+       cherchait la chaîne et accusait le bon message. */
+    assert.doesNotMatch(r!, /introuvable/,
+      "une erreur de COMPILATION est annoncée comme un `swiftc` absent : le lecteur va installer\n"
+      + "  des outils qu'il a déjà. Un diagnostic qui désigne la mauvaise cause coûte plus cher\n"
+      + "  qu'aucun diagnostic.");
+    assert.match(r!, /compilation/,
+      "le refus ne dit pas que c'est la compilation qui a échoué.");
+    assert.equal(existsSync(bin), false,
+      "un binaire est laissé derrière une compilation ratée : il serait accepté à l'appel suivant.");
+  } finally { rmSync(bac, { recursive: true, force: true }); }
+});
+
+test("trois compilations simultanées laissent UN binaire entier, et rien d'autre", { timeout: 180_000 }, async (t) => {
+  if (process.platform !== "darwin") return t.skip("la compilation Swift n'existe que sur macOS");
+  const bac = mkdtempSync(join(tmpdir(), "ocr-course-"));
+  try {
+    const src = join(bac, "lire.swift"), bin = join(bac, "lire");
+    copyFileSync(fileURLToPath(new URL("./ocr/lire.swift", import.meta.url)), src);
+
+    const un = () => new Promise<number>((r) => {
+      const p = spawn(process.execPath, ["--input-type=module", "-e",
+        `const m = await import(${JSON.stringify(fileURLToPath(new URL("./ocr.ts", import.meta.url)))});\n`
+        + `const v = m.ceQuiManque(${JSON.stringify(bin)}, ${JSON.stringify(src)});\n`
+        + `process.exit(v === null ? 0 : 1);`], { stdio: "ignore" });
+      p.on("exit", (c) => r(c ?? -1));
+    });
+    /*
+     * CE QUE CE CAS TIENT, ET CE QU'IL NE TIENT PAS — dit ici plutôt que laissé à supposer.
+     *
+     * IL TIENT : trois compilations simultanées rendent toutes 0, laissent un binaire entier,
+     * et aucun fichier provisoire derrière elles.
+     *
+     * IL NE TIENT PAS l'écriture atomique. J'ai essayé de l'éprouver en observant la cible
+     * toutes les cinq millisecondes pendant les trois compilations : avec la version qui
+     * compile DIRECTEMENT sur la cible, **aucune taille intermédiaire n'a jamais été vue**.
+     * `swiftc` publie apparemment sa sortie d'un coup. La troncature que la trouvaille
+     * décrivait n'est donc pas reproductible ici, et compiler à côté puis renommer ferme une
+     * CLASSE de défauts plutôt qu'un défaut mesuré. L'observation reste dans le cas : si un
+     * jour un `swiftc` écrit en plusieurs fois, elle le verra.
+     */
+    const tailles = new Set<number>();
+    const oeil = setInterval(() => {
+      try { tailles.add(statSync(bin).size); } catch { /* absente : c'est l'état attendu */ }
+    }, 5);
+    const codes = await Promise.all([un(), un(), un()]);
+    clearInterval(oeil);
+    assert.deepEqual(codes, [0, 0, 0], `trois compilations simultanées : codes ${codes.join(", ")}.`);
+
+    const finale = statSync(bin).size;
+    const partielles = [...tailles].filter((t) => t > 0 && t !== finale);
+    assert.deepEqual(partielles, [],
+      `la cible a été vue à ${partielles.join(", ")} octets alors qu'elle en fait ${finale}.\n`
+      + "  Un processus qui lance le binaire pendant ce temps — et trois fichiers de cas le font\n"
+      + "  en parallèle — trouverait un fichier coupé. Compiler à côté puis renommer ferme ça,\n"
+      + "  `rename` étant atomique. (Cette assertion n'a jamais rougi, même en compilant\n"
+      + "  directement sur la cible : elle guette, elle ne prouve pas.)");
+    assert.ok(statSync(bin).size > 0,
+      "le binaire est vide après trois compilations simultanées : `swiftc -o` tronque sa cible\n"
+      + "  avant d'écrire, donc l'un vide le fichier que l'autre vient de finir.");
+    assert.deepEqual(readdirSync(bac).filter((f) => f.startsWith("lire.")).sort(), ["lire.swift"],
+      "un fichier provisoire est resté : la prochaine compilation partirait d'un état inconnu.");
+  } finally { rmSync(bac, { recursive: true, force: true }); }
 });

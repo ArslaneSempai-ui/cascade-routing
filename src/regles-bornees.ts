@@ -52,7 +52,22 @@ async function evaluerUne(
   let vus = 0;
   return await new Promise<Issue>((resoudre) => {
     let minuteur: ReturnType<typeof setTimeout>;
-    const arreter = (r: Issue) => { clearTimeout(minuteur); void w.terminate(); resoudre(r); };
+    /*
+     * ON ATTEND LA MORT DU FIL, ET C'EST TOUT L'INTÉRÊT.
+     *
+     * `void w.terminate()` rendait la main tout de suite. Le fil coincé dans un motif
+     * catastrophique — `(a+)+$` sur une chaîne qui ne correspond pas — continue de brûler un
+     * cœur pendant environ deux secondes après le refus, pendant que les règles SUIVANTES
+     * sont déjà évaluées sous une borne en TEMPS RÉEL. Un fichier de règles hostiles fait
+     * donc refuser des règles ordinaires, en accusant le client d'une lenteur qu'on a créée.
+     *
+     * `terminate()` rend une promesse qui se résout quand le fil est réellement arrêté.
+     * L'attendre coûte le temps qu'il faut pour ne plus mentir sur le suivant.
+     */
+    const arreter = (r: Issue) => {
+      clearTimeout(minuteur);
+      void w.terminate().then(() => resoudre(r), () => resoudre(r));
+    };
     /* La borne est réarmée à CHAQUE cas : c'est une borne par évaluation, pas par passe.
        Une règle qui met 200 ms sur chacun de dix mille cas est lente mais évaluable ; une
        règle qui ne rend pas la main sur un seul cas ne l'est pas. */

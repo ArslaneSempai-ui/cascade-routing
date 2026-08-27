@@ -102,11 +102,30 @@ const racine = fileURLToPath(new URL("..", import.meta.url));
  * `--no-local` est nécessaire : un clone local par liens durs ne fait pas de copie de
  * travail et ne déclenche pas le défaut, ce qui l'a rendu invisible en contre-épreuve.
  */
-export function clonerNeuf(depot, dest, ref = null) {
+/**
+ * L'ENVIRONNEMENT ASSAINI, ET IL DOIT SERVIR À TOUTES LES ÉTAPES.
+ *
+ * Git exporte `GIT_DIR`, `GIT_INDEX_FILE` et `GIT_WORK_TREE` à ses crochets — et `GIT_DIR`
+ * l'emporte sur le dossier courant. `clonerNeuf` les retirait pour SON `git clone` ; les
+ * étapes suivantes — `rev-parse` dans le clone, `npm ci`, `npm test` — retransmettaient
+ * l'environnement intégral. Lancé depuis un crochet, ce contrôle vérifiait donc qu'un clone
+ * neuf tient debout... en interrogeant le dépôt de l'appelant, et en faisant tourner la suite
+ * du clone sur l'index de l'appelant. **Tout l'objet de ce fichier est qu'un clone tienne SEUL
+ * ; il ne pouvait pas le montrer.**
+ *
+ * Sept variables, pas trois : la liste courte laissait passer `GIT_OBJECT_DIRECTORY` et
+ * `GIT_COMMON_DIR`, qui détournent aussi bien.
+ */
+export function envSansGit() {
   const env = { ...process.env };
-  delete env.GIT_INDEX_FILE; delete env.GIT_DIR; delete env.GIT_WORK_TREE;
+  for (const v of ["GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_OBJECT_DIRECTORY",
+    "GIT_COMMON_DIR", "GIT_ALTERNATE_OBJECT_DIRECTORIES", "GIT_PREFIX"]) delete env[v];
+  return env;
+}
+
+export function clonerNeuf(depot, dest, ref = null) {
   execFileSync("git", ["clone", "--no-local", "--quiet",
-    ...(ref ? ["--branch", ref] : []), depot, dest], { stdio: "pipe", env });
+    ...(ref ? ["--branch", ref] : []), depot, dest], { stdio: "pipe", env: envSansGit() });
 }
 
 export const controle = ({
@@ -114,12 +133,12 @@ export const controle = ({
   depot = racine,
   ref = null,
   cloner = (dest) => clonerNeuf(depot, dest, ref),
-  historique = (dest) => { execFileSync("git", ["-C", dest, "rev-parse", "HEAD"], { stdio: "pipe" }); },
+  historique = (dest) => { execFileSync("git", ["-C", dest, "rev-parse", "HEAD"], { stdio: "pipe", env: envSansGit() }); },
   installer = (dest) => {
     execFileSync("npm", ["ci", "--prefer-offline", "--no-audit", "--no-fund", "--silent"],
-      { cwd: dest, stdio: "pipe" });
+      { cwd: dest, stdio: "pipe", env: envSansGit() });
   },
-  tester = (dest) => execFileSync("npm", ["test"], { cwd: dest, encoding: "utf8", stdio: "pipe" }),
+  tester = (dest) => execFileSync("npm", ["test"], { cwd: dest, encoding: "utf8", stdio: "pipe", env: envSansGit() }),
 } = {}) => {
   const t0 = Date.now();
 
