@@ -4,6 +4,42 @@
   "howEntriesAreEstablished": "Never by assumption. A successor is named only when it is bracketed on both sides: by content, because the relevé carries a field the successor's code introduces and its predecessor's does not; and by time, because the pass began after that commit and no other commit exists before the pass ended. Both are stated per entry so a reader can redo the reasoning.",
   "entries": [
     {
+      "missing": "a01216bff39153040bfa57e4287df26ceda7150c",
+      "nowAt": "469223fac2a13b82f89429c00a8271f116c44be5",
+      "citedBy": [
+        "survivants.json"
+      ],
+      "establishedBy": "recorded at rewrite time, not inferred",
+      "contentEvidence": "Same subject, rewritten by the 27 Aug 2026 removal of two empty commits; zero-line diff against the pre-rewrite branch, so both name the same tree.",
+      "timeEvidence": "Not needed: the mapping was written down while both sides existed.",
+      "limit": "The old object survives only in this working copy's backup branches; a clone will not find it.",
+      "whyTheRewrite": "Two empty commits, each with a message describing a fix that existed nowhere, were removed before publishing."
+    },
+    {
+      "missing": "45146e5",
+      "nowAt": "79e88bcbfa1decf3821d0b506da515d4974ccc19",
+      "citedBy": [
+        "menace-historique.json"
+      ],
+      "establishedBy": "recorded at rewrite time, not inferred",
+      "contentEvidence": "Same subject, rewritten by the 27 Aug 2026 removal of two empty commits; git diff against the pre-rewrite branch returned zero lines across the whole branch, so both name the same tree.",
+      "timeEvidence": "Not needed: the mapping was written down while both sides existed.",
+      "limit": "The old object survives only in this working copy's backup branches; a clone will not find it.",
+      "whyTheRewrite": "Two empty commits, each with a message describing a fix that existed nowhere, were removed before publishing."
+    },
+    {
+      "missing": "0345143",
+      "nowAt": "8bca350d9759ee46405080f41a2712dd249960c5",
+      "citedBy": [
+        "corpus-hostile.json"
+      ],
+      "establishedBy": "recorded at rewrite time, not inferred",
+      "contentEvidence": "Same tree by construction: the 27 Aug 2026 rewrite removed two empty commits and changed no file — git diff against the pre-rewrite branch returned zero lines. empty chain removed; nearest surviving ancestor's rewrite (2 hop(s), same tree).",
+      "timeEvidence": "Not needed: the mapping was written down while both sides existed.",
+      "limit": "The old object survives only in this working copy's backup branches; a clone will not find it — which is why this entry exists.",
+      "whyTheRewrite": "Two empty commits, each with a message describing a fix that existed nowhere, were removed before publishing. Their messages read as accomplished facts; the history a buyer audits should not."
+    },
+    {
       "missing": "679bf752e323da600fe1ab8f3b6ae89066e406a0",
       "nowAt": "b916b9bc01dfcf5aa382b572577205a3b2412ffd",
       "citedBy": [
