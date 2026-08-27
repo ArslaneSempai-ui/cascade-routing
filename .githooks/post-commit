@@ -1,0 +1,26 @@
+#!/bin/sh
+# ─── UN COMMIT HORS DE TOUTE BRANCHE EST UN COMMIT QUI DORT ───
+#
+# Trois fois en deux jours, une session a commité depuis un worktree détaché, annoncé son
+# travail livré, et son commit n'était atteignable par AUCUNE branche : il ne survivait que
+# tant que le worktree existait, et deux fois il a fallu le retrouver par son empreinte.
+# `git commit` réussit exactement pareil dans les deux cas — c'est ça le piège.
+#
+# Ce crochet ne bloque rien : le commit est déjà fait. Il DIT, à voix haute, ce que git tait.
+if ! git symbolic-ref -q HEAD >/dev/null; then
+  h=$(git rev-parse --short HEAD)
+  # `git branch --contains` IMPRIME « * (no branch) » sur une tête détachée — une ligne non
+  # vide, donc un `grep -q .` naïf croyait le commit porté et se taisait EXACTEMENT dans le cas
+  # à crier. Attrapé en éprouvant le crochet avant de le livrer, pas après.
+  if git branch --contains HEAD 2>/dev/null | grep -v "(no branch)" | grep -q .; then :; else
+    printf '\n  ┌─────────────────────────────────────────────────────────────────┐\n'
+    printf '  │ CE COMMIT (%s) N EST SUR AUCUNE BRANCHE.                     │\n' "$h"
+    printf '  │ Il dort : il ne survivra pas au retrait de ce worktree, et      │\n'
+    printf '  │ personne ne le verra depuis main. Trois fois en deux jours.     │\n'
+    printf '  │                                                                 │\n'
+    printf '  │   → demandez à la session qui tient main de faire :             │\n'
+    printf '  │     git merge --ff-only %s                                   │\n' "$h"
+    printf '  └─────────────────────────────────────────────────────────────────┘\n\n'
+  fi
+fi
+exit 0
