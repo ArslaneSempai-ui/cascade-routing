@@ -406,7 +406,20 @@ test("tuer egress emporte la commande surveillée — pas d'orphelin qui continu
   const egress = spawn("node", [CMD_EGRESS,
     "--every=100", "--", "-e", "setTimeout(() => {}, 30_000)"],
     { stdio: ["ignore", "pipe", "pipe"] });
-  await new Promise((r) => setTimeout(r, 2_500));
+  /* On ATTEND l'enfant au lieu de dormir un temps fixe : sous charge, 2,5 s ne suffisaient
+     pas toujours et ce cas rougissait par intermittence — la famille que le crochet doit
+     ensuite trancher. Un scrutin borné ne rougit que si l'enfant n'arrive JAMAIS. */
+  await (async () => {
+    const fin = Date.now() + 12_000;
+    for (;;) {
+      try {
+        execFileSync("pgrep", ["-P", String(egress.pid)], { stdio: "pipe" });
+        return;
+      } catch { /* pas encore de fils */ }
+      if (Date.now() > fin) return;
+      await new Promise((r) => setTimeout(r, 200));
+    }
+  })();
   const fils = execFileSync("pgrep", ["-P", String(egress.pid)], { encoding: "utf8" })
     .trim().split("\n").filter(Boolean).map(Number);
   assert.ok(fils.length >= 1, "le montage est faux : egress n'a pas d'enfant à surveiller.");
@@ -429,7 +442,20 @@ test("une commande surveillée TUÉE par un signal se dit, et la passe n'établi
     { stdio: ["ignore", "pipe", "pipe"] });
   let dit = "";
   egress.stderr!.on("data", (b) => { dit += String(b); });
-  await new Promise((r) => setTimeout(r, 2_500));
+  /* On ATTEND l'enfant au lieu de dormir un temps fixe : sous charge, 2,5 s ne suffisaient
+     pas toujours et ce cas rougissait par intermittence — la famille que le crochet doit
+     ensuite trancher. Un scrutin borné ne rougit que si l'enfant n'arrive JAMAIS. */
+  await (async () => {
+    const fin = Date.now() + 12_000;
+    for (;;) {
+      try {
+        execFileSync("pgrep", ["-P", String(egress.pid)], { stdio: "pipe" });
+        return;
+      } catch { /* pas encore de fils */ }
+      if (Date.now() > fin) return;
+      await new Promise((r) => setTimeout(r, 200));
+    }
+  })();
   const fils = execFileSync("pgrep", ["-P", String(egress.pid)], { encoding: "utf8" })
     .trim().split("\n").filter(Boolean).map(Number);
   assert.ok(fils.length >= 1, "le montage est faux : rien à tuer.");
