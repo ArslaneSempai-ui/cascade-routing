@@ -23,7 +23,7 @@
 import { writeFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { loadavg, cpus } from "node:os";
-import { isMain } from "./cli.ts";
+import { isMain, refuserDrapeauxInconnus } from "./cli.ts";
 import { ouvrirJournal, issue } from "./journal.ts";
 import { FIELDS, generateRecords } from "./corpus.ts";
 import { loadGeneratifs, extract, correct, PROMPTS, GENERATIFS_PUBLICS, type NomPrompt } from "./tiers.ts";
@@ -35,7 +35,8 @@ import type { TierName } from "./paliers.ts";
 import { fileURLToPath } from "node:url";
 /* La garde était écrite ici ET dans l'autre commande, et son commentaire disait déjà que sa
    place n'était pas la copie. Six autres commandes n'en avaient aucune : voir cas-demandes.ts. */
-import { casDemandes } from "./cas-demandes.ts";
+import { casDemandes, DRAPEAUX_CAS } from "./cas-demandes.ts";
+import { exigerArbrePropre, DRAPEAUX_ARBRE } from "./arbre-propre.ts";
 
 const SORTIE = fileURLToPath(new URL("../prompts-par-palier.json", import.meta.url));
 
@@ -76,25 +77,17 @@ if (isMain(import.meta)) {
   const noms = Object.keys(PROMPTS) as NomPrompt[];
   const paliers = GENERATIFS_PUBLICS;
 
-  const version = (() => {
-    try {
-      const cwd = fileURLToPath(new URL("..", import.meta.url));
-      return {
-        commit: execFileSync("git", ["rev-parse", "--short", "HEAD"], { cwd, encoding: "utf8" }).trim(),
-        sale: execFileSync("git", ["status", "--porcelain"], { cwd, encoding: "utf8" }).trim().length > 0,
-      };
-    } catch { return undefined; }
-  })();
-  if (version?.sale) {
-    console.error("\nModified tree: the prompts must be committed before they can be decided between.\n");
-    process.exit(1);
-  }
+  /* Un drapeau mal tapé ne se laisse pas ignorer : la commande tournerait entièrement,
+     avec les réglages par défaut, et rendrait un résultat qui ne répond pas à la question
+     posée. Les drapeaux des aides sont IMPORTÉS, pas recopiés. */
+  refuserDrapeauxInconnus([...DRAPEAUX_ARBRE, ...DRAPEAUX_CAS]);
+  const { etat: version, malgreArbreSale } = exigerArbrePropre("the prompt tuning");
 
   console.log(`\n${noms.length} phrasings × ${paliers.length} tiers × ${FIELDS.length} fields × ${cas} cases — on \`dev\`.`);
   console.log(`Load before starting: ${loadavg()[0]!.toFixed(2)} on ${cpus().length} cores.\n`);
   const journal = ouvrirJournal("regler", {
     quoi: "Cinq formulations par palier, sur le découpage de réglage.", split: "dev", cases: cas,
-    commit: version?.commit, sale: version?.sale,
+    commit: version?.commit, sale: (version?.sale.length ?? 0) > 0,
     chargeAvant: Number(loadavg()[0]!.toFixed(2)),
   });
   await loadGeneratifs();

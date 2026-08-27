@@ -24,7 +24,7 @@
 import { writeFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { loadavg, cpus } from "node:os";
-import { isMain } from "./cli.ts";
+import { isMain, refuserDrapeauxInconnus } from "./cli.ts";
 import { ouvrirJournal, issue } from "./journal.ts";
 import { FIELDS, generateRecords } from "./corpus.ts";
 import { loadGeneratifs, extract, correct, PROMPTS, type NomPrompt } from "./tiers.ts";
@@ -32,7 +32,8 @@ import { readProfiles } from "./measure.ts";
 
 import type { Field } from "./corpus.ts";
 import { fileURLToPath } from "node:url";
-import { casDemandes } from "./cas-demandes.ts";
+import { casDemandes, DRAPEAUX_CAS } from "./cas-demandes.ts";
+import { exigerArbrePropre, DRAPEAUX_ARBRE } from "./arbre-propre.ts";
 
 const SORTIE = fileURLToPath(new URL("../prompts-2026-08-20.json", import.meta.url));
 const PALIER = "gen-4b" as const;
@@ -42,21 +43,11 @@ if (isMain(import.meta)) {
   const dossiers = generateRecords(cas, "heldout");
   const noms = Object.keys(PROMPTS) as NomPrompt[];
 
-  const version = (() => {
-    try {
-      const cwd = fileURLToPath(new URL("..", import.meta.url));
-      return {
-        commit: execFileSync("git", ["rev-parse", "--short", "HEAD"], { cwd, encoding: "utf8" }).trim(),
-        sale: execFileSync("git", ["status", "--porcelain"], { cwd, encoding: "utf8" }).trim().length > 0,
-      };
-    } catch { return undefined; }
-  })();
-
-  if (version?.sale) {
-    console.error("\nThe tree carries uncommitted changes: the variants must be committed before");
-    console.error("running, or nothing proves none of them was added afterwards.\n");
-    process.exit(1);
-  }
+  /* Un drapeau mal tapé ne se laisse pas ignorer : la commande tournerait entièrement,
+     avec les réglages par défaut, et rendrait un résultat qui ne répond pas à la question
+     posée. Les drapeaux des aides sont IMPORTÉS, pas recopiés. */
+  refuserDrapeauxInconnus([...DRAPEAUX_ARBRE, ...DRAPEAUX_CAS]);
+  const { etat: version, malgreArbreSale } = exigerArbrePropre("the sensitivity sweep");
 
   console.log(`\n${noms.length} prompts × ${FIELDS.length} fields × ${cas} cases on ${PALIER}.`);
   console.log(`Load before starting: ${loadavg()[0]!.toFixed(2)} on ${cpus().length} cores.\n`);

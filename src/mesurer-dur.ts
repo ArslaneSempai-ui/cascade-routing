@@ -20,7 +20,7 @@ import { writeFileSync, readFileSync, writeSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { loadavg, cpus } from "node:os";
 import { CHARGE_MAX_PAR_COEUR } from "./measure.ts";
-import { isMain } from "./cli.ts";
+import { isMain, refuserDrapeauxInconnus } from "./cli.ts";
 import { FIELDS } from "./corpus.ts";
 import { ouvrirJournal } from "./journal.ts";
 import { loadExtractors, loadGeneratifs, extract, TIERS } from "./tiers.ts";
@@ -30,6 +30,7 @@ import type { Attendu, CasDur } from "./corpus-dur.ts";
 import type { TierName } from "./paliers.ts";
 import type { Field } from "./corpus.ts";
 import { fileURLToPath } from "node:url";
+import { exigerArbrePropre, DRAPEAUX_ARBRE } from "./arbre-propre.ts";
 
 const CLE_AMBIGUS = fileURLToPath(new URL("../cas-ambigus.json", import.meta.url));
 const SORTIE = fileURLToPath(new URL("../dur.json", import.meta.url));
@@ -90,16 +91,11 @@ if (isMain(import.meta)) {
   }
   const paliers = (demandes ?? TIERS.filter((t) => t !== "human")) as TierName[];
 
-  const version = (() => {
-    try {
-      const cwd = fileURLToPath(new URL("..", import.meta.url));
-      return {
-        commit: execFileSync("git", ["rev-parse", "--short", "HEAD"], { cwd, encoding: "utf8" }).trim(),
-        sale: execFileSync("git", ["status", "--porcelain"], { cwd, encoding: "utf8" }).trim().length > 0,
-      };
-    } catch { return undefined; }
-  })();
-  if (version?.sale) { console.error("\nModified tree: the scoring must be committed before the measurement.\n"); process.exit(1); }
+  /* Un drapeau mal tapé ne se laisse pas ignorer : la commande tournerait entièrement,
+     avec les réglages par défaut, et rendrait un résultat qui ne répond pas à la question
+     posée. Les drapeaux des aides sont IMPORTÉS, pas recopiés. */
+  refuserDrapeauxInconnus([...DRAPEAUX_ARBRE, "--tiers", "--allow-load"]);
+  const { etat: version, malgreArbreSale } = exigerArbrePropre("the hard-corpus measurement");
 
   const tabulaires = corpusDur();
   const ambigus = casAmbigus();
@@ -148,7 +144,7 @@ if (isMain(import.meta)) {
   const journal = ouvrirJournal("dur", {
     quoi: "Cas durs : documents malformés, écritures non latines, cas ambigus.",
     split: "hard-corpus", cases: tous.length,
-    commit: version?.commit, sale: version?.sale,
+    commit: version?.commit, sale: (version?.sale.length ?? 0) > 0,
     chargeAvant: Number(loadavg()[0]!.toFixed(2)),
   });
 

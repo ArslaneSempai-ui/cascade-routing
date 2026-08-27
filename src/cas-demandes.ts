@@ -57,6 +57,16 @@ export function drapeauEntier(
   return r.valeur;
 }
 
+/**
+ * LES DRAPEAUX QUE CE MODULE CONSULTE, DÉCLARÉS LÀ OÙ ILS SONT LUS.
+ *
+ * Une commande qui refuse les drapeaux inconnus doit connaître ceux que ses AIDES lisent pour
+ * elle. Recopier « --cases » dans chaque commande, c'est la liste écrite à la main qui oublie
+ * — et ici elle ne se contenterait pas d'oublier : elle ferait refuser un drapeau valide, ce
+ * qui fait retirer la garde.
+ */
+export const DRAPEAUX_CAS = ["--cases"] as const;
+
 /** La lecture pure : ni écriture, ni sortie. Testable sans sous-processus. */
 export function lireCas(argv: readonly string[], defaut: number): { cas: number } | { refus: string } {
   const brut = argv.find((a) => a.startsWith("--cases="))?.split("=")[1];

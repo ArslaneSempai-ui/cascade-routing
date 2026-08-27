@@ -24,6 +24,7 @@ import type { TierName } from "./tiers.ts";
 import type { Field } from "./corpus.ts";
 import { fileURLToPath } from "node:url";
 import { casDemandes } from "./cas-demandes.ts";
+import { exigerArbrePropre, etatDuDepot as etatPartage } from "./arbre-propre.ts";
 
 const FICHIER = fileURLToPath(new URL("../data/profiles.json", import.meta.url));
 
@@ -416,15 +417,14 @@ function quantile(xs: number[], q: number): number {
 }
 
 /** Le commit courant et la propreté de l'arbre — lu deux fois : par la mesure, et par sa garde. */
+/**
+ * Le relevé porte `sale` en BOOLÉEN — c'est sa forme publiée, scellée, et un correctif ne la
+ * change pas. La lecture, elle, vient de `arbre-propre.ts` : une seule commande git dans le
+ * dépôt, avec l'environnement assaini, au lieu de huit copies.
+ */
 function etatDuDepot(): { commit: string; sale: boolean } | undefined {
-
-    try {
-      const commit = execFileSync("git", ["rev-parse", "--short", "HEAD"],
-        { cwd: fileURLToPath(new URL("..", import.meta.url)), encoding: "utf8" }).trim();
-      const sale = execFileSync("git", ["status", "--porcelain"],
-        { cwd: fileURLToPath(new URL("..", import.meta.url)), encoding: "utf8" }).trim().length > 0;
-      return { commit, sale };
-    } catch { return undefined; }   // dépôt cloné sans git, ou git absent : on n'invente rien
+  const e = etatPartage();
+  return e ? { commit: e.commit, sale: e.sale.length > 0 } : undefined;
 }
 
 export async function measure(
@@ -857,16 +857,9 @@ if (isMain(import.meta)) {
    * mais la raison s'écrit alors dans la provenance de chaque palier, pour qu'un relecteur
    * sache que c'était voulu et pourquoi, au lieu de le supposer.
    */
-  const etat = etatDuDepot();
-  const brutSale = process.argv.find((a) => a.startsWith("--allow-dirty"));
-  const malgreArbreSale = brutSale ? (brutSale.split("=")[1] || "raison non donnée") : undefined;
-  if (etat?.sale && !malgreArbreSale) {
-    console.error(`\nThe working tree carries uncommitted changes.`);
-    console.error(`Every tier measured would be marked not reproducible, including by you.\n`);
-    console.error(`  git commit -am "…"        then run again`);
-    console.error(`  or --allow-dirty="why"       if this is deliberate — the reason goes into the record\n`);
-    process.exit(1);
-  }
+  /* La garde vit dans `arbre-propre.ts` : elle était écrite huit fois, avec trois issues
+     incompatibles et cinq commandes qui refusaient sans en offrir aucune. Voir son en-tête. */
+  const { etat, malgreArbreSale } = exigerArbrePropre("every tier measured");
 
   /*
    * Le seul chemin par lequel des dossiers peuvent quitter cette machine.

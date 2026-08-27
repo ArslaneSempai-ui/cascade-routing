@@ -1,91 +1,119 @@
-import { test } from "node:test";
-import assert from "node:assert/strict";
-import { appendFileSync, readFileSync, existsSync } from "node:fs";
-import { join } from "node:path";
-import { execFileSync } from "node:child_process";
-import { fileURLToPath } from "node:url";
-import { lancer, exigerRefus, exigerQueCaMarcheSansCa } from "./commande-eprouvee.ts";
-import { arbreJetable, retirerArbreJetable } from "./arbre-jetable.ts";
-
 /*
- * « MODIFIED TREE : COMMITE AVANT DE MESURER » — trois commandes, une seule garde.
+ * HUIT COPIES DE LA GARDE D'ARBRE SALE, TROIS ISSUES INCOMPATIBLES, DEUX DÉFINITIONS.
  *
- * ─── CE QU'ELLE TIENT ───
- *
- * Ces trois commandes écrivent un relevé estampillé du commit courant. Lancées sur un arbre
- * modifié, elles produisent un relevé qui DÉSIGNE un commit ne contenant pas le code mesuré.
- * Ce n'est pas une approximation : c'est une fausse provenance, et une fausse provenance se
- * cite. Le chiffre survit à la session qui l'a produit, plus la réserve qui allait avec.
- *
- * ─── POURQUOI ELLE ÉTAIT SURVIVANTE ───
- *
- * Le balayage des gardes l'a trouvée trois fois : retirée, aucun cas ne bougeait. Pas parce
- * qu'elle est inutile — parce que l'éprouver demande un arbre SALE, et salir l'arbre partagé
- * ferait refuser le commit de toutes les autres sessions le temps du cas. On travaille donc
- * dans un arbre isolé, sali puis nettoyé, et rien n'en sort.
- *
- * ─── LE CONTRÔLE POSITIF PORTE SUR CE QUI EST DIT, PAS SUR LE CODE ───
- *
- * Ces commandes chargent des modèles et tournent des minutes. On ne les laisse pas finir : on
- * pose une borne de temps et on exige qu'elles aient DÉPASSÉ la garde — ce qui se lit à leur
- * en-tête. Un code de sortie ne dirait rien ici : c'est celui d'un processus tué.
+ * Relevé le 27 août 2026 : `measure` offrait `--allow-dirty="raison"`, `mesurer-ocr`
+ * `--arbre-modifie` sans raison, et CINQ commandes refusaient sans offrir aucune issue —
+ * `mesurer-dur`, `apparier-prompt`, `departager-reglage`, `regler-prompt`,
+ * `sensibilite-prompt`. Celui qui apprend `--allow-dirty` sur `measure` se fait refuser par
+ * les voisines, et `refuserDrapeauxInconnus` rejette en plus le drapeau qu'il vient
+ * d'apprendre. Un refus dont l'issue change d'une commande à l'autre se lit comme un refus
+ * sans issue : on le contourne, ou on abandonne.
  */
 
-const RACINE = fileURLToPath(new URL("..", import.meta.url));
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { readdirSync, readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { join } from "node:path";
+import { etatDuDepot, raisonDArbreSale, DRAPEAUX_ARBRE } from "./arbre-propre.ts";
 
+const src = fileURLToPath(new URL(".", import.meta.url));
 
-/** Les trois commandes, avec l'en-tête qui prouve qu'elles ont dépassé la garde. */
-const COMMANDES = [
-  { fichier: "apparier-prompt.ts", entete: /tiers × .* phrasings/ },
-  { fichier: "departager-reglage.ts", entete: /pairs × .* fields/ },
-  { fichier: "mesurer-dur.ts", entete: /cases \(.*tabular/ },
-];
+test("les deux issues sont acceptées, et une absence reste une absence", () => {
+  assert.equal(raisonDArbreSale([]), undefined);
+  assert.equal(raisonDArbreSale(["--cases=10"]), undefined,
+    "un drapeau voisin est pris pour l'issue : la garde ne refuserait plus rien.");
 
-test("les trois commandes refusent de mesurer sur un arbre modifié", { timeout: 600_000 }, (t) => {
-  if (!existsSync(join(RACINE, ".git"))) {
-    /* Pas un saut déguisé : hors dépôt git, la propriété n'existe pas et le dire vaut mieux
-       que rendre un vert. */
-    t.diagnostic("hors dépôt git — la garde n'a pas de sens ici");
-    return;
-  }
-  const WT = arbreJetable("arbre-propre");
-  try {
-    /* ─── LE CONTRÔLE POSITIF D'ABORD ───
-       Sans lui, les refus ci-dessous pourraient venir d'un arbre isolé qui ne tourne pas du
-       tout — et ils passeraient d'autant mieux que tout serait cassé. */
-    for (const c of COMMANDES) {
-      const sain = lancer([join(WT, "src", c.fichier), "--cases=1"], { cwd: WT, msMax: 90_000 });
-      exigerQueCaMarcheSansCa({ code: 0, texte: sain.texte }, `${c.fichier} sur arbre propre`);
-      assert.match(sain.texte, c.entete,
-        `${c.fichier} : l'en-tête n'apparaît pas, donc la commande n'a pas dépassé la garde — `
-        + `le refus mesuré ensuite ne prouverait rien.\n${sain.texte.slice(0, 300)}`);
-      assert.doesNotMatch(sain.texte, /Modified tree/,
-        `${c.fichier} refuse sur un arbre PROPRE : la garde se déclenche à tort.`);
-    }
-
-    /* ─── PUIS LE REFUS, SUR LE MÊME ARBRE, SALI D'UNE LIGNE ─── */
-    appendFileSync(join(WT, "src", "corpus.ts"), "\n/* une ligne qui salit l'arbre */\n");
-    for (const c of COMMANDES) {
-      const sale = lancer([join(WT, "src", c.fichier), "--cases=1"], { cwd: WT, msMax: 90_000 });
-      exigerRefus(sale, /Modified tree/, `${c.fichier} sur arbre sali`);
-      assert.doesNotMatch(sale.texte, c.entete,
-        `${c.fichier} : la garde a parlé mais la mesure a démarré quand même. Un refus qui `
-        + `n'arrête pas laisse partir le relevé qu'il prétend empêcher.`);
-    }
-  } finally {
-    retirerArbreJetable(WT);
-  }
+  /* Celle de `measure`, avec sa raison — c'est elle qui entre dans la provenance. */
+  assert.equal(raisonDArbreSale(['--allow-dirty=je mesure du code en cours']), "je mesure du code en cours");
+  /* Celle d'`ocr`, sans raison : acceptée pour que personne ne réapprenne un geste. */
+  assert.equal(raisonDArbreSale(["--arbre-modifie"]), "reason not given");
+  assert.equal(raisonDArbreSale(["--allow-dirty"]), "reason not given");
 });
 
-test("l'arbre partagé n'a pas été touché", () => {
+test("une seule commande git lit l'état de l'arbre, et elle rend la liste", () => {
+  const e = etatDuDepot();
+  assert.ok(e, "git ne répond pas ici : ce cas ne vérifie rien.");
+  assert.match(e!.commit, /^[0-9a-f]{7,40}$/, `« ${e!.commit} » n'est pas une empreinte.`);
+  assert.ok(Array.isArray(e!.sale),
+    "l'état rend un booléen : le refus ne peut plus NOMMER les fichiers, et un refus qui ne\n"
+    + "  dit pas ce qu'il a vu se relit sans rien apprendre.");
+});
+
+test("aucune commande ne refait la garde dans son coin", () => {
   /*
-   * LE CAS QUI SURVEILLE LE CAS. Le précédent salit un arbre ; s'il salissait le vrai, il
-   * ferait refuser le commit de toutes les sessions — le contrôle casserait ce qu'il protège.
+   * LA COUVERTURE SE DÉDUIT. Une liste écrite ici oublierait la huitième commande — c'est
+   * exactement ce qui s'est passé : cinq d'entre elles n'avaient jamais reçu l'issue.
+   *
+   * `hostile.ts` est nommé, avec sa raison : il porte une DEUXIÈME définition de « sale »,
+   * restreinte à `src/`, et c'est délibéré. L'adopter partout élargirait sept gardes d'un coup,
+   * ce qui n'est pas une conséquence d'un travail d'unification — `corpus-externe/` et les
+   * fichiers de notation ne sont pas sous `src/` et changent les résultats.
    */
-  const etat = execFileSync("git", ["status", "--porcelain", "--", "src/corpus.ts"],
-    { cwd: RACINE, encoding: "utf8" });
-  assert.equal(etat.trim(), "",
-    "src/corpus.ts est modifié dans l'arbre partagé : le cas précédent a sali le mauvais arbre.");
-  assert.doesNotMatch(readFileSync(join(RACINE, "src", "corpus.ts"), "utf8"),
-    /une ligne qui salit l'arbre/, "la ligne du cas est restée dans le fichier partagé.");
+  /* liste-figee: les deux seuls fichiers qui ont le DROIT de lire l'arbre eux-mêmes —
+     `arbre-propre.ts` parce que c'est lui qui le fait pour les autres, et `hostile.ts` parce
+     qu'il porte une deuxième définition de « sale », restreinte à `src/`, déclarée et voulue.
+     La liste est courte et chacun y est pour une raison écrite : l'ajout d'un troisième doit
+     être un geste, pas un oubli. */
+  const DECLARES = new Set(["arbre-propre.ts", "hostile.ts"]);
+  const copies: string[] = [];
+  let balayes = 0;
+  for (const f of readdirSync(src)) {
+    if (!f.endsWith(".ts") || f.endsWith(".test.ts") || DECLARES.has(f)) continue;
+    balayes++;
+    const t = readFileSync(join(src, f), "utf8")
+      .replace(/\/\*[\s\S]*?\*\//g, " ").replace(/(?<!:)\/\/.*$/gm, " ");
+    if (/"status",\s*"--porcelain"/.test(t)) copies.push(f);
+  }
+  assert.ok(balayes >= 20, `${balayes} module(s) balayé(s) : la lecture du dossier a échoué.`);
+
+  /* Non-vacuité : le motif doit reconnaître la garde là où elle est légitime. */
+  assert.match(readFileSync(join(src, "arbre-propre.ts"), "utf8"), /"status",\s*"--porcelain"/,
+    "le motif ne reconnaît plus la lecture de l'arbre : ce cas ne garde plus rien.");
+
+  assert.deepEqual(copies, [],
+    `${copies.join(", ")} lit l'état de l'arbre par ses propres moyens.\n`
+    + "  Huit copies avaient trois issues incompatibles, et cinq n'en offraient aucune.\n"
+    + "  → `exigerArbrePropre(\"ce que la commande produit\")`");
+});
+
+test("les commandes de mesure offrent TOUTES la même issue", () => {
+  /*
+   * Le cas au-dessus tient l'implémentation ; celui-ci tient ce que l'utilisateur voit. Une
+   * commande pourrait appeler le module et refuser le drapeau plus haut, dans sa propre
+   * garde des drapeaux inconnus — le geste appris échouerait quand même.
+   */
+  const attendues: string[] = [];
+  for (const f of readdirSync(src)) {
+    if (!f.endsWith(".ts") || f.endsWith(".test.ts")) continue;
+    const t = readFileSync(join(src, f), "utf8");
+    if (/exigerArbrePropre\(|raisonDArbreSale\(/.test(t.replace(/\/\*[\s\S]*?\*\//g, " "))) attendues.push(f);
+  }
+  assert.ok(attendues.length >= 6,
+    `${attendues.length} commande(s) trouvée(s) : la déduction a échoué, et le vert ne dirait rien.`);
+
+  const sansDrapeau: string[] = [];
+  for (const f of attendues) {
+    const t = readFileSync(join(src, f), "utf8");
+    const m = t.match(/refuserDrapeauxInconnus\(\[([^\]]*)\]/);
+    if (!m) continue;                       // pas de garde des drapeaux : rien à accorder
+    /*
+     * `...DRAPEAUX_ARBRE` COMPTE AUTANT QUE LES NOMS ÉPELÉS, et ma première version l'a
+     * refusé : elle cherchait « allow-dirty » dans la liste littérale et accusait les cinq
+     * commandes qui font exactement ce qu'il fallait. Le contrôle porte sur ce que la commande
+     * ACCEPTE ; que les noms viennent d'un import est le but, pas un manquement. Le lien est
+     * tenu par le premier cas de ce fichier, qui éprouve le contenu de `DRAPEAUX_ARBRE`.
+     */
+    if (!/allow-dirty|arbre-modifie|DRAPEAUX_ARBRE/.test(m[1]!)) sansDrapeau.push(f);
+  }
+  /* Le maillon : si la liste importée cessait de porter les deux issues, le contrôle
+     ci-dessus resterait vert sur un `...DRAPEAUX_ARBRE` devenu vide. */
+  assert.deepEqual([...DRAPEAUX_ARBRE].sort(), ["--allow-dirty", "--arbre-modifie"],
+    "la liste partagée ne porte plus les deux issues : les commandes qui l'importent\n"
+    + "  refuseraient le drapeau qu'elles annoncent.");
+
+  assert.deepEqual(sansDrapeau, [],
+    `${sansDrapeau.join(", ")} appelle(nt) la garde mais refuse(nt) l'issue comme drapeau inconnu.\n`
+    + "  L'utilisateur lit « --allow-dirty=\"why\" », le tape, et s'entend répondre que ce\n"
+    + "  drapeau n'existe pas.");
 });

@@ -31,6 +31,7 @@ import { lire, texte as texteDesBlocs, ceQuiManque } from "./ocr.ts";
 import { rate, writeRate, distinguishable } from "./interval.ts";
 import type { TierName } from "./paliers.ts";
 import { casDemandes } from "./cas-demandes.ts";
+import { raisonDArbreSale, etatDuDepot } from "./arbre-propre.ts";
 
 const SORTIE = fileURLToPath(new URL("../ocr.json", import.meta.url));
 /* EXPORTÉ POUR QU'IL N'Y AIT QU'UNE SEULE VÉRITÉ. Un cas qui doit se sauter faute de moteur de
@@ -88,14 +89,10 @@ export async function litLeTexte(t: TierName, temoins: ClientFile[]): Promise<bo
  * rend `undefined` : le relevé ne portera alors AUCUN nom de commit. C'est voulu : pas de nom est
  * honnête, un nom qui n'est pas celui qui a tourné ne l'est pas.
  */
+/** Le relevé porte `sale` en booléen : c'est sa forme, et la lecture vient du module commun. */
 function lireLArbre(): { commit: string; sale: boolean } | undefined {
-  try {
-    const cwd = fileURLToPath(new URL("..", import.meta.url));
-    return {
-      commit: execFileSync("git", ["rev-parse", "--short", "HEAD"], { cwd, encoding: "utf8" }).trim(),
-      sale: execFileSync("git", ["status", "--porcelain"], { cwd, encoding: "utf8" }).trim().length > 0,
-    };
-  } catch { return undefined; }
+  const e = etatDuDepot();
+  return e ? { commit: e.commit, sale: e.sale.length > 0 } : undefined;
 }
 
 /**
@@ -138,7 +135,10 @@ export async function mesurer(
      ne peut plus être refait : on ne sait pas quelle version l'a rendu. Et mesurer sur un arbre
      modifié nomme un commit qui n'est pas celui qui a tourné — pire qu'aucun nom. */
   const version = (env.arbre ?? lireLArbre)();
-  if (version?.sale && !(env.argv ?? process.argv).includes("--arbre-modifie")) {
+  /* L'ISSUE S'APPREND UNE FOIS. `--allow-dirty` est la forme de `measure`, `--arbre-modifie`
+     celle d'ici : les deux sont acceptées, parce qu'un refus dont l'issue change d'une commande
+     à l'autre se lit comme un refus sans issue. Voir `arbre-propre.ts`. */
+  if (version?.sale && raisonDArbreSale(env.argv ?? process.argv) === undefined) {
     /* UN REFUS A BESOIN D'UNE ISSUE, sinon on commente la garde. L'issue existe, elle est
        explicite, et elle est désagréable à lire — c'est ce qui la garde exceptionnelle : le
        relevé produit portera « sale: true », et tout ce qui le relit le dira. */

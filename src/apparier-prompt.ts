@@ -17,7 +17,7 @@
 import { writeFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { loadavg, cpus } from "node:os";
-import { isMain } from "./cli.ts";
+import { isMain, refuserDrapeauxInconnus } from "./cli.ts";
 import { ouvrirJournal, issue } from "./journal.ts";
 import { FIELDS, generateRecords } from "./corpus.ts";
 import { loadGeneratifs, extract, correct, PROMPTS } from "./tiers.ts";
@@ -27,7 +27,8 @@ import type { NomPrompt } from "./tiers.ts";
 import type { TierName } from "./paliers.ts";
 import type { Field } from "./corpus.ts";
 import { fileURLToPath } from "node:url";
-import { casDemandes } from "./cas-demandes.ts";
+import { casDemandes, DRAPEAUX_CAS } from "./cas-demandes.ts";
+import { exigerArbrePropre, DRAPEAUX_ARBRE } from "./arbre-propre.ts";
 
 const SORTIE = fileURLToPath(new URL("../apparie-prompt.json", import.meta.url));
 const PALIERS = ["gen-4b", "gen-8b"] as TierName[];
@@ -37,22 +38,17 @@ if (isMain(import.meta)) {
   const cas = casDemandes(120);
   const dossiers = generateRecords(cas, "dev");   // l'observation vient de `dev` ; on y reste
 
-  const version = (() => {
-    try {
-      const cwd = fileURLToPath(new URL("..", import.meta.url));
-      return {
-        commit: execFileSync("git", ["rev-parse", "--short", "HEAD"], { cwd, encoding: "utf8" }).trim(),
-        sale: execFileSync("git", ["status", "--porcelain"], { cwd, encoding: "utf8" }).trim().length > 0,
-      };
-    } catch { return undefined; }
-  })();
-  if (version?.sale) { console.error("\nModified tree: commit before measuring.\n"); process.exit(1); }
+  /* Un drapeau mal tapé ne se laisse pas ignorer : la commande tournerait entièrement,
+     avec les réglages par défaut, et rendrait un résultat qui ne répond pas à la question
+     posée. Les drapeaux des aides sont IMPORTÉS, pas recopiés. */
+  refuserDrapeauxInconnus([...DRAPEAUX_ARBRE, ...DRAPEAUX_CAS]);
+  const { etat: version, malgreArbreSale } = exigerArbrePropre("the paired comparison");
 
   console.log(`\n${PALIERS.length} tiers × ${FORMULATIONS.length} phrasings × ${FIELDS.length} fields × ${cas} cases, on \`dev\`.`);
   console.log(`Load before starting: ${loadavg()[0]!.toFixed(2)} on ${cpus().length} cores.\n`);
   const journal = ouvrirJournal("apparier", {
     quoi: "Le classement de gen-4b et gen-8b dépend-il de la formulation ?", split: "dev", cases: cas,
-    commit: version?.commit, sale: version?.sale,
+    commit: version?.commit, sale: (version?.sale.length ?? 0) > 0,
     chargeAvant: Number(loadavg()[0]!.toFixed(2)),
   });
   await loadGeneratifs();
