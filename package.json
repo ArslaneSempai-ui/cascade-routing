@@ -48,7 +48,7 @@
     "hostile": "node src/hostile.ts"
   },
   "dependencies": {
-    "@huggingface/transformers": "^3.0.0"
+    "@huggingface/transformers": "^4.2.0"
   },
   "engines": {
     "node": ">=24"
