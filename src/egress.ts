@@ -172,15 +172,28 @@ export function connexions(pids: number[]): { hote: string; port: string; etat: 
   if (pids.length === 0) return [];
   try {
     const sortie = execFileSync("lsof", ["-nP", "-i", "-a", "-p", pids.join(",")],
-      { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
-    return sortie.split("\n").slice(1).filter(Boolean).map((l) => {
+      { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+    return lireSortieLsof(sortie);
+  } catch (e) {
+    return connexionsDepuisErreur(e);
+  }
+}
+
+/* Extrait pour que le chemin nominal et celui du code 1 partagent LA MÊME lecture : deux
+   lecteurs d'une même forme divergent toujours. */
+function lireSortieLsof(sortie: string): { hote: string; port: string; etat: string }[] {
+  return sortie.split("\n").slice(1).filter(Boolean).map((l) => {
       const champs = l.trim().split(/\s+/);
       const adresse = champs.find((c) => c.includes("->")) ?? champs.at(-2) ?? "";
       const cible = adresse.split("->")[1] ?? adresse;
       const i = cible.lastIndexOf(":");
       return { hote: i > 0 ? cible.slice(0, i) : cible, port: i > 0 ? cible.slice(i + 1) : "", etat: champs.at(-1) ?? "" };
     }).filter((c) => c.hote && c.hote !== "*");
-  } catch (e) {
+}
+
+export function connexionsDepuisErreur(e: unknown): { hote: string; port: string; etat: string }[] {
+  {
+
     /*
      * TROIS SITUATIONS RENDAIENT LE MÊME TABLEAU VIDE, ET LA TROISIÈME EST UN MENSONGE.
      *
@@ -210,7 +223,17 @@ export function connexions(pids: number[]): { hote: string; port: string; etat: 
         + "  process with no socket returns (1). The observation therefore did not happen, and\n"
         + "  returning an empty table here would publish \u201cno connection\u201d without having looked.");
     }
-    return [];   // code 1 : le processus n'a aucune socket ouverte. Le vide est la mesure.
+    /*
+     * CODE 1 AVEC UNE SORTIE NON VIDE : DES CONNEXIONS ONT ÉTÉ VUES. `lsof -p a,b,c` sort en 1
+     * dès qu'UN pid de la liste a disparu entre le `ps` et lui — les fils brefs de ce dépôt
+     * (`git`, `ps`, `python3`) meurent précisément dans cette fenêtre — même après avoir listé
+     * les sockets des survivants sur sa sortie standard. Jeter tout l'échantillon transformait
+     * des connexions OBSERVÉES en « rien vu », dans le relevé qui promet le contraire.
+     * Audit du 27 août 2026.
+     */
+    const restes = String((err as { stdout?: string }).stdout ?? "");
+    if (restes.trim()) return lireSortieLsof(restes);
+    return [];   // code 1, sortie vide : aucun processus n'a de socket. Le vide est la mesure.
   }
 }
 
@@ -318,6 +341,18 @@ function commandePubliable(c: readonly string[]): string {
 }
 
 const enfant = spawn("node", commande, { stdio: ["ignore", "ignore", "ignore"] });
+  /*
+   * L'ENFANT MEURT AVEC NOUS. Sans ces trois lignes, tuer egress — pkill, le timeout d'un
+   * harnais, un Ctrl-C — laissait la commande surveillée ORPHELINE : elle continuait de
+   * tourner, sans plus personne pour observer ce qu'elle ouvre. Une surveillance dont la mort
+   * libère le surveillé est pire que pas de surveillance : elle a l'air d'avoir eu lieu.
+   * Audit du 27 août 2026.
+   */
+  const emporter = (): void => { try { enfant.kill("SIGKILL"); } catch { /* déjà mort */ } };
+  process.on("exit", emporter);
+  for (const sig of ["SIGTERM", "SIGINT"] as const) {
+    process.on(sig, () => { emporter(); process.exit(128 + (sig === "SIGTERM" ? 15 : 2)); });
+  }
   const vues = new Map<string, Connexion>();
   let releves = 0;
   /* Combien de processus la passe a comptés au plus : « 1 » dit au lecteur que la commande
@@ -336,7 +371,23 @@ const enfant = spawn("node", commande, { stdio: ["ignore", "ignore", "ignore"] }
     }
   }, intervalle);
 
-  const code: number = await new Promise((r) => enfant.on("exit", (c) => r(c ?? 0)));
+  /*
+   * UNE COMMANDE TUÉE PAR UN SIGNAL N'A PAS DE CODE — SURTOUT PAS ZÉRO. L'événement `exit`
+   * livre `(null, "SIGKILL")` et `c ?? 0` transformait ce null en réussite : l'OOM-killer
+   * (cette machine est tombée à charge 116), ou le `kill` d'une autre session, faisait
+   * conclure « normal exit » au relevé qui adosse la promesse « nothing leaves the machine ».
+   * Une surveillance interrompue vaut 128+signal, la convention du shell, et le relevé porte
+   * le signal en toutes lettres. Audit du 27 août 2026.
+   */
+  const fin = await new Promise<{ code: number; signal: string | null }>((r) =>
+    enfant.on("exit", (c, sig) => r({ code: c ?? (sig ? 128 + 15 : 0), signal: sig })));
+  const code = fin.code;
+  if (fin.signal) {
+    console.error(`\nthe watched command was KILLED by ${fin.signal} — the watch is incomplete.`);
+    console.error(`Whatever it would have opened after that moment was never observed; this run`);
+    console.error(`establishes nothing and no record is written.`);
+    process.exitCode = 128;
+  }
   clearInterval(minuteur);
 
   const liste = [...vues.values()].sort((a, b) => b.vu - a.vu);

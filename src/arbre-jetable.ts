@@ -50,6 +50,17 @@ import { fileURLToPath } from "node:url";
 
 const RACINE = fileURLToPath(new URL("..", import.meta.url));
 
+const aDetruire = new Set<string>();
+process.on("exit", () => {
+  for (const chemin of aDetruire) {
+    try { rmSync(chemin, { recursive: true, force: true }); } catch { /* déjà parti */ }
+  }
+  /* Un seul prune pour tout le processus : les entrées dont on vient de retirer le dossier. */
+  try {
+    execFileSync("git", ["-C", RACINE, "worktree", "prune"], { env: envGitPropre() });
+  } catch { /* le dépôt peut avoir disparu — un bac ne doit jamais faire échouer une sortie */ }
+});
+
 /** Crée l'arbre et rend son chemin. À retirer avec `retirerArbreJetable`. */
 export function arbreJetable(prefixe: string, racineTemporaire: string = tmpdir()): string {
   /*
@@ -73,6 +84,15 @@ export function arbreJetable(prefixe: string, racineTemporaire: string = tmpdir(
    * création auto-réparante au lieu d'exiger une intendance que personne ne fera.
    */
   git(["-C", RACINE, "worktree", "prune"]);
+  /*
+   * LE NETTOYAGE EST GARANTI PAR LE PROCESSUS, PAS PROMIS PAR L'APPELANT. `prune` ne ramasse
+   * que les arbres dont le DOSSIER a disparu — or les cas qui échouent ou oublient laissent le
+   * dossier : quatre-vingt-dix bacs se sont ré-accumulés en une journée, une fois de plus, et
+   * l'administration git en gardait la trace complète. Chaque bac s'enregistre donc pour être
+   * détruit à la SORTIE du processus qui l'a créé, réussite ou échec — le seul moment qui
+   * arrive toujours. Audit du 27 août 2026, seconde récurrence.
+   */
+  aDetruire.add(chemin);
   git(["-C", RACINE, "worktree", "add", "--detach", "-q", chemin, "HEAD"]);
   /* `node_modules` est LIÉ, jamais installé : le dépôt y garde plus d'un gigaoctet de modèles
      en cache, et les commandes ne démarrent pas sans lui. */
@@ -116,12 +136,17 @@ export function arbreJetable(prefixe: string, racineTemporaire: string = tmpdir(
       + `  two sessions' uncommitted work on 27 August 2026 (inherited GIT_DIR wins over cwd).`);
   }
   git(["-C", chemin, "add", "-A"]);
-  git(["-C", chemin, "-c", "user.name=t", "-c", "user.email=t@t",
+  /* `core.hooksPath` neutralisé : le figeage déclenchait la boîte « CE COMMIT N'EST SUR
+     AUCUNE BRANCHE » du post-commit partagé — à CHAQUE création de bac. Un avertissement
+     imprimé cent fois par passe cesse d'être lu, et c'est lui qui doit sauver le prochain
+     commit détaché RÉEL. Le bac est jetable par construction : sa boîte est du bruit. */
+  git(["-C", chemin, "-c", "user.name=t", "-c", "user.email=t@t", "-c", "core.hooksPath=/dev/null",
     "commit", "-q", "--no-verify", "--allow-empty", "-m", "état du disque, figé pour ce cas"]);
   return chemin;
 }
 
 export function retirerArbreJetable(chemin: string): void {
+  aDetruire.delete(chemin);
   try {
     git(["-C", RACINE, "worktree", "remove", "--force", chemin]);
   } catch { /* déjà parti : rien à faire */ }

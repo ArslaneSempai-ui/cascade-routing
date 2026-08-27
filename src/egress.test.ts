@@ -1,11 +1,12 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { spawn } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
+import { arbreJetable, retirerArbreJetable } from "./arbre-jetable.ts";
 import { mkdtempSync, mkdirSync, copyFileSync, writeFileSync, chmodSync, existsSync, rmSync, realpathSync, readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
-import { pidsSurveilles, connexions, ASSEZ_DE_RELEVES } from "./egress.ts";
+import { connexionsDepuisErreur, pidsSurveilles, connexions, ASSEZ_DE_RELEVES } from "./egress.ts";
 
 /*
  * LA GARDE QUI EMPÊCHE « rien vu » DE SE FAIRE PASSER POUR « rien ».
@@ -357,4 +358,86 @@ test("une connexion tenue par le FILS est lue, et elle ne l'était pas avant", a
     serveur.close();
     rmSync(dossier, { recursive: true, force: true });
   }
+});
+
+test("un pid disparu entre ps et lsof ne jette pas les connexions réellement vues", () => {
+  /*
+   * `lsof -p a,b,c` sort en 1 dès qu'UN pid a disparu — les fils brefs meurent précisément
+   * dans cette fenêtre — même après avoir listé les sockets des survivants. Jeter l'échantillon
+   * transformait des connexions OBSERVÉES en « rien vu », dans le relevé qui promet l'inverse.
+   */
+  const sortieAvecConnexion =
+    "COMMAND PID USER FD TYPE DEVICE SIZE NODE NAME\n"
+    + "node 123 u 21u IPv4 0x1 0t0 TCP 127.0.0.1:5000->93.184.216.34:443 (ESTABLISHED)\n";
+  const e = Object.assign(new Error("exit 1"), { status: 1, stdout: sortieAvecConnexion });
+  const vues = connexionsDepuisErreur(e);
+  assert.equal(vues.length, 1,
+    "les connexions listées avant la mort d'un pid ont été jetées avec l'échantillon.");
+  assert.equal(vues[0]!.hote, "93.184.216.34",
+    `l'hôte observé doit survivre au code 1 : ${JSON.stringify(vues)}`);
+});
+
+/*
+ * LES DEUX TÉMOINS QUI LANCENT LA COMMANDE LE FONT DEPUIS UN BAC, jamais depuis l'arbre
+ * vivant : `egress.ts` écrit son relevé À CÔTÉ DE LUI (`../egress.json`), et ma première
+ * version écrasait le relevé livré du dépôt — le défaut exact que le contrôle des paramètres
+ * a attrapé dans l'heure (« publie intervalleMs=100, le code utiliserait 250 »), et la même
+ * famille que releve-scelle ce matin. Un témoin qui salit l'arbre fabrique les rouges des
+ * autres. Audit du 27 août 2026.
+ */
+const BAC_EGRESS = arbreJetable("egress-vivant");
+/* `realpathSync`, ET C'EST LE PIÈGE DU JOUR QUI REVIENT : `mkdtemp` rend `/var/…` quand le
+   chemin réel est `/private/var/…`. La garde de point d'entrée compare `import.meta.url`
+   (résolu) à `argv[1]` (non résolu) : sans cette résolution, egress se CHARGE, ne fait rien,
+   sort en 0 — et un témoin qui attend un enfant à surveiller trouve un silence parfaitement
+   vert. `lancer()` de commande-eprouvee le fait déjà ; un spawn à la main doit le refaire. */
+const CMD_EGRESS = realpathSync(join(BAC_EGRESS, "src", "egress.ts"));
+test.after(() => retirerArbreJetable(BAC_EGRESS));
+
+test("tuer egress emporte la commande surveillée — pas d'orphelin qui continue sans témoin",
+  { timeout: 20_000 }, async () => {
+  /*
+   * Sans ça, `pkill egress` (ou le timeout d'un harnais) laissait la commande surveillée
+   * tourner SEULE : plus personne n'observait ce qu'elle ouvre, et la surveillance avait
+   * l'air d'avoir eu lieu. Et une commande TUÉE par un signal doit se dire : `exit` livre
+   * (null, "SIGKILL") et un `c ?? 0` en faisait un code 0 — « normal exit » sur une
+   * surveillance interrompue, dans le relevé qui adosse « nothing leaves the machine ».
+   */
+  const egress = spawn("node", [CMD_EGRESS,
+    "--every=100", "--", "-e", "setTimeout(() => {}, 30_000)"],
+    { stdio: ["ignore", "pipe", "pipe"] });
+  await new Promise((r) => setTimeout(r, 2_500));
+  const fils = execFileSync("pgrep", ["-P", String(egress.pid)], { encoding: "utf8" })
+    .trim().split("\n").filter(Boolean).map(Number);
+  assert.ok(fils.length >= 1, "le montage est faux : egress n'a pas d'enfant à surveiller.");
+
+  egress.kill("SIGTERM");
+  await new Promise((r) => setTimeout(r, 1_500));
+  for (const pid of fils) {
+    let vivant = true;
+    try { process.kill(pid, 0); } catch { vivant = false; }
+    assert.equal(vivant, false,
+      `le fils ${pid} SURVIT à la mort d'egress : la commande surveillée devient orpheline\n`
+      + "  et continue sans témoin — la surveillance a l'air d'avoir eu lieu.");
+  }
+});
+
+test("une commande surveillée TUÉE par un signal se dit, et la passe n'établit rien",
+  { timeout: 20_000 }, async () => {
+  const egress = spawn("node", [CMD_EGRESS,
+    "--every=100", "--", "-e", "setTimeout(() => {}, 30_000)"],
+    { stdio: ["ignore", "pipe", "pipe"] });
+  let dit = "";
+  egress.stderr!.on("data", (b) => { dit += String(b); });
+  await new Promise((r) => setTimeout(r, 2_500));
+  const fils = execFileSync("pgrep", ["-P", String(egress.pid)], { encoding: "utf8" })
+    .trim().split("\n").filter(Boolean).map(Number);
+  assert.ok(fils.length >= 1, "le montage est faux : rien à tuer.");
+  for (const pid of fils) process.kill(pid, "SIGKILL");
+  const code = await new Promise<number>((r) => egress.on("exit", (c) => r(c ?? -1)));
+  assert.match(dit, /KILLED by SIGKILL/,
+    "une surveillance interrompue par un signal ne le dit pas : elle se lirait comme une\n"
+    + "  passe normale, dans le relevé qui adosse « nothing leaves the machine ».");
+  assert.ok(code >= 128 || code === 1,
+    `le code de sortie doit dire l'interruption, reçu ${code} — un 0 ferait conclure « normal exit ».`);
 });

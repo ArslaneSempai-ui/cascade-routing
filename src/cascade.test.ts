@@ -25,7 +25,7 @@ import { lireCsv } from "./your-cases.ts";
 import { corpusDur } from "./corpus-dur.ts";
 import { comparerPopulations, plancherDeBruit, longueur, GRAINES_DE_BRUIT } from "./entree.ts";
 import { SEUIL_DE_L_INDUSTRIE, OBSERVATIONS_MINIMALES } from "./psi.ts";
-import { readProfiles, empreinteDuReleve, RELEVE_DE_REFERENCE, type Profile, type ProvenanceDuPalier, type Provenance } from "./measure.ts";
+import { latencesRetenues, readProfiles, empreinteDuReleve, RELEVE_DE_REFERENCE, type Profile, type ProvenanceDuPalier, type Provenance } from "./measure.ts";
 import { optimiseExtraction, optimiseClassification, budgetShadowPrice, latenceRepresentative, paliersMesures, evaluer, pricePerThousandDocuments } from "./optimise.ts";
 import { rapportPourLeClient } from "./your-cases.ts";
 import { elaguer as elaguerInterne } from "./journal.ts";
@@ -4477,7 +4477,10 @@ test("un relevé publié porte les paramètres sous lesquels le code le prendrai
     "menace-historique.json:commits", "menace-historique.json:trouves",
     "menace-historique.json:temoins", "menace-historique.json:declares",
     /* Le relevé de sortie réseau : `releves` est le nombre d'échantillons de SA passe et
-       `codeSortie` celui de la commande observée — deux comptes, pas des réglages. */
+       `codeSortie` celui de la commande observée — deux comptes, pas des réglages.
+       `processusRegardes` est le MAXIMUM de processus vus pendant la passe — un compte lui
+       aussi : il dit ce que la surveillance a couvert, pas comment elle était réglée. */
+    "egress.json:processusRegardes",
     "egress.json:releves", "egress.json:codeSortie",
     /*
      * `stryker.conf.json` N'EST PAS UN RELEVÉ, C'EST LA CONFIGURATION D'UN OUTIL.
@@ -4754,4 +4757,27 @@ test("un /api/tags en panne fait refuser, il ne se lit pas « aucun modèle »",
   } finally {
     await new Promise<void>((r) => stub.close(() => r()));
   }
+});
+
+test("sous charge, la classification garde les latences de la passe précédente — comme l'extraction", () => {
+  /*
+   * Le défaut : quand `latenceValide` était faux, l'extraction conservait les anciennes
+   * latences et la classification écrivait les fraîches — un même relevé portait des latences
+   * de DEUX passes sous une seule provenance. La règle vit maintenant dans une fonction, et ce
+   * cas l'éprouve dans les deux sens. LIMITE ÉCRITE : il éprouve la fonction, pas ses deux
+   * points d'appel — les exercer demande une mesure réelle avec modèles.
+   */
+  const fraiches = { latency: 999, latencyP10: 900, latencyP90: 1100, accuracy: 0.5 };
+  const anciennes = { latency: 40, latencyP10: 35, latencyP90: 60 };
+  const sousCharge = latencesRetenues(false, fraiches, anciennes);
+  assert.equal(sousCharge.latency, 40,
+    "sous charge, la latence fraîche — prise sur une machine occupée — a été gardée : le\n"
+    + "  relevé mélange deux passes sous une seule provenance.");
+  assert.equal(sousCharge.accuracy, 0.5, "les champs hors latence doivent rester les frais.");
+  const machineCalme = latencesRetenues(true, fraiches, anciennes);
+  assert.equal(machineCalme.latency, 999,
+    "machine calme, c'est la mesure FRAÎCHE qui fait foi — garder l'ancienne figerait le relevé.");
+  const premierePasse = latencesRetenues(false, fraiches, undefined);
+  assert.equal(premierePasse.latency, 999,
+    "sans passe précédente, il n'y a rien à conserver : la fraîche, même bruitée, est la seule.");
 });

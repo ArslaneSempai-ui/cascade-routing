@@ -427,6 +427,25 @@ function etatDuDepot(): { commit: string; sale: boolean } | undefined {
   return e ? { commit: e.commit, sale: e.sale.length > 0 } : undefined;
 }
 
+/**
+ * Les latences d'une passe sous charge ne valent rien — on garde alors celles de la passe
+ * précédente. LA RÈGLE VIT ICI, UNE FOIS : l'extraction l'appliquait et la classification
+ * écrivait les fraîches, donc un même relevé portait des latences de deux passes sous une
+ * seule provenance. Deux consommateurs d'une même règle finissent par diverger quand chacun
+ * la réécrit. Audit du 27 août 2026.
+ */
+export function latencesRetenues<T extends { latency: number; latencyP10: number; latencyP90: number }>(
+  latenceValide: boolean, fraiches: T, anciennes: { latency?: number; latencyP10?: number; latencyP90?: number } | undefined,
+): T {
+  if (latenceValide) return fraiches;
+  return {
+    ...fraiches,
+    latency: anciennes?.latency ?? fraiches.latency,
+    latencyP10: anciennes?.latencyP10 ?? fraiches.latencyP10,
+    latencyP90: anciennes?.latencyP90 ?? fraiches.latencyP90,
+  };
+}
+
 export async function measure(
   howMany = 120,
   options: { llm?: boolean; tiers?: TierName[]; cases?: Partial<Record<TierName, number>>; malgreArbreSale?: string; latenceValide?: boolean; malgreCharge?: string; prompt?: NomPrompt } = {},
@@ -659,13 +678,23 @@ export async function measure(
           ms: Number(ms.toFixed(3)), value: String(got), expected: a.truth,
         });
       }
+      /*
+       * LA MÊME RÈGLE QUE L'EXTRACTION, SOUS CHARGE. Quand la machine ne permettait pas de
+       * chronométrer, l'extraction gardait les latences de la passe précédente — et la
+       * classification écrivait les fraîches, prises sur la machine chargée. Un même relevé
+       * portait alors des latences de DEUX passes sous une seule provenance : la famille
+       * exacte des « deux sources pour une grandeur ». Audit du 27 août 2026.
+       */
+      const ancienneClasse = latenceValide ? undefined : readProfiles()?.classification?.[tier];
       classification[tier] = {
         reussites: bits.join(""),
         sorties,
         accuracy: right / alertes.length,
-        latency: quantile(durees, 0.5),
-        latencyP10: quantile(durees, 0.1),
-        latencyP90: quantile(durees, 0.9),
+        ...latencesRetenues(latenceValide, {
+          latency: quantile(durees, 0.5),
+          latencyP10: quantile(durees, 0.1),
+          latencyP90: quantile(durees, 0.9),
+        }, ancienneClasse),
         items: alertes.length,
       };
     }
