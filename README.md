@@ -439,12 +439,12 @@ No budget buys better: the ceiling is in the tiers available.
 
 | Lever | Pays off once a wrong value is worth | What it does |
 |---|---|---|
-| **Abstain** | **1.132 reviews** | returns nothing when a signal says the value is doubtful — 91 wrong values removed for 12 correct ones lost, precision 29.3 % → 68.1 % |
+| **Abstain** | **1.141 reviews** | returns nothing when a signal says the value is doubtful — 85 wrong values removed for 12 correct ones lost, precision 30 % → 62.3 % |
 | Re-route | 29.14 reviews | moves a field to a different tier — the published recommendation is stable below that |
 
 **Abstention pays roughly 26 times sooner than re-routing.** For almost any client, the lever is refusing to answer — not moving fields between tiers. That is the opposite of where attention usually goes.
 
-*The abstention figures are measured on the **hard corpus** — 30 deliberately difficult documents, 150 values — not on the main sample. That is where abstention is worth measuring, and it is also why the baseline precision there is 29.3 % rather than the headline. The ratio itself carries no unit and does not depend on that choice.*
+*The abstention figures are measured on the **hard corpus** — 30 deliberately difficult documents, 150 values — not on the main sample. That is where abstention is worth measuring, and it is also why the baseline precision there is 30 % rather than the headline. The ratio itself carries no unit and does not depend on that choice.*
 <!-- /figures:leviers -->
 
 <!-- figures:frontiere -->
@@ -452,14 +452,14 @@ No budget buys better: the ceiling is in the tiers available.
 
 | Signals required | Reviews added | Wrong values avoided | Correct values lost | Precision of what is delivered | Break-even ratio |
 |---|---|---|---|---|---|
-| **1** | 69 reviews · 0.9 h | 61 | 8 | 68.1 % [53.8–79.6] | 1.132 |
-| **2** | 3 reviews · 0.0 h | 3 | 0 | 30.1 % [23.3–38] | 1 |
+| **1** | 65 reviews · 0.8 h | 57 | 8 | 62.3 % [48.8–74.1] | 1.141 |
+| **2** | 3 reviews · 0.0 h | 3 | 0 | 30.8 % [23.9–38.7] | 1 |
 
 *Reviews are converted at 45 seconds each — the one assumption in this table, and it is yours to change. Everything else is counted.*
 
-**At 1 signal, the trade is 7.6 wrong values removed for every correct one lost**, and precision goes from 29.3 % to 68.1 %. Whether that is worth 0.9 hours per hundred values is your arithmetic, not ours — it depends on what a misfiled record costs you.
+**At 1 signal, the trade is 7.1 wrong values removed for every correct one lost**, and precision goes from 30 % to 62.3 %. Whether that is worth 0.8 hours per hundred values is your arithmetic, not ours — it depends on what a misfiled record costs you.
 
-**And the cautious threshold moves nothing.** 29.3 % to 30.1 % — the intervals overlap almost entirely, so the sample cannot tell the two apart. It is nearly free and nearly useless, which is worth saying rather than letting two adjacent numbers suggest a gain.
+**And the cautious threshold moves nothing.** 30 % to 30.8 % — the intervals overlap almost entirely, so the sample cannot tell the two apart. It is nearly free and nearly useless, which is worth saying rather than letting two adjacent numbers suggest a gain.
 
 **And a caution on the row that looks free.** At 2 signals no correct value is lost at all — but on 4 abstentions, which is below this repository's floor of 20. "Never sacrifices a correct value" is a claim that sample cannot carry: the interval on it runs from 51 % to 100 %.
 
@@ -597,8 +597,9 @@ anything. A validator can audit a history; they cannot audit a promise.
 | 2026-08-24 | That the finding is 94.4 % for $191, and that no available budget buys a better routing. Both were true of the objective the solver optimises — the mean per field — and the headline gave a reader no reason to suspect there was another objective. | The unit that gets filed is the record. On the published routing, 92 of 120 records come out with all five fields right: 76.7 % [68-83], not 94.4 %. And a routing that aims at the record delivers 95 of 120 for $54 rather than $191, worse on no record in the sample. 'No available budget buys a better routing' is still true about the budget and false about the reader's conclusion, which is the shape of overclaim this file exists to record. | Building the per-record measurement asked for in the plan, and finding that the headline and the middle of the same document now told different stories. |
 | 2026-08-24 | On 2026-08-20, correcting "nothing leaves the machine", I wrote as an inventory that a measurement's path contains exactly one outbound call — the generative host — and that OLLAMA_HOST was the condition nobody had written down. The sentence reads as a count that was taken. | There are at least three. `npm run benchmark` downloads a public labelled dataset with curl, and it is a measurement. The model library pulls 1.26 GB of weights on a first run — the README says so two hundred lines above. Neither sends anything of the client's, so the promise survives; the COUNT did not, and it was the count that made the correction sound complete. | Sweeping every command a buyer can run, to find which ones actually work. `benchmark` was read rather than run, and its curl contradicted a sentence written four days earlier. |
 | 2026-08-25 | On 2026-08-25, commit 9e10b26 stated as a measurement: "No dependency runs code at install time, and every one is pinned." It carried a figure — 81 packages, 0 install scripts — and a test was added to pin the property. It reads as a reading that was taken. | Two packages of 243 declare a postinstall. `protobufjs` rewrites a field of its own package.json in 32 lines, with no network and no subprocess. `onnxruntime-node` DOWNLOADS native binaries from github.com and Microsoft's Azure feed and extracts them with execFileSync — gated on Linux x64, therefore inert on macOS and active on an ubuntu-latest runner. WHETHER THEY RUN IS A PROPERTY OF THE CLIENT'S MACHINE, NOT OF THIS REPOSITORY: npm 12 blocks both behind `allowScripts`, closed by default, and `ignore-scripts` is false; on npm 11 or earlier, on yarn, and on pnpm they execute. Measured on both sides, and the blocking is without consequence here — onnxruntime-node's `bin/napi-v3/**` is byte-identical at 208 MB between a blocked clone and an unblocked one, because the binaries ship in the tarball. | A peer session, told by a second, which measured before accepting and found it wider than reported — two packages rather than one. The guard now reads both the lockfile flag and the package.json actually on disk, and a disagreement between them is itself a finding. |
+| 2026-08-27 | The README stated, as measurements on the hard corpus: break-even at 1.132 reviews, 91 wrong values removed for 12 correct ones lost, delivered precision 68.1 % [53.8–79.6] at 1 signal. All were derived from the 2026-08-24 pass. | Thirteen grading keys in cas-ambigus.json carried a literal '*accepted:*' marker left by the grading pass itself. Against those keys, eight rules-tier silences graded as correct abstentions when the declared reading was a value. The 2026-08-24 tier answers were not affected — re-measured on 2026-08-27 with corrected keys, all five model tiers are byte-identical; only the grading of silences moved. Corrected figures: break-even 1.141 reviews, 85 wrong removed for 12 lost, delivered precision 62.3 % [48.8–74.1]. The direction of the error flattered the product's main lever. | The 2026-08-27 audit found the marker in the keys; the re-measure was ordered rather than assumed, and only the re-measure said which figures moved and by how much. |
 
-23 of these 31 are now held by a named test, so the same mistake fails the build rather than reaching a reader.
+24 of these 32 are now held by a named test, so the same mistake fails the build rather than reaching a reader.
 <!-- /figures:retractations -->
 
 Each line names what caught it, because that is the part worth copying. Two were caught by a

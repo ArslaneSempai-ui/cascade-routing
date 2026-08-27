@@ -1,58 +1,58 @@
 {
   "quoi": "Les blocs de landing.json calculés depuis les journaux de tentatives, figés parce que `data/` n'est pas versionné et qu'un clone frais doit pouvoir vérifier landing.json.",
-  "journal": "tentatives/2026-08-24T12-32-20-859Z-dur.jsonl",
-  "journalModifieLe": "2026-08-24T12:39:22.441Z",
-  "calculeLe": "2026-08-24T12:39:54.077Z",
+  "journal": "tentatives/2026-08-27T16-31-52-594Z-dur.jsonl",
+  "journalModifieLe": "2026-08-27T16:37:38.389Z",
+  "calculeLe": "2026-08-27T16:39:06.388Z",
   "blocs": {
     "compositionCheck": {
       "measured": true,
-      "from": "tentatives/2026-08-24T12-32-20-859Z-dur.jsonl",
+      "from": "tentatives/2026-08-27T16-31-52-594Z-dur.jsonl",
       "corpus": "hard-corpus",
       "perTier": [
         {
           "tier": "gen-0.6b",
           "documents": 30,
           "sumOfFieldPercentilesMs": {
-            "p10": 862,
-            "median": 974,
-            "p90": 1075
+            "p10": 842,
+            "median": 945,
+            "p90": 1043
           },
           "percentilesOfRealTotalMs": {
-            "p10": 922,
-            "median": 978,
-            "p90": 1055
+            "p10": 892,
+            "median": 951,
+            "p90": 1016
           },
-          "p90ErrorPct": 1.9
+          "p90ErrorPct": 2.6
         },
         {
           "tier": "gen-4b",
           "documents": 30,
           "sumOfFieldPercentilesMs": {
-            "p10": 2876,
-            "median": 3912,
-            "p90": 5820
+            "p10": 2607,
+            "median": 3044,
+            "p90": 3845
           },
           "percentilesOfRealTotalMs": {
-            "p10": 2978,
-            "median": 3783,
-            "p90": 6087
+            "p10": 2777,
+            "median": 3020,
+            "p90": 4015
           },
-          "p90ErrorPct": -4.4
+          "p90ErrorPct": -4.2
         },
         {
           "tier": "gen-8b",
           "documents": 30,
           "sumOfFieldPercentilesMs": {
-            "p10": 5036,
-            "median": 6787,
-            "p90": 9210
+            "p10": 4137,
+            "median": 5705,
+            "p90": 7761
           },
           "percentilesOfRealTotalMs": {
-            "p10": 5972,
-            "median": 6858,
-            "p90": 9351
+            "p10": 4842,
+            "median": 5760,
+            "p90": 7458
           },
-          "p90ErrorPct": -1.5
+          "p90ErrorPct": 4.1
         }
       ],
       "conservative": false,
@@ -209,8 +209,8 @@
       "documents": 30,
       "fields": 150,
       "escalations": 30,
-      "fieldsCorrectBefore": 44,
-      "fieldsCorrectAfter": 70,
+      "fieldsCorrectBefore": 45,
+      "fieldsCorrectAfter": 71,
       "paired": {
         "gains": 26,
         "losses": 0,
@@ -227,28 +227,28 @@
       "corpus": "hard-corpus",
       "documents": 30,
       "valuesMeasured": 150,
-      "baselinePrecisionPct": 29.3,
+      "baselinePrecisionPct": 30,
       "baselinePrecisionInterval": [
-        22.6,
-        37.1
+        23.2,
+        37.8
       ],
       "rules": [
         {
           "signalsRequired": 1,
-          "abstentions": 103,
-          "wrongRemoved": 91,
+          "abstentions": 97,
+          "wrongRemoved": 85,
           "correctSacrificed": 12,
-          "breakEvenCostRatio": 1.132,
-          "delivered": 47,
-          "deliveredCorrect": 32,
-          "deliveredPrecisionPct": 68.1,
+          "breakEvenCostRatio": 1.141,
+          "delivered": 53,
+          "deliveredCorrect": 33,
+          "deliveredPrecisionPct": 62.3,
           "deliveredPrecisionInterval": [
-            53.8,
-            79.6
+            48.8,
+            74.1
           ],
           "neverSacrificesInterval": [
-            80.7,
-            93.2
+            79.6,
+            92.8
           ]
         },
         {
@@ -258,11 +258,11 @@
           "correctSacrificed": 0,
           "breakEvenCostRatio": 1,
           "delivered": 146,
-          "deliveredCorrect": 44,
-          "deliveredPrecisionPct": 30.1,
+          "deliveredCorrect": 45,
+          "deliveredPrecisionPct": 30.8,
           "deliveredPrecisionInterval": [
-            23.3,
-            38
+            23.9,
+            38.7
           ],
           "neverSacrificesInterval": [
             51,

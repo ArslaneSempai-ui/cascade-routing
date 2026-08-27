@@ -325,6 +325,16 @@
       "heldBy": "aucune dépendance n'exécute de code à l'installation, et toutes sont épinglées",
       "caughtBeforeAnyoneSawIt": false,
       "howItGotThrough": "The guard read `packages[].scripts.postinstall` in the lockfile. npm does not write a dependency's scripts there; it writes a boolean, `hasInstallScript`. The field read was always absent, the collection always empty, and the zero meant nothing. AND THE COUNTER-PROOF SHARED THE ERROR: I planted a postinstall and watched the guard fire, but planted it in `scripts` — the same wrong field the guard read. A witness placed in the same shape as the guard proves the guard reads that shape, not that the shape is where the truth lives. That is the failure mode of every witness written by the hand that wrote the guard."
+    },
+    {
+      "date": "2026-08-27",
+      "headline": "The published abstention figures were computed against 13 polluted grading keys — the lever looked better than it is.",
+      "claimed": "The README stated, as measurements on the hard corpus: break-even at 1.132 reviews, 91 wrong values removed for 12 correct ones lost, delivered precision 68.1 % [53.8–79.6] at 1 signal. All were derived from the 2026-08-24 pass.",
+      "actually": "Thirteen grading keys in cas-ambigus.json carried a literal '*accepted:*' marker left by the grading pass itself. Against those keys, eight rules-tier silences graded as correct abstentions when the declared reading was a value. The 2026-08-24 tier answers were not affected — re-measured on 2026-08-27 with corrected keys, all five model tiers are byte-identical; only the grading of silences moved. Corrected figures: break-even 1.141 reviews, 85 wrong removed for 12 lost, delivered precision 62.3 % [48.8–74.1]. The direction of the error flattered the product's main lever.",
+      "consequence": "The argument survives — 7.1 wrong values removed per correct one lost, and abstention still pays roughly 25 times sooner than re-routing — but every abstention figure published between 2026-08-24 and 2026-08-27 overstated the lever. The README regenerates from the corrected measurement; nothing is edited by hand.",
+      "caughtBeforeAnyoneSawIt": false,
+      "caughtBy": "The 2026-08-27 audit found the marker in the keys; the re-measure was ordered rather than assumed, and only the re-measure said which figures moved and by how much.",
+      "heldBy": "le marqueur *accepted:* est interprété, jamais noté tel quel"
     }
   ]
 }

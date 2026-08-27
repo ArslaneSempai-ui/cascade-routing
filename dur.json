@@ -5,22 +5,22 @@
   "decoupage": "hard-corpus",
   "cas": 44,
   "champs": 164,
-  "mesureLe": "2026-08-24T12:39:22.441Z",
+  "mesureLe": "2026-08-27T16:37:38.389Z",
   "code": {
-    "commit": "5474cee",
-    "sale": false
+    "commit": "0a87047",
+    "sale": []
   },
   "charge": {
-    "externalBefore": 2.5,
+    "externalBefore": 2.48,
     "coeurs": 10
   },
-  "journal": "tentatives/2026-08-24T12-32-20-859Z-dur.jsonl",
+  "journal": "tentatives/2026-08-27T16-31-52-594Z-dur.jsonl",
   "paliers": {
     "rules": {
-      "clean": 30,
-      "blank": 133,
-      "wrong": 1,
-      "overRefusal": 133,
+      "clean": 31,
+      "blank": 125,
+      "wrong": 8,
+      "overRefusal": 125,
       "overAnswer": 0,
       "parSource": {
         "documents-malformes.md": {
@@ -28,7 +28,7 @@
           "total": 90
         },
         "ecritures-non-latines.md": {
-          "clean": 3,
+          "clean": 4,
           "total": 60
         },
         "cas-ambigus.md": {
