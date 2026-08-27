@@ -52,7 +52,13 @@ mkdir -p "$(dirname "$JOURNAL")" 2>/dev/null
 # le fichier ajouté demain — c'est la faute que ce dépôt passe ses journées à corriger. Et si
 # la dérivation ne marche pas, on REFUSE : un contrôle qui ne sait pas ce qu'il protège ne
 # doit pas rendre « rien à signaler ».
-LICENCIE="$HOME/Documents/cascade-licencie/src"
+# LE CHEMIN SE SURCHARGE POUR LES BANCS D'ESSAI, ET POUR EUX SEULS. Sur un runner public et
+# chez un acheteur, le dépôt privé n'existe pas et NE DOIT PAS exister — mais la suite doit
+# pouvoir éprouver ce crochet partout : sans surcharge, le cas qui vérifie « rien d'ignoré ne
+# part » mourait sur « DÉPÔT LICENCIÉ INTROUVABLE » avant d'avoir rien éprouvé (CI rouge du
+# 27/08/2026). Une poussée réelle ne définit jamais CASCADE_LICENCIE ; le refus ci-dessous
+# reste donc le défaut sur toute machine sans le dépôt privé.
+LICENCIE="${CASCADE_LICENCIE:-$HOME/Documents/cascade-licencie/src}"
 if [ ! -d "$LICENCIE" ]; then
   echo "" >&2
   echo "  DÉPÔT LICENCIÉ INTROUVABLE — impossible de savoir ce qui ne doit pas sortir." >&2

@@ -83,16 +83,36 @@ test("une branche qui porte un dossier ignoré ne part pas, et une branche propr
        pousser, et une réécriture de sa règle ici ne prouverait rien de ce qu'il fait. */
     const copie = join(bac, "pre-push");
     copyFileSync(crochet, copie); chmodSync(copie, 0o755);
+    /* LE DÉPÔT LICENCIÉ N'EXISTE QUE SUR LA MACHINE DE DÉVELOPPEMENT. Sur un runner public
+       et chez un acheteur il est absent — à raison — et sans cette fixture le crochet mourait
+       sur « DÉPÔT LICENCIÉ INTROUVABLE » avant d'éprouver quoi que ce soit : le refus avait le
+       bon code mais la mauvaise cause, et l'assertion sur le nom du fichier rougissait (CI du
+       27/08/2026). Le nom du module fictif n'existe pas dans le bac, donc la garde des modules
+       licenciés ne se déclenche pas ici — c'est celle des ignorés qu'on éprouve. */
+    const licencie = join(bac, "licencie-src");
+    mkdirSync(licencie, { recursive: true });
+    writeFileSync(join(licencie, "verrou-licencie.ts"), "export {};\n");
     const zero = "0".repeat(40);
-    const lancer = (ref: string, sha: string) => spawnSync("sh", [copie], {
+    const lancer = (ref: string, sha: string, envSup: Record<string, string> = {}) =>
+      spawnSync("sh", [copie], {
       cwd: bac, encoding: "utf8", timeout: 120_000,
       input: `refs/heads/${ref} ${sha} refs/heads/${ref} ${zero}\n`,
       /* Le crochet aussi tourne dans l'environnement NETTOYÉ : lancé depuis un crochet de
          pré-commit, il hériterait de `GIT_DIR` et regarderait le vrai dépôt au lieu du bac —
          il ne verrait donc aucun fichier ignoré, et le cas rougirait en accusant la garde.
          L'accord est donné, sans quoi le crochet refuse plus loin pour une autre raison. */
-      env: { ...envPropre, ACCORD_ARSLANE: "oui" },
+      env: { ...envPropre, ACCORD_ARSLANE: "oui", CASCADE_LICENCIE: licencie, ...envSup },
     });
+
+    /* TÉMOIN DU REFUS D'ABORD : une machine SANS le dépôt licencié doit refuser en le disant,
+       pas rendre « rien à signaler » — un contrôle qui ne sait pas ce qu'il protège ne
+       conclut pas. Et ce témoin prouve du même coup que la surcharge est bien LUE : si le
+       crochet l'ignorait, il trouverait le vrai dépôt ici et partirait. */
+    const sansDepot = lancer("main", avecBac, { CASCADE_LICENCIE: join(bac, "nexiste-pas") });
+    assert.equal(sansDepot.status, 1,
+      "sans dépôt licencié, le crochet laisse partir : il ne sait pas ce qu'il protège.");
+    assert.match(sansDepot.stderr, /LICENCI\u00c9 INTROUVABLE/,
+      "le refus sans dépôt licencié ne dit pas sa cause.");
 
     const refuse = lancer("main", avecBac);
     assert.equal(refuse.status, 1,
