@@ -38,7 +38,7 @@ in any file.
 
 ## Secrets in the history
 
-**0 undeclared secrets in the published history** across 526 commits — swept on 2026-08-26, sealed at `45146e5`.
+**0 undeclared secrets in the published history** across 744 commits — swept on 2026-08-27, sealed at `8a454e4`.
 
 The sweep reads `--all`, which on the author's machine also covers backup branches and
 the `refs/original/` a history rewrite leaves behind. 10 matches sit there and **are not in
