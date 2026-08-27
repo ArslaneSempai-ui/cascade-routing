@@ -72,10 +72,13 @@ test("aucune commande ne lit `--cases=` par elle-même", () => {
   assert.match(commun, /startsWith\(\s*["']--cases=["']\s*\)/,
     "le motif ne reconnaît plus une lecture de `--cases=` : ce cas ne garde plus rien.");
 
+  /* Le compte du 26 août 2026 — six commandes sur huit — reste ici, dans le commentaire :
+     c'est un fait daté, il ne se vérifie pas, et un message d'échec est lu au moment où
+     quelqu'un cherche une cause. Lui servir un nombre qui a dérivé depuis est le pire moment. */
   assert.deepEqual(lecteurs, [],
     `${lecteurs.join(", ")} lit \`--cases=\` sans passer par \`cas-demandes.ts\`.\n`
-    + "  `Number(\"\")` vaut 0 : la passe tournera sur zéro dossier et écrira quand même son\n"
-    + "  fichier. Six commandes sur huit étaient dans ce cas le 26 août 2026.\n"
+    + "  `Number(\"\")` vaut 0 : la passe tournerait sans aucun dossier et écrirait quand même\n"
+    + "  son fichier.\n"
     + "  → `import { casDemandes } from \"./cas-demandes.ts\";`");
 });
 

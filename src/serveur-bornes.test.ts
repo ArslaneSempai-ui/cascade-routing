@@ -254,8 +254,8 @@ test("la politique de contenu est stricte ET la page reste exécutable", { timeo
     const sansJeton = enLigne.filter((m) => !m[1]!.includes(`nonce="${jeton}"`)).length;
     assert.equal(sansJeton, 0,
       `${sansJeton} script(s) en ligne sur ${enLigne.length} ne portent pas le jeton de l'en-tête. `
-      + "Le navigateur les refusera et la page sera vide — mesuré : 2 figures et 35 cellules "
-      + "tombent à zéro, sans une erreur de console.");
+      + "Le navigateur les refusera et la page sera vide : tout ce qu'elle affichait tombe à "
+      + "zéro, sans une erreur de console.");
 
     /* CONTRE-ÉPREUVE DU JETON LUI-MÊME : deux réponses ne doivent pas porter le même, sinon
        une injection qui a lu la page une fois connaît le jeton de la suivante. */

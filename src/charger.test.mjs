@@ -45,8 +45,19 @@ test("un fils de charge s'arrête tout seul quand son père est tué sans préav
       + "  vérification DANS la boucle, un cœur reste saturé indéfiniment, et sur cette machine\n"
       + "  ça fausse les temps mesurés par toutes les autres sessions.");
   } finally {
-    for (const f of fils) { try { process.kill(f, "SIGKILL"); } catch { /* déjà parti */ } }
-    try { process.kill(pere.pid, "SIGKILL"); } catch { /* déjà parti */ }
+    /*
+     * piege:ok catch-muet — nettoyage : `process.kill` sur un pid déjà mort lève `ESRCH`, et
+     * c'est le cas COURANT ici puisque le cas vient précisément de vérifier que le processus
+     * s'est arrêté. Nommer cette panne-là ferait crier le chemin normal, et un avis qui crie
+     * toujours cesse d'être lu.
+     *
+     * La propriété qui compte n'est pas avalée : elle est tenue par l'assertion du corps —
+     * « le fils tourne encore quinze secondes après la mort de son père » et « le fils ignore
+     * son échéance une fois le père parti ». Si le nettoyage échouait pour une autre raison
+     * qu'un processus déjà parti, ces deux-là auraient déjà rougi avant d'y arriver.
+     */
+    for (const f of fils) { try { process.kill(f, "SIGKILL"); } catch { /* déjà parti (ESRCH) */ } }
+    try { process.kill(pere.pid, "SIGKILL"); } catch { /* déjà parti (ESRCH) */ }
   }
 });
 
@@ -67,7 +78,18 @@ test("un fils de charge s'arrête à l'échéance, même si son père l'oublie",
     for (let i = 0; i < 60 && !parti; i++) { await dors(250); parti = !vivant(fils[0]); }
     assert.ok(parti, `le fils ${fils[0]} ignore son échéance une fois le père parti.`);
   } finally {
-    for (const f of fils) { try { process.kill(f, "SIGKILL"); } catch { /* déjà parti */ } }
-    try { process.kill(pere.pid, "SIGKILL"); } catch { /* déjà parti */ }
+    /*
+     * piege:ok catch-muet — nettoyage : `process.kill` sur un pid déjà mort lève `ESRCH`, et
+     * c'est le cas COURANT ici puisque le cas vient précisément de vérifier que le processus
+     * s'est arrêté. Nommer cette panne-là ferait crier le chemin normal, et un avis qui crie
+     * toujours cesse d'être lu.
+     *
+     * La propriété qui compte n'est pas avalée : elle est tenue par l'assertion du corps —
+     * « le fils tourne encore quinze secondes après la mort de son père » et « le fils ignore
+     * son échéance une fois le père parti ». Si le nettoyage échouait pour une autre raison
+     * qu'un processus déjà parti, ces deux-là auraient déjà rougi avant d'y arriver.
+     */
+    for (const f of fils) { try { process.kill(f, "SIGKILL"); } catch { /* déjà parti (ESRCH) */ } }
+    try { process.kill(pere.pid, "SIGKILL"); } catch { /* déjà parti (ESRCH) */ }
   }
 });

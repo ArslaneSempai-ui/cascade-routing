@@ -73,7 +73,7 @@ test("aucune commande ne refait la garde dans son coin", () => {
 
   assert.deepEqual(copies, [],
     `${copies.join(", ")} lit l'état de l'arbre par ses propres moyens.\n`
-    + "  Huit copies avaient trois issues incompatibles, et cinq n'en offraient aucune.\n"
+    + "  Les copies dispersées offraient des issues incompatibles, quand elles en offraient.\n"
     + "  → `exigerArbrePropre(\"ce que la commande produit\")`");
 });
 

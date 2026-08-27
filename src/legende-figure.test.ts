@@ -62,7 +62,7 @@ test("la légende de la figure de routage ne tape aucune taille d'échantillon",
     + "moins l'un d'eux. Le dériver de ce qui est affiché.");
 });
 
-test("chaque palier a bien UNE taille d'échantillon, la même sur les cinq champs", () => {
+test(`chaque palier a bien UNE taille d'échantillon, la même sur les ${FIELDS.length} champs`, () => {
   /* La page lit `items` du PREMIER champ et l'annonce pour le palier entier. Si un palier
      portait deux tailles selon le champ, cette lecture publierait la première comme si elle
      valait pour toutes — un chiffre juste par accident. */

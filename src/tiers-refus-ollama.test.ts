@@ -87,7 +87,7 @@ test("un modèle réinstallé sous le même nom fait REFUSER la commande, pas se
   try {
     const r = { sortie: await chargerGeneratifs(f.url) };
     assert.match(r.sortie, /are not the ones that were measured/,
-      "trois modèles installés sous les bons noms avec de mauvaises empreintes ne font pas\n"
+      "des modèles installés sous les bons noms avec de mauvaises empreintes ne font pas\n"
       + "  refuser. `digestsQuiDivergent` est éprouvée en fonction pure ; c'est le POINT\n"
       + "  D'APPEL qui décide, et il ne l'était pas.");
     assert.match(r.sortie, /qwen3:/,

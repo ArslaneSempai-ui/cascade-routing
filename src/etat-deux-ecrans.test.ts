@@ -62,7 +62,7 @@ test("les deux états que ui.html lit portent les mêmes clés", () => {
     + "  silence, jusqu'à ce que quelqu'un compare les deux pages.");
 });
 
-test("la clé que la légende de routage exige est dans les deux", () => {
+test("la clé que la légende de routage exige est présente de part et d'autre", () => {
   /*
    * Le cas ci-dessus tomberait aussi si les deux perdaient la clé ENSEMBLE. C'est le défaut
    * d'origine — une légende qui tape son dénominateur — et il vaut son propre refus.
@@ -72,8 +72,8 @@ test("la clé que la légende de routage exige est dans les deux", () => {
   ] as const) {
     assert.ok(clesDuRetour(fichier, ancre).includes("echantillons"),
       `${fichier} ne porte plus « echantillons » : la légende de la figure de routage n'a plus\n`
-      + "  de quoi dériver ses tailles d'échantillon, et elle en taperait une — sept paliers\n"
+      + "  de quoi dériver ses tailles d'échantillon, et elle en taperait une — les paliers\n"
       + "  n'ont pas le même dénominateur, et celui du plus petit élargit l'intervalle des\n"
-      + "  autres d'un facteur trois.");
+      + "  autres de plusieurs fois leur valeur.");
   }
 });

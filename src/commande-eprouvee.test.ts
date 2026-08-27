@@ -105,6 +105,6 @@ test("mesurer sur un arbre modifié est refusé, et le refus dit quoi faire", { 
   exigerRefus(refus, /uncommitted changes/, "un arbre modifié doit être refusé");
   /* Et l'issue doit être là : c'est ce que la réunion des huit copies avait pour but. */
   assert.match(refus.texte, /--allow-dirty/,
-    "le refus ne dit plus comment passer outre : cinq commandes refusaient sans issue, et\n"
-    + "  c'est précisément ce qui a été corrigé.");
+    "le refus ne dit plus comment passer outre — un refus sans issue se contourne, et c'est\n"
+    + "  précisément ce qui a été corrigé ici.");
 });

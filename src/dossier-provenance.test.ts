@@ -237,7 +237,11 @@ test("le document ne peut pas se contredire sur ce que les règles rendent", () 
   const l = texte.split("\n").find((x) => /values returned/.test(x));
   assert.ok(l, "aucune phrase ne dit plus ce que les règles rendent : ce cas ne garde plus rien.");
   const rendus = (l!.match(/(\d+),\s*(\d+)\s*(?:,|and)\s*(\d+)/) ?? []).slice(1).map(Number);
-  assert.equal(rendus.length, 3, `« ${l} » ne porte plus trois nombres.`);
+  /* Le compte vit dans UNE constante que l'assertion et le message lisent tous les deux :
+     écrit deux fois, il finit par diverger — et c'est le message qui ment, au moment où
+     quelqu'un cherche une cause. */
+  const ATTENDUS = 3;
+  assert.equal(rendus.length, ATTENDUS, `« ${l} » ne porte plus ${ATTENDUS} nombres.`);
 
   const champs = ["birth", "document", "country"] as const;
   champs.forEach((champ, i) => {
@@ -255,5 +259,5 @@ test("le document ne peut pas se contredire sur ce que les règles rendent", () 
 
   assert.ok(!/do not answer at all/.test(texte),
     "« they do not answer at all » est de retour : mesuré sur le CSV livré, les règles\n"
-    + "  rendent 290, 198 et 259 valeurs.");
+    + "  rendent des comptes différents sur ce même CSV.");
 });

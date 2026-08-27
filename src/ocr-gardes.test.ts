@@ -104,7 +104,11 @@ test("une compilation qui échoue ne se fait pas passer pour un swiftc absent", 
   } finally { rmSync(bac, { recursive: true, force: true }); }
 });
 
-test("trois compilations simultanées laissent UN binaire entier, et rien d'autre", { timeout: 180_000 }, async (t) => {
+/* Le compte vit dans une constante que le titre ET le corps lisent : écrit deux fois, il
+   diverge, et c'est le titre qui ment le plus longtemps. */
+const SIMULTANEES = 3;
+
+test(`${SIMULTANEES} compilations simultanées laissent UN binaire entier, et rien d'autre`, { timeout: 180_000 }, async (t) => {
   if (process.platform !== "darwin") return t.skip("la compilation Swift n'existe que sur macOS");
   const bac = mkdtempSync(join(tmpdir(), "ocr-course-"));
   try {
@@ -136,21 +140,22 @@ test("trois compilations simultanées laissent UN binaire entier, et rien d'autr
     const oeil = setInterval(() => {
       try { tailles.add(statSync(bin).size); } catch { /* absente : c'est l'état attendu */ }
     }, 5);
-    const codes = await Promise.all([un(), un(), un()]);
+    const codes = await Promise.all(Array.from({ length: SIMULTANEES }, () => un()));
     clearInterval(oeil);
-    assert.deepEqual(codes, [0, 0, 0], `trois compilations simultanées : codes ${codes.join(", ")}.`);
+    assert.deepEqual(codes, Array.from({ length: SIMULTANEES }, () => 0),
+      `${SIMULTANEES} compilations simultanées : codes ${codes.join(", ")}.`);
 
     const finale = statSync(bin).size;
     const partielles = [...tailles].filter((t) => t > 0 && t !== finale);
     assert.deepEqual(partielles, [],
       `la cible a été vue à ${partielles.join(", ")} octets alors qu'elle en fait ${finale}.\n`
-      + "  Un processus qui lance le binaire pendant ce temps — et trois fichiers de cas le font\n"
+      + "  Un processus qui lance le binaire pendant ce temps — et des fichiers de cas le font\n"
       + "  en parallèle — trouverait un fichier coupé. Compiler à côté puis renommer ferme ça,\n"
       + "  `rename` étant atomique. (Cette assertion n'a jamais rougi, même en compilant\n"
       + "  directement sur la cible : elle guette, elle ne prouve pas.)");
     assert.ok(statSync(bin).size > 0,
-      "le binaire est vide après trois compilations simultanées : `swiftc -o` tronque sa cible\n"
-      + "  avant d'écrire, donc l'un vide le fichier que l'autre vient de finir.");
+      `le binaire est vide après ${SIMULTANEES} compilations simultanées : \`swiftc -o\` tronque
+        sa cible avant d'écrire, donc l'un vide le fichier que l'autre vient de finir.`);
     assert.deepEqual(readdirSync(bac).filter((f) => f.startsWith("lire.")).sort(), ["lire.swift"],
       "un fichier provisoire est resté : la prochaine compilation partirait d'un état inconnu.");
   } finally { rmSync(bac, { recursive: true, force: true }); }

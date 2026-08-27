@@ -15,10 +15,48 @@
  * C'est le risque central : mesurer notre outil contre notre propre lecture, et appeler ça une
  * mesure externe. Un échantillon est donc relu à la main avant que le moindre chiffre soit cité.
  */
-import { readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { parse } from "node:path";
 
-const D = "/private/tmp/claude-501/-Users-arslanechr-Downloads-atlas-final-en-fr/9eaa6456-ea12-48c5-bd77-6279f40c9def/scratchpad/externe";
+/*
+ * ─── OÙ SONT LES FICHIERS DE L'OFAC, ET POURQUOI CE N'EST PLUS ÉCRIT EN DUR ───
+ *
+ * Cette ligne portait le chemin d'un bac à sable de session : `/private/tmp/claude-501/…/<id>`.
+ * Ce dossier n'existe plus — il appartenait à une session terminée — donc ce script ne pouvait
+ * plus tourner pour personne, y compris pour celui qui l'a écrit.
+ *
+ * Ce n'est pas un détail de confort. Ce fichier EXTRAIT la vérité de référence du seul corpus
+ * que nous n'avons pas écrit, celui qui sert à mesurer nos règles hors de nos propres angles
+ * morts. Un corpus dont la dérivation n'est pas rejouable n'est plus un corpus externe : c'est
+ * un fichier qu'on nous demande de croire. Le CSV et sa provenance sont versionnés, mais la
+ * chaîne qui va de la source publique à ce CSV était cassée.
+ *
+ * Le dossier se donne donc, et son absence est un REFUS qui dit quoi télécharger et où :
+ *
+ *     node corpus-externe/construire.mjs --donnees=/chemin/vers/les/csv
+ *     OFAC_DONNEES=/chemin/vers/les/csv node corpus-externe/construire.mjs
+ */
+const D = (() => {
+  const drapeau = process.argv.find((a) => a.startsWith("--donnees="))?.slice("--donnees=".length);
+  const d = drapeau || process.env.OFAC_DONNEES;
+  if (!d) {
+    console.error(
+      "\n  Where are the OFAC exports?\n\n"
+      + "    --donnees=<folder>   or   OFAC_DONNEES=<folder>\n\n"
+      + "  The folder must hold sdn.csv and sdn-add.csv, as published here:\n"
+      + "    https://sanctionslistservice.ofac.treas.gov/api/PublicationPreview/exports/SDN.CSV\n"
+      + "    https://sanctionslistservice.ofac.treas.gov/api/PublicationPreview/exports/SDN_ADD.CSV\n\n"
+      + "  This script downloads nothing. The source is public and its URL is recorded in\n"
+      + "  corpus-externe/provenance.json, with the date of the reading that produced the\n"
+      + "  versioned CSV.\n");
+    process.exit(2);
+  }
+  if (!existsSync(d)) {
+    console.error(`\n  ${d} does not exist. Nothing was read, nothing was written.\n`);
+    process.exit(2);
+  }
+  return d;
+})();
 
 /* Un lecteur CSV minimal : le format de l'OFAC est simple mais porte des virgules citées. */
 const lire = (f) => {
@@ -39,7 +77,11 @@ const lire = (f) => {
 const vide = (v) => !v || v === "-0-";
 const sdn = lire(`${D}/sdn.csv`);
 const adresses = new Map();
-for (const l of lire(`${D}/add.csv`.replace("add", "sdn-add"))) {
+/* Le nom du fichier s'écrit, il ne se dérive pas d'un autre par remplacement : `.replace`
+   agit sur la PREMIÈRE occurrence de la chaîne dans tout le chemin, donc un dossier contenant
+   « add » — `/tmp/addendum` — produisait `/tmp/sdn-addendum/add.csv` et lisait autre chose en
+   silence. Mesuré. */
+for (const l of lire(`${D}/sdn-add.csv`)) {
   if (!adresses.has(l[0])) adresses.set(l[0], l);
 }
 

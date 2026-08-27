@@ -542,6 +542,33 @@ export function exigerHoteLocal(url: string = OLLAMA): void {
  * complets ont noté 0,0 % sur les cinq champs avant que le schéma ne soit posé — un harnais
  * cassé pris pour un modèle cassé, pour la troisième fois dans ce dépôt.
  */
+/*
+ * piege:ok prompt-sans-garde-fou — le contrôle existe, il est mesuré, et c'est un SIGNAL.
+ *
+ * ─── CE QUE LA RÈGLE A POINTÉ, ET CE QU'ELLE A MANQUÉ ───
+ *
+ * Elle signalait `exigerHoteLocal`, qui interpole une URL dans un message de REFUS — pas dans
+ * une invite. Faux positif. Mais son exemption porte sur le fichier entier, et ce fichier envoie
+ * de vraies invites : c'est ici, quelques lignes plus bas, que le texte d'un document client
+ * part chez le modèle. Déclarer sans répondre à ÇA serait une exemption plus large que sa
+ * raison — elle couvrirait ce qu'elle n'a jamais examiné.
+ *
+ * ─── LE GARDE-FOU, ET POURQUOI IL SIGNALE AU LIEU DE REFUSER ───
+ *
+ * `document-suspect.ts` examine chaque document avant la mesure et signale les tournures
+ * d'instruction. Le refus a été écarté sur mesure, pas par confort : sur cinq phrases bancaires
+ * ordinaires écrites à la main pour l'éprouver, l'une déclenche un motif fort — « please
+ * disregard the previous invoice, it was cancelled » est une phrase normale dans un dossier.
+ * Une garde qui refuse le travail légitime se fait retirer, en emportant la protection.
+ *
+ * Ce que le signal ne peut PAS faire est mesuré et publié plutôt que supposé : `CORPUS-HOSTILE.md`
+ * donne, par palier, ce qu'un document fabriqué obtient. Sur les huit documents du corpus, deux
+ * attaques passent sous le signal — l'emphase et la longueur ne donnent aucun ordre — et un
+ * ordre écrit en français échappe à des motifs anglais. Ces trois trous sont tenus par des cas
+ * qui INTERDISENT de les supprimer.
+ *
+ * La décision « signaler, jamais refuser » est inscrite à `TACHES.md:33`.
+ */
 async function ollama(tier: TierName, prompt: string, schema: unknown): Promise<any> {
   const m = MODELES_LOCAUX[tier];
   if (!m) throw new Error(`palier ${tier} inconnu de l'échelle générative`);

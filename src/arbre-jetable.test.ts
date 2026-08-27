@@ -59,9 +59,12 @@ test("un GIT_INDEX_FILE hérité ne touche pas l'index de l'appelant", () => {
   let chemin = "";
   try {
     chemin = arbreJetable("essai-env");
+    /* Le compte de ce jour-là — quatre — vit dans le commentaire au-dessus du cas, pas dans ce
+       message. Un compte historique ne se vérifie pas, et un message d'échec est lu au moment où
+       quelqu'un cherche une cause : le pire moment pour lui servir un nombre qui a dérivé. */
     assert.equal(readFileSync(faux, "utf8"), "",
       "L'ARBRE JETABLE A ÉCRIT DANS L'INDEX DE SON APPELANT : c'est le mécanisme exact des\n"
-      + "  quatre commits vides du 26 août, dans l'outil construit pour s'en protéger.");
+      + "  commits vides du 26 août, dans l'outil construit pour s'en protéger.");
   } finally {
     if (avant === undefined) delete process.env.GIT_INDEX_FILE;
     else process.env.GIT_INDEX_FILE = avant;
