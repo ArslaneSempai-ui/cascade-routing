@@ -165,7 +165,7 @@ function blocVerdict() {
   $("#verdict").innerHTML = pareil
     ? `<div class="renvoi favorable">${L.optimal}</div>`
     : `<div class="renvoi attention">${L.mieux(pc(o.accuracy), dollars(o.cost), facteur)}
-        <div style="margin-top:10px"><button class="b primaire" id="prendre" type="button">${esc(L.prendreOptimum)}</button></div></div>`;
+        <div class="verdict-action"><button class="b primaire" id="prendre" type="button">${esc(L.prendreOptimum)}</button></div></div>`;
   const b = $("#prendre");
   if (b) b.onclick = () => envoyer("/api/optimum", {});
 }

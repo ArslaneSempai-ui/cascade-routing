@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
 import { PREMIER_COMMIT_MULTI_FORMULATION } from "./landing.ts";
 import assert from "node:assert/strict";
-import { readFileSync, existsSync, readdirSync, writeFileSync, mkdtempSync, rmSync } from "node:fs";
+import { utimesSync, readFileSync, existsSync, readdirSync, writeFileSync, mkdtempSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { execFileSync, spawn, spawnSync } from "node:child_process";
@@ -4407,7 +4407,15 @@ test("l'élagage ne jette jamais le dernier journal d'un genre", () => {
     const noms = ["2026-08-01T00-00-00-000Z-dur.jsonl",
       ...Array.from({ length: 12 }, (_, i) =>
         `2026-08-2${Math.floor(i / 5)}T0${i % 5}-00-00-000Z-essai.jsonl`)];
-    for (const n of noms) writeFileSync(join(dossier, n), '{"kind":"run"}\n');
+    /* Vieillis AU-DELÀ de la fenêtre d'âge (six heures) : depuis qu'un journal jeune n'est
+       jamais élagué — la protection d'une passe EN COURS —, une fixture au mtime d'aujourd'hui
+       serait toute épargnée et ce cas n'éprouverait plus rien. Le mtime suit la fiction des
+       noms, comme il le ferait en vrai. */
+    const hier = new Date(Date.now() - 26 * 3600 * 1000);
+    for (const n of noms) {
+      writeFileSync(join(dossier, n), '{"kind":"run"}\n');
+      utimesSync(join(dossier, n), hier, hier);
+    }
 
     const efface = elaguerInterne(dossier, 5);
     const restants = readdirSync(dossier);

@@ -12,11 +12,11 @@ import { test } from "node:test";
 import { modulesEnRetard } from "./verifier-ecran.mjs";
 import { TIERS, ENCODEURS, GENERATIFS } from "./tiers.ts";
 import assert from "node:assert/strict";
-import { readFileSync, writeFileSync, mkdtempSync, rmSync, readdirSync, existsSync, statSync } from "node:fs";
+import { utimesSync, readFileSync, writeFileSync, mkdtempSync, rmSync, readdirSync, existsSync, statSync } from "node:fs";
 import { execFileSync, spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { issue, ouvrirJournal, lireJournal, apparie, parDocument, issues, desaccord, latences, accordEntreMachines } from "./journal.ts";
+import { elaguer, issue, ouvrirJournal, lireJournal, apparie, parDocument, issues, desaccord, latences, accordEntreMachines } from "./journal.ts";
 import { correct } from "./tiers.ts";
 import { RELEVE_DE_REFERENCE } from "./measure.ts";
 import { FIELDS, generateRecords, draw } from "./corpus.ts";
@@ -1251,7 +1251,17 @@ test("le pas qui refuse un cas ignoré cherche ce que le rapporteur écrit vraim
     if (l.trim() !== "" && !/^\s{10}/.test(l)) break;
     corps.push(l.replace(/^\s{10}/, ""));
   }
-  const script = corps.join("\n").replace(/^\s*npm test .*$/m, 'cat "$1" > /tmp/suite.txt');
+  /*
+   * LE CHEMIN DE TRAVAIL EST PROPRE À CE CAS. Le pas d'intégration écrit dans /tmp/suite.txt,
+   * un chemin FIXE : deux `npm test` simultanés — six sessions ici — se marchaient dessus, et
+   * l'un lisait le résumé de l'autre. La famille exacte de releve-scelle. On réécrit TOUTES
+   * les occurrences du chemin fixe vers le bac du cas ; sur la machine d'intégration, un seul
+   * lancement tourne à la fois et le chemin fixe y reste correct. Audit du 27 août 2026.
+   */
+  const suiteTxt = join(mkdtempSync(join(tmpdir(), "ci-sortie-")), "suite.txt");
+  const script = corps.join("\n")
+    .replace(/^\s*npm test .*$/m, `cat "$1" > ${suiteTxt}`)
+    .replaceAll("/tmp/suite.txt", suiteTxt);
   assert.match(script, /cat "\$1"/, "la ligne qui lance la suite n'a pas été trouvée dans le pas.");
   assert.match(script, /skipped/, "le pas ne cherche plus rien à propos des cas ignorés.");
 
@@ -1894,4 +1904,45 @@ test("toute règle gratuite porte un score mesuré hors de notre corpus", async 
     `${desaccords.length} désaccord(s) entre la mesure et le document :\n  ${desaccords.join("\n  ")}\n`
     + "  → le tableau est calculé par `dossier.ts` : s'il diverge, c'est qu'il a été écrit à la\n"
     + "    main ou que le document n'a pas été régénéré. `npm run figures`.");
+});
+
+test("l'élagage ne touche jamais un journal jeune — une passe en cours écrit encore dedans", () => {
+  /*
+   * « Dernier du genre » ne protégeait pas une passe EN COURS : un journal naissant volait la
+   * protection au précédent, et l'élagage d'une session voisine effaçait un journal de 40 min
+   * encore en écriture — recréé tronqué, sans en-tête, par le prochain appendFileSync. L'âge
+   * est la seule protection qui ne dépende pas de ce que font les voisins.
+   */
+  const d = mkdtempSync(join(tmpdir(), "journaux-"));
+  const vieuxMais = (nom: string, ageMs: number): void => {
+    const f = join(d, nom);
+    writeFileSync(f, "{}\n");
+    const t = new Date(Date.now() - ageMs);
+    utimesSync(f, t, t);
+  };
+  /*
+   * LA PASSE EN COURS DOIT ÊTRE HORS de la fenêtre des 40 gardés, sinon c'est le COMPTE qui la
+   * protège et le témoin ne prouve rien sur l'ÂGE — ma première fixture la mettait dedans, et
+   * retirer la garde d'âge laissait tout vert. 46 journaux plus récents qu'elle : exactement
+   * ce que six sessions produisent en une soirée.
+   */
+  vieuxMais("2026-08-27T10-00Z-ocr.jsonl", 30 * 60 * 1000);      // passe A, 30 min, EN COURS
+  vieuxMais("2026-08-27T10-20Z-ocr.jsonl", 10 * 60 * 1000);      // passe B, même genre — A n'est plus « dernier du genre »
+  for (let i = 0; i < 45; i++) vieuxMais(`2026-08-27T11-${String(i).padStart(2, "0")}Z-bruit${i}.jsonl`, 5 * 60 * 1000);
+  elaguer(d, 40);
+  assert.ok(existsSync(join(d, "2026-08-27T10-00Z-ocr.jsonl")),
+    "le journal d'une passe EN COURS a été élagué : le prochain appendFileSync le recrée\n"
+    + "  tronqué, sans en-tête — et la garde anti-mélange le classerait « machine inconnue ».");
+});
+
+test("deux journaux sans conditions lisibles ne se regroupent pas entre eux", () => {
+  /* La garde anti-mélange tombait OUVERTE sur l'inconnu : deux en-têtes illisibles recevaient
+     tous deux « inconnue » et leurs latences se regroupaient — deux inconnus peuvent être deux
+     machines. */
+  assert.throws(() => latences([
+    { tentatives: [{ ms: 10 } as never] },
+    { tentatives: [{ ms: 400 } as never] },
+  ]), /Refusing to pool latencies/,
+    "deux lots SANS machine lisible ont été regroupés : la garde qui refuse de mélanger deux\n"
+    + "  machines laisse passer précisément les journaux dont on sait le moins.");
 });

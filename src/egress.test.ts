@@ -1,12 +1,12 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { execFileSync, spawn } from "node:child_process";
+import { spawnSync, execFileSync, spawn } from "node:child_process";
 import { arbreJetable, retirerArbreJetable } from "./arbre-jetable.ts";
 import { mkdtempSync, mkdirSync, copyFileSync, writeFileSync, chmodSync, existsSync, rmSync, realpathSync, readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
-import { connexionsDepuisErreur, pidsSurveilles, connexions, ASSEZ_DE_RELEVES } from "./egress.ts";
+import { verdictEgress, connexionsDepuisErreur, pidsSurveilles, connexions, ASSEZ_DE_RELEVES } from "./egress.ts";
 
 /*
  * LA GARDE QUI EMPÊCHE « rien vu » DE SE FAIRE PASSER POUR « rien ».
@@ -440,4 +440,34 @@ test("une commande surveillée TUÉE par un signal se dit, et la passe n'établi
     + "  passe normale, dans le relevé qui adosse « nothing leaves the machine ».");
   assert.ok(code >= 128 || code === 1,
     `le code de sortie doit dire l'interruption, reçu ${code} — un 0 ferait conclure « normal exit ».`);
+});
+
+test("le verdict ÉCRIT par le CLI est celui de verdictEgress — sur une passe qui a vu du trafic",
+  { timeout: 30_000 }, async () => {
+  /*
+   * Les deux exemplaires du verdict avaient déjà divergé une fois. Ce cas lance une VRAIE
+   * passe dont la commande se connecte à elle-même en boucle locale : le verdict juste est
+   * « to this machine only », et un CLI qui réécrirait sa propre logique — ou dirait « no
+   * connection » — diverge de la fonction sur cette passe-là. L'égalité est exigée contre le
+   * RELEVÉ ÉCRIT, pas contre ce que le code semble faire.
+   */
+  const programme = `
+    const net = require("node:net");
+    const srv = net.createServer(() => {}).listen(0, "127.0.0.1", () => {
+      const s = net.connect(srv.address().port, "127.0.0.1");
+      setTimeout(() => { s.destroy(); srv.close(); }, 6000);
+    });`;
+  const r = spawnSync("node", [CMD_EGRESS, "--every=100", "--", "-e", programme],
+    { encoding: "utf8", timeout: 25_000 });
+  const releve = JSON.parse(readFileSync(join(BAC_EGRESS, "egress.json"), "utf8")) as {
+    releves: number; verdict: string;
+    connexions: { hote: string; vu: number }[]; bouclesLocales: { hote: string; vu: number }[];
+  };
+  assert.ok(releve.bouclesLocales.length >= 1,
+    `le montage est faux : aucune connexion locale observée (stdout: ${r.stdout?.slice(0, 150)})`);
+  const attendu = verdictEgress({ releves: releve.releves,
+    connexions: [...releve.connexions, ...releve.bouclesLocales] });
+  assert.equal(releve.verdict, attendu.verdict,
+    "le CLI a écrit un verdict que verdictEgress ne produit pas sur les mêmes données : les\n"
+    + "  deux exemplaires ont divergé — le témoin éprouvait la fonction, l'acheteur lit le CLI.");
 });

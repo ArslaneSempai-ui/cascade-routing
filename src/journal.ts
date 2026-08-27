@@ -26,7 +26,7 @@
  * reproductible, une passe qui répète ses conditions à chaque ligne est illisible.
  */
 
-import { appendFileSync, mkdirSync, readFileSync, existsSync, readdirSync, rmSync } from "node:fs";
+import { statSync, appendFileSync, mkdirSync, readFileSync, existsSync, readdirSync, rmSync } from "node:fs";
 import { platform, arch, cpus, loadavg } from "node:os";
 import { join } from "node:path";
 import { normaliserReponse, correct } from "./tiers.ts";
@@ -94,6 +94,10 @@ export function issue(got: string, expected: string): Issue {
  */
 const GARDE_DERNIERS = 40;
 
+/* Une passe longue dure ici jusqu'à une heure ; six heures couvrent large sans jamais garder
+   plus d'une journée de bruit. */
+export const FENETRE_PASSE_MS = 6 * 3600 * 1000;
+
 export function elaguer(dossier = DOSSIER, garde = GARDE_DERNIERS): number {
   let fichiers: string[];
   try { fichiers = readdirSync(dossier).filter((f) => f.endsWith(".jsonl")); }
@@ -137,7 +141,22 @@ export function elaguer(dossier = DOSSIER, garde = GARDE_DERNIERS): number {
     if (!vus.has(g)) { vus.add(g); dernierDuGenre.add(f); }
   }
 
-  const vieux = parDate.slice(0, parDate.length - garde).filter((f) => !dernierDuGenre.has(f));
+  /*
+   * UN JOURNAL JEUNE N'EST JAMAIS ÉLAGUÉ, quoi qu'en disent les autres règles. « Dernier du
+   * genre » ne protégeait pas une passe EN COURS : un journal naissant volait la protection au
+   * précédent (l'élagage d'une session voisine effaçait alors un journal de 40 min encore en
+   * écriture, qu'`appendFileSync` recréait tronqué — sans en-tête), et une passe doublée du
+   * même genre perdait la sienne dès que quarante journaux plus récents arrivaient — six
+   * sessions y suffisent en une soirée. L'âge est la seule protection qui ne dépend pas de ce
+   * que font les voisins. Audit du 27 août 2026.
+   */
+  const maintenant = Date.now();
+  const enCours = (f: string): boolean => {
+    try { return maintenant - statSync(join(dossier, f)).mtimeMs < FENETRE_PASSE_MS; }
+    catch { return true; }   /* illisible = peut-être en cours : on ne détruit pas dans le doute */
+  };
+  const vieux = parDate.slice(0, parDate.length - garde)
+    .filter((f) => !dernierDuGenre.has(f) && !enCours(f));
   const epargnes = parDate.slice(0, parDate.length - garde).filter((f) => dernierDuGenre.has(f));
   let efface = 0;
   /* piege:ok catch-muet — un journal déjà effacé ou tenu ouvert par une autre passe est le
@@ -466,7 +485,16 @@ export function desaccord(
  * rendues doivent être identiques, pas seulement comparables.
  */
 export function latences(lots: readonly { conditions?: { machine?: { cpu: string } }; tentatives: readonly Tentative[] }[]) {
-  const machines = new Set(lots.map((l) => l.conditions?.machine?.cpu ?? "inconnue"));
+  /*
+   * L'INCONNU TOMBE FERMÉ. Deux journaux SANS conditions lisibles — en-tête tronqué par un
+   * kill, journal recréé après un élagage concurrent, format d'avant le champ `machine` —
+   * recevaient tous deux « inconnue » et se regroupaient : la garde qui refuse de mélanger
+   * deux machines laissait passer précisément les journaux dont on sait le moins. Un lot sans
+   * machine lisible ne peut se regrouper avec RIEN — pas même avec un autre inconnu, parce que
+   * deux inconnus peuvent être deux machines. Audit du 27 août 2026.
+   */
+  let sansConditions = 0;
+  const machines = new Set(lots.map((l) => l.conditions?.machine?.cpu ?? `inconnue-${++sansConditions}`));
   if (machines.size > 1) {
     throw new Error(
       `Refusing to pool latencies from ${machines.size} machines: ${[...machines].join(", ")}.\n`

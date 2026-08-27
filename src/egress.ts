@@ -98,7 +98,9 @@ export const ASSEZ_DE_RELEVES = 20;
  * une vraie passe ne pourrait éprouver ni la passe trop courte, ni la sortie réelle. Les deux
  * cas qui décident sont précisément ceux qu'on ne peut pas provoquer à volonté.
  */
-export function verdictEgress(o: { releves: number; connexions: { hote: string; vu: number }[] }) {
+export function verdictEgress<C extends { hote: string; vu: number }>(
+  o: { releves: number; connexions: C[] },
+) {
   const locales = o.connexions.filter((c) => estBoucleLocale(c.hote));
   const sorties = o.connexions.filter((c) => !estBoucleLocale(c.hote));
   /*
@@ -438,8 +440,16 @@ const enfant = spawn("node", commande, { stdio: ["ignore", "ignore", "ignore"] }
   }
   /* LA BOUCLE LOCALE À PART. Elle ne fait rien sortir, et la compter empêchait le verdict
      d'être atteignable sur la machine où il est justement vrai. */
-  const locales = liste.filter((c) => estBoucleLocale(c.hote));
-  const sorties = liste.filter((c) => !estBoucleLocale(c.hote));
+  /*
+   * LE CLI NE RÉÉCRIT PLUS LE VERDICT : il appelle verdictEgress, la fonction exportée et
+   * éprouvée. Les deux exemplaires — mêmes phrases, même tri, même plancher — avaient déjà
+   * divergé une fois (le plancher de la fonction gardait les deux sens, celui du CLI un seul),
+   * et durcir l'un laissait l'autre : le témoin éprouvait la fonction, l'acheteur lisait le
+   * CLI. Audit du 27 août 2026.
+   */
+  const verdictCalcule = verdictEgress({ releves, connexions: liste });
+  const locales = verdictCalcule.locales;
+  const sorties = verdictCalcule.sorties;
 
   const releve = {
     mesureLe: new Date().toISOString(),
@@ -457,11 +467,7 @@ const enfant = spawn("node", commande, { stdio: ["ignore", "ignore", "ignore"] }
     processusRegardes: pidsMax,
     connexions: sorties,
     bouclesLocales: locales,
-    verdict: sorties.length === 0
-      ? (locales.length === 0
-        ? "no connection observed for the whole pass"
-        : `no outbound traffic observed; ${locales.length} connection(s) to this machine only`)
-      : `${sorties.length} host(s) outside this machine were contacted`,
+    verdict: verdictCalcule.verdict,
     limite: "Sampling sees the connections open at the instants it looks; it does not rule "
       + "out a short send between two samples. What it establishes is a floor, not a proof — "
       + "and the floor is what a buyer can check for themselves by re-running it. The whole "

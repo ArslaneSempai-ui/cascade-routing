@@ -529,8 +529,21 @@ async function ecouteur(req: IncomingMessage, res: ServerResponse, cheminUi: str
     }
     for (const [chemin, type] of [["/graphes.js", "text/javascript"], ["/registre.css", "text/css"]] as const) {
       if (url.pathname === chemin) {
+        /*
+         * LIRE AVANT D'ÉCRIRE L'EN-TÊTE. `writeHead(200)` avant `readFileSync` : un fichier
+         * illisible rendait un 200 TRONQUÉ — l'en-tête est déjà parti, on ne peut plus dire
+         * 500 — et le navigateur recevait « succès » avec un corps vide. Un 200 qui ment est
+         * pire qu'un 500 : rien, nulle part, ne signale que la page tourne sans son script.
+         * Audit du 27 août 2026.
+         */
+        let corps: string;
+        try {
+          corps = readFileSync(fileURLToPath(new URL("." + chemin, import.meta.url)), "utf8");
+        } catch (e) {
+          return json(res, { erreur: sansChemins(`${chemin} unreadable: ${(e as Error).message}`) }, 500);
+        }
         res.writeHead(200, { "content-type": `${type}; charset=utf-8`, "cache-control": "no-store" });
-        res.end(readFileSync(fileURLToPath(new URL("." + chemin, import.meta.url)), "utf8"));
+        res.end(corps);
         return;
       }
     }
