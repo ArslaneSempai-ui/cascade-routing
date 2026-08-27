@@ -69,7 +69,7 @@ jobs:
           # commit. Les cas n'étaient pas faux — l'environnement l'était. Corrigé après avoir
           # lu les journaux plutôt qu'après avoir supposé.
           fetch-depth: 0
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: ${{ matrix.node }}
           cache: npm
