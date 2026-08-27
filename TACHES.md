@@ -44,6 +44,8 @@ pas. Le détail va dans le message de commit, qui voyage avec la ligne qu'il exp
 
 - [ ] Refonte du design, sous Fable 5 : animation d'entrée, écrans au défilement, la mesure sur le premier écran, 404 dessiné
 - [ ] Windows : écarté par écrit, à traiter plus tard
-- [ ] 13 commits en attente de poussée (décision d'Arslane)
+- [x] ~~13 commits en attente de poussée~~ — **poussé le 27 août** : 118 commits publics, CI verte (verifier + CodeQL 0 alerte + pages)
+
+- [ ] **Les 6 PRs dependabot** (décision d'Arslane) : #1–3 (actions GitHub) sont vertes et fusionnables telles quelles. #4–6 (npm) échouent PAR CONSTRUCTION : la garde d'inventaire exige que l'inventaire versionné accompagne toute montée de version, et dependabot ne sait pas le régénérer — les prendre à la main (bump + `licences`/inventaire régénérés + suite) ou les fermer. Attention : transformers 4.2.0 et typescript 7.0.2 sont des MAJEURES — la première touche `POIDS_MODELES` (révisions, octets, disposition du cache).
 
 - [ ] **Re-mesurer le corpus dur** : les taux publiés ont été calculés contre 13 clés polluées par `*accepted:*` (corrigé le 27 août) — ils sous-notent les paliers. La re-mesure demande les modèles (~heures) et fera BOUGER des chiffres publiés : décision, pas maintenance.
