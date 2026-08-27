@@ -40,11 +40,19 @@ function cacheFactice(contenus: Record<string, string> = {}): string {
   return base;
 }
 
+/*
+ * Les fixtures font 35 octets là où le vrai modèle en fait 260 millions : le contrôle
+ * d'intégrité de l'export les refuserait toutes, à raison. On le débranche ICI, nommément,
+ * parce que ces cas éprouvent d'autres gardes — et un cas dédié plus bas éprouve celle-ci
+ * avec le contrôle RÉEL.
+ */
+const sansControleDEntiers = (): void => {};
+
 const nettoyer = (...d: string[]): void => { for (const x of d) rmSync(x, { recursive: true, force: true }); };
 
 test("un export puis un import rendent le même octet, pas seulement le même nom", () => {
   const source = cacheFactice(), dossier = mkdtempSync(join(tmpdir(), "cascade-export-")), cible = mkdtempSync(join(tmpdir(), "cascade-cible-"));
-  const m = exporter(dossier, ["small"], source);
+  const m = exporter(dossier, ["small"], source, sansControleDEntiers);
   assert.equal(m.entrees.length, 3, "les trois fichiers du modèle sont pris, pas seulement model.onnx");
   const { ecrits } = importer(dossier, cible);
   assert.equal(ecrits, 3);
@@ -56,7 +64,7 @@ test("un export puis un import rendent le même octet, pas seulement le même no
 
 test("un octet retourné sans changer la taille est refusé", () => {
   const source = cacheFactice(), dossier = mkdtempSync(join(tmpdir(), "cascade-export-"));
-  exporter(dossier, ["small"], source);
+  exporter(dossier, ["small"], source, sansControleDEntiers);
   assert.equal(verifierExport(lireManifeste(dossier), dossier).length, 0, "l'export à neuf est propre");
 
   /* CONTRE-ÉPREUVE : même longueur exactement. Un contrôle qui ne regarde que la taille
@@ -75,7 +83,7 @@ test("un octet retourné sans changer la taille est refusé", () => {
 
 test("un import qui trouve un grief n'écrit rien du tout", () => {
   const source = cacheFactice(), dossier = mkdtempSync(join(tmpdir(), "cascade-export-")), cible = mkdtempSync(join(tmpdir(), "cascade-cible-"));
-  exporter(dossier, ["small"], source);
+  exporter(dossier, ["small"], source, sansControleDEntiers);
   /* Abîmer le DERNIER fichier par ordre alphabétique : si l'import copiait au fil de l'eau,
      les précédents seraient déjà sur le disque quand il s'arrête. C'est cet état à moitié
      écrit qui abat le processus nativement, sans nommer le fichier. */
@@ -88,7 +96,7 @@ test("un import qui trouve un grief n'écrit rien du tout", () => {
 
 test("des poids exportés pour une autre révision sont refusés avant leur empreinte", () => {
   const source = cacheFactice(), dossier = mkdtempSync(join(tmpdir(), "cascade-export-"));
-  exporter(dossier, ["small"], source);
+  exporter(dossier, ["small"], source, sansControleDEntiers);
   const m = lireManifeste(dossier);
   const truque: Manifeste = { ...m, entrees: m.entrees.map((e) => ({ ...e, revision: "0000deadbeef" })) };
   writeFileSync(join(dossier, NOM_MANIFESTE), JSON.stringify(truque));
@@ -200,4 +208,19 @@ test("exporter depuis un cache vide refuse au lieu d'écrire un export vide", ()
   assert.throws(() => exporter(dossier, ["small"], vide), /Nothing to export/);
   assert.equal(existsSync(join(dossier, NOM_MANIFESTE)), false);
   nettoyer(vide, dossier);
+});
+
+test("un modèle tronqué dans le cache fait refuser l'EXPORT, pas seulement le chargement", () => {
+  /*
+   * Le chemin qui n'était couvert par rien : l'export ne charge aucun modèle, donc le contrôle
+   * d'intégrité ne tournait jamais. Un model.onnx coupé s'exportait avec un manifeste
+   * parfaitement cohérent — le sha256 authentifie le transport, il ne dit rien de la source —
+   * et la machine isolée recevait un poids inutilisable avec un tampon « verified ».
+   */
+  const source = cacheFactice(), dossier = mkdtempSync(join(tmpdir(), "cascade-export-"));
+  assert.throws(() => exporter(dossier, ["small"], source),
+    /incomplete — an interrupted download/,
+    "un cache dont le modèle n'a pas la taille attendue doit faire refuser l'export :\n"
+    + "  exporté, il voyagerait avec un manifeste cohérent et serait « vérifié » à l'arrivée.");
+  nettoyer(source, dossier);
 });

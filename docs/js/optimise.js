@@ -13,7 +13,7 @@
 import { TIERS } from "./paliers.js";
 import { isMain, refuserDrapeauxInconnus } from "./cli.js";
 import { FIELDS } from "./corpus.js";
-import { pricePerThousandExtractions, accuracy, latency, ASSUMPTIONS } from "./assumptions.js";
+import { symboleDe, UNITS, pricePerThousandExtractions, accuracy, latency, ASSUMPTIONS } from "./assumptions.js";
 import { rate, distinguishable, pairedVerdict } from "./interval.js";
 /*
  * LA TABLE FIGÉE EST POSÉE PAR L'APPELANT, ELLE N'EST PAS LUE ICI.
@@ -443,9 +443,15 @@ if (isMain(import.meta)) {
         process.exit(1);
     }
     const h = ASSUMPTIONS;
-    const euro = (n) => "$" + Math.round(n).toLocaleString("en-GB");
+    /*
+     * LE SYMBOLE VIENT DE `symboleDe(UNITS.budget)`, jamais du site de rendu — c'est la règle
+     * que le message d'erreur de symboleDe énonce en toutes lettres, et ce helper, nommé `euro`,
+     * tapait « $ » à la main. Deux devises dans un même écran : « budget $4,000 » puis « point
+     * per thousand euros ». Le nom suit le symbole qu'il rend. Audit du 27 août 2026.
+     */
+    const monnaie = (n) => symboleDe(UNITS.budget) + Math.round(n).toLocaleString("en-GB");
     const pc = (x) => (x * 100).toFixed(1) + " %";
-    console.log(`\n${h.volume.toLocaleString("en-GB")} records · budget ${euro(h.budget)}`);
+    console.log(`\n${h.volume.toLocaleString("en-GB")} records · budget ${monnaie(h.budget)}`);
     console.log(`human accuracy assumed at ${pc(h.humanAccuracy)} — this is not a measurement\n`);
     const a = optimiseExtraction(p, h);
     if (!a) {
@@ -458,21 +464,21 @@ if (isMain(import.meta)) {
     for (const c of FIELDS) {
         const e = a.routing[c];
         const j = accuracy(e, p.extraction[e][c].accuracy, h);
-        console.log(`${c.padEnd(13)}${e.padEnd(15)}${pc(j).padStart(7)}   ${euro((h.volume / 1000) * pricePerThousandExtractions(e, h, p.extraction[e][c].latency)).padStart(8)}`);
+        console.log(`${c.padEnd(13)}${e.padEnd(15)}${pc(j).padStart(7)}   ${monnaie((h.volume / 1000) * pricePerThousandExtractions(e, h, p.extraction[e][c].latency)).padStart(8)}`);
     }
     console.log("─".repeat(52));
-    console.log(`${"".padEnd(13)}${"total".padEnd(15)}${pc(a.accuracy).padStart(7)}   ${euro(a.cost).padStart(8)}`);
+    console.log(`${"".padEnd(13)}${"total".padEnd(15)}${pc(a.accuracy).padStart(7)}   ${monnaie(a.cost).padStart(8)}`);
     const b = optimiseClassification(p, h);
     console.log("\n\nCHAIN B — one tier for everyone\n");
     console.log("tier         accuracy       cost   affordable");
     console.log("─".repeat(45));
     for (const o of b.options) {
-        console.log(`${o.tier.padEnd(12)}${pc(o.accuracy).padStart(7)}   ${euro(o.cost).padStart(9)}   ${o.affordable ? "yes" : "no"}${b.chosen?.tier === o.tier ? "   <- chosen" : ""}`);
+        console.log(`${o.tier.padEnd(12)}${pc(o.accuracy).padStart(7)}   ${monnaie(o.cost).padStart(9)}   ${o.affordable ? "yes" : "no"}${b.chosen?.tier === o.tier ? "   <- chosen" : ""}`);
     }
     const f = budgetShadowPrice(p, h);
     if (f) {
         console.log("\n\nPRICE OF THE NEXT IMPROVEMENT\n");
-        console.log(`  budget used: ${euro(f.currentCost)} of ${euro(f.currentBudget)} — ${pc(a.budgetShare)}`);
+        console.log(`  budget used: ${monnaie(f.currentCost)} of ${monnaie(f.currentBudget)} — ${pc(a.budgetShare)}`);
         console.log(`  the constraint ${f.constraintBinds ? "BINDS" : "does not bind"}`);
         if (!f.step) {
             console.log("  no budget buys anything better — the ceiling is in the tiers available.\n");
@@ -480,8 +486,8 @@ if (isMain(import.meta)) {
         else {
             const m = f.step;
             console.log(`  next gain: +${m.gainPoints.toFixed(1)} point(s) of accuracy`);
-            console.log(`  it costs ${euro(m.extra)} more — ${(m.budgetNeeded / f.currentCost).toFixed(0)}x current spend`);
-            console.log(`  yield: ${m.pointsPerThousandEuros.toFixed(3)} point per thousand euros`);
+            console.log(`  it costs ${monnaie(m.extra)} more — ${(m.budgetNeeded / f.currentCost).toFixed(0)}x current spend`);
+            console.log(`  yield: ${m.pointsPerThousandEuros.toFixed(3)} points per thousand ${symboleDe(UNITS.budget) === "$" ? "dollars" : "euros"}`);
             const change = FIELDS.filter((c) => m.routing[c] !== a.routing[c]);
             console.log(`  what changes: ${change.map((c) => `${c} -> ${m.routing[c]}`).join(", ")}\n`);
         }

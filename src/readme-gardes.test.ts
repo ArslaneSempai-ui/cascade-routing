@@ -23,6 +23,9 @@ import { mkdtempSync, cpSync, copyFileSync, readdirSync, readFileSync, writeFile
 import { spawnSync, type SpawnSyncReturns } from "node:child_process";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
+import { readProfiles } from "./measure.ts";
+import { optimiseExtraction } from "./optimise.ts";
+import { ASSUMPTIONS } from "./assumptions.ts";
 import { fileURLToPath } from "node:url";
 
 const racine = fileURLToPath(new URL("..", import.meta.url));
@@ -236,4 +239,24 @@ test("tout bloc engendré du README a la clé qui l'engendre, et réciproquement
     + "  des taux tapés, celui de la prose — continuent de l'écarter. Plus rien ne le tient.\n"
     + "  → remettre la clé, ou retirer les marqueurs pour que le bloc redevienne de la prose\n"
     + "    contrôlée comme telle.");
+});
+
+test("le routage « publié » d'exposition.json est celui que le relevé livré produit", () => {
+  /*
+   * exposition.json vient d'ailleurs (cascade-licencie) et porte un routage gelé que le README
+   * cite comme « publié ». Rien ne le confrontait au routage que le relevé LIVRÉ produit :
+   * après une re-mesure qui déplace le seuil, le README aurait continué de citer l'ancien
+   * routage sans qu'aucun contrôle tombe. Deux sources pour une même grandeur — la famille
+   * qui a produit quatre défauts en deux jours. Audit du 27 août 2026.
+   */
+  const expo = JSON.parse(readFileSync(fileURLToPath(new URL("../exposition.json", import.meta.url)), "utf8")) as
+    { publie: Record<string, string> };
+  const p = readProfiles();
+  assert.ok(p, "aucun relevé lisible : ce cas ne peut rien confronter.");
+  const optimum = optimiseExtraction(p!, ASSUMPTIONS);
+  assert.ok(optimum, "l'optimum ne se calcule pas sur le relevé livré.");
+  assert.deepEqual(expo.publie, optimum!.routing,
+    "exposition.json publie un routage que le relevé livré ne produit plus : le README citerait\n"
+    + "  un état révolu comme « publié ». Régénérer exposition.json (cascade-licencie), ou dire\n"
+    + "  pourquoi l'écart est voulu — mais pas le laisser diverger en silence.");
 });

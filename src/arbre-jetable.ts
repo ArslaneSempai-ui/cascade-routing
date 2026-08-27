@@ -77,6 +77,14 @@ export function arbreJetable(prefixe: string, racineTemporaire: string = tmpdir(
   /* `node_modules` est LIÉ, jamais installé : le dépôt y garde plus d'un gigaoctet de modèles
      en cache, et les commandes ne démarrent pas sans lui. */
   symlinkSync(join(RACINE, "node_modules"), join(chemin, "node_modules"));
+  /*
+   * LES SUPPRESSIONS AUSSI. `worktree add` extrait HEAD, puis `cpSync` copie le disque
+   * PAR-DESSUS — sans retirer ce que HEAD porte et que le disque n'a plus. Un fichier supprimé
+   * (rm, pas encore commité) restait donc dans le bac : « l'état du disque » contenait un
+   * fichier que le commit à venir n'aura pas, et une suite verte sur le bac ne prouvait rien
+   * du commit. On efface src/ extrait avant de copier. Audit du 27 août 2026.
+   */
+  rmSync(join(chemin, "src"), { recursive: true, force: true });
   cpSync(join(RACINE, "src"), join(chemin, "src"), { recursive: true });
   /*
    * NETTOYER LES VARIABLES EST UNE INTENTION ; VÉRIFIER EST UN FAIT. Deux sessions ont observé

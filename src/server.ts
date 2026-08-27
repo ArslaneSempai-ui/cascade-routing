@@ -329,11 +329,19 @@ export function oublierLesRequetes(): void { vues.clear(); }
  * — reste lisible : c'est l'information la plus utile d'un message d'erreur, et la retirer
  * ferait écrire aux suivants un gestionnaire qui contourne celui-ci.
  */
+/*
+ * LA LISTE DES RACINES EST UNE LISTE, ET C'EST SA FAIBLESSE CONNUE. Un dépôt lancé depuis un
+ * disque externe (`/Volumes/WORK/…`), `/usr/local`, `/srv`, `/mnt` n'était pas caviardé : le
+ * chemin complet — nom d'utilisateur, arborescence — partait dans la réponse HTTP. Élargie le
+ * 27 août 2026 aux racines usuelles des trois systèmes et des chaînes d'intégration. Elle
+ * reste une liste : un chemin sous une racine exotique passera encore, et la parade de fond —
+ * ne jamais mettre un chemin dans un message qui sort — vit dans les messages eux-mêmes.
+ */
 export function sansChemins(texte: string): string {
   return texte
     .replace(/file:\/\/\/[^\s"')]+/g, "<file>")
     .replace(/\b[A-Za-z]:\\[^\s"')]+/g, "<file>")
-    .replace(/(?:\/(?:Users|home|private|var|tmp|opt|etc|Applications)|\.\.?)\/[^\s"')]*/g, "<file>")
+    .replace(/(?:\/(?:Users|home|private|var|tmp|opt|etc|Applications|Volumes|Library|usr|srv|mnt|media|data|root|Sites|workspace|github|builds?)|\.\.?)\/[^\s"')]*/g, "<file>")
     .replace(/[^\s"')]*node_modules\/[^\s"')]*/g, "<file>");
 }
 

@@ -1116,7 +1116,14 @@ export async function classerParmi(
 
   const emb = tier === "small" ? embSmall : embLarge;
   if (!emb) throw new Error("appeler loadClassifiers() avant classerParmi()");
-  const cle = `${tier}|${etiquettes.length}|${etiquettes[0]}|${etiquettes.at(-1)}`;
+  /*
+   * LA CLÉ PORTE TOUT CE QUI ENTRE DANS LE CALCUL. L'ancienne — longueur + extrémités —
+   * confondait ["fraud","x","normal"] et ["fraud","y","normal"] : « y » était classé avec le
+   * vecteur de « x ». Et `descriptions` n'y entrait pas du tout : changer la description d'une
+   * étiquette gardait les vecteurs de l'ancienne. Un cache dont la clé oublie une entrée ne
+   * rend pas des résultats lents, il rend des résultats FAUX. Audit du 27 août 2026.
+   */
+  const cle = `${tier}|${etiquettes.map(decrire).join("\u0001")}`;
   if (refsCache.cle !== cle) {
     refsCache.cle = cle;
     refsCache.vecteurs = await Promise.all(etiquettes.map(async (e) =>

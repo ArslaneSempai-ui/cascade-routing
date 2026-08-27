@@ -40,7 +40,7 @@ import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, statSyn
 import { dirname, join, relative, sep } from "node:path";
 
 import { isMain } from "./cli.ts";
-import { POIDS_MODELES, racineDesPoids, type CleModele } from "./tiers.ts";
+import { exigerModelesEntiers, POIDS_MODELES, racineDesPoids, type CleModele } from "./tiers.ts";
 
 /** Le nom du manifeste dans le dossier d'export. Un dossier sans lui n'est pas un export. */
 export const NOM_MANIFESTE = "cascade-weights.json";
@@ -149,8 +149,20 @@ export function lireManifeste(dossier: string): Manifeste {
   return JSON.parse(readFileSync(chemin, "utf8")) as Manifeste;
 }
 
-export function exporter(dossier: string, cles: readonly CleModele[], racine?: string): Manifeste {
+export function exporter(
+  dossier: string, cles: readonly CleModele[], racine?: string,
+  /*
+   * LE CONTRÔLE D'INTÉGRITÉ EST INJECTABLE POUR ÊTRE ÉPROUVABLE, ET SA VALEUR PAR DÉFAUT EST
+   * LA VRAIE. L'export ne charge aucun modèle, donc `exigerModelesEntiers` ne tournait jamais
+   * sur ce chemin : un model.onnx tronqué — téléchargement coupé — s'exportait « avec succès »,
+   * le manifeste portait la taille tronquée et son sha256 parfaitement cohérent, et l'import
+   * sur la machine isolée validait un poids inutilisable. Le sha256 authentifie le transport ;
+   * il ne dit RIEN de la source. Audit du 27 août 2026.
+   */
+  controlerEntiers: (c: readonly CleModele[], r?: string) => void = exigerModelesEntiers,
+): Manifeste {
   const base = racineDesPoids(racine);
+  controlerEntiers(cles, racine);
   const m = construireManifeste(cles, racine);
   if (m.entrees.length === 0) {
     throw new Error(

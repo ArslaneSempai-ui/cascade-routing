@@ -6,6 +6,7 @@
  */
 
 import { readProfiles } from "./measure.ts";
+import { PLAUSIBLE } from "./sensitivity.ts";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { INVENTORY } from "./inventory.ts";
@@ -863,7 +864,10 @@ const embauche = (() => {
     + `human tier would occupy **${fraction(enUsage).toFixed(2)} of an analyst**, billed pro `
     + `rata at ${euro(prorata(enUsage))} where a payroll pays ${euro(reel(enUsage))} — a factor `
     + `of ${rapport(enUsage).toFixed(2)}. You do not hire a fraction of a person. At the bottom `
-    + `of the swept range the factor reaches ${rapport(15).toFixed(2)}. It does not change the `
+    /* La borne vient de PLAUSIBLE, jamais recopiée : « bottom of the swept range » avec un 15
+       tapé en dur devenait faux le jour où quelqu'un élargit le balayage — la phrase restait,
+       l'étiquette mentait, aucun contrôle ne tombait. Audit du 27 août 2026. */
+    + `of the swept range the factor reaches ${rapport(PLAUSIBLE.humanSeconds![0]).toFixed(2)}. It does not change the `
     + `answer here — the routing above does not select the human tier — but the cost model is `
     + `a slope where the world has steps, and that is stated rather than left to be found.`;
 })();

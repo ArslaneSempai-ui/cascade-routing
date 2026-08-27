@@ -70,3 +70,17 @@ test("tout message d'erreur renvoyé passe par le caviardage", () => {
   assert.equal(voit('json(res, { erreur: `rate limit reached from ${adresse}` }, 429);'), 0,
     "le motif attrape un message qui ne vient pas d'une exception : il exigerait un caviardage inutile.");
 });
+
+test("sansChemins caviarde aussi les racines hors des sept d'origine", () => {
+  /* /Volumes (disque externe macOS), /usr/local, /srv, /mnt : un dépôt lancé de là envoyait
+     son chemin complet — nom d'utilisateur compris — dans la réponse HTTP. La liste reste une
+     liste, et ce cas épingle au moins les racines usuelles des trois systèmes. */
+  for (const chemin of ["/Volumes/WORK/cascade/src/a.ts", "/usr/local/lib/b.js",
+                        "/srv/app/c.ts", "/mnt/d/e.ts", "/Library/Caches/f.bin"]) {
+    /* Le `:12` part avec le chemin — `[^\s"')]*` le consomme, comportement historique du
+       motif : un numéro de ligne colle au chemin sans espace. On épingle le comportement réel,
+       relevé en le lançant, pas celui que j'avais imaginé. */
+    assert.equal(sansChemins(`Error at ${chemin}:12`), "Error at <file>",
+      `${chemin} n'est pas caviardé : le chemin partirait dans la réponse.`);
+  }
+});
