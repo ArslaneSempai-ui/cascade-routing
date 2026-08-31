@@ -1117,6 +1117,108 @@ test("aucun appel sortant n'a été ajouté hors de la liste", () => {
   }
 });
 
+/**
+ * LES DEUX SORTIES QUE LE MOTIF `fetch` NE VOIT PAS.
+ *
+ * Le cas ci-dessus lit les appels à `fetch`. Il le dit lui-même, et c'était sa limite écrite :
+ * un envoi par `node:http`, par `node:net` ou par `curl` en sous-processus compile, passe la
+ * suite, et ne figure dans aucune liste. Trois chemins, un seul surveillé.
+ *
+ * Ces deux tables ferment les deux autres. Elles sont tenues à la main comme
+ * `SORTIES_AUTORISEES`, et pour la même raison : ce qui doit être lu par une revue de
+ * sécurité doit être ÉCRIT quelque part. Ce qui les empêche de dériver n'est pas la
+ * discipline, ce sont les DEUX SENS — une occurrence non déclarée fait tomber la suite, et
+ * une déclaration devenue sans objet aussi.
+ *
+ * AUCUN COMMENTAIRE N'EST RETIRÉ AVANT LA LECTURE, et c'est délibéré. Un dépouilleur de
+ * commentaires écrit à la main mange une chaîne un jour ou l'autre — ce dépôt a déjà payé
+ * celui qui avalait `"file://"` — et le trou qu'il ouvre est SILENCIEUX. Deux mentions en
+ * prose se déclarent donc comme telles, avec `vers: null` : le prix est deux lignes, et il
+ * n'achète aucun angle mort.
+ */
+const RESEAU_DIRECT_AUTORISE: Record<string, string> = {
+  "server.ts": "l'écran, lié explicitement à la boucle locale — le cas juste en dessous éprouve l'adresse",
+};
+
+/** Les binaires qui parlent au réseau : un sous-processus sort sans que `fetch` le voie. */
+const BINAIRES_RESEAU = ["curl", "wget", "nc", "ncat", "netcat", "ssh", "scp", "sftp", "rsync", "ftp", "telnet", "socat"];
+
+/**
+ * Où va chaque fichier qui NOMME un de ces binaires. `vers: null` veut dire « le nomme sans
+ * l'appeler » — une phrase de commentaire, pas une sortie.
+ */
+const SOUS_PROCESSUS_RESEAU: Record<string, { binaire: string; vers: string | null }> = {
+  "benchmark.ts": { binaire: "curl", vers: "raw.githubusercontent.com" },
+  "capturer.mjs": { binaire: "curl", vers: "http://127.0.0.1" },
+  "capturer.test.mjs": { binaire: "curl", vers: "http://127.0.0.1" },
+  "verifier-ecran.mjs": { binaire: "curl", vers: "http://127.0.0.1" },
+  "pages.ts": { binaire: "curl", vers: null },
+  "server.ts": { binaire: "curl", vers: null },
+};
+
+test("aucune sortie n'échappe au motif `fetch` par un module réseau ou un sous-processus", () => {
+  /*
+   * `benchmark.ts` télécharge son jeu public par `curl`, pas par `fetch` : sa destination
+   * était dans `SORTIES_AUTORISEES` et le contrôle qui lit cette liste ne l'atteignait pas.
+   * Elle y est maintenant confrontée pour de vrai.
+   */
+  const dossier = fileURLToPath(new URL("./", import.meta.url));
+  const fichiers = readdirSync(dossier).filter((f) => /\.(ts|mjs)$/.test(f) && !f.endsWith(".test.ts"));
+  assert.ok(fichiers.length > 0, "`fichiers` est vide : les boucles qui suivent ne vérifient rien.");
+
+  const MODULES = ["http", "https", "net", "dgram", "tls"];
+  const nonDeclares: string[] = [];
+  const vusEnSousProcessus: string[] = [];
+  for (const f of fichiers) {
+    const src = readFileSync(join(dossier, f), "utf8");
+    for (const m of MODULES) {
+      if (!new RegExp(`node:${m}\\b`).test(src)) continue;
+      if (!(f in RESEAU_DIRECT_AUTORISE)) nonDeclares.push(`${f} importe node:${m}`);
+    }
+    const b = BINAIRES_RESEAU.find((n) => new RegExp(`\\b${n}\\b`).test(src));
+    if (b === undefined) continue;
+    vusEnSousProcessus.push(f);
+    const d = SOUS_PROCESSUS_RESEAU[f];
+    if (d === undefined) { nonDeclares.push(`${f} nomme « ${b} »`); continue; }
+    assert.equal(d.binaire, b, `${f} : la déclaration nomme « ${d.binaire} », le fichier nomme « ${b} ».`);
+    if (d.vers === null) continue;
+    const permis = SORTIES_AUTORISEES.some((s) => s.motif === d.vers);
+    assert.ok(estLocal(d.vers) || permis,
+      `${f} appelle « ${b} » vers « ${d.vers} », qui n'est ni cette machine ni dans SORTIES_AUTORISEES.`);
+  }
+  assert.deepEqual(nonDeclares, [],
+    `${nonDeclares.length} sortie(s) possible(s) hors de toute liste :\n  ${nonDeclares.join("\n  ")}\n`
+    + "  → un module réseau et un sous-processus sortent tous deux sans passer par `fetch` :\n"
+    + "    le contrôle du dessus ne les voit pas, et la promesse « rien ne quitte votre\n"
+    + "    machine » redeviendrait une affirmation.\n"
+    + "  → déclarez le fichier avec sa destination, ou retirez l'appel.");
+
+  /* L'AUTRE SENS. Une déclaration qui ne correspond plus à rien fige une dispense que
+     personne ne relit — et elle couvrirait un appel réintroduit demain sous le même nom. */
+  const mortes = Object.keys(SOUS_PROCESSUS_RESEAU).filter((f) => !vusEnSousProcessus.includes(f));
+  assert.deepEqual(mortes, [],
+    `déclaration(s) sans objet : ${mortes.join(", ")} ne nomme(nt) plus aucun binaire réseau.`);
+  const mortesDirect = Object.keys(RESEAU_DIRECT_AUTORISE)
+    .filter((f) => !MODULES.some((m) => new RegExp(`node:${m}\\b`).test(readFileSync(join(dossier, f), "utf8"))));
+  assert.deepEqual(mortesDirect, [],
+    `déclaration(s) sans objet : ${mortesDirect.join(", ")} n'importe(nt) plus de module réseau.`);
+
+  /*
+   * CONTRE-ÉPREUVE. Les deux détecteurs ci-dessus rendraient exactement le même vert s'ils ne
+   * détectaient plus rien. On leur donne donc une source fabriquée qui porte le défaut, et une
+   * autre qui ne le porte pas — un détecteur qui accepte tout échoue ici, pas en production.
+   */
+  const trouveBinaire = (src: string) => BINAIRES_RESEAU.find((n) => new RegExp(`\\b${n}\\b`).test(src));
+  assert.equal(trouveBinaire(`execFileSync("wget", ["-O", f, u]);`), "wget",
+    "le détecteur de binaires ne voit plus un envoi en sous-processus.");
+  assert.equal(trouveBinaire(`const encre = "concurrent"; scpTotal += 1;`), undefined,
+    "le détecteur se déclenche sur un mot qui CONTIENT le nom d'un binaire : il crierait au loup.");
+  assert.ok(/node:net\b/.test(`import { createServer } from "node:net";`),
+    "le détecteur de modules réseau ne voit plus un import direct.");
+  assert.ok(!/node:net\b/.test(`import { x } from "node:network-ish";`),
+    "le détecteur de modules réseau prend un préfixe pour le module.");
+});
+
 test("l'écran n'écoute que la boucle locale", () => {
   /*
    * `listen(PORT)` seul rend l'outil joignable par n'importe qui sur le même réseau — dans une
