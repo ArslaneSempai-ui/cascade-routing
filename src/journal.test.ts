@@ -2154,3 +2154,81 @@ test("la nightly d'onnxruntime-web est celle qu'amont épingle, et elle est assu
     + "    commentaire au-dessus, refaites `npm audit`, puis inscrivez la version ici — ou\n"
     + "    posez l'override, avec ce que vous aurez mesuré.");
 });
+
+/*
+ * ─── UNE ÉTIQUETTE SE REDÉPLACE ; UNE EMPREINTE, NON ───
+ *
+ * `actions/checkout@v7` désigne ce que le propriétaire de l'étiquette veut bien qu'elle
+ * désigne aujourd'hui. Il peut la faire pointer ailleurs, et la chaîne d'intégration
+ * exécuterait un autre code sans qu'une seule ligne de ce dépôt ne change — sur un coureur
+ * qui tient le jeton du dépôt.
+ *
+ * C'EST LE MÊME ARGUMENT QUE CE DÉPÔT VEND AILLEURS, et il ne se l'appliquait pas : révision
+ * épinglée pour les modèles, version exacte et empreinte au verrou pour les paquets, et trois
+ * étiquettes mouvantes dans la passe qui existe précisément pour PROUVER cet épinglage. Un
+ * contrôle qui s'exempte de sa propre règle est la forme la plus coûteuse du vert vide, parce
+ * qu'on la lit comme une garantie.
+ *
+ * CE CAS NE LISTE PAS LES TROIS ACTIONS. Une liste rouille à la quatrième, en silence. Il lit
+ * les fichiers de passe et exige une empreinte à CHAQUE `uses:` — celle qu'on ajoutera demain
+ * comprise. Il exige aussi le numéro de version en commentaire : une empreinte que personne
+ * ne sait lire ne se met jamais à jour, et le durcissement se paie alors en obsolescence.
+ */
+test("chaque action de la chaîne d'intégration est épinglée par empreinte, version lisible à côté", () => {
+  const dossier = join(fileURLToPath(new URL("..", import.meta.url)), ".github", "workflows");
+  const fichiers = readdirSync(dossier).filter((f) => /\.ya?ml$/.test(f));
+  assert.ok(fichiers.length >= 1,
+    `${fichiers.length} fichier(s) de passe lu(s) dans .github/workflows : la lecture a échoué, `
+    + "et le zéro qui suit ne dirait rien.");
+
+  const EMPREINTE = /^[0-9a-f]{40}$/;
+  const nues: string[] = [];
+  const sansVersion: string[] = [];
+  let vues = 0;
+  for (const f of fichiers) {
+    for (const ligne of readFileSync(join(dossier, f), "utf8").split("\n")) {
+      const m = /^\s*(?:- )?uses:\s*(\S+)/.exec(ligne);
+      if (m === null) continue;
+      vues++;
+      const ref = m[1]!.split("@")[1] ?? "";
+      if (!EMPREINTE.test(ref)) { nues.push(`${f}: ${m[1]}`); continue; }
+      if (!/#\s*v?\d/.test(ligne)) sansVersion.push(`${f}: ${m[1]}`);
+    }
+  }
+
+  /* LE DÉNOMINATEUR : un motif qui ne reconnaît plus `uses:` rendrait deux listes vides, et
+     ce vert-là ne dirait que « je n'ai rien regardé ». */
+  assert.ok(vues >= 1,
+    `aucun \`uses:\` trouvé dans ${fichiers.length} fichier(s) de passe : le motif ne lit plus `
+    + "la passe, et les deux verdicts qui suivent sont vides.");
+
+  assert.deepEqual(nues, [],
+    `${nues.length} action(s) épinglée(s) par étiquette et non par empreinte :\n`
+    + `  ${nues.join("\n  ")}\n`
+    + "  → une étiquette se redéplace : la passe exécuterait un autre code sans qu'une ligne\n"
+    + "    d'ici ne change, sur un coureur qui tient le jeton du dépôt.\n"
+    + "  → résolvez l'étiquette (`gh api repos/<action>/git/refs/tags`) et écrivez l'empreinte\n"
+    + "    de commit, en gardant le numéro de version en commentaire.");
+  assert.deepEqual(sansVersion, [],
+    `${sansVersion.length} empreinte(s) sans numéro de version lisible : ${sansVersion.join(", ")}\n`
+    + "  → une empreinte que personne ne sait lire ne se met jamais à jour, et le durcissement\n"
+    + "    se paie alors en obsolescence. Ajoutez « # v7 » en fin de ligne.");
+
+  /* CONTRE-ÉPREUVE : la règle doit DISTINGUER. Un motif qui accepte tout rendrait exactement
+     le même vert sur la passe d'avant. */
+  const jugee = (ligne: string) => {
+    const m = /^\s*(?:- )?uses:\s*(\S+)/.exec(ligne);
+    if (m === null) return "pas une action";
+    const ref = m[1]!.split("@")[1] ?? "";
+    if (!EMPREINTE.test(ref)) return "étiquette";
+    return /#\s*v?\d/.test(ligne) ? "épinglée" : "sans version";
+  };
+  assert.equal(jugee("      - uses: actions/checkout@v7"), "étiquette",
+    "la règle ne voit plus une étiquette : c'est le défaut qu'elle vient de fermer.");
+  assert.equal(jugee("      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1   # v7"),
+    "épinglée", "la règle refuse une action pourtant épinglée : elle ferait fuir les suivants.");
+  assert.equal(jugee("      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1"),
+    "sans version", "une empreinte sans version lisible passe : elle ne sera jamais relue.");
+  assert.equal(jugee("      - run: npm ci --ignore-scripts"), "pas une action",
+    "la règle prend une commande pour une action : elle exigerait une empreinte sur un `run`.");
+});

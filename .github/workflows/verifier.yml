@@ -55,7 +55,21 @@ jobs:
         node: ['24', '26']
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      # ─── LES ACTIONS SONT ÉPINGLÉES PAR EMPREINTE, PAS PAR ÉTIQUETTE ───
+      #
+      # `@v7` est une étiquette, et une étiquette SE REDÉPLACE : celui qui la tient peut la
+      # faire pointer ailleurs, et cette passe exécuterait un autre code sans qu'une seule
+      # ligne d'ici ne change. Une empreinte de commit ne se redéplace pas.
+      #
+      # C'est exactement l'argument que ce dépôt vend sur ses modèles — révision épinglée — et
+      # sur ses paquets — version exacte, empreinte au verrou. Une passe qui existe pour
+      # PROUVER l'épinglage ne peut pas s'en exempter elle-même.
+      #
+      # Les empreintes sont résolues depuis les étiquettes le 31 août 2026, par l'API GitHub,
+      # jamais recopiées de mémoire. Le numéro de version reste écrit à côté : sans lui,
+      # personne ne sait plus ce qui est épinglé, et une empreinte que personne ne peut lire
+      # ne se met jamais à jour.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1   # v7
         with:
           # L'HISTORIQUE ENTIER, ET C'EST LA RAISON POUR LAQUELLE CETTE PASSE ÉTAIT ROUGE.
           #
@@ -69,7 +83,7 @@ jobs:
           # commit. Les cas n'étaient pas faux — l'environnement l'était. Corrigé après avoir
           # lu les journaux plutôt qu'après avoir supposé.
           fetch-depth: 0
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020   # v7
         with:
           node-version: ${{ matrix.node }}
           cache: npm
@@ -99,7 +113,7 @@ jobs:
       # bibliothèque décide et pas nous. La clé porte le verrou de dépendances : une
       # bibliothèque qui change de version peut changer de disposition.
       - name: cache des poids de modèle
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9   # v6
         with:
           path: node_modules/@huggingface/transformers/.cache
           key: poids-${{ matrix.node }}-${{ hashFiles('package-lock.json') }}
