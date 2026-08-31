@@ -367,19 +367,45 @@ export function oublierLesRequetes(): void { vues.clear(); }
  * ferait écrire aux suivants un gestionnaire qui contourne celui-ci.
  */
 /*
- * LA LISTE DES RACINES EST UNE LISTE, ET C'EST SA FAIBLESSE CONNUE. Un dépôt lancé depuis un
- * disque externe (`/Volumes/WORK/…`), `/usr/local`, `/srv`, `/mnt` n'était pas caviardé : le
- * chemin complet — nom d'utilisateur, arborescence — partait dans la réponse HTTP. Élargie le
- * 27 août 2026 aux racines usuelles des trois systèmes et des chaînes d'intégration. Elle
- * reste une liste : un chemin sous une racine exotique passera encore, et la parade de fond —
- * ne jamais mettre un chemin dans un message qui sort — vit dans les messages eux-mêmes.
+ * LA LISTE DES RACINES A DISPARU, PARCE QU'UNE LISTE ÉTAIT LE DÉFAUT.
+ *
+ * Elle énumérait `Users`, `home`, `private`, `var`, `tmp`, `opt`… et elle disait elle-même sa
+ * faiblesse : « un chemin sous une racine exotique passera encore ». Élargie une fois le
+ * 27 août 2026, elle serait à élargir au suivant. Une énumération de ce qu'on refuse est
+ * toujours en retard d'un cas sur le monde ; c'est le sens de marche qui était faux, pas la
+ * longueur de la liste.
+ *
+ * LE SENS EST INVERSÉ ICI : est caviardé TOUT ce qui a la forme d'un chemin — quoi qu'il y ait
+ * après la première barre — et ne survit QUE ce qui figure dans `FORMES_PERMISES`. Un disque
+ * externe, `/srv`, `/mnt`, une racine que personne n'a encore inventée : tous partent en
+ * `<file>` sans qu'on ait eu à les prévoir. C'est la seule forme de garde dont la couverture
+ * ne dépend pas de ce qu'on a pensé à écrire.
+ *
+ * CE QUI EST PERMIS EST UNE ROUTE, ET RIEN D'AUTRE. C'est l'information la plus utile d'un
+ * message d'erreur — la retirer ferait écrire aux suivants un gestionnaire qui contourne
+ * celui-ci — et c'est la seule chose commençant par une barre que cet écran a le droit de
+ * nommer. La liste est confrontée aux routes réelles de ce fichier par un cas, dans les deux
+ * sens : une route ajoutée sans être permise, et une permission devenue sans objet.
+ *
+ * LA BARRE DOIT OUVRIR LE JETON. `application/json`, `text/html`, `24/08/2026` ne sont pas des
+ * chemins et ne sont pas touchés : la barre y est précédée d'un caractère de mot, et le regard
+ * arrière l'exclut. Sans lui, le caviardage rendait « application<file> » et le suivant
+ * écrivait un gestionnaire qui l'évite — un caviardage qui abîme ce qui n'est pas un chemin
+ * se fait contourner, et c'est ainsi qu'on perd les deux.
  */
+export const FORMES_PERMISES: readonly string[] = [
+  "/", "/api/etat", "/api/routage", "/api/optimum", "/api/hypotheses", "/graphes.js", "/registre.css",
+];
+
 export function sansChemins(texte: string): string {
   return texte
-    .replace(/file:\/\/\/[^\s"')]+/g, "<file>")
-    .replace(/\b[A-Za-z]:\\[^\s"')]+/g, "<file>")
-    .replace(/(?:\/(?:Users|home|private|var|tmp|opt|etc|Applications|Volumes|Library|usr|srv|mnt|media|data|root|Sites|workspace|github|builds?)|\.\.?)\/[^\s"')]*/g, "<file>")
-    .replace(/[^\s"')]*node_modules\/[^\s"')]*/g, "<file>");
+    .replace(/file:\/\/\/[^\s"')]*/g, "<file>")
+    .replace(/[^\s"')]*node_modules\/[^\s"')]*/g, "<file>")
+    /* Toute barre inverse : la lettre de lecteur de Windows, et aussi `\\serveur\partage`,
+       qui n'en porte pas et que la garde d'avant laissait passer entier. */
+    .replace(/[^\s"')]*\\[^\s"')]*/g, "<file>")
+    .replace(/(?<![\w.~-])(?:~|\.{1,2})?\/[^\s"')]*/g,
+      (jeton) => (FORMES_PERMISES.includes(jeton) ? jeton : "<file>"));
 }
 
 /**

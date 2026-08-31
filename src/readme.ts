@@ -705,8 +705,22 @@ const commandes = (() => {
      * les `model.onnx`, et un tokeniseur pèse en plus. Un plancher nommé plancher ne ment pas
      * quand il est dépassé ; un chiffre exact qui ne l'est plus, si.
      */
+    /*
+     * DIVISÉ PAR 10⁹, PAS PAR 2³⁰ — L'UNITÉ ÉTAIT FAUSSE ET LE CHIFFRE AUSSI.
+     *
+     * `/ 2 ** 30` rend des GIBIOCTETS et l'étiquette disait « GB » : 1,23 annoncé pour
+     * 1 318 111 932 octets, qui font 1,32 GB décimal. Même faute une ligne de prose plus bas,
+     * où une somme de mébioctets divisée par 1000 donnait « 1.26 GB ».
+     *
+     * CE N'EST PAS UNE QUERELLE D'UNITÉS : `npm run poids` affiche déjà des mégaoctets
+     * décimaux — 496,6 Mo pour roberta — pendant que cette page en annonçait 474 pour le même
+     * fichier. Deux chiffres différents pour le même objet, dans le même dépôt, et c'est
+     * toujours ainsi que commence une discussion de méthode qui n'était qu'une discussion
+     * d'unité. Le téléchargement se compte en décimal partout ailleurs — npm, le navigateur,
+     * le dépôt de modèles — et c'est cette convention-là qu'on suit, une seule fois.
+     */
     ["measure", `measure the encoder tiers and freeze the profile (at least ${
-      (Object.values(POIDS_MODELES).reduce((s, m) => s + m.octets, 0) / 2 ** 30).toFixed(2)
+      (Object.values(POIDS_MODELES).reduce((s, m) => s + m.octets, 0) / 1e9).toFixed(1)
     } GB downloaded on the first run — \`npm run poids\` lists each one)`],
     ["sceller", "seal a profile: the fingerprint that makes a silently edited measurement fail loudly"],
     ["diff", "compare two sealed runs case by case — a rising rate can still have lost cases"],
@@ -836,6 +850,30 @@ const nAvecHypothese = paliersMesures(p).filter((t) => t === "human").length;
  * un dépôt dont la règle est que les chiffres ne s'écrivent pas à la main. Celle-ci se
  * calcule depuis la donnée, donc elle vieillit avec elle.
  */
+/*
+ * LE POIDS À TÉLÉCHARGER, CALCULÉ — CE PARAGRAPHE ÉTAIT TAPÉ À LA MAIN, ET FAUX.
+ *
+ * « 1.26 GB … 474 MB for roberta … 448 MB for multilingual-e5-small … » : des MÉBIOCTETS
+ * portant une étiquette de mégaoctets, et un total qui était une somme de mébioctets divisée
+ * par 1000. Pendant ce temps `npm run poids` affichait 496,6 Mo pour le même fichier. Deux
+ * chiffres pour un seul objet, dans un dépôt dont c'est le reproche central aux autres.
+ *
+ * La garde des chiffres nus les tolérait — inscrits dans ses `permis` avec une raison qui
+ * tenait (« figé par la révision du modèle ») et qui était vraie : ils ne rouillaient pas,
+ * ils étaient faux DÈS L'ÉCRITURE. Un permis répond à « ce chiffre va-t-il vieillir ? », pas
+ * à « est-il juste ? », et c'est la question qu'il ne pose pas qui coûte. Le remède que le
+ * message de cette garde propose en premier est le bon : le calculer.
+ */
+const poidsATelecharger = (() => {
+  const enMo = (n: number): string => Math.round(n / 1e6).toLocaleString("en-GB") + " MB";
+  const parTaille = Object.values(POIDS_MODELES).slice().sort((a, b) => b.octets - a.octets);
+  const total = parTaille.reduce((s, m) => s + m.octets, 0);
+  return `**${(total / 1e9).toFixed(1)} GB of model weights** on the first \`npm run measure\` — `
+    /* Le nom court est DÉRIVÉ du dépôt épinglé, jamais réécrit : « distilbert » abrégeait à la
+       main un identifiant qui désigne le fichier réellement téléchargé. */
+    + parTaille.map((m) => `${enMo(m.octets)} for ${m.depot.split("/")[1]}`).join(", ") + `.`;
+})();
+
 const coutDeReproduction = (() => {
   const dates: string[] = [];
   const ramasse = (o: unknown): void => {
@@ -1482,6 +1520,6 @@ const documents = (() => {
 })();
 
 emit(fileURLToPath(new URL("../README.md", import.meta.url)),
-  { chapeau, chaines, finding, obligation, ouCaTourne, lecture, exposition: expositionBloc, document: documentBloc, leviers, frontiere, extraction, classification, routing, shadow, gallery, baselines, provenance, coutDeReproduction, embauche,
+  { chapeau, chaines, finding, obligation, ouCaTourne, lecture, exposition: expositionBloc, document: documentBloc, leviers, frontiere, extraction, classification, routing, shadow, gallery, baselines, provenance, poidsATelecharger, coutDeReproduction, embauche,
     echelles, latence, egalites, fuite, deuxfaits, retractations, public: publicJeu, commandes, documents,
     tests });

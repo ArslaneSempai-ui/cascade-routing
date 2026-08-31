@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { sansChemins } from "./server.ts";
+import { sansChemins, FORMES_PERMISES } from "./server.ts";
 
 /*
  * UNE ERREUR RENVOYÉE NE PORTE PAS DE CHEMIN — PAR CONSTRUCTION, PAS PAR CHANCE.
@@ -82,5 +82,68 @@ test("sansChemins caviarde aussi les racines hors des sept d'origine", () => {
        relevé en le lançant, pas celui que j'avais imaginé. */
     assert.equal(sansChemins(`Error at ${chemin}:12`), "Error at <file>",
       `${chemin} n'est pas caviardé : le chemin partirait dans la réponse.`);
+  }
+});
+
+test("les formes permises sont les routes de l'écran, dans les deux sens", () => {
+  /*
+   * LE CAVIARDAGE NE MARCHE PLUS PAR LISTE DE CE QU'IL REFUSE, MAIS DE CE QU'IL LAISSE.
+   * L'inversion ne vaut que si la courte liste qui reste ne dérive pas de son côté : une
+   * route ajoutée sans permission sortirait en `<file>` et le suivant contournerait le
+   * gestionnaire ; une permission devenue sans objet couvrirait une route réintroduite
+   * demain sous le même nom, sans que personne l'ait relue.
+   *
+   * Les routes sont donc LUES dans `server.ts`, pas recopiées ici.
+   */
+  const src = readFileSync(fileURLToPath(new URL("./server.ts", import.meta.url)), "utf8");
+  const servies = new Set<string>(["/"]);
+  for (const m of src.matchAll(/url\.pathname === "([^"]+)"/g)) servies.add(m[1]!);
+  for (const m of src.matchAll(/\["(\/[A-Za-z0-9._-]+)", "(?:text|application)\//g)) servies.add(m[1]!);
+
+  /* LE DÉNOMINATEUR D'ABORD : un motif qui ne lit plus rien rendrait un ensemble vide, et les
+     deux comparaisons qui suivent tomberaient d'accord sur du vide. */
+  assert.ok(servies.size >= 5,
+    `${servies.size} route(s) lue(s) dans server.ts : la lecture a échoué, et l'accord qui suit `
+    + "ne dirait rien.");
+
+  const permises = new Set(FORMES_PERMISES);
+  const oubliees = [...servies].filter((r) => !permises.has(r)).sort();
+  assert.deepEqual(oubliees, [],
+    `route(s) servie(s) et non permise(s) : ${oubliees.join(", ")}\n`
+    + "  → un message qui les nomme sortirait en `<file>`, et le suivant écrirait un\n"
+    + "    gestionnaire qui contourne celui-ci.");
+  const mortes = [...permises].filter((r) => !servies.has(r)).sort();
+  assert.deepEqual(mortes, [],
+    `permission(s) sans objet : ${mortes.join(", ")} n'est (ne sont) plus servie(s).`);
+});
+
+test("une racine que personne n'a prévue est caviardée aussi", () => {
+  /*
+   * LE CAS QUE L'ANCIENNE LISTE NE POUVAIT PAS PASSER. Elle énumérait sept racines, puis
+   * quinze ; celle-ci n'en énumère aucune. Les chemins ci-dessous ne sont sous AUCUNE racine
+   * connue de l'ancienne garde — et c'est exactement ce que sa propre note annonçait comme
+   * sa faiblesse : « un chemin sous une racine exotique passera encore ».
+   */
+  for (const chemin of ["/zpool/equipe/arslane/cascade/a.ts", "/net/nfs42/x/b.js",
+                        "/System/Volumes/Data/c.ts", "~/secrets/d.env", "../../etc/e.conf"]) {
+    const sorti = sansChemins(`Error at ${chemin}:12`);
+    assert.equal(sorti, "Error at <file>", `${chemin} n'est pas caviardé.`);
+  }
+  /* Windows sans lettre de lecteur : un partage réseau, que la garde d'avant laissait entier. */
+  assert.equal(sansChemins(String.raw`open \\serveur\partage\dossier\f.json failed`),
+    "open <file> failed", "un chemin UNC part encore dans la réponse.");
+
+  /*
+   * LE PENDANT, ET IL EST PLUS EXIGEANT QU'AVANT. Le caviardage est maintenant déclenché par
+   * une barre, donc c'est LUI qui risque d'abîmer ce qui n'en est pas un — un type de contenu,
+   * une date. Un caviardage qui mange des messages honnêtes se fait contourner, et on perd les
+   * deux à la fois.
+   */
+  for (const t of ["expected content-type application/json, got text/html",
+                   "mesuré le 24/08/2026, 240 requêtes en 60 s",
+                   "unknown option: --fields. This command accepts: --cases",
+                   "no route /api/etat for method DELETE",
+                   "served /graphes.js and /registre.css from memory"]) {
+    assert.equal(sansChemins(t), t, `« ${t} » a été caviardé alors qu'il ne porte aucun chemin.`);
   }
 });

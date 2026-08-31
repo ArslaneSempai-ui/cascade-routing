@@ -2107,3 +2107,50 @@ test("deux journaux sans conditions lisibles ne se regroupent pas entre eux", ()
     "deux lots SANS machine lisible ont été regroupés : la garde qui refuse de mélanger deux\n"
     + "  machines laisse passer précisément les journaux dont on sait le moins.");
 });
+
+/*
+ * ─── UNE NIGHTLY DANS LE GRAPHE DE PRODUCTION, ASSUMÉE PAR ÉCRIT PLUTÔT QUE SUBIE ───
+ *
+ * `onnxruntime-web` est figé sur `1.26.0-dev.20260416-b7804b056c` — une construction de nuit,
+ * atteignable depuis les dépendances de production, et elle tire à son tour une nightly
+ * d'`onnxruntime-common`. Avant une sortie, ça se décide ; ce qui ne se fait pas, c'est le
+ * laisser sans phrase.
+ *
+ * LA DÉCISION EST DE NE PAS FORCER, ET VOICI SUR QUOI ELLE TIENT. Cette version n'est pas un
+ * choix de ce dépôt : `@huggingface/transformers` 4.2.0 l'épingle EXACTEMENT dans ses propres
+ * dépendances. Un `overrides` vers une stable n'écarterait donc pas une borne large, il
+ * contredirait un épinglage amont — et il échangerait, sans qu'aucun cas d'ici ne l'exerce,
+ * le moteur WebAssembly contre un autre. `npm audit` rend zéro avis sur cet arbre. Le coût du
+ * refus est nul aujourd'hui ; celui de l'override ne l'est pas, et il n'est pas mesuré.
+ *
+ * CE QUI EST À REGARDER EST AILLEURS, ET C'EST UNE VRAIE TROUVAILLE : le paquet Node
+ * `transformers.node.mjs` embarque le paquet ORT-web et porte, en dur, une adresse
+ * `https://cdn.jsdelivr.net/npm/onnxruntime-web@…/dist/` pour ses artefacts WebAssembly. Le
+ * contrôle des sorties de ce dépôt lit `src/`, donc il ne peut pas la voir : une destination
+ * qui vit dans une dépendance échappe à toute liste tenue chez nous. Elle est écrite ici pour
+ * qu'elle cesse d'être invisible.
+ *
+ * CE CAS TOMBE LE JOUR OÙ LA VERSION BOUGE, ce qui est exactement le jour où la décision doit
+ * être reprise — par quelqu'un qui lira ces lignes, et non par un `npm install` silencieux.
+ */
+test("la nightly d'onnxruntime-web est celle qu'amont épingle, et elle est assumée ici", () => {
+  const racine = fileURLToPath(new URL("..", import.meta.url));
+  const verrou = JSON.parse(readFileSync(join(racine, "package-lock.json"), "utf8")) as {
+    packages: Record<string, { version?: string; dependencies?: Record<string, string> }>;
+  };
+  const ASSUMEE = "1.26.0-dev.20260416-b7804b056c";
+
+  const amont = verrou.packages["node_modules/@huggingface/transformers"]?.dependencies?.["onnxruntime-web"];
+  const installe = verrou.packages["node_modules/onnxruntime-web"]?.version;
+  assert.ok(amont !== undefined && installe !== undefined,
+    "`onnxruntime-web` est introuvable dans le verrou : la lecture a échoué, et l'accord qui "
+    + "suit ne dirait rien.");
+  assert.equal(installe, amont,
+    `le verrou installe ${installe} là où \`@huggingface/transformers\` épingle ${amont} : `
+    + "quelque chose a forcé cette résolution, et la raison ci-dessus ne s'applique plus.");
+  assert.equal(installe, ASSUMEE,
+    `\`onnxruntime-web\` est passé de ${ASSUMEE} à ${installe}.\n`
+    + "  → la décision de ne pas forcer tenait à l'épinglage amont et à zéro avis. Relisez le\n"
+    + "    commentaire au-dessus, refaites `npm audit`, puis inscrivez la version ici — ou\n"
+    + "    posez l'override, avec ce que vous aurez mesuré.");
+});

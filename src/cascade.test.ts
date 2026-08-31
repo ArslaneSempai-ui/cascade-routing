@@ -484,13 +484,13 @@ test("aucun chiffre n'est tapé à la main dans la prose du README, et la garde 
     ["51.7 %", "un chiffre historique : ce que valait un champ avant que l'évaluateur soit corrigé"],
     ["25 %", "la référence triviale à cinq classes, fixée par le nombre de classes"],
     ["20 %", "idem, le tirage uniforme à cinq classes"],
-    /* Les poids : figés par la révision du modèle, et un modèle réinstallé est déjà attrapé
-       ailleurs par `digestsQuiDivergent()`. Ils ne rouillent donc pas en silence. */
+    /* LES QUATRE POIDS ONT QUITTÉ CETTE LISTE : ils sont engendrés depuis `POIDS_MODELES`,
+       dans <!-- figures:poidsATelecharger -->. Leur permis disait « figé par la révision du
+       modèle », ce qui était VRAI — et à côté de la question. Ils ne vieillissaient pas, ils
+       étaient faux dès le premier jour : des mébioctets étiquetés mégaoctets, 474 pour un
+       fichier que `npm run poids` annonçait à 496,6. Un permis répond à « ce chiffre va-t-il
+       rouiller ? » et jamais à « est-il juste ? ». */
     ["400 MB", "les paquets npm, un ordre de grandeur arrondi et annoncé comme tel"],
-    ["474 MB", "le poids de roberta-base-squad2 à sa révision épinglée"],
-    ["448 MB", "le poids de multilingual-e5-small à sa révision épinglée"],
-    ["249 MB", "le poids de distilbert à sa révision épinglée"],
-    ["86 MB", "le poids de MiniLM à sa révision épinglée"],
     ["50 Mbit", "une hypothèse sur la ligne du lecteur, pas une mesure de ce dépôt"],
     ["133 of 685", "un compte historique : les échecs imputés à l'évaluateur avant sa correction"],
   ]);

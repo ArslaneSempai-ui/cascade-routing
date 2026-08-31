@@ -27,7 +27,7 @@ what that pass actually cost is stated below, read from the relevé rather than 
 |---|---|
 | `npm ci --ignore-scripts` | install exactly the versions the lockfile pins, and run no install script from any dependency — nothing below runs without it, and it is the only command here that needs the network. It also skips this repository's own `prepare`, so run `git config core.hooksPath .githooks` yourself if you intend to commit |
 | `npm run test` | types, figures and the suite — start here; downloads nothing while the cached failure gallery matches the code |
-| `npm run measure` | measure the encoder tiers and freeze the profile (at least 1.23 GB downloaded on the first run — `npm run poids` lists each one) |
+| `npm run measure` | measure the encoder tiers and freeze the profile (at least 1.3 GB downloaded on the first run — `npm run poids` lists each one) |
 | `npm run sceller` | seal a profile: the fingerprint that makes a silently edited measurement fail loudly |
 | `npm run diff` | compare two sealed runs case by case — a rising rate can still have lost cases |
 | `npm run entree` | population drift on the documents alone, no labels, read against its own noise floor |
@@ -131,7 +131,7 @@ several scripts chain shell commands, which hold under Git Bash and not under `c
 <!-- /figures:documents -->
 
 <!-- figures:tests -->
-**586 tests** across 65 files, counted from the sources rather than typed here.
+**594 tests** across 66 files, counted from the sources rather than typed here.
 <!-- /figures:tests -->
 
 Everything runs locally, and that is enforced rather than promised. The one call that could
@@ -140,10 +140,11 @@ before it is made, on every path that reaches it; a run pointed anywhere else re
 start unless you write `--remote-ollama` in the command yourself. No API key, and anyone who
 clones this reproduces the numbers below.
 
-**What it actually costs you to reproduce it:** about 400 MB of npm packages, then **1.26 GB
-of model weights** on the first `npm run measure` — 474 MB for roberta-base-squad2, 448 MB for
-multilingual-e5-small, 249 MB for distilbert, 86 MB for MiniLM. On a 50 Mbit line that is
-three and a half minutes of download before anything is measured.
+**What it actually costs you to reproduce it:** about 400 MB of npm packages, then
+<!-- figures:poidsATelecharger -->
+**1.3 GB of model weights** on the first `npm run measure` — 497 MB for roberta-base-squad2-ONNX, 470 MB for multilingual-e5-small, 261 MB for distilbert-base-cased-distilled-squad, 90 MB for all-MiniLM-L6-v2.
+<!-- /figures:poidsATelecharger -->
+On a 50 Mbit line that is three and a half minutes of download before anything is measured.
 
 <!-- figures:coutDeReproduction -->
 **What the published pass actually took.** The provenance stamps of the profile shipped with this repository run from 10:08:32 to 10:40:28 — **32 minutes** of measurement on the machine named in the seal, on top of the weight download. That is the figure to plan for, not a round number: it is read from the relevé, so it moves when the relevé does.
@@ -283,7 +284,7 @@ same machine, same run, opposite verdicts depending on the task.
 **It stays optional.** The encoder ladder is what `npm run measure` measures: no server and
 no API key, against the eight gigabytes and the running Ollama the generative ladder needs.
 Its own download and duration are stated above — this paragraph said "a few tens of megabytes"
-and "two minutes" while the paragraph above said 1.26 GB, which is the kind of contradiction a
+and "two minutes" while the paragraph above said 1.3 GB, which is the kind of contradiction a
 reader finds before any accuracy figure. The generative ladder needs Ollama running and about eight gigabytes of models,
 so it lives behind `npm run measure -- --llm`, and a run without the flag leaves its frozen
 figures untouched rather than deleting them.

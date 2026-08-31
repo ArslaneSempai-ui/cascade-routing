@@ -850,18 +850,39 @@ let qaSmall: any = null, qaLarge: any = null;
  */
 const HORS_LIGNE = (): boolean => process.env.CASCADE_OFFLINE === "1";
 
+/**
+ * POSER LE HORS-LIGNE : refuser ce qui manque, puis couper le réseau de la bibliothèque.
+ *
+ * EXPORTÉE, ET C'EST TOUT L'INTÉRÊT. Ces deux gestes vivaient en ligne dans le chargeur, donc
+ * derrière 1,3 Go de poids : aucun cas ne pouvait les atteindre, et le README le disait —
+ * « opt-in, not tested ». Une garde que rien n'atteint n'est pas une garde, c'est une
+ * intention : elle se supprime par accident et rien ne bouge au vert.
+ *
+ * `racine` n'existe que pour ça : `exigerPoidsSurPlace` la prend déjà, et elle laisse un cas
+ * montrer un cache garni sans en fabriquer un de 1,3 Go. Rien d'autre n'est injecté — le cas
+ * appelle la fonction que le chargeur appelle, pas une réécriture de sa règle.
+ *
+ * Rend `true` si le hors-ligne a été posé, `false` si le drapeau n'y était pas. Un booléen
+ * plutôt que rien, pour qu'un cas puisse éprouver LES DEUX branches : une fonction qui coupe
+ * toujours passerait un test qui ne regarde que la coupure.
+ */
+export async function armerHorsLigne(cles: readonly CleModele[], racine?: string): Promise<boolean> {
+  if (!HORS_LIGNE()) return false;
+  const poids = await import("./poids.ts");
+  poids.exigerPoidsSurPlace(cles, racine);
+  /* LE REFUS PRÉALABLE N'EST PAS LA GARANTIE. Il regarde `model.onnx` ; la bibliothèque va
+     aussi chercher un tokenizer, une configuration, et un fichier ajouté par une version
+     future que notre liste ne connaît pas. Couper le réseau ferme la question pour tout ce
+     qu'on n'a pas pensé à énumérer — mesuré le 25 août 2026 : avec `allowRemoteModels` à
+     faux et les poids en cache, le modèle se charge et répond. Un contrôle qui vérifie ce
+     qu'on a listé promet moins que la coupure qui vérifie ce qu'on a oublié. */
+  envHF.allowRemoteModels = false;
+  return true;
+}
+
 async function chargerAvecFilet<T>(cles: readonly CleModele[], charger: () => Promise<T>): Promise<T> {
   const poids = await import("./poids.ts");
-  if (HORS_LIGNE()) {
-    poids.exigerPoidsSurPlace(cles);
-    /* LE REFUS PRÉALABLE N'EST PAS LA GARANTIE. Il regarde `model.onnx` ; la bibliothèque va
-       aussi chercher un tokenizer, une configuration, et un fichier ajouté par une version
-       future que notre liste ne connaît pas. Couper le réseau ferme la question pour tout ce
-       qu'on n'a pas pensé à énumérer — mesuré le 25 août 2026 : avec `allowRemoteModels` à
-       faux et les poids en cache, le modèle se charge et répond. Un contrôle qui vérifie ce
-       qu'on a listé promet moins que la coupure qui vérifie ce qu'on a oublié. */
-    envHF.allowRemoteModels = false;
-  }
+  await armerHorsLigne(cles);
   try {
     return await charger();
   } catch (e) {
@@ -874,12 +895,53 @@ async function chargerAvecFilet<T>(cles: readonly CleModele[], charger: () => Pr
   }
 }
 
+/**
+ * UNE CHAÎNE RENDUE SANS SON TOKENISEUR EST RENDUE CASSÉE, ET ELLE NE LE DIT PAS.
+ *
+ * Mesuré le 31 août 2026, les quatre modèles épinglés entiers sur le disque : sous
+ * `CASCADE_OFFLINE=1`, `loadExtractors()` REND SANS ERREUR, et la première extraction meurt
+ * dans la bibliothèque sur `this.tokenizer is not a function` — une ligne qui ne nomme ni le
+ * modèle, ni le fichier, ni le drapeau qui l'a causée.
+ *
+ * LA CAUSE, RELEVÉE AVEC UN PIÈGE SUR `fetch`. La bibliothèque demande
+ * `resolve/main/tokenizer_config.json` — la révision `main`, PAS celle que ce dépôt épingle et
+ * qui est sur le disque — et elle ne met pas ce fichier en cache. Chaque chargement des
+ * extracteurs sort donc DEUX FOIS vers huggingface.co, réseau ouvert ; réseau coupé, le
+ * fichier manque, le tokeniseur n'est pas construit, et personne ne le signale.
+ *
+ * CE CONTRÔLE NE RÉPARE RIEN — il refuse à voix haute. Le défaut est dans le chemin de
+ * résolution de la bibliothèque, hors de ce fichier ; ce qui est à nous, c'est de ne pas
+ * rendre une chaîne inutilisable en annonçant un succès. Le jour où la révision épinglée sera
+ * honorée pour le tokeniseur, ce contrôle deviendra muet sans qu'on ait à y toucher.
+ */
+function exigerChaineEntiere(nom: string, chaine: unknown): void {
+  if (typeof (chaine as { tokenizer?: unknown } | null)?.tokenizer === "function") return;
+  throw new Error(
+    `${nom} loaded without a tokenizer, so it would answer nothing.\n\n`
+    + "  The pipeline came back without one and reported success. The first extraction would\n"
+    + "  have died inside the library on `this.tokenizer is not a function`, naming neither\n"
+    + "  this model nor the reason.\n\n"
+    + (HORS_LIGNE()
+      ? "  CASCADE_OFFLINE=1 is set. Measured on 31 August 2026: the library asks for\n"
+        + "  `resolve/main/tokenizer_config.json` — revision `main`, not the revision this\n"
+        + "  repository pins and holds on disk — and it does not cache that file. With the\n"
+        + "  network refused it cannot be read, and the tokenizer is silently skipped.\n\n"
+        + "  Every load of the extractors reaches huggingface.co for that one file, with or\n"
+        + "  without weights on disk. Until that is closed, CASCADE_OFFLINE=1 cannot run the\n"
+        + "  encoder tiers on this version of the library. It refuses here instead of\n"
+        + "  failing later somewhere that names nothing.\n"
+      : "  The network was not refused by this tool, so the cause is elsewhere: read the\n"
+        + "  message above and check what the library could not read.\n"));
+}
+
 export async function loadExtractors(): Promise<void> {
   exigerModelesEntiers(MODELES_EXTRACTION);
   await chargerAvecFilet(MODELES_EXTRACTION, async () => {
     qaSmall ??= await pipeline("question-answering", "Xenova/distilbert-base-cased-distilled-squad", { revision: REVISIONS.small });
     qaLarge ??= await pipeline("question-answering", "onnx-community/roberta-base-squad2-ONNX", { revision: REVISIONS.large });
   });
+  exigerChaineEntiere(POIDS_MODELES.small.depot, qaSmall);
+  exigerChaineEntiere(POIDS_MODELES.large.depot, qaLarge);
 }
 
 export async function extract(
