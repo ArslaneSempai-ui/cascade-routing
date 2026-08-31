@@ -74,6 +74,27 @@ jobs:
           node-version: ${{ matrix.node }}
           cache: npm
 
+      # ─── LA MÊME INSTALLATION QUE CELLE QUE LE README PRESCRIT ───
+      #
+      # C'était `npm install`, et la page d'accueil dit `npm ci --ignore-scripts` depuis le
+      # 31/08. Deux commandes différentes, et l'écart n'était pas cosmétique :
+      #
+      #   `install` n'impose PAS le verrou. L'épinglage exact que l'annexe Sécurité vend à un
+      #   acheteur n'était donc vérifié par aucune passe — la doc l'affirmait, la CI ne le
+      #   contrôlait pas.
+      #
+      #   `install` exécute les scripts d'installation. Le postinstall d'onnxruntime-node est
+      #   inerte sur macOS et ACTIF sur linux/x64 : ce coureur est le SEUL endroit où il
+      #   tourne vraiment, et c'est nous qui l'y allumions. Il va chercher les trois `.so` de
+      #   CUDA et TensorRT sur api.nuget.org ; rien ici ne configure de fournisseur CUDA.
+      #
+      # ET L'ORDRE A CHANGÉ AVEC LA COMMANDE, sans quoi la correction en cassait une autre :
+      # `npm ci` SUPPRIME `node_modules` avant d'installer, et le cache des poids vit dessous.
+      # Restaurer d'abord puis lancer `npm ci` effaçait 740 Mo restaurés à chaque passe, et
+      # rouvrait l'œuf-et-poule que le bloc suivant a coûté cher à fermer. On installe, PUIS
+      # on restaure.
+      - run: npm ci --ignore-scripts
+
       # Les poids d'encodeur — 740 Mo, mesurés — vivent sous node_modules, ce que la
       # bibliothèque décide et pas nous. La clé porte le verrou de dépendances : une
       # bibliothèque qui change de version peut changer de disposition.
@@ -82,8 +103,6 @@ jobs:
         with:
           path: node_modules/@huggingface/transformers/.cache
           key: poids-${{ matrix.node }}-${{ hashFiles('package-lock.json') }}
-
-      - run: npm install
 
       # ─── LES POIDS S'AMORCENT HORS DÉLAI DE CAS ───
       #

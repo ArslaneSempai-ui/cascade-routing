@@ -1885,6 +1885,36 @@ test("le relevé livré correspond à son empreinte, et une valeur changée la f
   for (const k of Object.keys(brut).reverse()) remue[k] = brut[k];
   assert.equal(empreinteDuReleve(remue), empreinteDuReleve(brut),
     "l'empreinte dépend de l'ordre des clés : elle signalera des faux positifs.");
+
+  /*
+   * LE SCELLÉ S'EXCLUT LUI-MÊME, ET RIEN D'AUTRE QUI PORTE SON NOM.
+   *
+   * `canonique` retirait la clé `empreinte` à TOUS les niveaux — une règle bien plus large
+   * que celle qu'il fallait. Elle ne s'exploitait pas : relu le 31 août 2026, les cinq
+   * relevés livrés portent une seule `empreinte`, à la racine. C'est le jour d'APRÈS qui
+   * était ouvert : qu'un relevé gagne une empreinte par palier ou par corpus — la forme vers
+   * laquelle ce dépôt tend déjà — et elle naîtrait hors du scellé. On pourrait la changer, le
+   * scellé correspondrait toujours, et le contrôle dirait « intact » sur un relevé modifié.
+   *
+   * Ce cas est écrit MAINTENANT, pendant que la faille est latente. Après, la fermer casse
+   * des scellés déjà livrés.
+   */
+  const imbrique = JSON.parse(JSON.stringify(brut));
+  const palier = Object.keys(imbrique.extraction)[0]!;
+  imbrique.extraction[palier].empreinte = "0000000000000000";
+  const avecAutre = JSON.parse(JSON.stringify(imbrique));
+  avecAutre.extraction[palier].empreinte = "ffffffffffffffff";
+  assert.notEqual(empreinteDuReleve(imbrique), empreinteDuReleve(avecAutre),
+    "une `empreinte` IMBRIQUÉE ne compte pas dans le scellé : elle naîtrait hors de lui, on\n"
+    + "pourrait la changer, et le contrôle dirait « intact » sur un relevé modifié.");
+
+  /* L'AUTRE MOITIÉ, sans laquelle on aurait seulement inversé le défaut : celle de la RACINE
+     doit rester exclue, sinon le scellé se calculerait sur lui-même et aucun relevé livré ne
+     se vérifierait plus. */
+  const sansScelle = JSON.parse(JSON.stringify(brut));
+  delete sansScelle.empreinte;
+  assert.equal(empreinteDuReleve(sansScelle), empreinteDuReleve(brut),
+    "l'empreinte de la racine entre dans son propre calcul : le scellé devient circulaire.");
 });
 
 /*

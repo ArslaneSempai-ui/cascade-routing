@@ -264,12 +264,31 @@ export const RELEVE_DE_REFERENCE = "profiles-2026-08-20-coeur-rendu.json";
  * Sérialisation à clés triées, sinon deux exécutions du même relevé rendent deux empreintes
  * et le contrôle devient du bruit que tout le monde apprend à ignorer.
  */
-function canonique(x: unknown): unknown {
-  if (Array.isArray(x)) return x.map(canonique);
+/*
+ * LA CLÉ RETIRÉE EST CELLE DE LA RACINE, ET D'AUCUN AUTRE NIVEAU.
+ *
+ * Le scellé doit s'exclure lui-même : il vit à la racine du relevé, et l'inclure dans son
+ * propre calcul serait circulaire. Mais la version d'avant retirait `empreinte` à CHAQUE
+ * niveau, ce qui est une tout autre règle — elle dit « aucune empreinte, où qu'elle soit,
+ * n'est scellée ».
+ *
+ * Aucun relevé livré n'en porte d'imbriquée : relu le 31 août 2026 sur les cinq fichiers
+ * `profiles-*.json`, une seule `empreinte` en tout, à la racine. Il n'y a donc rien à
+ * exploiter aujourd'hui, et l'empreinte des relevés existants ne bouge pas d'un caractère.
+ *
+ * CE QUI SE FERME EST LE JOUR D'APRÈS. Qu'un relevé gagne une empreinte par palier ou par
+ * corpus — la forme même vers laquelle ce dépôt tend, puisqu'il empreinte déjà ses modules et
+ * ses corpus — et elle naîtrait HORS du scellé : on pourrait la changer, le scellé
+ * continuerait de correspondre, et le contrôle dirait « intact » sur un relevé modifié. Une
+ * garde latente se ferme pendant qu'elle est latente ; après, elle se ferme en cassant des
+ * scellés livrés.
+ */
+function canonique(x: unknown, racine = true): unknown {
+  if (Array.isArray(x)) return x.map((v) => canonique(v, false));
   if (x && typeof x === "object") {
     const o = x as Record<string, unknown>;
     return Object.keys(o).sort().reduce<Record<string, unknown>>((a, k) => {
-      if (k !== "empreinte") a[k] = canonique(o[k]);
+      if (!(racine && k === "empreinte")) a[k] = canonique(o[k], false);
       return a;
     }, {});
   }
