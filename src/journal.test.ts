@@ -1648,13 +1648,21 @@ test("aucune dépendance n'exécute de code à l'installation, et toutes sont é
       "postinstall de 32 lignes qui réécrit un champ de son propre package.json ; aucun réseau, "
       + "aucun sous-processus — lu, pas supposé",
     "node_modules/onnxruntime-node":
-      "postinstall qui TÉLÉCHARGE des binaires natifs depuis github.com et le flux Azure de "
-      + "Microsoft, et les extrait — par `adm-zip` depuis la 1.24.3, par execFileSync avant "
-      + "elle (`script/install-utils.js`, « Use adm-zip instead of spawn »). Conditionné à "
-      + "Linux x64, donc inerte sur macOS et actif sur un coureur ubuntu-latest. C'est la "
-      + "seule vraie surface d'exécution à l'installation de ce projet, et elle doit être "
-      + "dite à un acheteur, pas cachée. Le décompacteur qu'elle emploie est donc du code qui "
-      + "tourne vraiment chez nous : voir la garde d'`adm-zip` juste en dessous",
+      "postinstall qui TÉLÉCHARGE une archive et l'extrait — par `adm-zip` depuis la 1.24.3, "
+      + "par execFileSync avant elle (`script/install-utils.js`, « Use adm-zip instead of "
+      + "spawn »). CE QU'IL TÉLÉCHARGE, RELU DANS SON MANIFESTE LE 31 AOÛT 2026 : "
+      + "`script/install-metadata.js` ne demande de fichiers que pour `linux/x64`, et ce sont "
+      + "les trois `.so` de CUDA et de TensorRT, tirés d'`api.nuget.org` — le moteur CPU, "
+      + "lui, est livré dans le paquet pour les six plateformes. La phrase d'avant disait "
+      + "« des binaires natifs depuis github.com et le flux Azure de Microsoft » : ni la "
+      + "destination ni la charge n'étaient les bonnes, et c'est la ligne qu'un acheteur lit. "
+      + "Conditionné à Linux x64, donc sans téléchargement sur macOS et ACTIF sur un coureur "
+      + "ubuntu-latest, GPU ou non : le décompacteur y tourne vraiment, et la garde d'`adm-zip` "
+      + "juste en dessous reste atteignable. C'est la seule surface d'exécution à "
+      + "l'installation de ce projet, et elle doit être dite à un acheteur, pas cachée. "
+      + "`npm ci --ignore-scripts`, que le README donne maintenant comme installation par "
+      + "défaut, la ferme : ce dépôt ne configure aucun fournisseur CUDA, donc le drapeau ne "
+      + "lui coûte rien qu'il demande",
   };
   const inconnus = surLeDisque.filter((k) => !(k in DECLARES));
   assert.deepEqual(inconnus, [],
@@ -1675,6 +1683,65 @@ test("aucune dépendance n'exécute de code à l'installation, et toutes sont é
     + "  → « npm ci » ne vérifie que ce que le verrou déclare. Ce qui n'est pas déclaré peut\n"
     + "    être remplacé sur le registre sans que l'installation le refuse.");
 });
+
+/*
+ * ─── UNE BORNE N'EST PAS UN ÉPINGLAGE, ET LE VERROU NE PROTÈGE QUE CE QU'IL A DÉJÀ VU ───
+ *
+ * `^4.2.0` autorise toute 4.x à venir. Le verrou fige la résolution d'aujourd'hui, mais il ne
+ * survit ni à un `npm install <autre chose>`, ni à une résolution de conflit, ni à un
+ * `npm update` : la BORNE, elle, reste, et c'est elle qui décidera. Le paquet visé ici tire
+ * 1,3 Go de poids de modèles et porte la seule surface d'exécution à l'installation de cet
+ * arbre — une mineure arrivée par une borne n'aurait été mesurée par personne.
+ *
+ * LES `overrides` RESTENT DES BORNES, ET C'EST VOULU : `adm-zip: ^0.6.0` existe pour forcer
+ * l'arbre AU-DELÀ d'un avis de sécurité, et l'épingler exactement gèlerait le correctif
+ * suivant. Ils sont donc écartés — mais NOMMÉS et comptés juste en dessous, parce qu'une
+ * exclusion silencieuse est la façon dont un zéro finit par couvrir moins qu'on ne le lit.
+ *
+ * `devDependencies` ne part pas chez le client et n'est pas visé. Le dire est le seul moyen
+ * que ce vert ne se lise pas plus large qu'il n'est.
+ */
+test("les dépendances livrées sont épinglées exactement, pas bornées", () => {
+  const racine = fileURLToPath(new URL("..", import.meta.url));
+  const pkg = JSON.parse(readFileSync(join(racine, "package.json"), "utf8")) as {
+    dependencies?: Record<string, string>; overrides?: Record<string, string>;
+  };
+  const deps = Object.entries(pkg.dependencies ?? {});
+
+  /* LE DÉNOMINATEUR D'ABORD : un `dependencies` absent rendrait une liste vide, et le zéro
+     obtenu sur rien se lirait comme une preuve. */
+  assert.ok(deps.length >= 1,
+    "aucune dépendance lue dans package.json : la lecture a échoué, et ce qui suit ne dirait rien.");
+
+  const EXACTE = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/;
+  const bornees = deps.filter(([, v]) => !EXACTE.test(v)).map(([n, v]) => `${n}: ${v}`);
+  assert.deepEqual(bornees, [],
+    `${bornees.length} dépendance(s) livrée(s) portent une borne au lieu d'une version :\n`
+    + `  ${bornees.join("\n  ")}\n`
+    + "  → le verrou fige ce qui est résolu aujourd'hui ; la borne décidera de la prochaine\n"
+    + "    résolution, et personne n'aura mesuré ce qu'elle aura choisi.\n"
+    + "  → écrivez la version exacte, puis `npm install --package-lock-only`.");
+
+  /* CE QUI EST ÉCARTÉ EST NOMMÉ, pas exclu en silence : un override ajouté demain doit être
+     lu et inscrit ici, faute de quoi il hérite d'une dispense que personne n'a accordée. */
+  const ecartes = Object.keys(pkg.overrides ?? {}).sort();
+  assert.deepEqual(ecartes, ["adm-zip", "sharp"],
+    `les \`overrides\` écartés de cette règle ont changé : ${ecartes.join(", ") || "aucun"}.\n`
+    + "  → chacun est une borne VOULUE : elle force l'arbre au-delà d'un avis, et l'épingler\n"
+    + "    exactement gèlerait le correctif suivant.");
+
+  /* CONTRE-ÉPREUVE : la règle doit DISTINGUER. Un motif qui accepte tout passerait le cas
+     ci-dessus en prétendant vérifier une forme. */
+  for (const [v, attendu] of [
+    ["4.2.0", true], ["1.0.0-rc.1", true],
+    ["^4.2.0", false], ["~4.2.0", false], [">=4.2.0", false], ["4.2", false], ["4.x", false],
+    ["*", false], ["latest", false], ["npm:autre@4.2.0", false], ["", false],
+  ] as [string, boolean][]) {
+    assert.equal(EXACTE.test(v), attendu,
+      `« ${v} » ne devrait ${attendu ? "pas être refusé" : "pas passer"} pour une version exacte.`);
+  }
+});
+
 
 /*
  * ─── UN `overrides` QUI TUE UNE VULNÉRABILITÉ N'A RIEN QUI L'EMPÊCHE DE DISPARAÎTRE ───

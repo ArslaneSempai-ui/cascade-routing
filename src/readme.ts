@@ -747,7 +747,7 @@ const commandes = (() => {
   const classees = new Set(ordre.map(([n]) => n));
   const oubliees = Object.keys(pkg.scripts).filter((n) => !classees.has(n) && n !== "typage");
   /*
-   * `npm install` EN PREMIÈRE LIGNE, ET IL N'EST PAS UN SCRIPT.
+   * L'INSTALLATION EN PREMIÈRE LIGNE, ET ELLE N'EST PAS UN SCRIPT.
    *
    * Il n'apparaissait nulle part dans les 781 lignes de cette page, et la ligne suivante disait
    * « start here ». Mesuré le 25 août 2026 sur un clone du dépôt publié : la toute première
@@ -758,10 +758,33 @@ const commandes = (() => {
    * d'installation qui vit ailleurs que là où le lecteur commence n'existe pas. Et il est en
    * dur plutôt que déduit de `package.json`, parce qu'il n'y est pas — le contrôle des
    * commandes non classées ne le réclamera donc jamais.
+   *
+   * `npm install` EST DEVENU `npm ci --ignore-scripts`, ET LES DEUX MOTS SE PAIENT.
+   *
+   * `ci` installe ce que le verrou épingle, ni plus ni moins ; `install` peut résoudre une
+   * version qui n'a jamais été mesurée ici. `--ignore-scripts` refuse le code qui tourne sur
+   * la machine du client AVANT la nôtre : c'est la voie des compromissions de chaîne
+   * d'approvisionnement, et la seule contradiction possible à « rien ne sort de votre
+   * machine », puisqu'à cet instant ce n'est plus notre outil qui décide.
+   *
+   * CE QUE LE DRAPEAU COÛTE, MESURÉ LE 31 AOÛT 2026 ET NON SUPPOSÉ. Un seul paquet de cet
+   * arbre exécute quelque chose à l'installation : `onnxruntime-node` 1.24.3. Son manifeste
+   * — `script/install-metadata.js` — ne réclame de fichiers que pour `linux/x64`, et ces
+   * fichiers sont les trois `.so` de CUDA et de TensorRT, tirés d'`api.nuget.org`. Le moteur
+   * CPU, lui — `libonnxruntime.so.1`, `onnxruntime_binding.node` — est livré DANS le paquet
+   * pour les six plateformes : il est présent ici, sur macOS, où ce script n'installe rien.
+   * Ce dépôt ne configure aucun fournisseur CUDA. Le drapeau ne coûte donc que
+   * l'accélération GPU d'une machine Linux+NVIDIA, que rien ici ne demande.
+   *
+   * IL COÛTE AUSSI LE `prepare` DE CE DÉPÔT, qui pose `core.hooksPath`. Sans lui les crochets
+   * ne sont pas branchés — sans effet pour qui mesure, et avec effet pour qui commite. La
+   * ligne le dit, plutôt que de le laisser découvrir au premier commit passé sans contrôle.
    */
   const lignes = [
-    ["`npm install`", "install the dependencies — nothing below runs without it, and it is the "
-      + "only command here that needs the network"] as [string, string],
+    ["`npm ci --ignore-scripts`", "install exactly the versions the lockfile pins, and run no "
+      + "install script from any dependency — nothing below runs without it, and it is the only "
+      + "command here that needs the network. It also skips this repository's own `prepare`, so "
+      + "run `git config core.hooksPath .githooks` yourself if you intend to commit"] as [string, string],
     ...ordre.filter(([n]) => n in pkg.scripts).map(([n, quoi]) => [`\`npm run ${n}\``, quoi] as [string, string]),
   ];
   const manquantes = ordre.filter(([n]) => !(n in pkg.scripts)).map(([n]) => n);
