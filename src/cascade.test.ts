@@ -4511,7 +4511,7 @@ test("le rapport que le client garde porte la réserve, pas seulement le termina
 
   /* AVEC UNE QUESTION DÉDUITE : la réserve doit être dans le fichier, pas ailleurs. */
   const deduit = rapportPourLeClient({
-    cas: 25, champs: ["nom_complet"], date: "2026-08-24", avecRegles: false, lignes,
+    cas: 25, champs: ["nom_complet"], date: "2026-08-24", avecRegles: false, lignes, verdicts: [],
     questions: { nom_complet: questionPourInterne("nom_complet") },
   });
   assert.match(deduit, /derived from your column name/,
@@ -4528,7 +4528,7 @@ test("le rapport que le client garde porte la réserve, pas seulement le termina
   /* CONTRE-ÉPREUVE — sous une question fournie, l'avertissement N'APPARAÎT PAS. Un rapport
      qui crie à chaque fois ne distingue plus rien, et on cesse de le lire. */
   const fourni = rapportPourLeClient({
-    cas: 25, champs: ["nom_complet"], date: "2026-08-24", avecRegles: true, lignes,
+    cas: 25, champs: ["nom_complet"], date: "2026-08-24", avecRegles: true, lignes, verdicts: [],
     questions: { nom_complet: questionPourInterne("nom_complet", { nom_complet: "What is the name of the client?" }) },
   });
   assert.ok(!/not comparable/.test(fourni),

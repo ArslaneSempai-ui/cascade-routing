@@ -642,7 +642,7 @@ test("le rapport écrit ne cite pas un taux que la console refuse de citer", asy
   const c = cellulesDeTaux(q);
   const md = rapportPourLeClient({
     cas: 1, champs: ["total"], date: "2026-08-25", questions: { total: { texte: "What is the total?", provenance: "deduite" as const } }, avecRegles: false,
-    lignes: [["`total`", "small", c.taux, c.intervalle, q.n, "14 ms"]],
+    lignes: [["`total`", "small", c.taux, c.intervalle, q.n, "14 ms"]], verdicts: [],
   });
 
   assert.ok(!/100\.0 %/.test(md),
@@ -655,7 +655,7 @@ test("le rapport écrit ne cite pas un taux que la console refuse de citer", asy
   const c2 = cellulesDeTaux(q2);
   const md2 = rapportPourLeClient({
     cas: 20, champs: ["total"], date: "2026-08-25", questions: { total: { texte: "What is the total?", provenance: "deduite" as const } }, avecRegles: false,
-    lignes: [["`total`", "small", c2.taux, c2.intervalle, q2.n, "14 ms"]],
+    lignes: [["`total`", "small", c2.taux, c2.intervalle, q2.n, "14 ms"]], verdicts: [],
   });
   assert.match(md2, /80\.0 %/, "sinon ce cas passerait pour la mauvaise raison.");
 });
@@ -1160,4 +1160,90 @@ test("sous le lanceur de tests, poids absents = la commande s'écarte, cache int
   assert.notEqual(r2.status, 0, "sans poids et sans réseau, la commande ne peut pas avoir mesuré.");
   assert.match(r2.stderr, /Nothing will be downloaded/, "le refus hors ligne doit nommer ce qu'il ne fera pas.");
   assert.deepEqual(readdirSync(vide), [], "le refus hors ligne n'écrit rien dans le cache.");
+});
+
+/*
+ * LA RECOMMANDATION, ÉPROUVÉE SANS MODÈLE.
+ *
+ * Le 3 septembre 2026, sur 24 cas, la commande écrivait « small is not measurably worse than
+ * large. Take the cheaper one. » devant 95,8 % contre 66,7 %. `recommander` est pure : ces cas
+ * lui donnent les réussites bit à bit et lisent la phrase — la même qui part dans le fichier.
+ */
+test("--margin : des points entre 0 et 100, rendus en proportion ; tout le reste est refusé", async () => {
+  const { lireMarge } = await import("./your-cases.ts");
+  assert.equal(lireMarge(undefined), undefined, "sans drapeau, pas de marge — et pas de recommandation.");
+  assert.equal(lireMarge("2"), 0.02);
+  assert.equal(lireMarge("0.5"), 0.005);
+  for (const brut of ["abc", "0", "100", "-1", "", "2%"]) {
+    assert.throws(() => lireMarge(brut), /not a loss in percentage points/, `--margin=${brut} doit refuser.`);
+  }
+});
+
+test("recommander : la mesure du 3 septembre ne recommande plus le palier faible", async () => {
+  const { recommander } = await import("./your-cases.ts");
+  const { rate } = await import("./interval.ts");
+  const bits = (n: number, faux: number[]) => Array.from({ length: n }, (_, i) => (faux.includes(i) ? "0" : "1")).join("");
+  const releve = { name: {
+    large: { bons: 23, sur: 24, ms: 10, reussites: bits(24, [5]) },
+    small: { bons: 16, sur: 24, ms: 5, reussites: bits(24, [5, 1, 2, 3, 4, 6, 7, 8]) },
+  } } as never;
+  const rangs = [
+    { palier: "large", r: rate(23, 24), ms: 10 },
+    { palier: "small", r: rate(16, 24), ms: 5 },
+  ];
+  const sans = recommander("name", rangs, releve);
+  assert.ok(sans.some((l) => /small is separably worse than large/.test(l)), sans.join("\n"));
+  assert.ok(sans.some((l) => /large wins outright/.test(l)), sans.join("\n"));
+  assert.ok(!sans.some((l) => /Take the cheaper one/.test(l)),
+    "la phrase du 3 septembre — recommander small devant 29 points d'écart — ne doit plus sortir.");
+
+  /* Sans marge, un écart indécis ne recommande RIEN, et dit ce qui manque. */
+  const proche = { name: {
+    large: { bons: 24, sur: 24, ms: 10, reussites: bits(24, []) },
+    small: { bons: 21, sur: 24, ms: 5, reussites: bits(24, [0, 1, 2]) },
+  } } as never;
+  const rangs2 = [{ palier: "large", r: rate(24, 24), ms: 10 }, { palier: "small", r: rate(21, 24), ms: 5 }];
+  const indecis = recommander("name", rangs2, proche);
+  assert.ok(indecis.some((l) => /not evidence they are equivalent/.test(l)), indecis.join("\n"));
+  assert.ok(indecis.some((l) => /No recommendation for name/.test(l)), indecis.join("\n"));
+  assert.ok(!indecis.some((l) => /Take the cheaper one/.test(l)));
+
+  /* Avec une marge et un échantillon qui la tient : la seule branche qui recommande. */
+  const large200 = bits(200, [0, 1]), small200 = bits(200, [2, 3, 4]);
+  const serre = { name: {
+    large: { bons: 198, sur: 200, ms: 10, reussites: large200 },
+    small: { bons: 197, sur: 200, ms: 5, reussites: small200 },
+  } } as never;
+  const rangs3 = [{ palier: "large", r: rate(198, 200), ms: 10 }, { palier: "small", r: rate(197, 200), ms: 5 }];
+  const retenu = recommander("name", rangs3, serre, 0.02);
+  assert.ok(retenu.some((l) => /Take the cheaper one/.test(l)), retenu.join("\n"));
+  assert.ok(retenu.some((l) => /Recommendation for name: small/.test(l)), retenu.join("\n"));
+
+  /* Une chaîne déclarée sans durée n'est pas écartée des candidats, et sa phrase n'invente
+     pas de rapport de vitesse. */
+  const declaree = { name: {
+    large: { bons: 198, sur: 200, ms: 10, reussites: large200 },
+    "your chain": { bons: 197, sur: 200, ms: Number.NaN, reussites: small200 },
+  } } as never;
+  const rangs4 = [{ palier: "large", r: rate(198, 200), ms: 10 }, { palier: "your chain", r: rate(197, 200), ms: Number.NaN }];
+  const chaine = recommander("name", rangs4, declaree, 0.02);
+  assert.ok(chaine.some((l) => /your chain is non-inferior/.test(l)), chaine.join("\n"));
+  assert.ok(!chaine.some((l) => /× faster/.test(l)), "sans durée mesurée, aucun rapport de vitesse.");
+});
+
+test("le fichier livré porte la recommandation, mot pour mot, et dit quand aucune marge n'a été déclarée", async () => {
+  const { rapportPourLeClient } = await import("./your-cases.ts");
+  const base = {
+    cas: 24, champs: ["name"], date: "2026-09-03",
+    questions: { name: { texte: "What is the name of the client?", provenance: "mesuree" as const } },
+    avecRegles: false, lignes: [["`name`", "large", "95.8 %", "[80–99]", 24, "10 ms"]],
+  };
+  const sans = rapportPourLeClient({ ...base, verdicts: [{ champ: "name", lignes: ["small is separably worse than large on these 24 cases: 7 of 7 disagreements go to large (McNemar exact, p = 0.016).", "large wins outright on this sample."] }] });
+  assert.match(sans, /## Recommendation per field/);
+  assert.match(sans, /No margin was declared, so no cheaper tier is recommended/);
+  assert.match(sans, /7 of 7 disagreements go to large/);
+  assert.match(sans, /only separation was tested, never sufficiency/);
+  const avec = rapportPourLeClient({ ...base, marge: 0.02, verdicts: [{ champ: "name", lignes: ["x"] }] });
+  assert.match(avec, /Margin declared: \*\*2 point\(s\)\*\*/);
+  assert.match(avec, /the margin is your declaration, not a measurement/);
 });

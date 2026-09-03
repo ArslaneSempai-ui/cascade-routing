@@ -38,7 +38,8 @@ import { loadExtractors, loadClassifiers, loadGeneratifs, extract, correct, clas
   MODELES_EXTRACTION, MODELES_CLASSEMENT, type CleModele } from "./tiers.ts";
 import { poidsAbsents, motifDEcart, CODE_ECART_TEMOIN, exigerPoidsSurPlace } from "./poids.ts";
 import { TIERS, ENCODEURS, GENERATIFS } from "./paliers.ts";
-import { rate, writeRate, cellulesDeTaux, distinguishable, CONFIANCE, ENOUGH } from "./interval.ts";
+import { rate, writeRate, cellulesDeTaux, CONFIANCE, ENOUGH, type Rate } from "./interval.ts";
+import { apparier, juger, phrase } from "./comparaison-appariee.ts";
 import { evaluerRegles, direLesRefus, type ReglesEvaluees } from "./regles-bornees.ts";
 import { table } from "./figures.ts";
 
@@ -159,6 +160,12 @@ export function lireEchantillon(brut: string | undefined): number | undefined {
 /** Ce que le relevé garde d'un champ sous un palier. */
 export type EntreeDuReleve = {
   bons: number; sur: number; ms: number;
+  /**
+   * Un caractère par cas, dans l'ordre du fichier : « 1 » juste, « 0 » faux, « - » non mesuré
+   * (un cas absent du fichier d'issues du client). C'est ce qui rend la comparaison APPARIÉE
+   * possible — deux taux ne suffisent pas, voir `comparaison-appariee.ts`.
+   */
+  reussites?: string;
   /**
    * Parmi les cas notés faux, ceux dont la réponse porte EXACTEMENT les mêmes mots que la
    * vérité attendue, dans un autre ordre. Un désaccord de convention, pas une extraction
@@ -739,9 +746,30 @@ export function ecrireMs(ms: number, declaree: boolean): string {
  * qu'on n'a pas prévues.
  */
 export const DRAPEAUX_CONNUS: readonly string[] = [
-  "cases", "rules", "sorties", "questions", "task", "sample",
+  "cases", "rules", "sorties", "questions", "task", "sample", "margin",
   "llm", "journal", "show-questions", "yes-run-it",
 ];
+
+/**
+ * LA MARGE DE NON-INFÉRIORITÉ, EN POINTS, ET SEULEMENT SI LE CLIENT L'A ÉCRITE.
+ *
+ * « Le petit modèle suffit » n'est pas « le petit modèle n'est pas significativement moins
+ * bon » : c'est « il perd moins que ce que j'accepte de perdre ». Ce chiffre-là appartient à
+ * celui qui paie ; sans lui, aucune donnée n'établit qu'un palier suffit, et la commande ne
+ * recommande rien. Même discipline que `--sample` : une valeur illisible refuse, elle ne se
+ * fait pas ignorer. Rendue en PROPORTION (2 → 0,02), l'unité de `comparaison-appariee.ts`.
+ */
+export function lireMarge(brut: string | undefined): number | undefined {
+  if (brut === undefined) return undefined;
+  const n = Number(brut);
+  if (!/^\d+(\.\d+)?$/.test(brut.trim()) || !(n > 0) || n >= 100) {
+    throw new Error(`--margin=${brut} is not a loss in percentage points strictly between 0 and 100 `
+      + `(e.g. --margin=2).\n`
+      + `  Left as it was, this flag would have been ignored without a word, and a tier would\n`
+      + `  have been recommended against a margin nobody declared.`);
+  }
+  return n / 100;
+}
 
 export const TACHES: readonly string[] = ["extract", "classify"];
 
@@ -982,11 +1010,65 @@ export function chargerRegles(chemin: string, champs: readonly string[]): Record
  * lire chargerait deux modèles, donc ne tournerait pas — et le seul endroit qui a menti
  * resterait sans témoin.
  */
+/**
+ * LA RECOMMANDATION D'UN CHAMP — pure, pour qu'un témoin la lise sans lancer un modèle.
+ *
+ * Les candidats sont les paliers MOINS CHERS que la tête (ici : plus rapides ; une durée
+ * déclarée absente passe, on ne sait pas s'il est moins cher), du moins cher au plus cher.
+ * Chacun est comparé à la tête CAS PAR CAS (`comparaison-appariee.ts`). Le retenu est le
+ * moins cher des non-inférieurs — ce qui demande une marge déclarée ; sans elle il n'y en a
+ * aucun, et chaque phrase dit ce que l'échantillon sépare ou ne sépare pas.
+ */
+export function recommander(
+  champ: string,
+  rangs: { palier: string; r: Rate; ms: number }[],
+  releve: Record<string, Record<TierName, EntreeDuReleve>>,
+  marge?: number,
+): string[] {
+  const tete = rangs[0]!;
+  const bitsDe = (p: string) => releve[champ]?.[p as TierName]?.reussites;
+  const cout = (ms: number) => (Number.isFinite(ms) ? ms : Number.POSITIVE_INFINITY);
+  const candidats = rangs.slice(1)
+    .filter((x) => !Number.isFinite(x.ms) || x.ms < tete.ms)
+    .sort((a, b) => cout(a.ms) - cout(b.ms));
+  if (candidats.length === 0) {
+    return [`${tete.palier} wins outright on this sample: nothing cheaper to compare it with.`];
+  }
+  const lignes: string[] = [];
+  let retenu: string | undefined;
+  let tousPires = true;
+  for (const x of candidats) {
+    const bt = bitsDe(tete.palier), bx = bitsDe(x.palier);
+    if (!bt || !bx) {
+      tousPires = false;
+      lignes.push(`${x.palier}: no case-by-case verdicts, so it cannot be compared with ${tete.palier} case for case.`);
+      continue;
+    }
+    const a = apparier(bt, bx);
+    const v = juger(a, marge);
+    lignes.push(phrase({ tete: tete.palier, candidat: x.palier, a, v, msTete: tete.ms, msCandidat: x.ms }));
+    if (v.genre === "non-inferieur" && retenu === undefined) retenu = x.palier;
+    if (!(v.genre === "separable" && v.sens === "tete")) tousPires = false;
+  }
+  if (retenu !== undefined) {
+    lignes.push(`Recommendation for ${champ}: ${retenu} — the cheapest tier non-inferior to ${tete.palier} within your margin.`);
+  } else if (tousPires) {
+    lignes.push(`${tete.palier} wins outright on this sample.`);
+  } else {
+    lignes.push(`No recommendation for ${champ}.`);
+  }
+  return lignes;
+}
+
 export function rapportPourLeClient(o: {
   cas: number; champs: string[]; date: string;
   questions: Record<string, { texte: string; provenance: "fournie" | "mesuree" | "deduite" }>;
   lignes: (string | number)[][];
   avecRegles: boolean;
+  /** La recommandation de chaque champ, les MÊMES phrases que la console. */
+  verdicts: { champ: string; lignes: string[] }[];
+  /** La marge déclarée, en proportion ; absente, aucun palier n'est recommandé. */
+  marge?: number;
 }): string {
   const deduites = o.champs.filter((c) => o.questions[c]!.provenance === "deduite");
   const entete = [
@@ -1019,14 +1101,38 @@ export function rapportPourLeClient(o: {
      au tableau, et la section entière se rend en un seul paragraphe. */
   entete.push(``, `## Accuracy per field and tier`, ``, ``);
 
+  /*
+   * LA RECOMMANDATION VOYAGE AVEC LE CHIFFRE, ET C'EST LA MÊME PHRASE QU'À LA CONSOLE.
+   *
+   * Le fichier ne portait qu'un tableau de taux ; la recommandation vivait dans le terminal
+   * et mourait avec lui — et c'est le fichier qui est classé, transféré, cité. Les phrases
+   * viennent de `recommander`, jamais retapées ici.
+   */
+  const recommandation = [``, ``, `## Recommendation per field`, ``,
+    `Two tiers on the same cases are compared case for case (McNemar, exact). A cheaper tier `
+    + `is recommended only when its worst case at 95 % stays inside the margin declared with `
+    + "`--margin` — non-inferiority. \"Not significantly different\" is not \"equivalent\".",
+    ``,
+    o.marge === undefined
+      ? `**No margin was declared, so no cheaper tier is recommended.** The lines below say what `
+        + `these cases can and cannot separate.`
+      : `Margin declared: **${(100 * o.marge).toString()} point(s)** — your declaration, not a measurement.`,
+    ``,
+    ...o.verdicts.map((v) => `- **${cellule(v.champ)}**\n${v.lignes.map((l) => `  - ${l}`).join("\n")}`),
+  ];
+
   const pied = [``, ``, `## What this does not establish`, ``,
     `- That these rates hold on documents other than the ${o.cas} you supplied.`,
     `- ${o.avecRegles ? "That your regexes generalise beyond these cases."
       : "What a free tier would carry: no rule of yours was measured — see `--rules`."}`,
     `- That the tiers here are the ones you should run: they are the ones this repository has.`,
+    `- ${o.marge === undefined
+      ? "Which tier suffices: without a declared margin, only separation was tested, never sufficiency."
+      : "That a tier inside your margin is the right choice: the margin is your declaration, not a measurement."}`,
   ];
   return entete.join("\n")
     + table(["Field", "Tier", "Accuracy", "Interval", "n", "Median ms"], o.lignes)
+    + recommandation.join("\n")
     + pied.join("\n") + "\n";
 }
 
@@ -1057,14 +1163,18 @@ export async function mesurerVosCas(
     if (sorties) {
       const siennes = sorties.issues[champ] ?? {};
       let bons = 0, apparies = 0;
+      const bits: string[] = [];
       for (const c of cas) {
-        if (!(c.id in siennes)) continue;      // absent de son fichier : compté ailleurs, pas ici
+        if (!(c.id in siennes)) { bits.push("-"); continue; }   // absent de son fichier : compté ailleurs, pas ici
         apparies++;
-        if (siennes[c.id] === "clean") bons++;
+        const juste = siennes[c.id] === "clean";
+        if (juste) bons++;
+        bits.push(juste ? "1" : "0");
       }
       releve[champ]![sorties.nom as TierName] = {
         bons, sur: apparies,
         ms: sorties.declares?.msParDocument ?? Number.NaN,
+        reussites: bits.join(""),
       };
     }
 
@@ -1074,17 +1184,21 @@ export async function mesurerVosCas(
     const valeursRegle = regles?.valeurs[champ];
     if (valeursRegle) {
       let bons = 0;
+      const bits: string[] = [];
       for (let i = 0; i < cas.length; i++) {
-        if (correct(valeursRegle[i] ?? "", cas[i]!.truth[champ]!)) bons++;
+        const juste = correct(valeursRegle[i] ?? "", cas[i]!.truth[champ]!);
+        if (juste) bons++;
+        bits.push(juste ? "1" : "0");
       }
       releve[champ]!["rules" as TierName] = {
-        bons, sur: cas.length, ms: regles!.ms[champ] ?? 0,
+        bons, sur: cas.length, ms: regles!.ms[champ] ?? 0, reussites: bits.join(""),
       };
     }
 
     for (const palier of paliers) {
       let bons = 0, desordre = 0;
       const durees: number[] = [];
+      const bits: string[] = [];
       /*
        * L'AVANCEMENT SE COMPTE, IL NE SE PRÉDIT PAS.
        *
@@ -1124,14 +1238,17 @@ export async function mesurerVosCas(
         });
         /* La forme est notée EN MÊME TEMPS que la justesse, sur le même appel : deux
            parcours séparés diraient un jour deux choses différentes du même corpus. */
-        if (noter(palier, champ, got, c.truth[champ]!, borne.texte) === "juste") bons++;
+        const juste = noter(palier, champ, got, c.truth[champ]!, borne.texte) === "juste";
+        if (juste) bons++;
         /* Noté faux, mais avec exactement les mêmes mots : c'est un désaccord de convention.
            On compte, on ne garde rien — le compte reste chez le client comme le reste. */
         else if (memesMots(got, c.truth[champ]!)) desordre++;
+        bits.push(juste ? "1" : "0");
       }
       durees.sort((a, b) => a - b);
       releve[champ]![palier] = {
         bons, sur: cas.length, ms: durees[Math.floor(durees.length / 2)] ?? 0,
+        reussites: bits.join(""),
         ...(desordre > 0 ? { desordre } : {}),
       };
     }
@@ -1239,6 +1356,11 @@ The CSV wants an id, the input text, then one column per field to extract:
          sample of client cases the same field scored 0 % under a derived question and 100 %
          under the client's own: supply these before concluding anything about a tier.
 --llm    add the local generative tiers (needs Ollama and the models pulled).
+--margin  the loss, in percentage points, you would accept to take a cheaper tier (e.g.
+         --margin=2). Two tiers on the same cases are compared case for case (McNemar,
+         exact); a cheaper tier is recommended only when its worst case at 95 % stays
+         inside this margin — non-inferiority, not "no significant difference". Without
+         it the command says what these cases can separate, and recommends nothing.
 --show-questions  print the derived question for every field, however many there are.
          Without it the list is cut after the first few and the rest are counted.
 --yes-run-it  run even when the number of model calls is above the printed ceiling. The
@@ -1263,6 +1385,7 @@ Nothing leaves your machine: the models are local and this path makes no network
    */
   const echantillonBrut = arg("sample");
   const echantillon = lireEchantillon(echantillonBrut);
+  const marge = lireMarge(arg("margin"));
   let { champs, cas, ecartees, courtes, demesurees, lecture } = lireCsv(readFileSync(fichier, "utf8"));
 
   /*
@@ -1600,6 +1723,7 @@ Nothing leaves your machine: the models are local and this path makes no network
 
   console.log("\nACCURACY PER FIELD, with the interval at "
     + `${(CONFIANCE.niveau * 100).toFixed(0)} %\n`);
+  const verdicts: { champ: string; lignes: string[] }[] = [];
   for (const champ of champs) {
     const rangs = Object.entries(releve[champ]!)
       .map(([palier, r]) => ({ palier, r: rate(r.bons, r.sur), ms: r.ms }))
@@ -1616,19 +1740,25 @@ Nothing leaves your machine: the models are local and this path makes no network
      * cher parmi les équivalents » recommanderait alors toujours le plus rapide, sur zéro
      * preuve, avec l'aplomb d'un conseil. C'est le piège exact que cet outil dénonce chez
      * les autres, et il y est tombé à sa première exécution sur trois cas.
+     *
+     * ET AU-DESSUS DU SEUIL, LA MÊME RÈGLE MENTAIT ENCORE. Mesuré le 3 septembre 2026 sur
+     * 24 cas : large 95,8 % [80–99], small 66,7 % [47–82], intervalles qui se touchent entre
+     * 80 et 82 — et la phrase disait « small is not measurably worse. Take the cheaper one. »
+     * Le chevauchement d'intervalles n'est pas un test apparié, et « pas significativement
+     * différent » n'est pas « équivalent ». La règle vit désormais dans `recommander`, qui
+     * compare cas par cas et ne recommande qu'à l'intérieur d'une marge déclarée.
      */
     const tete = rangs[0]!;
     if (!tete.r.reportable) {
-      console.log(`    → no recommendation: ${tete.r.n} cases cannot separate any of these. `
-        + `Bring at least ${ENOUGH}.\n`);
+      const ligne = `no recommendation: ${tete.r.n} cases cannot separate any of these. Bring at least ${ENOUGH}.`;
+      console.log(`    → ${ligne}\n`);
+      verdicts.push({ champ, lignes: [ligne] });
       continue;
     }
-    const equivalents = rangs.filter((x) => !distinguishable(x.r, tete.r));
-    const retenu = equivalents.reduce((a, b) => (b.ms < a.ms ? b : a));
-    console.log(retenu.palier === tete.palier
-      ? `    → ${tete.palier} wins outright on this sample.\n`
-      : `    → ${retenu.palier} is not measurably worse than ${tete.palier} and is `
-        + `${(tete.ms / Math.max(retenu.ms, 0.01)).toFixed(0)}× faster. Take the cheaper one.\n`);
+    const lignes = recommander(champ, rangs, releve, marge);
+    for (const l of lignes) console.log(`    → ${l}`);
+    console.log("");
+    verdicts.push({ champ, lignes });
   }
 
   const desordres = direLesDesordres(releve);
@@ -1661,7 +1791,7 @@ Nothing leaves your machine: the models are local and this path makes no network
 
   writeFileSync(sortie, rapportPourLeClient({
     cas: cas.length, champs, date: new Date().toISOString().slice(0, 10),
-    questions, avecRegles: reglesMesurees,
+    questions, avecRegles: reglesMesurees, verdicts, marge,
     lignes: champs.flatMap((champ) => Object.entries(releve[champ]!).map(([palier, r]) => {
       const q = rate(r.bons, r.sur);
       /* Le fichier passe par le MÊME formateur que la console : c'est lui qui porte le
