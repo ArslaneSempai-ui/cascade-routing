@@ -1493,6 +1493,14 @@ Nothing leaves your machine: the models are local and this path makes no network
   }
   if (!existsSync(fichier)) { console.error(`no such file: ${fichier}`); process.exit(1); }
 
+  /*
+   * L'ÉTAT DU DÉPÔT SE LIT AU DÉPART, PAS À L'ÉCRITURE. Mesuré le 3 septembre 2026 : une
+   * passe d'une heure a écrit `commit 3599830, sale: false` alors qu'elle avait été lancée
+   * sous 7592f8e avec un arbre modifié — le code qui a mesuré est celui chargé au départ, et
+   * `etatDuDepot()` appelé à la fin décrivait le dépôt d'après deux commits. Un relevé qui
+   * cite le mauvais commit n'est pas reproductible par qui le suit, et rien ne le dit.
+   */
+  const etatAuDepart = etatDuDepot();
   const tache = lireTache(arg("task"));
   /*
    * `Number(x)` S'EXÉCUTE AVANT QU'ON DEMANDE SI x EST UN NOMBRE.
@@ -1944,7 +1952,7 @@ Nothing leaves your machine: the models are local and this path makes no network
    * rapport signé. Le markdown est pour un lecteur ; ce fichier est pour une machine.
    */
   const releveJson = fichier.replace(/\.csv$/i, "") + "-measured.json";
-  const etat = etatDuDepot();
+  const etat = etatAuDepart;
   const enregistrement = releveClient({
     fichier, octets: readFileSync(fichier), cas: cas.length, casDansLeFichier, champs, questions,
     releve, verdicts, marge, sorties, measuredAt: new Date().toISOString(),
