@@ -109,6 +109,14 @@ jobs:
       # on restaure.
       - run: npm ci --ignore-scripts
 
+      # `--ignore-scripts` SAUTE AUSSI LE `prepare` DE CE DÉPÔT, qui branche les crochets.
+      # Le README le dit à l'acheteur en toutes lettres — « run git config core.hooksPath
+      # .githooks yourself » — et le coureur ne le faisait pas : depuis le passage à
+      # `--ignore-scripts` (31/08), le témoin « les crochets qui refusent sont versionnés,
+      # et installés » lisait un `core.hooksPath` vide et la chaîne était rouge sur main
+      # (12ae650, puis 18a572c le 3 septembre). Le coureur fait le même geste que le README.
+      - run: git config core.hooksPath .githooks
+
       # Les poids d'encodeur — 740 Mo, mesurés — vivent sous node_modules, ce que la
       # bibliothèque décide et pas nous. La clé porte le verrou de dépendances : une
       # bibliothèque qui change de version peut changer de disposition.
