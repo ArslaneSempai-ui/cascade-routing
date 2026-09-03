@@ -32,7 +32,13 @@ import { isMain } from "./cli.ts";
 import { pairedVerdict } from "./interval.ts";
 
 type Cellule = { reussites?: string; accuracy: number; items: number };
-type Releve = { measuredAt: string; extraction: Record<string, Record<string, Cellule>> };
+/** Un relevé du banc, ou un relevé CLIENT (`<file>-measured.json`) : la même forme, plus la
+    source dont il vient — deux relevés client ne se comparent cas par cas que sur le même fichier. */
+type Releve = {
+  measuredAt: string;
+  extraction: Record<string, Record<string, Cellule>>;
+  source?: { file?: string; sha256?: string; cases?: number };
+};
 
 const RACINE = fileURLToPath(new URL("..", import.meta.url));
 
@@ -161,10 +167,35 @@ export function comparer(a: Releve, b: Releve): Comparaison {
     cellulesEcartees: ecartees, casCompares: cas, gagnes: gTot, perdus: pTot, ecarts };
 }
 
+/**
+ * UN RELEVÉ CLIENT VIT À CÔTÉ DU FICHIER DU CLIENT, PAS À LA RACINE DU DÉPÔT.
+ *
+ * `join(RACINE, "/Users/…/cas-measured.json")` fabriquait un chemin sous le dépôt qui n'existe
+ * pas, et le seul diff que le site promet à un acheteur — « run it twice, compare » — ne
+ * pouvait pas lire ce que `measure:yours` venait d'écrire. Un chemin qui existe tel quel est
+ * pris tel quel ; le repli sur la racine ne sert qu'aux relevés livrés.
+ */
 function lire(f: string): Releve {
-  const c = join(RACINE, f);
+  const c = existsSync(f) ? f : join(RACINE, f);
   if (!existsSync(c)) throw new Error(`${f} does not exist. Records available: ${relevesDisponibles().join(", ")}`);
   return JSON.parse(readFileSync(c, "utf8")) as Releve;
+}
+
+/**
+ * DEUX RELEVÉS CLIENT NE SE COMPARENT QUE SUR LE MÊME FICHIER.
+ *
+ * Les réussites par cas sont dans l'ordre du CSV, sans identifiant : apparier le cas i d'un
+ * fichier avec le cas i d'un autre produirait un chiffre lisible et faux — la faute exacte
+ * que ce diff refuse déjà pour deux échantillons de tailles différentes, mais que deux
+ * fichiers de même taille ne montreraient pas. L'empreinte de la source décide.
+ */
+export function sourcesIncompatibles(a: Releve, b: Releve): string | null {
+  const sa = a.source?.sha256, sb = b.source?.sha256;
+  if (!sa || !sb || sa === sb) return null;
+  return `these two records were measured on DIFFERENT files — ${a.source?.file ?? "?"} (${sa.slice(0, 12)}…) `
+    + `against ${b.source?.file ?? "?"} (${sb.slice(0, 12)}…). Case-by-case comparison pairs the i-th `
+    + `case of one file with the i-th case of the other, which means nothing across two files. `
+    + `Measure the same file twice, or compare the rates in each report by hand.`;
 }
 
 if (isMain(import.meta)) {
@@ -197,6 +228,12 @@ if (isMain(import.meta)) {
     console.error("  reported as a case lost. This tool exists to say what a rising aggregate hides,");
     console.error("  and in this order it would say the opposite of what happened.");
     console.error(`\n  → node src/diff.ts ${fb} ${fa}\n`);
+    process.exit(2);
+  }
+
+  const incompatibles = sourcesIncompatibles(ra, rb);
+  if (incompatibles) {
+    console.error(`\n  ${incompatibles}\n`);
     process.exit(2);
   }
 

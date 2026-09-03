@@ -1247,3 +1247,50 @@ test("le fichier livré porte la recommandation, mot pour mot, et dit quand aucu
   assert.match(avec, /Margin declared: \*\*2 point\(s\)\*\*/);
   assert.match(avec, /the margin is your declaration, not a measurement/);
 });
+
+/*
+ * LE RELEVÉ CLIENT — ce qu'une machine peut relire, sceller, comparer et signer.
+ *
+ * Construit sans modèle depuis un relevé en mémoire : la forme du banc, aucune valeur, le
+ * nom nu du fichier, et un scellé qui correspond. C'est la matière première de `diff`, de
+ * `sceller` et du composant licencié — la couture que la revue du 3 septembre 2026 a trouvée
+ * absente.
+ */
+test("releveClient : la forme du banc, des comptes et des bits, jamais une valeur, et un nom de fichier nu", async () => {
+  const { releveClient } = await import("./your-cases.ts");
+  const { empreinteDuReleve } = await import("./measure.ts");
+  const releve = { name: {
+    large: { bons: 23, sur: 24, ms: 10, reussites: "111110111111111111111111", vides: 1, faux: 0 },
+    small: { bons: 16, sur: 24, ms: 5, reussites: "100001000111111111111111", vides: 2, faux: 6, desordre: 1 },
+    "your chain": { bons: 20, sur: 22, ms: Number.NaN, reussites: "1111111111-1111111111-11", vides: 1, faux: 1 },
+  } } as never;
+  const r = releveClient({
+    fichier: "/Users/someone/Documents/secret-folder/cas.csv", octets: Buffer.from("id,text,name\n1,Zorglub Wyvernheim,Zorglub Wyvernheim\n"),
+    cas: 24, casDansLeFichier: 30, champs: ["name"],
+    questions: { name: { texte: "What is the name of the client?", provenance: "mesuree" } },
+    releve, verdicts: [{ champ: "name", lignes: ["large wins outright on this sample."] }],
+    marge: 0.02, measuredAt: "2026-09-03T12:00:00.000Z", code: { commit: "427016b", sale: false },
+    sorties: { nom: "your chain", issues: {}, declares: { coutParMilleDocuments: 3.2, msParDocument: undefined } } as never,
+  });
+  assert.equal(r.kind, "cascade-client-record");
+  assert.deepEqual(r.source, { file: "cas.csv", sha256: r.source.sha256, cases: 24, casesInFile: 30 });
+  assert.match(r.source.sha256, /^[0-9a-f]{64}$/);
+  assert.deepEqual(r.tiers.sort(), ["large", "small", "your chain"]);
+  assert.deepEqual(r.extraction.large!.name, {
+    accuracy: 23 / 24, items: 24, low: r.extraction.large!.name!.low, high: r.extraction.large!.name!.high,
+    latency: 10, reussites: "111110111111111111111111", blank: 1, wrong: 0,
+  });
+  assert.equal(r.extraction.small!.name!.reordered, 1);
+  assert.equal(r.extraction["your chain"]!.name!.latency, null, "une durée déclarée absente est null, pas zéro.");
+  assert.deepEqual(r.declared, { "your chain": { costPerThousandDocuments: 3.2, msPerDocument: undefined } });
+  assert.equal(r.margin, 0.02);
+  assert.deepEqual(r.recommendation, { name: ["large wins outright on this sample."] });
+  const texte = JSON.stringify(r);
+  assert.ok(!texte.includes("Zorglub"), "aucune valeur du fichier ne doit entrer dans le relevé.");
+  assert.ok(!texte.includes("secret-folder") && !texte.includes("/Users/"), "aucun chemin : le nom nu du fichier, rien d'autre.");
+  /* Scellé : posé par l'appelant, vérifié comme ceux du banc. */
+  r.empreinte = empreinteDuReleve(r);
+  assert.equal(empreinteDuReleve(r), r.empreinte, "le scellé doit se recalculer à l'identique sur le relevé scellé.");
+  const altere = { ...r, extraction: { ...r.extraction, large: { name: { ...r.extraction.large!.name!, accuracy: 1 } } } };
+  assert.notEqual(empreinteDuReleve(altere), r.empreinte, "un taux modifié à la main doit casser le scellé.");
+});

@@ -3507,7 +3507,7 @@ test("la version de sharp installée est au-dessus des CVE de libvips", () => {
  * qui est ecrit. Une garde qui inspecte la source rate une valeur ecrite par un autre chemin ;
  * celle-ci regarde ce qui sort.
  */
-test("aucune valeur du client n'entre dans le fichier que l'outil lui rend", (t) => {
+test("aucune valeur du client n'entre dans le fichier que l'outil lui rend", async (t) => {
   const dossier = mkdtempSync(join(tmpdir(), "cascade-clause-"));
   try {
     /* Des valeurs qu'aucun agregat ne pourrait produire par hasard : si l'une d'elles
@@ -3587,6 +3587,23 @@ test("aucune valeur du client n'entre dans le fichier que l'outil lui rend", (t)
     /* Et le contrôle doit avoir REGARDE quelque chose : un fichier vide passerait sinon. */
     assert.ok(rendu.includes("Accuracy") && rendu.length > 100,
       "le fichier rendu est vide ou sans table : le zero ci-dessus ne prouve rien.");
+
+    /* ET LE RELEVÉ SCELLÉ ÉCRIT À CÔTÉ — même clause, même contrôle. Il porte des comptes et
+       des bits, jamais une valeur ; et son scellé doit correspondre à son contenu, sinon
+       `diff` et le composant licencié liraient un fichier que personne ne peut vérifier. */
+    const releveJson = sortie.replace(/\.md$/, ".json");
+    assert.ok(existsSync(releveJson), "le relevé scellé <file>-measured.json n'a pas été écrit à côté du rapport.");
+    const brutJson = readFileSync(releveJson, "utf8");
+    const fuitesJson = TEMOINS.filter((v) => brutJson.includes(v));
+    assert.deepEqual(fuitesJson, [], `valeur(s) du client dans le relevé scellé : ${fuitesJson.join(", ")}.`);
+    const { empreinteDuReleve } = await import("./measure.ts");
+    const enregistrement = JSON.parse(brutJson) as { empreinte?: string; source?: { file?: string }; extraction?: object };
+    assert.equal(enregistrement.empreinte, empreinteDuReleve(enregistrement),
+      "le relevé client n'est pas scellé, ou son scellé ne correspond pas à son contenu.");
+    assert.ok(enregistrement.source?.file && !enregistrement.source.file.includes("/"),
+      "la source doit être un nom de fichier nu — un chemin porterait le nom d'utilisateur.");
+    assert.ok(enregistrement.extraction && Object.keys(enregistrement.extraction).length >= 2,
+      "le relevé ne porte pas ses paliers : le contrôle au-dessus n'a rien regardé.");
   } finally {
     rmSync(dossier, { recursive: true, force: true });
   }

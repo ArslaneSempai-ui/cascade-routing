@@ -749,7 +749,7 @@ const commandes = (() => {
     ["dossier", "the validation file a reviewer signs"],
     ["sonde", "the generative probe, regenerated from the frozen profile — it was hand-typed and eleven of its figures had gone stale"],
     ["start", "the screen, on localhost:4670"],
-    ["measure:yours", "your own cases, from a CSV — nothing leaves your machine"],
+    ["measure:yours", "your own cases, from a CSV — nothing leaves your machine. Writes a report beside the file, and a sealed record `<file>-measured.json` (counts and per-case verdicts, never a value) that `diff` compares and `sceller` re-verifies"],
     ["benchmark", "the same measurement on a public labelled dataset — the one command that downloads: the dataset comes down, nothing of yours goes up"],
     ["intake", "turn a filled-in questionnaire into the assumptions a run uses"],
     ["egress", "watch the network while a measurement runs, and record what it sees"],

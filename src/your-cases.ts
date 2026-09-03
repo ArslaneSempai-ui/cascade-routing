@@ -40,6 +40,10 @@ import { poidsAbsents, motifDEcart, CODE_ECART_TEMOIN, exigerPoidsSurPlace } fro
 import { TIERS, ENCODEURS, GENERATIFS } from "./paliers.ts";
 import { rate, writeRate, cellulesDeTaux, CONFIANCE, ENOUGH, type Rate } from "./interval.ts";
 import { apparier, juger, phrase } from "./comparaison-appariee.ts";
+import { createHash } from "node:crypto";
+import { basename } from "node:path";
+import { empreinteDuReleve } from "./measure.ts";
+import { etatDuDepot } from "./arbre-propre.ts";
 import { evaluerRegles, direLesRefus, type ReglesEvaluees } from "./regles-bornees.ts";
 import { table } from "./figures.ts";
 
@@ -166,6 +170,10 @@ export type EntreeDuReleve = {
    * possible — deux taux ne suffisent pas, voir `comparaison-appariee.ts`.
    */
   reussites?: string;
+  /** Les échecs, partagés : une valeur VIDE déclenche une relecture, une valeur FAUSSE entre
+      au dossier. C'est cette partition que l'exposition en euros lit — un taux ne la porte pas. */
+  vides?: number;
+  faux?: number;
   /**
    * Parmi les cas notés faux, ceux dont la réponse porte EXACTEMENT les mêmes mots que la
    * vérité attendue, dans un autre ordre. Un désaccord de convention, pas une extraction
@@ -1010,6 +1018,82 @@ export function chargerRegles(chemin: string, champs: readonly string[]): Record
  * lire chargerait deux modèles, donc ne tournerait pas — et le seul endroit qui a menti
  * resterait sans témoin.
  */
+/** Une cellule du relevé client — la forme du banc (`Profile`), plus la partition des échecs. */
+export type CelluleClient = {
+  accuracy: number; items: number; low: number; high: number;
+  /** Médiane mesurée en ms ; `null` pour une chaîne déclarée sans durée. */
+  latency: number | null;
+  reussites: string; blank: number; wrong: number;
+  /** Notés faux avec exactement les mêmes mots dans un autre ordre — un désaccord de convention. */
+  reordered?: number;
+};
+
+/**
+ * LE RELEVÉ CLIENT — ce qu'une machine peut relire, sceller, comparer, et signer.
+ *
+ * `measure:yours` n'écrivait qu'un markdown. Rien à sceller, rien à donner à `diff` dans six
+ * mois, rien à donner aux modules qui calculent le taux par dossier, l'exposition et le
+ * rapport signé : la couture au milieu de l'offre n'existait pas (revue du 3 septembre 2026).
+ *
+ * La forme est celle du banc — `extraction[palier][champ]`, `reussites` bit à bit — pour que
+ * `diff` et `sceller` le lisent sans un mot de plus. Il ne porte AUCUNE valeur : des comptes,
+ * des taux, des bits, et le nom nu du fichier — un chemin porterait le nom d'utilisateur.
+ */
+export type ReleveClient = {
+  kind: "cascade-client-record"; version: 1;
+  measuredAt: string;
+  code: { commit: string; sale: boolean } | null;
+  source: { file: string; sha256: string; cases: number; casesInFile: number };
+  fields: string[];
+  questions: Record<string, { texte: string; provenance: string }>;
+  margin: number | null;
+  tiers: string[];
+  declared: Record<string, { costPerThousandDocuments?: number; msPerDocument?: number }>;
+  extraction: Record<string, Record<string, CelluleClient>>;
+  recommendation: Record<string, string[]>;
+  empreinte?: string;
+};
+
+export function releveClient(o: {
+  fichier: string; octets: Buffer; cas: number; casDansLeFichier: number; champs: string[];
+  questions: Record<string, { texte: string; provenance: string }>;
+  releve: Record<string, Record<TierName, EntreeDuReleve>>;
+  verdicts: { champ: string; lignes: string[] }[];
+  marge?: number; sorties?: SortiesFournies; measuredAt: string;
+  code: { commit: string; sale: boolean } | null;
+}): ReleveClient {
+  const extraction: Record<string, Record<string, CelluleClient>> = {};
+  const tiers = new Set<string>();
+  for (const champ of o.champs) {
+    for (const [palier, e] of Object.entries(o.releve[champ] ?? {})) {
+      tiers.add(palier);
+      const r = rate(e.bons, e.sur);
+      (extraction[palier] ??= {})[champ] = {
+        accuracy: r.rate, items: e.sur, low: r.low, high: r.high,
+        latency: Number.isFinite(e.ms) ? e.ms : null,
+        reussites: e.reussites ?? "", blank: e.vides ?? 0, wrong: e.faux ?? 0,
+        ...(e.desordre ? { reordered: e.desordre } : {}),
+      };
+    }
+  }
+  const declared: ReleveClient["declared"] = o.sorties
+    ? { [o.sorties.nom]: {
+        costPerThousandDocuments: o.sorties.declares?.coutParMilleDocuments,
+        msPerDocument: o.sorties.declares?.msParDocument } }
+    : {};
+  return {
+    kind: "cascade-client-record", version: 1, measuredAt: o.measuredAt, code: o.code,
+    source: {
+      file: basename(o.fichier),
+      sha256: createHash("sha256").update(o.octets).digest("hex"),
+      cases: o.cas, casesInFile: o.casDansLeFichier,
+    },
+    fields: [...o.champs], questions: o.questions, margin: o.marge ?? null,
+    tiers: [...tiers], declared, extraction,
+    recommendation: Object.fromEntries(o.verdicts.map((v) => [v.champ, v.lignes])),
+  };
+}
+
 /**
  * LA RECOMMANDATION D'UN CHAMP — pure, pour qu'un témoin la lise sans lancer un modèle.
  *
@@ -1162,19 +1246,21 @@ export async function mesurerVosCas(
      */
     if (sorties) {
       const siennes = sorties.issues[champ] ?? {};
-      let bons = 0, apparies = 0;
+      let bons = 0, apparies = 0, vides = 0, faux = 0;
       const bits: string[] = [];
       for (const c of cas) {
         if (!(c.id in siennes)) { bits.push("-"); continue; }   // absent de son fichier : compté ailleurs, pas ici
         apparies++;
         const juste = siennes[c.id] === "clean";
         if (juste) bons++;
+        else if (siennes[c.id] === "blank") vides++;
+        else faux++;
         bits.push(juste ? "1" : "0");
       }
       releve[champ]![sorties.nom as TierName] = {
         bons, sur: apparies,
         ms: sorties.declares?.msParDocument ?? Number.NaN,
-        reussites: bits.join(""),
+        reussites: bits.join(""), vides, faux,
       };
     }
 
@@ -1183,20 +1269,23 @@ export async function mesurerVosCas(
        par palier sous l'étiquette « lent ». */
     const valeursRegle = regles?.valeurs[champ];
     if (valeursRegle) {
-      let bons = 0;
+      let bons = 0, vides = 0, faux = 0;
       const bits: string[] = [];
       for (let i = 0; i < cas.length; i++) {
-        const juste = correct(valeursRegle[i] ?? "", cas[i]!.truth[champ]!);
+        const sort = issue(valeursRegle[i] ?? "", cas[i]!.truth[champ]!);
+        const juste = sort === "clean";
         if (juste) bons++;
+        else if (sort === "blank") vides++;
+        else faux++;
         bits.push(juste ? "1" : "0");
       }
       releve[champ]!["rules" as TierName] = {
-        bons, sur: cas.length, ms: regles!.ms[champ] ?? 0, reussites: bits.join(""),
+        bons, sur: cas.length, ms: regles!.ms[champ] ?? 0, reussites: bits.join(""), vides, faux,
       };
     }
 
     for (const palier of paliers) {
-      let bons = 0, desordre = 0;
+      let bons = 0, desordre = 0, vides = 0, faux = 0;
       const durees: number[] = [];
       const bits: string[] = [];
       /*
@@ -1243,12 +1332,14 @@ export async function mesurerVosCas(
         /* Noté faux, mais avec exactement les mêmes mots : c'est un désaccord de convention.
            On compte, on ne garde rien — le compte reste chez le client comme le reste. */
         else if (memesMots(got, c.truth[champ]!)) desordre++;
+        /* Vide ou faux : la partition que l'exposition lit. La même règle que le journal. */
+        if (!juste) { if (issue(got, c.truth[champ]!) === "blank") vides++; else faux++; }
         bits.push(juste ? "1" : "0");
       }
       durees.sort((a, b) => a - b);
       releve[champ]![palier] = {
         bons, sur: cas.length, ms: durees[Math.floor(durees.length / 2)] ?? 0,
-        reussites: bits.join(""),
+        reussites: bits.join(""), vides, faux,
         ...(desordre > 0 ? { desordre } : {}),
       };
     }
@@ -1407,6 +1498,9 @@ Nothing leaves your machine: the models are local and this path makes no network
       + `  Nothing was measured, so nothing was written: a report over zero cases reads like\n`
       + `  one that measured something.`);
   }
+  /* Le compte AVANT tirage : le relevé scellé dit combien le fichier portait, et combien ont
+     été mesurés — deux nombres, sinon un échantillon passe pour le fichier entier. */
+  const casDansLeFichier = cas.length;
   /* Demander plus de cas qu'il n'y en a n'est pas une erreur, mais le silence en est une :
      le client doit savoir que son échantillon est le corpus entier. */
   if (echantillon !== undefined && echantillon >= cas.length) {
@@ -1806,7 +1900,25 @@ Nothing leaves your machine: the models are local and this path makes no network
         ecrireMs(r.ms, palier === sorties?.nom)];
     })),
   }));
-  console.log(`Written to ${sortie}\n`);
+  console.log(`Written to ${sortie}`);
+
+  /*
+   * ET LE RELEVÉ SCELLÉ, À CÔTÉ. C'est lui que `diff` compare dans six mois, que `sceller`
+   * revérifie, et que le composant licencié lit pour le taux par dossier, l'exposition et le
+   * rapport signé. Le markdown est pour un lecteur ; ce fichier est pour une machine.
+   */
+  const releveJson = fichier.replace(/\.csv$/i, "") + "-measured.json";
+  const etat = etatDuDepot();
+  const enregistrement = releveClient({
+    fichier, octets: readFileSync(fichier), cas: cas.length, casDansLeFichier, champs, questions,
+    releve, verdicts, marge, sorties, measuredAt: new Date().toISOString(),
+    code: etat ? { commit: etat.commit, sale: etat.sale.length > 0 } : null,
+  });
+  enregistrement.empreinte = empreinteDuReleve(enregistrement);
+  writeFileSync(releveJson, JSON.stringify(enregistrement, null, 2));
+  console.log(`Sealed record written to ${releveJson} — seal ${enregistrement.empreinte}.`);
+  console.log(`  Counts, rates and per-case verdicts, never a value. \`npm run diff -- <before> <after>\``);
+  console.log(`  compares two of them case by case; \`npm run sceller -- <file>\` recomputes the seal.\n`);
   if (!reglesMesurees) {
     console.log(reglesBrutes
       ? "Your --rules file was read, but no rule was measured on any field. The report says so."

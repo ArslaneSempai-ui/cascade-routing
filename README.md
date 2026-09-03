@@ -53,7 +53,7 @@ what that pass actually cost is stated below, read from the relevé rather than 
 | `npm run dossier` | the validation file a reviewer signs |
 | `npm run sonde` | the generative probe, regenerated from the frozen profile — it was hand-typed and eleven of its figures had gone stale |
 | `npm run start` | the screen, on localhost:4670 |
-| `npm run measure:yours` | your own cases, from a CSV — nothing leaves your machine |
+| `npm run measure:yours` | your own cases, from a CSV — nothing leaves your machine. Writes a report beside the file, and a sealed record `<file>-measured.json` (counts and per-case verdicts, never a value) that `diff` compares and `sceller` re-verifies |
 | `npm run benchmark` | the same measurement on a public labelled dataset — the one command that downloads: the dataset comes down, nothing of yours goes up |
 | `npm run intake` | turn a filled-in questionnaire into the assumptions a run uses |
 | `npm run egress` | watch the network while a measurement runs, and record what it sees |
@@ -131,7 +131,7 @@ several scripts chain shell commands, which hold under Git Bash and not under `c
 <!-- /figures:documents -->
 
 <!-- figures:tests -->
-**608 tests** across 67 files, counted from the sources rather than typed here.
+**612 tests** across 68 files, counted from the sources rather than typed here.
 <!-- /figures:tests -->
 
 Everything runs locally, and that is enforced rather than promised. The one call that could
