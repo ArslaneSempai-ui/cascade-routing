@@ -61,8 +61,10 @@ what that pass actually cost is stated below, read from the relevé rather than 
 | `npm run pages` | build docs/ and verify the published screen — required before publishing: docs/ carries a compiled copy of the code and goes stale silently |
 | `npm run captures` | re-record the images on this page |
 | `npm run ocr` | read the same documents as images and measure what the reading stage costs (macOS: Vision, no API) |
-
-⚠ 5 command(s) exist in package.json and are not classified above: `prepare`, `premiere-reponse`, `licences`, `menace`, `hostile`.
+| `npm run premiere-reponse` | the conclusion from the sealed records, in under a second, before `npm install` — the one-second version of this page |
+| `npm run licences` | regenerate `LICENCES.md`, the licence of every shipped package — `--check` fails the suite when the table drifts |
+| `npm run menace` | the threat model, executable rather than written: regenerates `SECURITE.md` from checks that run — `--check` fails the suite when it drifts |
+| `npm run hostile` | the hostile pass: every case of the hostile corpus on every tier, sealed in `corpus-hostile.json`; `CORPUS-HOSTILE.md` is generated from it — `--check` refuses if the page moved |
 <!-- /figures:commandes -->
 
 ```bash
@@ -110,6 +112,13 @@ Under that flag the library is told not to reach the network at all. If a model 
 says so, names it, gives its size, and stops — instead of stalling on a download that cannot
 finish. `npm run poids` with no argument reports what is on this machine.
 
+The encoder tiers run fully air-gapped. The model library asks for one tokenizer file at
+revision `main` whatever revision is pinned, and reads it from the cache before the network;
+the loader places a copy of the pinned file under that cache key, so no call remains — with
+the network open or refused. Measured on 3 September 2026: with the copies in place,
+`CASCADE_OFFLINE=1 npm run measure:yours` measures every cell without a single outbound
+request; the suite holds it.
+
 ## Requirements
 
 Node 24 or newer, on **macOS or Linux**. Windows has not been tested and is not claimed;
@@ -127,11 +136,12 @@ several scripts chain shell commands, which hold under Git Bash and not under `c
 | [`VALIDATION.md`](VALIDATION.md) | what was measured, on which corpus, and what the numbers do not establish |
 | [`cle-publique.pem`](cle-publique.pem) | the key that signs reports — verify one with `node src/verifier-rapport.mjs` |
 | [`retractations.json`](retractations.json) | every conclusion published here that turned out to be wrong |
+| [`rules-example.json`](rules-example.json) | an example `--rules` file for `measure:yours`: one regular expression per column of your CSV, the whole match is the value — copy it, keep the columns you have |
 | [`sbom.json`](sbom.json) | the dependency inventory, CycloneDX, for a procurement team |
 <!-- /figures:documents -->
 
 <!-- figures:tests -->
-**612 tests** across 68 files, counted from the sources rather than typed here.
+**617 tests** across 69 files, counted from the sources rather than typed here.
 <!-- /figures:tests -->
 
 Everything runs locally, and that is enforced rather than promised. The one call that could

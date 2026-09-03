@@ -222,8 +222,14 @@ const PRODUITS_HORS_DEPOT = new Set(["exposition.json"]);
  * un commit. Il refuse seulement que leur nombre MONTE sans que quelqu'un l'ait décidé.
  *
  * Un chiffre de sélection porte le compte de ce qu'il écarte, ou il ne se publie pas.
+ *
+ * MONTÉ À 19 LE 3 SEPTEMBRE 2026, et voici pourquoi : `rules-example.json`, le gabarit de
+ * `--rules` que le README et le site promettaient sans jamais le livrer. Deux expressions
+ * régulières écrites à la main, comme `intake-template.json` : il ne mesure rien, donc il
+ * ne cite aucun commit, et c'est juste. Il est nommé ici pour que le plancher garde son
+ * sens — le prochain fichier sans provenance devra encore s'expliquer.
  */
-const SANS_PROVENANCE_AU_26_08 = 18;
+const SANS_PROVENANCE_AU_26_08 = 19;
 
 test("chaque redirection de commit nomme les relevés qui la citent vraiment", () => {
   /*

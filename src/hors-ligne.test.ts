@@ -17,7 +17,7 @@
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync, readFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync, readFileSync, readdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -32,10 +32,10 @@ function cacheGarni(): string {
   const base = mkdtempSync(join(tmpdir(), "cascade-hors-ligne-"));
   for (const cle of MODELES_EXTRACTION) {
     const m = POIDS_MODELES[cle];
-    for (const rel of ["onnx/model.onnx", "config.json", "tokenizer.json"]) {
+    for (const rel of ["onnx/model.onnx", "config.json", "tokenizer.json", "tokenizer_config.json"]) {
       const p = join(base, m.depot, m.revision, rel);
       mkdirSync(dirname(p), { recursive: true });
-      writeFileSync(p, "des octets qui font office de modèle");
+      writeFileSync(p, rel === "tokenizer_config.json" ? `{"model": "${m.depot}"}` : "des octets qui font office de modèle");
     }
   }
   return base;
@@ -172,4 +172,59 @@ test("le chargeur pose bien le hors-ligne, au lieu de laisser la garde orpheline
   const fauxCorps = faux.slice(faux.indexOf("async function chargerAvecFilet"));
   assert.doesNotMatch(fauxCorps.slice(0, fauxCorps.indexOf("\n}\n")), /armerHorsLigne\(/,
     "le découpage déborde du corps : il verrait un appel resté ailleurs dans le fichier.");
+});
+
+/*
+ * LA RÉPARATION DU DERNIER APPEL RÉSEAU — le tokeniseur sous la clé « main ».
+ *
+ * Lu dans la bibliothèque le 3 septembre 2026 : `get_tokenizer_files()` demande
+ * `tokenizer_config.json` avec des options vides, donc à la révision `main`, et regarde le
+ * cache d'abord sous `<dépôt>/tokenizer_config.json`. Une copie du fichier épinglé à cet
+ * endroit, et la bibliothèque ne sort plus — ni réseau ouvert, ni réseau refusé. Le premier
+ * cas éprouve la copie sur un cache factice ; le second lance la vraie commande hors ligne
+ * et exige qu'elle mesure — il s'écarte, nommément, sur une machine sans poids.
+ */
+test("le tokeniseur épinglé est posé sous la clé « main », une fois, et jamais inventé", async () => {
+  const { poserTokenizerSousMain } = await import("./tiers.ts");
+  const garni = cacheGarni();
+  try {
+    const poses = poserTokenizerSousMain(MODELES_EXTRACTION, garni);
+    assert.deepEqual(poses.sort(), MODELES_EXTRACTION.map((c) => POIDS_MODELES[c].depot).sort(),
+      "les deux dépôts d'extraction doivent recevoir leur copie.");
+    for (const cle of MODELES_EXTRACTION) {
+      const m = POIDS_MODELES[cle];
+      assert.equal(readFileSync(join(garni, m.depot, "tokenizer_config.json"), "utf8"),
+        readFileSync(join(garni, m.depot, m.revision, "tokenizer_config.json"), "utf8"),
+        "la copie sous « main » doit être l'octet pour octet le fichier épinglé.");
+    }
+    assert.deepEqual(poserTokenizerSousMain(MODELES_EXTRACTION, garni), [], "déjà posé : rien à refaire.");
+
+    /* Sans fichier épinglé, rien n'est posé — on ne fabrique pas un tokeniseur. */
+    const nu = mkdtempSync(join(tmpdir(), "cascade-hors-ligne-nu-"));
+    assert.deepEqual(poserTokenizerSousMain(MODELES_EXTRACTION, nu), []);
+    assert.equal(readdirSync(nu).length, 0, "un cache sans révision épinglée reste vide.");
+    rmSync(nu, { recursive: true, force: true });
+  } finally {
+    rmSync(garni, { recursive: true, force: true });
+  }
+});
+
+test("hors ligne, la vraie commande MESURE — elle ne charge plus un modèle muet", (t) => {
+  const d = mkdtempSync(join(tmpdir(), "cascade-hors-ligne-mesure-"));
+  try {
+    const csv = join(d, "cas.csv");
+    writeFileSync(csv, `id,text,name\n1,"Client: Anna Petrova — dob 3 May 1990.",Anna Petrova\n`);
+    const r = spawnSync(process.execPath, [fileURLToPath(new URL("./your-cases.ts", import.meta.url)),
+      `--cases=${csv}`, "--sample=1"], { encoding: "utf8", timeout: 280_000, env: { ...process.env, CASCADE_OFFLINE: "1" } });
+    const sortie = (r.stdout ?? "") + (r.stderr ?? "");
+    /* Poids absents : la commande s'écarte sous le lanceur de tests ; ce cas se déclare ignoré. */
+    if (r.status === 75) { t.skip(sortie.trim()); return; }
+    assert.equal(r.status, 0, `hors ligne, la commande sort en ${r.status} :\n${sortie.slice(-900)}`);
+    assert.doesNotMatch(sortie, /loaded without a tokenizer/,
+      "le modèle est chargé sans tokeniseur : la copie sous « main » n'a pas été posée, ou pas lue.");
+    assert.doesNotMatch(sortie, /Could not download/, "hors ligne, rien ne doit avoir tenté le réseau.");
+    assert.match(sortie, /Written to/, "la mesure doit aller au bout et écrire son rapport.");
+  } finally {
+    rmSync(d, { recursive: true, force: true });
+  }
 });

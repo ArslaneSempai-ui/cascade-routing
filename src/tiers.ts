@@ -12,7 +12,7 @@
 import { pipeline, env as envHF } from "@huggingface/transformers";
 import { fileURLToPath } from "node:url";
 import { join } from "node:path";
-import { existsSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readdirSync, statSync, copyFileSync } from "node:fs";
 import { FIELDS, TYPOLOGIES } from "./corpus.ts";
 import type { Field, ClientFile, Alert, Typology } from "./corpus.ts";
 
@@ -455,6 +455,39 @@ export function poidsEnCache(racine?: string): boolean {
 }
 
 /**
+ * LE TOKENISEUR SOUS LA CLÉ « main » — la réparation du seul appel réseau qui restait.
+ *
+ * Mesuré le 3 septembre 2026, en lisant la bibliothèque : `get_tokenizer_files()` demande
+ * `tokenizer_config.json` avec des options VIDES — donc à la révision `main`, quelle que soit
+ * celle qu'on épingle — et `_get_file_metadata()` regarde D'ABORD le cache, sous la clé que
+ * `main` produit : `<dépôt>/tokenizer_config.json`, à la racine du dépôt, sans révision. Notre
+ * cache ne portait ce fichier que sous `<dépôt>/<révision>/`. D'où un appel réseau à chaque
+ * chargement, réseau ouvert ; et réseau refusé, le tokeniseur sauté en silence — le défaut
+ * que `exigerChaineEntiere` refuse à voix haute depuis le 31 août.
+ *
+ * La réparation tient en une copie : le fichier de la révision épinglée, posé aussi sous la
+ * clé « main ». Le cache répond, la bibliothèque ne sort plus, et le hors-ligne tient. Mesuré
+ * le 3 septembre : les deux copies posées, `CASCADE_OFFLINE=1 measure:yours` mesure les huit
+ * cellules de deux paliers sur trois cas, sans une sortie.
+ *
+ * Idempotente, et jamais un octet inventé : la copie ne se fait que depuis le fichier de la
+ * révision épinglée, et seulement s'il manque sous « main ». Rend les dépôts servis.
+ */
+export function poserTokenizerSousMain(cles: readonly CleModele[], racine?: string): string[] {
+  const base = racineDesPoids(racine);
+  const poses: string[] = [];
+  for (const cle of cles) {
+    const m = POIDS_MODELES[cle];
+    const epingle = join(base, m.depot, m.revision, "tokenizer_config.json");
+    const sousMain = join(base, m.depot, "tokenizer_config.json");
+    if (!existsSync(epingle) || existsSync(sousMain)) continue;
+    copyFileSync(epingle, sousMain);
+    poses.push(m.depot);
+  }
+  return poses;
+}
+
+/**
  * Les modèles déjà sollicités DANS CE PROCESSUS.
  *
  * Sert à savoir si l'attente qui commence inclut un chargement. Volontairement par processus
@@ -882,6 +915,9 @@ export async function armerHorsLigne(cles: readonly CleModele[], racine?: string
 
 async function chargerAvecFilet<T>(cles: readonly CleModele[], charger: () => Promise<T>): Promise<T> {
   const poids = await import("./poids.ts");
+  /* Réseau ouvert ou non : le tokeniseur épinglé sous la clé « main » retire l'appel réseau
+     que chaque chargement faisait, et c'est ce qui rend le hors-ligne possible. */
+  poserTokenizerSousMain(cles);
   await armerHorsLigne(cles);
   try {
     return await charger();
@@ -909,10 +945,10 @@ async function chargerAvecFilet<T>(cles: readonly CleModele[], charger: () => Pr
  * extracteurs sort donc DEUX FOIS vers huggingface.co, réseau ouvert ; réseau coupé, le
  * fichier manque, le tokeniseur n'est pas construit, et personne ne le signale.
  *
- * CE CONTRÔLE NE RÉPARE RIEN — il refuse à voix haute. Le défaut est dans le chemin de
- * résolution de la bibliothèque, hors de ce fichier ; ce qui est à nous, c'est de ne pas
- * rendre une chaîne inutilisable en annonçant un succès. Le jour où la révision épinglée sera
- * honorée pour le tokeniseur, ce contrôle deviendra muet sans qu'on ait à y toucher.
+ * CE CONTRÔLE NE RÉPARE RIEN — il refuse à voix haute. La réparation vit dans
+ * `poserTokenizerSousMain` (3 septembre 2026) : le fichier épinglé posé sous la clé de cache
+ * que la révision `main` produit, et le chargeur le pose avant de charger. Si ce refus parle
+ * encore, c'est que cette copie manque — le message dit comment la remettre.
  */
 function exigerChaineEntiere(nom: string, chaine: unknown): void {
   if (typeof (chaine as { tokenizer?: unknown } | null)?.tokenizer === "function") return;
@@ -922,14 +958,12 @@ function exigerChaineEntiere(nom: string, chaine: unknown): void {
     + "  have died inside the library on `this.tokenizer is not a function`, naming neither\n"
     + "  this model nor the reason.\n\n"
     + (HORS_LIGNE()
-      ? "  CASCADE_OFFLINE=1 is set. Measured on 31 August 2026: the library asks for\n"
-        + "  `resolve/main/tokenizer_config.json` — revision `main`, not the revision this\n"
-        + "  repository pins and holds on disk — and it does not cache that file. With the\n"
-        + "  network refused it cannot be read, and the tokenizer is silently skipped.\n\n"
-        + "  Every load of the extractors reaches huggingface.co for that one file, with or\n"
-        + "  without weights on disk. Until that is closed, CASCADE_OFFLINE=1 cannot run the\n"
-        + "  encoder tiers on this version of the library. It refuses here instead of\n"
-        + "  failing later somewhere that names nothing.\n"
+      ? "  CASCADE_OFFLINE=1 is set. The library asks for `tokenizer_config.json` at revision\n"
+        + "  `main` — not the revision this repository pins — and reads it from the cache under\n"
+        + "  `<model>/tokenizer_config.json`. The loader places a copy of the pinned file there\n"
+        + "  before loading; if you read this, that copy is missing or unreadable. Run\n"
+        + "  `npm run poids -- --import <dir>` again (it places it), or on a connected machine\n"
+        + "  `npm run poids -- --prime`, then retry.\n"
       : "  The network was not refused by this tool, so the cause is elsewhere: read the\n"
         + "  message above and check what the library could not read.\n"));
 }

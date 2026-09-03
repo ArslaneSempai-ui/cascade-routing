@@ -44,6 +44,7 @@ import { createHash } from "node:crypto";
 import { basename } from "node:path";
 import { empreinteDuReleve } from "./measure.ts";
 import { etatDuDepot } from "./arbre-propre.ts";
+import { scoreDeDoute, doutesVides, compterDoute, signauxApplicables, type Doutes } from "./doute.ts";
 import { evaluerRegles, direLesRefus, type ReglesEvaluees } from "./regles-bornees.ts";
 import { table } from "./figures.ts";
 
@@ -174,6 +175,9 @@ export type EntreeDuReleve = {
       au dossier. C'est cette partition que l'exposition en euros lit — un taux ne la porte pas. */
   vides?: number;
   faux?: number;
+  /** Combien de valeurs ont chaque score de doute, et combien d'entre elles étaient fausses —
+      la courbe du point de fonctionnement se calcule depuis ces deux comptes. `doute.ts`. */
+  doutes?: Doutes;
   /**
    * Parmi les cas notés faux, ceux dont la réponse porte EXACTEMENT les mêmes mots que la
    * vérité attendue, dans un autre ordre. Un désaccord de convention, pas une extraction
@@ -755,7 +759,7 @@ export function ecrireMs(ms: number, declaree: boolean): string {
  */
 export const DRAPEAUX_CONNUS: readonly string[] = [
   "cases", "rules", "sorties", "questions", "task", "sample", "margin",
-  "llm", "journal", "show-questions", "yes-run-it",
+  "llm", "journal", "trace", "show-questions", "yes-run-it",
 ];
 
 /**
@@ -1026,6 +1030,9 @@ export type CelluleClient = {
   reussites: string; blank: number; wrong: number;
   /** Notés faux avec exactement les mêmes mots dans un autre ordre — un désaccord de convention. */
   reordered?: number;
+  /** La courbe du point de fonctionnement en germe : par score de doute, combien de valeurs et
+      combien de fausses ; et les signaux que ce champ peut déclencher. */
+  doubt?: { byScore: number[]; wrongByScore: number[]; signals: string[] };
 };
 
 /**
@@ -1073,6 +1080,7 @@ export function releveClient(o: {
         latency: Number.isFinite(e.ms) ? e.ms : null,
         reussites: e.reussites ?? "", blank: e.vides ?? 0, wrong: e.faux ?? 0,
         ...(e.desordre ? { reordered: e.desordre } : {}),
+        ...(e.doutes ? { doubt: { byScore: [...e.doutes.parScore], wrongByScore: [...e.doutes.fauxParScore], signals: signauxApplicables(champ) } } : {}),
       };
     }
   }
@@ -1220,6 +1228,9 @@ export function rapportPourLeClient(o: {
     + pied.join("\n") + "\n";
 }
 
+/** Une ligne de trace : ce que le système a vu (l'identifiant), décidé (l'issue), et avec quel score. Jamais la valeur. */
+export type Traceur = (caseId: string, palier: string, champ: string, issue: "clean" | "wrong" | "blank", score: number) => void;
+
 export async function mesurerVosCas(
   cas: Cas[], champs: string[], paliers: TierName[], regles?: ReglesEvaluees,
   journaliser = false, sorties?: SortiesFournies,
@@ -1227,6 +1238,9 @@ export async function mesurerVosCas(
      colonne — et ce choix s'affiche, parce qu'un taux obtenu sous une question déduite n'est
      pas comparable à celui du README. */
   questions?: Record<string, string>,
+  /* Le rejeu d'incident : une décision par cas, par palier et par champ — issue et score,
+     jamais la valeur. Absent, rien n'est tracé. */
+  tracer?: Traceur,
 ): Promise<Record<string, Record<TierName, EntreeDuReleve>>> {
   const releve: Record<string, Record<TierName, EntreeDuReleve>> = {};
   const journal = journaliser ? ouvrirJournal("vos-cas", {
@@ -1271,16 +1285,21 @@ export async function mesurerVosCas(
     if (valeursRegle) {
       let bons = 0, vides = 0, faux = 0;
       const bits: string[] = [];
+      const doutes = doutesVides();
       for (let i = 0; i < cas.length; i++) {
-        const sort = issue(valeursRegle[i] ?? "", cas[i]!.truth[champ]!);
+        const valeur = valeursRegle[i] ?? "";
+        const sort = issue(valeur, cas[i]!.truth[champ]!);
         const juste = sort === "clean";
         if (juste) bons++;
         else if (sort === "blank") vides++;
         else faux++;
         bits.push(juste ? "1" : "0");
+        const score = scoreDeDoute(valeur, cas[i]!.text, champ);
+        compterDoute(doutes, score, juste);
+        tracer?.(cas[i]!.id, "rules", champ, sort, score);
       }
       releve[champ]!["rules" as TierName] = {
-        bons, sur: cas.length, ms: regles!.ms[champ] ?? 0, reussites: bits.join(""), vides, faux,
+        bons, sur: cas.length, ms: regles!.ms[champ] ?? 0, reussites: bits.join(""), vides, faux, doutes,
       };
     }
 
@@ -1288,6 +1307,7 @@ export async function mesurerVosCas(
       let bons = 0, desordre = 0, vides = 0, faux = 0;
       const durees: number[] = [];
       const bits: string[] = [];
+      const doutes = doutesVides();
       /*
        * L'AVANCEMENT SE COMPTE, IL NE SE PRÉDIT PAS.
        *
@@ -1333,13 +1353,19 @@ export async function mesurerVosCas(
            On compte, on ne garde rien — le compte reste chez le client comme le reste. */
         else if (memesMots(got, c.truth[champ]!)) desordre++;
         /* Vide ou faux : la partition que l'exposition lit. La même règle que le journal. */
-        if (!juste) { if (issue(got, c.truth[champ]!) === "blank") vides++; else faux++; }
+        const sort = issue(got, c.truth[champ]!);
+        if (!juste) { if (sort === "blank") vides++; else faux++; }
         bits.push(juste ? "1" : "0");
+        /* Le score de doute, compté au moment de la notation — la courbe du point de
+           fonctionnement en vit, et le rejeu d'incident en porte une ligne. Jamais la valeur. */
+        const score = scoreDeDoute(got, borne.texte, champ);
+        compterDoute(doutes, score, juste);
+        tracer?.(c.id, palier, champ, sort, score);
       }
       durees.sort((a, b) => a - b);
       releve[champ]![palier] = {
         bons, sur: cas.length, ms: durees[Math.floor(durees.length / 2)] ?? 0,
-        reussites: bits.join(""), vides, faux,
+        reussites: bits.join(""), vides, faux, doutes,
         ...(desordre > 0 ? { desordre } : {}),
       };
     }
@@ -1452,6 +1478,9 @@ The CSV wants an id, the input text, then one column per field to extract:
          exact); a cheaper tier is recommended only when its worst case at 95 % stays
          inside this margin — non-inferiority, not "no significant difference". Without
          it the command says what these cases can separate, and recommends nothing.
+--trace  also write <file>-trace.json, sealed: one line per case, tier and field — the case id,
+         the outcome (clean, wrong, blank) and the doubt score. What the system saw and
+         decided, replayable months later; never a value, never the text.
 --show-questions  print the derived question for every field, however many there are.
          Without it the list is cut after the first few and the rest are counted.
 --yes-run-it  run even when the number of model calls is above the printed ceiling. The
@@ -1811,9 +1840,16 @@ Nothing leaves your machine: the models are local and this path makes no network
     }
   }
 
+  /* Le rejeu d'incident, sur demande : une décision par cas, palier et champ — id, issue,
+     score. Il n'entre dans le fichier que ce qui n'est pas une valeur. */
+  const tracer = process.argv.includes("--trace");
+  const trace: Record<string, Record<string, Record<string, { outcome: string; score: number }>>> = {};
+  const traceur: Traceur | undefined = tracer
+    ? (id, palier, champ, sort, score) => { (((trace[id] ??= {})[palier] ??= {})[champ] = { outcome: sort, score }); }
+    : undefined;
   const releve = await mesurerVosCas(cas, champs, paliers, regles,
     process.argv.includes("--journal"), sorties,
-    Object.fromEntries(Object.entries(questions).map(([k, v]) => [k, v.texte])));
+    Object.fromEntries(Object.entries(questions).map(([k, v]) => [k, v.texte])), traceur);
 
   console.log("\nACCURACY PER FIELD, with the interval at "
     + `${(CONFIANCE.niveau * 100).toFixed(0)} %\n`);
@@ -1917,6 +1953,17 @@ Nothing leaves your machine: the models are local and this path makes no network
   enregistrement.empreinte = empreinteDuReleve(enregistrement);
   writeFileSync(releveJson, JSON.stringify(enregistrement, null, 2));
   console.log(`Sealed record written to ${releveJson} — seal ${enregistrement.empreinte}.`);
+  if (tracer) {
+    const traceJson = fichier.replace(/\.csv$/i, "") + "-trace.json";
+    const t: Record<string, unknown> = {
+      kind: "cascade-client-trace", version: 1, measuredAt: enregistrement.measuredAt,
+      record: enregistrement.empreinte, source: enregistrement.source, fields: champs, tiers: enregistrement.tiers,
+      decisions: trace,
+    };
+    t.empreinte = empreinteDuReleve(t);
+    writeFileSync(traceJson, JSON.stringify(t, null, 2));
+    console.log(`Trace written to ${traceJson} — seal ${t.empreinte}: one decision per case, tier and field; no value.`);
+  }
   console.log(`  Counts, rates and per-case verdicts, never a value. \`npm run diff -- <before> <after>\``);
   console.log(`  compares two of them case by case; \`npm run sceller -- <file>\` recomputes the seal.\n`);
   if (!reglesMesurees) {

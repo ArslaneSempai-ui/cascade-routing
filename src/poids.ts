@@ -41,7 +41,7 @@ import { dirname, join, relative, sep } from "node:path";
 
 import { isMain } from "./cli.ts";
 import { exigerModelesEntiers, loadClassifiers, loadExtractors, modelesTronques, modelesAbsents,
-  POIDS_MODELES, racineDesPoids, type CleModele, type EtatModele } from "./tiers.ts";
+  poserTokenizerSousMain, POIDS_MODELES, racineDesPoids, type CleModele, type EtatModele } from "./tiers.ts";
 
 /** Le nom du manifeste dans le dossier d'export. Un dossier sans lui n'est pas un export. */
 export const NOM_MANIFESTE = "cascade-weights.json";
@@ -205,6 +205,9 @@ export function importer(dossier: string, racine?: string): { ecrits: number; oc
     copyFileSync(join(dossier, e.chemin), cible);
     octets += e.octets;
   }
+  /* ET LE TOKENISEUR SOUS LA CLÉ « main », sans quoi la machine isolée charge un modèle muet :
+     voir `poserTokenizerSousMain`. Posé ici, l'import suffit — aucune commande n'a à sortir. */
+  poserTokenizerSousMain([...new Set(m.entrees.map((e) => e.cle))], racine);
   return { ecrits: m.entrees.length, octets };
 }
 

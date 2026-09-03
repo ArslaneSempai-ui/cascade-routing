@@ -757,9 +757,22 @@ const commandes = (() => {
     ["pages", "build docs/ and verify the published screen — required before publishing: docs/ carries a compiled copy of the code and goes stale silently"],
     ["captures", "re-record the images on this page"],
     ["ocr", "read the same documents as images and measure what the reading stage costs (macOS: Vision, no API)"],
+    ["premiere-reponse", "the conclusion from the sealed records, in under a second, before `npm install` — the one-second version of this page"],
+    ["licences", "regenerate `LICENCES.md`, the licence of every shipped package — `--check` fails the suite when the table drifts"],
+    ["menace", "the threat model, executable rather than written: regenerates `SECURITE.md` from checks that run — `--check` fails the suite when it drifts"],
+    ["hostile", "the hostile pass: every case of the hostile corpus on every tier, sealed in `corpus-hostile.json`; `CORPUS-HOSTILE.md` is generated from it — `--check` refuses if the page moved"],
   ];
   const classees = new Set(ordre.map(([n]) => n));
-  const oubliees = Object.keys(pkg.scripts).filter((n) => !classees.has(n) && n !== "typage");
+  /*
+   * LE ⚠ ÉTAIT PUBLIÉ. « 5 command(s) exist in package.json and are not classified above » se
+   * lisait dans le README d'origin/main, entre deux lignes propres, par tout acheteur qui
+   * l'ouvrait — un avertissement de générateur à la place d'une table finie (revue du 3
+   * septembre 2026). Les quatre commandes ont maintenant leur ligne ; `prepare` n'est pas
+   * une commande qu'on lance, c'est le branchement des crochets que la ligne d'installation
+   * décrit déjà, et `typage` est un pas de la suite. Les deux sont exclus NOMMÉMENT, pour que
+   * le ⚠ garde son sens : une commande neuve sans ligne le fait réapparaître.
+   */
+  const oubliees = Object.keys(pkg.scripts).filter((n) => !classees.has(n) && n !== "typage" && n !== "prepare");
   /*
    * L'INSTALLATION EN PREMIÈRE LIGNE, ET ELLE N'EST PAS UN SCRIPT.
    *
@@ -1506,6 +1519,7 @@ const documents = (() => {
     "retractations.json": "every conclusion published here that turned out to be wrong",
     "sbom.json": "the dependency inventory, CycloneDX, for a procurement team",
     "cle-publique.pem": "the key that signs reports — verify one with `node src/verifier-rapport.mjs`",
+    "rules-example.json": "an example `--rules` file for `measure:yours`: one regular expression per column of your CSV, the whole match is the value — copy it, keep the columns you have",
   };
   const presents = readdirSync(racine).filter((n) => n in decrit).sort();
   if (presents.length === 0) {
