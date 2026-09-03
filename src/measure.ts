@@ -798,6 +798,9 @@ export async function measure(
 }
 
 if (isMain(import.meta)) {
+  // import dynamique : evaluation.ts lit le disque, le graphe NAVIGATEUR ne doit pas le voir
+  const { lignesEvaluation } = await import("./evaluation.ts");
+  for (const l of lignesEvaluation()) console.log(l);
   /*
    * ─── CETTE COMMANDE TÉLÉCHARGE 1,26 Go, ET ON NE LA LANCE PAS PAR DISTRACTION ───
    *

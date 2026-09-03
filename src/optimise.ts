@@ -477,6 +477,9 @@ export function budgetShadowPrice(p: Profiles, h: Assumptions) {
 }
 
 if (isMain(import.meta)) {
+  // import dynamique : evaluation.ts lit le disque, le graphe NAVIGATEUR ne doit pas le voir
+  const { lignesEvaluation } = await import("./evaluation.ts");
+  for (const l of lignesEvaluation()) console.log(l);
 
   refuserDrapeauxInconnus([]);
   /* Chargé ici et pas en tête : `measure.ts` ouvre des fichiers et tire le runtime des
