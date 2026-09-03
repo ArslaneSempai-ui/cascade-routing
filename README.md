@@ -26,7 +26,7 @@ what that pass actually cost is stated below, read from the relevé rather than 
 | Command | What it does, in the order that makes sense |
 |---|---|
 | `npm ci --ignore-scripts` | install exactly the versions the lockfile pins, and run no install script from any dependency — nothing below runs without it, and it is the only command here that needs the network. It also skips this repository's own `prepare`, so run `git config core.hooksPath .githooks` yourself if you intend to commit |
-| `npm run test` | types, figures and the suite — start here; downloads nothing while the cached failure gallery matches the code |
+| `npm run test` | types, figures and the suite — start here. Downloads nothing: the two cases that need the model weights stand aside, by name, until `npm run poids -- --prime` has fetched them; everything else runs on what git carries |
 | `npm run measure` | measure the encoder tiers and freeze the profile (at least 1.3 GB downloaded on the first run — `npm run poids` lists each one) |
 | `npm run sceller` | seal a profile: the fingerprint that makes a silently edited measurement fail loudly |
 | `npm run diff` | compare two sealed runs case by case — a rising rate can still have lost cases |
@@ -131,7 +131,7 @@ several scripts chain shell commands, which hold under Git Bash and not under `c
 <!-- /figures:documents -->
 
 <!-- figures:tests -->
-**596 tests** across 66 files, counted from the sources rather than typed here.
+**597 tests** across 66 files, counted from the sources rather than typed here.
 <!-- /figures:tests -->
 
 Everything runs locally, and that is enforced rather than promised. The one call that could

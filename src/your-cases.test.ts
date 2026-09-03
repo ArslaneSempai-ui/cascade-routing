@@ -19,6 +19,7 @@ import assert from "node:assert/strict";
 import { lireCsv } from "./your-cases.ts";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
+import { CODE_ECART_TEMOIN } from "./poids.ts";
 
 test("deux colonnes : texte et réponse, sans identifiant", () => {
   const { champs, cas } = lireCsv("text,category\nHow do I find my card?,card_arrival\n");
@@ -1118,4 +1119,45 @@ test("une cellule démesurée s'évalue en OCTETS réels, pas en unités UTF-16"
     + "  en promettant des octets, et rate les écritures non latines.");
   assert.equal(demesurees[0]!.octets, 1_200_000,
     `le compte annoncé doit être en octets réels : ${demesurees[0]!.octets}`);
+});
+
+/*
+ * SOUS LE LANCEUR DE TESTS, LA COMMANDE S'ÉCARTE QUAND LES POIDS MANQUENT — ELLE NE TÉLÉCHARGE PAS.
+ *
+ * Mesuré le 3 septembre 2026 par `npm run clone-neuf` : dans un clone neuf, sans cache, les
+ * témoins qui lancent cette commande la laissaient télécharger 1,3 Go dans un `spawnSync`
+ * muet, et deux mouraient au délai de 280 s. La garde vit dans `your-cases.ts`
+ * (`sEcarterSiPoidsAbsents`) ; ce cas l'éprouve contre un cache FACTICE et vide, sans toucher
+ * aux vrais poids — et tient les deux côtés : sous `node --test`, le code d'écart et aucun
+ * octet écrit ; hors du lanceur, jamais ce code (le premier lancement d'un acheteur doit
+ * télécharger, en l'annonçant), et sous CASCADE_OFFLINE un refus qui nomme les poids.
+ */
+test("sous le lanceur de tests, poids absents = la commande s'écarte, cache intact ; hors du lanceur, jamais ce code", () => {
+  const d = mkdtempSync(join(tmpdir(), "ecart-"));
+  const csv = join(d, "cas.csv");
+  writeFileSync(csv, `id,text,name\n1,"Anna Petrova — dob 3 May 1990",Anna Petrova\n`);
+  const vide = mkdtempSync(join(tmpdir(), "cache-vide-"));
+  const CMD = fileURLToPath(new URL("./your-cases.ts", import.meta.url));
+
+  const r = spawnSync(process.execPath, [CMD, `--cases=${csv}`], {
+    encoding: "utf8", timeout: 120_000,
+    env: { ...process.env, CASCADE_POIDS_RACINE: vide, NODE_TEST_CONTEXT: "child-v8" },
+  });
+  assert.equal(r.status, CODE_ECART_TEMOIN,
+    `sous le lanceur de tests et sans poids, la commande doit sortir en ${CODE_ECART_TEMOIN}, `
+    + `pas en ${r.status}. Sortie :\n${(r.stdout + r.stderr).slice(-600)}`);
+  assert.match(r.stdout, /STANDING ASIDE/, "l'écart doit se lire comme un écart, pas comme une réussite.");
+  assert.match(r.stdout, /npm run poids -- --prime/, "l'écart doit dire comment le lever.");
+  assert.match(r.stdout, /not measured, not passed/, "un lecteur doit comprendre que rien n'a été prouvé.");
+  assert.deepEqual(readdirSync(vide), [], "le cache factice doit rester vide : rien n'a été téléchargé.");
+
+  /* CONTRE-ÉPREUVE : hors du lanceur de tests, ce code ne sort jamais. Sous CASCADE_OFFLINE,
+     le refus est celui de `poids.ts`, contre le même cache factice, et n'écrit rien non plus. */
+  const env: NodeJS.ProcessEnv = { ...process.env, CASCADE_POIDS_RACINE: vide, CASCADE_OFFLINE: "1" };
+  delete env.NODE_TEST_CONTEXT;
+  const r2 = spawnSync(process.execPath, [CMD, `--cases=${csv}`], { encoding: "utf8", timeout: 120_000, env });
+  assert.notEqual(r2.status, CODE_ECART_TEMOIN, "hors du lanceur de tests, le code d'écart ne doit jamais sortir.");
+  assert.notEqual(r2.status, 0, "sans poids et sans réseau, la commande ne peut pas avoir mesuré.");
+  assert.match(r2.stderr, /Nothing will be downloaded/, "le refus hors ligne doit nommer ce qu'il ne fera pas.");
+  assert.deepEqual(readdirSync(vide), [], "le refus hors ligne n'écrit rien dans le cache.");
 });

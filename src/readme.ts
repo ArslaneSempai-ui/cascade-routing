@@ -690,7 +690,7 @@ const commandes = (() => {
      * pas. La ligne est engendrée comme les autres, donc elle ne peut pas se perdre à la
      * prochaine régénération.
      */
-    ["test", "types, figures and the suite — start here; downloads nothing while the cached failure gallery matches the code"],
+    ["test", "types, figures and the suite — start here. Downloads nothing: the two cases that need the model weights stand aside, by name, until `npm run poids -- --prime` has fetched them; everything else runs on what git carries"],
     /*
      * CE CHIFFRE ÉTAIT TAPÉ À LA MAIN, ET IL SE CACHAIT DE LA GARDE QUI L'INTERDIT.
      *

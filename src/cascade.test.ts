@@ -2612,9 +2612,11 @@ test("l'indice d'entrée sépare les populations, et refuse sous le nombre où l
  * `npm test` d'un clone frais. L'outil l'écrivait pourtant, en toutes lettres, au milieu d'une
  * sortie que personne ne lit jusqu'au bout.
  *
- * Et le README publie la promesse « downloads nothing while the cached failure gallery matches
- * the code ». Elle est littéralement vraie et pratiquement fausse : la condition n'était plus
- * tenue. Ce témoin la remet dans les mains de l'outil plutôt que dans celles du lecteur.
+ * Et le README publie la promesse « downloads nothing » sur `npm test`. Elle était littéralement
+ * vraie et pratiquement fausse : la condition — une galerie à jour — n'était plus tenue. Ce
+ * témoin la remet dans les mains de l'outil plutôt que dans celles du lecteur. (Le 3 septembre
+ * 2026, la même promesse est tombée par un autre côté : deux témoins lançaient les extracteurs
+ * sans regarder le cache — voir `poidsAbsents` et le contrôle de `poids.test.ts`.)
  *
  * Le contrôle ne charge aucun modèle : il compare deux empreintes.
  */

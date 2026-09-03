@@ -46,7 +46,7 @@ test("exactement au plafond, rien n'est retiré", () => {
   assert.equal(bornerTexte(pile + "z").ecarte, 1, "un caractère de plus doit en retirer exactement un.");
 });
 
-test("la commande ANNONCE ce qu'elle a borné, et le compte est juste", { timeout: 300_000 }, async () => {
+test("la commande ANNONCE ce qu'elle a borné, et le compte est juste", { timeout: 300_000 }, async (t) => {
   /*
    * LE SITE D'APPEL, PAS LA FONCTION.
    *
@@ -72,6 +72,11 @@ test("la commande ANNONCE ce qu'elle a borné, et le compte est juste", { timeou
   const r = spawnSync("node", [fileURLToPath(new URL("./your-cases.ts", import.meta.url)),
     `--cases=${join(d, "cas.csv")}`, "--sample=1"], { encoding: "utf8", timeout: 280_000 });
   const sortie = (r.stdout ?? "") + (r.stderr ?? "");
+  /* Poids absents : la commande s'est écartée sous le lanceur de tests (`sEcarterSiPoidsAbsents`,
+     clone neuf du 3 septembre 2026) ; ce cas se déclare ignoré avec son motif plutôt que de
+     laisser un téléchargement de 1,3 Go tourner dans un spawnSync muet. */
+  const { CODE_ECART_TEMOIN } = await import("./poids.ts");
+  if (r.status === CODE_ECART_TEMOIN) { t.skip(sortie.trim()); return; }
 
   assert.match(sortie, /1 case\(s\) had their text cut/,
     `la troncature n'est pas annoncée. Sortie :\n${sortie.slice(-600)}`);

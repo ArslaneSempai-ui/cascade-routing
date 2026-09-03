@@ -40,7 +40,7 @@ import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync,
 import { dirname, join, relative, sep } from "node:path";
 
 import { isMain } from "./cli.ts";
-import { exigerModelesEntiers, loadClassifiers, loadExtractors, modelesTronques,
+import { exigerModelesEntiers, loadClassifiers, loadExtractors, modelesTronques, modelesAbsents,
   POIDS_MODELES, racineDesPoids, type CleModele, type EtatModele } from "./tiers.ts";
 
 /** Le nom du manifeste dans le dossier d'export. Un dossier sans lui n'est pas un export. */
@@ -216,13 +216,51 @@ export function importer(dossier: string, racine?: string): { ecrits: number; oc
  * nous : le client se débrouille avec, ce qui est le seul genre de message qui serve à
  * quelqu'un qui ne peut pas nous appeler.
  */
+/**
+ * LES MODÈLES ABSENTS, SANS LEVER — pour qui doit décider AVANT de lancer quoi que ce soit.
+ *
+ * Mesuré le 3 septembre 2026 par `npm run clone-neuf` : deux témoins lancent `your-cases.ts`
+ * avec les vrais extracteurs, et dans un clone neuf le cache n'existe pas. La bibliothèque
+ * téléchargeait donc 1,3 Go PENDANT `npm test`, dans un `spawnSync` dont la sortie est
+ * capturée — l'acheteur voyait cinq minutes de silence puis deux rouges au délai, sur un
+ * dépôt qui écrit « downloads nothing ». Ni cette machine ni le coureur CI ne l'avaient vu :
+ * les deux portent le cache, et c'est exactement pour ça que `clone-neuf` existe.
+ *
+ * `exigerPoidsSurPlace` lève avec un message écrit pour CASCADE_OFFLINE. Un témoin n'a pas
+ * besoin de lever : il a besoin de la liste, pour s'écarter en la nommant.
+ */
+export function poidsAbsents(cles: readonly CleModele[], racine?: string): CleModele[] {
+  /* La même question que `tiers.ts` se pose déjà, posée au même endroit : deux tests
+     d'existence écrits à deux endroits finissent par regarder deux chemins différents. */
+  return modelesAbsents(cles, racine);
+}
+
+/**
+ * SOUS LE LANCEUR DE TESTS, UNE COMMANDE QUI A BESOIN DES POIDS S'ÉCARTE AU LIEU DE LES
+ * TÉLÉCHARGER — et elle le dit avec ce code de sortie, que chaque témoin traduit en « skipped ».
+ *
+ * 75 est EX_TEMPFAIL de sysexits : « réessayez plus tard », ce qui est exactement le sens.
+ * Aucun autre chemin de ce dépôt ne sort en 75, donc un témoin qui le lit ne peut pas
+ * confondre l'écart avec un refus ou une panne.
+ */
+export const CODE_ECART_TEMOIN = 75;
+
+/**
+ * Ce que la commande dit quand elle s'écarte — en anglais, parce que c'est l'acheteur qui le
+ * lit dans la sortie de `npm test`. « Skipped » n'est pas « passed », et la phrase le dit.
+ */
+export function motifDEcart(manquants: readonly CleModele[]): string {
+  const total = manquants.reduce((s, c) => s + POIDS_MODELES[c]!.octets, 0);
+  return `STANDING ASIDE — not measured, not passed: this command runs the real extractors and `
+    + `${manquants.length} model weight(s) are not on this machine — `
+    + manquants.map((c) => `${POIDS_MODELES[c]!.depot} (${enMo(POIDS_MODELES[c]!.octets)})`).join(", ")
+    + `, ${enMo(total)} in total. A test downloads nothing. Fetch them once with `
+    + "`npm run poids -- --prime` (or import them across an air gap, see the README), then "
+    + `run the suite again: until then this site of call is unverified on this machine.`;
+}
+
 export function exigerPoidsSurPlace(cles: readonly CleModele[], racine?: string): void {
-  const base = racineDesPoids(racine);
-  const manquants = cles.filter((cle) => {
-    const m = POIDS_MODELES[cle];
-    return !existsSync(join(base, m.depot, m.revision, "onnx", "model.onnx"))
-      && !existsSync(join(base, m.depot, "onnx", "model.onnx"));
-  });
+  const manquants = poidsAbsents(cles, racine);
   if (manquants.length === 0) return;
   const total = manquants.reduce((s, c) => s + POIDS_MODELES[c]!.octets, 0);
   throw new Error(

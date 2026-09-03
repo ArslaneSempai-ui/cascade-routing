@@ -34,7 +34,9 @@ import { loadavg } from "node:os";
 import { isMain } from "./cli.ts";
 import { ouvrirJournal, issue } from "./journal.ts";
 import { normaliserReponse } from "./tiers.ts";
-import { loadExtractors, loadClassifiers, loadGeneratifs, extract, correct, classerParmi, MODELES_LOCAUX, questionPour } from "./tiers.ts";
+import { loadExtractors, loadClassifiers, loadGeneratifs, extract, correct, classerParmi, MODELES_LOCAUX, questionPour,
+  MODELES_EXTRACTION, MODELES_CLASSEMENT, type CleModele } from "./tiers.ts";
+import { poidsAbsents, motifDEcart, CODE_ECART_TEMOIN, exigerPoidsSurPlace } from "./poids.ts";
 import { TIERS, ENCODEURS, GENERATIFS } from "./paliers.ts";
 import { rate, writeRate, cellulesDeTaux, distinguishable, CONFIANCE, ENOUGH } from "./interval.ts";
 import { evaluerRegles, direLesRefus, type ReglesEvaluees } from "./regles-bornees.ts";
@@ -1174,6 +1176,40 @@ export async function classerVosCas(
   return { etiquettes, releve, majoritaire: { nom: nomMaj, taux: nMaj / cas.length } };
 }
 
+/**
+ * SOUS LE LANCEUR DE TESTS, LA COMMANDE S'ÉCARTE PLUTÔT QUE DE TÉLÉCHARGER.
+ *
+ * Mesuré le 3 septembre 2026 par `npm run clone-neuf` : plusieurs témoins lancent cette
+ * commande sur un ou deux cas, avec les vrais extracteurs. Dans un clone neuf le cache
+ * n'existe pas ; la bibliothèque téléchargeait donc 1,3 Go PENDANT `npm test`, dans des
+ * `spawnSync` dont la sortie est capturée, et deux témoins mouraient au délai de 280 s —
+ * cinq minutes de silence puis deux rouges, chez un acheteur, sur un dépôt qui écrit
+ * « downloads nothing ». Ni cette machine ni le coureur CI ne l'avaient vu : les deux
+ * portent le cache.
+ *
+ * La garde vit ICI, dans l'enfant, et non dans chaque témoin : un témoin de plus qui lance
+ * la commande hérite de la règle sans avoir à la connaître. `NODE_TEST_CONTEXT` est posé par
+ * `node --test` et hérité par les processus qu'un cas lance ; hors de lui, le comportement
+ * de premier lancement — télécharger, en l'annonçant — ne change pas. `CASCADE_POIDS_RACINE`
+ * permet à un témoin de pointer un cache factice pour éprouver cette garde sans toucher aux
+ * vrais poids.
+ */
+export function sEcarterSiPoidsAbsents(cles: readonly CleModele[]): void {
+  const racine = process.env.CASCADE_POIDS_RACINE;
+  const absents = poidsAbsents(cles, racine);
+  if (absents.length === 0) return;
+  if (process.env.NODE_TEST_CONTEXT) {
+    console.log(`\n${motifDEcart(absents)}\n`);
+    process.exit(CODE_ECART_TEMOIN);
+  }
+  /* Hors ligne, le refus est celui de `poids.ts`, contre le MÊME cache — sinon un témoin qui
+     pointe un cache factice verrait la bibliothèque partir chercher les vrais poids. */
+  if (process.env.CASCADE_OFFLINE === "1") {
+    try { exigerPoidsSurPlace(cles, racine); }
+    catch (e) { console.error((e as Error).message); process.exit(1); }
+  }
+}
+
 async function principal(): Promise<void> {
   const arg = (nom: string) => process.argv.find((a) => a.startsWith(`--${nom}=`))?.split("=").slice(1).join("=");
   exigerDrapeauxConnus(process.argv.slice(2));
@@ -1471,6 +1507,10 @@ Nothing leaves your machine: the models are local and this path makes no network
     const refus = direLesRefus(regles);
     if (refus) console.log(`\n${refus}\n`);
   }
+
+  /* Avant tout chargement : sous `node --test`, des poids absents font s'écarter la commande
+     au lieu de la faire télécharger — voir `sEcarterSiPoidsAbsents`. */
+  sEcarterSiPoidsAbsents(tache === "classify" ? MODELES_CLASSEMENT : MODELES_EXTRACTION);
 
   if (avecLlm) await loadGeneratifs();
 

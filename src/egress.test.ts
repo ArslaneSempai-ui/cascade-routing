@@ -87,9 +87,15 @@ function bacASable(corpsDeLsof: (chemin: string) => string): Bac {
   /* La commande observée : elle ne fait rien, assez longtemps pour dépasser le plancher de
      relevés. Sans ça, la version gardée et la version mutante sortiraient TOUTES DEUX en 1
      sur « passe trop courte », et ni le relevé écrit ni le code de sortie ne diraient plus
-     la différence qui compte. */
+     la différence qui compte.
+
+     TROIS SECONDES, PAS 700 MS. Chaque relevé lance `lsof` de façon synchrone ; sous la suite
+     complète (CPU à 274 %, mesuré le 3 septembre 2026) un relevé prend bien plus que les 20 ms
+     d'intervalle, et 700 ms n'en donnaient plus vingt : la passe nominale sortait en 1 sur
+     « trop courte », et « lsof qui répond pendant toute la passe » rougissait. La durée de
+     l'observée ne doit pas dépendre de la charge pour tenir le plancher. */
   const observee = join(tmp, "dort.mjs");
-  writeFileSync(observee, "setTimeout(() => {}, 700);\n");
+  writeFileSync(observee, "setTimeout(() => {}, 3000);\n");
 
   const bin = join(tmp, "bin");
   mkdirSync(bin);
@@ -107,9 +113,11 @@ function bacASable(corpsDeLsof: (chemin: string) => string): Bac {
   };
 }
 
-/** Lance la commande copiée et rend ce qu'un appelant peut en voir : son code et son stderr. */
-async function passe(b: Bac): Promise<{ code: number; err: string }> {
-  const p = spawn(process.execPath, [b.script, "--every=20", b.observee],
+/** Lance la commande copiée et rend ce qu'un appelant peut en voir : son code et son stderr.
+    `every` est l'intervalle d'échantillonnage passé à la commande — un cas qui a besoin que le
+    plancher soit HORS DE PORTÉE le relève, voir « une passe trop courte ». */
+async function passe(b: Bac, every = 20): Promise<{ code: number; err: string }> {
+  const p = spawn(process.execPath, [b.script, `--every=${every}`, b.observee],
     { env: b.env, stdio: ["ignore", "ignore", "pipe"] });
   let err = "";
   p.stderr!.setEncoding("utf8");
@@ -270,9 +278,17 @@ test("une passe trop courte refuse SUR LA SORTIE D'ERREUR, pas en silence", asyn
    */
   const b = bacASable(() => `#!/bin/sh\nexit 1\n`);
   try {
-    /* Une commande instantanée : zéro relevé, donc sous le plancher à coup sûr. */
+    /*
+     * Une commande instantanée : zéro relevé, donc sous le plancher — À CONDITION que l'enfant
+     * meure avant vingt échantillons. À `--every=20`, vingt échantillons font 400 ms, et sous
+     * la suite complète le démarrage de `node` dépasse ça : la passe ATTEIGNAIT le plancher,
+     * concluait « aucune connexion », sortait en 0, et ce cas rougissait — 595/596 à CPU 274 %,
+     * vert trois fois sur trois isolé. Mesuré le 3 septembre 2026. Le plancher se met hors de
+     * portée par construction : 250 ms × 20 = 5 s, qu'un `process.exit(0)` n'atteint sous
+     * aucune charge. Un témoin dont la prémisse dépend de la charge n'est pas un témoin.
+     */
     writeFileSync(b.observee, "process.exit(0);\n");
-    const { code, err } = await passe(b);
+    const { code, err } = await passe(b, 250);
 
     assert.equal(code, 1, `une passe trop courte sort en ${code} : elle ne refuse plus.`);
     assert.ok(err.trim().length > 0,
