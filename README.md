@@ -135,13 +135,14 @@ several scripts chain shell commands, which hold under Git Bash and not under `c
 | [`SONDE.md`](SONDE.md) | real generative models on the same corpus, judged by the same grader |
 | [`VALIDATION.md`](VALIDATION.md) | what was measured, on which corpus, and what the numbers do not establish |
 | [`cle-publique.pem`](cle-publique.pem) | the key that signs reports — verify one with `node src/verifier-rapport.mjs` |
+| [`rapport-exemple.html`](rapport-exemple.html) | an example of the signed report, issued on cascade's own held-out corpus with the repository's key — verify it before buying anything: `node src/verifier-rapport.mjs rapport-exemple.html` |
 | [`retractations.json`](retractations.json) | every conclusion published here that turned out to be wrong |
 | [`rules-example.json`](rules-example.json) | an example `--rules` file for `measure:yours`: one regular expression per column of your CSV, the whole match is the value — copy it, keep the columns you have |
 | [`sbom.json`](sbom.json) | the dependency inventory, CycloneDX, for a procurement team |
 <!-- /figures:documents -->
 
 <!-- figures:tests -->
-**617 tests** across 69 files, counted from the sources rather than typed here.
+**618 tests** across 69 files, counted from the sources rather than typed here.
 <!-- /figures:tests -->
 
 Everything runs locally, and that is enforced rather than promised. The one call that could

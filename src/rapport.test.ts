@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { generateKeyPairSync, sign as signer } from "node:crypto";
-import { readFileSync, writeFileSync, mkdtempSync, rmSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdtempSync, rmSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -326,4 +326,27 @@ test("« rien n'a été vérifié » rend 2, et ne se confond pas avec un refus"
     assert.match(inconnue.sortie, /Unknown option/,
       "sinon `--clef` vérifierait contre la clé du dépôt en laissant croire au contraire.");
   } finally { rmSync(dossier, { recursive: true, force: true }); }
+});
+
+/*
+ * LE RAPPORT D'EXEMPLE LIVRÉ EST SIGNÉ DE LA CLÉ PUBLIÉE, ET INTACT.
+ *
+ * Revue du 3 septembre 2026 : le vérificateur et la clé publique étaient publics, mais un
+ * acheteur n'avait rien à vérifier avant d'avoir payé — le seul rapport émis vivait dans un
+ * cas de test, signé d'une clé jetable. `rapport-exemple.html` est émis sur notre corpus
+ * held-out, signé de la vraie clé, et dit lui-même qu'il n'est qu'un exemple. Ce cas le
+ * vérifie avec la clé du dépôt, comme l'acheteur le fera ; un exemple qui ne se vérifie plus
+ * — clé tournée, fichier retouché — rougit ici avant de rougir chez lui.
+ */
+test("le rapport d'exemple livré se vérifie avec la clé publique du dépôt, et se dit exemple", () => {
+  const chemin = join(racine, "rapport-exemple.html");
+  assert.ok(existsSync(chemin), "rapport-exemple.html a disparu : l'acheteur n'a plus rien à vérifier avant d'acheter.");
+  const html = readFileSync(chemin, "utf8");
+  const r = verifier(html, readFileSync(join(racine, "cle-publique.pem"), "utf8"));
+  assert.equal(r.valide, true, r.motif);
+  assert.match(r.donnees.client, /^Example/, "le rapport d'exemple doit se nommer comme tel, dans ses octets signés.");
+  assert.match(html, /This is an example of the deliverable/, "la réserve « exemple, pas un résultat client » doit être dans le document signé.");
+  assert.match(html, /verifier-rapport\.mjs/, "et il doit dire comment se vérifier.");
+  /* Et le contrôle doit avoir lu un vrai rapport : un fichier vide passerait sinon. */
+  assert.ok(r.octets > 2000, `${r.octets} octets signés : ce n'est pas un rapport.`);
 });

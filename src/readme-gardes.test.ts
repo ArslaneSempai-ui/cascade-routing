@@ -47,7 +47,10 @@ function bac(): string {
   const d = mkdtempSync(join(tmpdir(), "cascade-readme-"));
   cpSync(join(racine, "src"), join(d, "src"), { recursive: true });
   symlinkSync(join(racine, "node_modules"), join(d, "node_modules"), "dir");
-  const copies = readdirSync(racine).filter((n) => /\.(json|md|pem)$/.test(n));
+  /* `.html` depuis le 3 septembre 2026 : le rapport d'exemple signé est un document livré que
+     le tableau annonce, et un bac qui ne le copie pas fait rougir le cas des documents pour
+     une absence qu'il a fabriquée lui-même. */
+  const copies = readdirSync(racine).filter((n) => /\.(json|md|pem|html)$/.test(n));
   /* Un bac vide rendrait le même rouge que la garde visée, et pour rien. */
   assert.ok(copies.length >= 10,
     `${copies.length} relevé(s) copié(s) dans le bac : la racine n'a pas été lue.`);

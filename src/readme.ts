@@ -1520,6 +1520,7 @@ const documents = (() => {
     "sbom.json": "the dependency inventory, CycloneDX, for a procurement team",
     "cle-publique.pem": "the key that signs reports — verify one with `node src/verifier-rapport.mjs`",
     "rules-example.json": "an example `--rules` file for `measure:yours`: one regular expression per column of your CSV, the whole match is the value — copy it, keep the columns you have",
+    "rapport-exemple.html": "an example of the signed report, issued on cascade's own held-out corpus with the repository's key — verify it before buying anything: `node src/verifier-rapport.mjs rapport-exemple.html`",
   };
   const presents = readdirSync(racine).filter((n) => n in decrit).sort();
   if (presents.length === 0) {
