@@ -42,7 +42,13 @@ test("LA FRONTIÈRE EST AU PASSAGE, PAS À CHAQUE PORTE D'ENTRÉE", () => {
    * et qu'il l'est. Un nouveau point d'entrée hérite de la garde sans que personne y pense ;
    * un nouveau site d'envoi, lui, fait tomber ce cas.
    */
-  const fichiers = readdirSync(dossier).filter((n) => /\.(ts|mjs)$/.test(n) && !n.endsWith(".test.ts"));
+  // RÉCURSIF : l'énumération s'arrêtait au premier niveau de src/ ; un envoi planté dans un
+  // sous-dossier (src/ocr/) laissait ce cas vert (constat de Mesure sur l'outil bleu, 7/09).
+  // Le témoin porte sur l'énumération elle-même : elle doit voir au moins un chemin imbriqué.
+  const tout = readdirSync(dossier, { recursive: true }) as string[];
+  assert.ok(tout.some((n) => n.includes("/")),
+    "aucun chemin imbriqué énuméré : l'énumération n'est pas récursive, les sous-dossiers échappent à la garde");
+  const fichiers = tout.filter((n) => /\.(ts|mjs)$/.test(n) && !n.endsWith(".test.ts"));
   assert.ok(fichiers.length >= 10, `${fichiers.length} fichier(s) lus : la lecture a échoué.`);
 
   const envois: string[] = [];
