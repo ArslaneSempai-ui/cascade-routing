@@ -155,6 +155,15 @@ export type VerdictCellule = {
   nouveau: Rate;
   verdict: "holds" | "moved" | "undetermined";
   sens?: "up" | "down";
+  /**
+   * UN MOVED DE JUSTESSE SE MARQUE. Le critère compare le taux PONCTUEL du jour à
+   * l'intervalle de la référence — le bruit d'échantillonnage du jour n'y entre pas
+   * (relecture adverse du 5 septembre 2026). Quand les deux intervalles se chevauchent
+   * encore, la direction n'est pas séparable du tirage sur cet échantillon : le verdict
+   * reste « moved » — le critère est celui de l'offre et il est énoncé — mais il le dit,
+   * là où un comité le lit, au lieu de le laisser deviner.
+   */
+  limite?: boolean;
   pourquoi?: string;
 };
 
@@ -171,8 +180,9 @@ export function jugerCellule(
       pourquoi: `${cote} case(s) — below ${ENOUGH}, the interval spans too much of the scale to separate anything`,
     };
   }
-  if (nouveau.rate < base.low) return { palier, champ, base: socle, nouveau, verdict: "moved", sens: "down" };
-  if (nouveau.rate > base.high) return { palier, champ, base: socle, nouveau, verdict: "moved", sens: "up" };
+  const chevauche = nouveau.low <= base.high && nouveau.high >= base.low;
+  if (nouveau.rate < base.low) return { palier, champ, base: socle, nouveau, verdict: "moved", sens: "down", ...(chevauche ? { limite: true } : {}) };
+  if (nouveau.rate > base.high) return { palier, champ, base: socle, nouveau, verdict: "moved", sens: "up", ...(chevauche ? { limite: true } : {}) };
   return { palier, champ, base: socle, nouveau, verdict: "holds" };
 }
 
@@ -296,7 +306,7 @@ export function rendreRecertification(o: {
   const lignes = o.cellules.map((c) => [
     `\`${c.champ}\``, `\`${c.palier}\``, ecrireTaux(c.base), ecrireTaux(c.nouveau),
     c.verdict === "holds" ? "**holds**"
-      : c.verdict === "moved" ? `**MOVED ${c.sens}**`
+      : c.verdict === "moved" ? `**MOVED ${c.sens}**${c.limite ? " (borderline: the two intervals still overlap — read the case list before alerting anyone)" : ""}`
         : `undetermined — ${c.pourquoi}`,
   ]);
   const parties = [
@@ -354,6 +364,10 @@ export function rendreRecertification(o: {
     + `. Next one due **${o.rythme.prochaine}**.`);
   parties.push(``, `## What this does not establish`, ``,
     `- That the rates hold on documents other than the ${o.cas} supplied today.`,
+    `- That a borderline MOVED is real: the verdict compares today's point rate to the baseline's`,
+    `  interval, and today's own sampling noise is not in that criterion. When the two intervals`,
+    `  still overlap the table says so — on a small sample, reread the named cases before`,
+    `  alerting a committee; on the same file, the discordant cases are the paired evidence.`,
     `- Why a field moved: a moved verdict says the spring decision expired, not what to buy instead —`,
     `  re-run \`npm run measure:yours\` with a declared margin for a fresh recommendation.`,
     `- That a "holds" under drift is safe: an expired population with stable rates is stable so far.`,

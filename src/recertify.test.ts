@@ -66,6 +66,31 @@ test("moved, dans les deux sens — un taux qui monte a bougé aussi", () => {
   assert.equal(haut.sens, "up");
 });
 
+test("un moved de justesse se marque : les deux intervalles se chevauchent encore", () => {
+  const base = { accuracy: 22 / 24, low: 0.73, high: 0.977, items: 24 };
+  /* 15/24 = 62,5 % [42,6–78,8] : le point sort de [73–97,7], l'intervalle du jour y mord
+     encore — la direction n'est pas séparable du tirage sur cet échantillon. */
+  const justesse = jugerCellule("small", "name", base, rate(15, 24));
+  assert.equal(justesse.verdict, "moved");
+  assert.equal(justesse.limite, true);
+  /* 5/24 = 20,8 % [9,2–40] : disjoint de [73–97,7] — un vrai départ, sans marque. */
+  const franc = jugerCellule("small", "name", base, rate(5, 24));
+  assert.equal(franc.verdict, "moved");
+  assert.equal(franc.limite, undefined);
+  /* Et la marque ATTEINT le rapport : le tableau porte la mise en garde, le pied la limite. */
+  const md = rendreRecertification({
+    date: "2026-09-05", fichier: "automne.csv",
+    baseline: { file: "printemps-measured.json", measuredAt: "2026-06-01T00:00:00.000Z", empreinte: "deadbeef00000000" },
+    cas: 24, champs: ["name"], cellules: [justesse],
+    verdictsParChamp: { name: "moved" }, cellulesEcartees: [],
+    jointure: { regime: "none", pourquoi: "x", parChamp: {} },
+    derive: { mesuree: false, pourquoi: "x" },
+    rythme: { jours: 90, declare: false, prochaine: "2026-12-04" },
+  });
+  assert.match(md, /borderline: the two intervals still overlap/);
+  assert.match(md, /today's own sampling noise is not in that criterion/);
+});
+
 test("sous ENOUGH observations, on ne tranche pas — et on dit de quel côté le compte manque", () => {
   const maigre = jugerCellule("small", "name", { accuracy: 0.9, low: 0.6, high: 0.98, items: 10 }, rate(20, 24));
   assert.equal(maigre.verdict, "undetermined");
