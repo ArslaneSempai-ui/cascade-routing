@@ -750,6 +750,7 @@ const commandes = (() => {
     ["sonde", "the generative probe, regenerated from the frozen profile — it was hand-typed and eleven of its figures had gone stale"],
     ["start", "the screen, on localhost:4670"],
     ["measure:yours", "your own cases, from a CSV — nothing leaves your machine. Writes a report beside the file, and a sealed record `<file>-measured.json` (counts and per-case verdicts, never a value) that `diff` compares and `sceller` re-verifies"],
+    ["recertify", "does the spring measurement still hold? Re-measures a new CSV under the sealed baseline record's own protocol — same fields, same questions, same tiers — and says per field: holds, or MOVED (exit code 1), naming the cases that used to pass and no longer do. Measures input drift against its own noise floor when the spring CSV is still beside the record. Writes `<file>-recertified.md` and a sealed `<file>-recertified.json`, which serves as the next baseline"],
     ["benchmark", "the same measurement on a public labelled dataset — the one command that downloads: the dataset comes down, nothing of yours goes up"],
     ["intake", "turn a filled-in questionnaire into the assumptions a run uses"],
     ["egress", "watch the network while a measurement runs, and record what it sees"],
