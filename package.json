@@ -31,6 +31,7 @@
     "captures": "node src/capturer.mjs .",
     "dossier": "node src/dossier.ts",
     "measure:yours": "node src/your-cases.ts",
+    "measure:humans": "node src/humans.ts",
     "fuite": "node src/fuite.ts",
     "benchmark": "node src/benchmark.ts",
     "egress": "node src/egress.ts",
