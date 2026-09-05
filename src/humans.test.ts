@@ -192,7 +192,7 @@ test(`sous ${ENOUGH} cas, le branchement refuse — remplacer une hypothèse par
   const chemin = join(d, "peu.json");
   writeFileSync(chemin, JSON.stringify(peu));
   assert.throws(() => lireMesureHumaine(chemin), (e: Error) => {
-    assert.match(e.message, /1 case\(s\), below 20/);
+    assert.match(e.message, /1 review\(s\), below 20/);
     assert.match(e.message, /worse than the/, "le refus dit pourquoi, pas seulement non");
     return true;
   });
@@ -245,7 +245,7 @@ test("« assumed » devient « measured » avec le drapeau, et redevient vrai sa
   const avec = spawnSync(process.execPath, [CMD_OPTIMISE, `--humans=${chemin}`],
     { encoding: "utf8", timeout: 120_000 });
   assert.equal(avec.status, 0, `optimise --humans a échoué :\n${avec.stderr}`);
-  assert.match(avec.stdout, /human accuracy measured at 83\.3 % on 30 case\(s\)/);
+  assert.match(avec.stdout, /human accuracy measured at 83\.3 % on 30 review\(s\)/);
   assert.doesNotMatch(avec.stdout, /assumed at .* this is not a measurement/,
     "les deux phrases à la fois : le lecteur ne sait plus laquelle croire");
 

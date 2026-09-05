@@ -490,7 +490,8 @@ if (isMain(import.meta)) {
         console.log(`human accuracy assumed at ${pc(h.humanAccuracy)} — this is not a measurement\n`);
     }
     else {
-        console.log(`human accuracy measured at ${pc(h.humanAccuracy)} on ${mesureHumaine.global.n} case(s) — from ${fichierHumains}`);
+        /* « review(s) » : une par couple (dossier, champ) — « 120 cases » se lirait 120 dossiers. */
+        console.log(`human accuracy measured at ${pc(h.humanAccuracy)} on ${mesureHumaine.global.n} review(s) — from ${fichierHumains}`);
         console.log(mesureHumaine.secondes !== null && mesureHumaine.secondes.n > 0
             ? `human seconds measured: median ${h.humanSeconds.toFixed(1)} s over ${mesureHumaine.secondes.n} case(s)\n`
             : `human seconds still assumed at ${h.humanSeconds} s — the file carried no usable timestamps\n`);

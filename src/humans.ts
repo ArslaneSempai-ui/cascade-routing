@@ -272,7 +272,11 @@ export function rapport(m: MesureHumaine, releveJson: string): string {
   const l: string[] = [
     `# The human tier, measured on your reviewed cases`,
     ``,
-    `${m.source.cas} case(s) from \`${cellule(m.source.fichier).slice(1, -1)}\` `
+    /* « review(s) », PAS « case(s) » : le compte est celui des RELECTURES — une par couple
+       (dossier, champ). 24 dossiers × 5 champs font 120 lignes, et un comité qui lit
+       « 120 cases » croit 120 dossiers. L'unité voyage dans le nom, pas dans un tableau
+       trois lignes plus bas. Relevé par la relecture d'Écriture. */
+    `${m.source.cas} review(s) — one per (case, field) pair — from \`${cellule(m.source.fichier).slice(1, -1)}\` `
     + `(sha256 ${m.source.sha256.slice(0, 16)}…), measured on this machine on ${m.date}. Nothing left it.`,
     ``,
     `This replaces an assumption, not a measurement of anyone: the tier is aggregated, no`,
@@ -345,7 +349,7 @@ export function lireMesureHumaine(chemin: string): MesureHumaine {
       + `  Its content moved since it was written. Re-run: npm run measure:humans -- --cases=…`);
   }
   if (brut.global.n < ENOUGH) {
-    throw new Error(`${chemin} measures ${brut.global.n} case(s), below ${ENOUGH}.\n`
+    throw new Error(`${chemin} measures ${brut.global.n} review(s), below ${ENOUGH}.\n`
       + `  Replacing a stated assumption with a rate over so few would be worse than the\n`
       + `  assumption. Review more cases, then measure again.`);
   }
@@ -408,12 +412,12 @@ the same (id, field) twice. Nothing about your file leaves this machine.
   writeFileSync(md, rapport(m, releveJson));
 
   const g = cellulesDeTaux(rate(m.global.propres, m.global.n));
-  console.log(`\n${m.source.cas} case(s), ${Object.keys(m.parChamp).length} field(s) — human tier at ${g.taux} ${g.intervalle}`);
+  console.log(`\n${m.source.cas} review(s), ${Object.keys(m.parChamp).length} field(s) — human tier at ${g.taux} ${g.intervalle}`);
   console.log(`  ${md}`);
   console.log(`  ${releveJson}`);
   console.log(`\nPlug it in: npm run optimise -- --humans=${releveJson}\n`);
   if (m.global.n < ENOUGH) {
-    console.warn(`⚠ ${m.global.n} case(s) is below ${ENOUGH}: the report is written, and the routing will refuse\n`
+    console.warn(`⚠ ${m.global.n} review(s) is below ${ENOUGH}: the report is written, and the routing will refuse\n`
       + `  to replace the assumption with it. Review more cases, then measure again.`);
   }
 }
