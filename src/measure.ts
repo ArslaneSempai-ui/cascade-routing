@@ -25,6 +25,7 @@ import type { Field } from "./corpus.ts";
 import { fileURLToPath } from "node:url";
 import { casDemandes } from "./cas-demandes.ts";
 import { exigerArbrePropre, etatDuDepot as etatPartage } from "./arbre-propre.ts";
+import { estNomDeReleve } from "./nom-de-releve.ts";
 
 const FICHIER = fileURLToPath(new URL("../data/profiles.json", import.meta.url));
 
@@ -328,7 +329,12 @@ export function empreinteDuReleve(profils: unknown): string {
 export function ecrireReleve(fichier: string, releve: Profiles): Profiles {
   mkdirSync(dirname(fichier), { recursive: true });
   /* Le scellé se pose sur le contenu et s'exclut lui-même du calcul — voir `canonique()`. */
-  (releve as Record<string, unknown>).empreinte = empreinteDuReleve(releve);
+  // les MARQUES de la famille (8/09/2026) : le Dossier exige un relevé identifié et versionné
+  // avant de le dater ; posées AVANT le sceau, elles en font partie
+  const marque = releve as Record<string, unknown>;
+  if (marque.kind === undefined) marque.kind = "cascade-routing-record";
+  if (marque.version === undefined) marque.version = 1;
+  marque.empreinte = empreinteDuReleve(releve);
   const provisoire = `${fichier}.tmp`;
   writeFileSync(provisoire, JSON.stringify(releve, null, 2));
   /* Le renommage est atomique sur le même système de fichiers : un lecteur voit l'ancien
@@ -383,7 +389,7 @@ export function readProfiles(
   }
 
   const livres = readdirSync(racine)
-    .filter((f) => /^profiles-.*\.json$/.test(f))
+    .filter(estNomDeReleve)
     .map((f) => {
       try { return { f, p: JSON.parse(readFileSync(join(racine, f), "utf8")) as Profiles }; }
       catch { return null; }

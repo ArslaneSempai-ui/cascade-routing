@@ -4689,6 +4689,12 @@ test("un relevé publié porte les paramètres sous lesquels le code le prendrai
     if (!d || typeof d !== "object" || Array.isArray(d)) continue;
     for (const [k, v] of Object.entries(d)) {
       if (typeof v !== "number" || COMPTES.has(k) || COMPTES.has(`${f}:${k}`)) continue;
+      /* Un relevé de la FAMILLE (8/09 : `{kind: "cascade-routing-record", version: 1}`, les
+         marques que les quatre autres outils portent et que le Dossier lit) : `version` y est
+         la révision du FORMAT du relevé, pas un réglage de mesure. Reconnu par la marque
+         `kind`, pas par le nom du fichier : le prochain relevé écrit par `ecrireReleve` porte
+         la même marque sous un autre nom. */
+      if (k === "version" && d.kind === "cascade-routing-record") continue;
       if (!(k in AUJOURDHUI)) { nonClasses.push(`${f}:${k}`); continue; }
       confrontes++;
       if (v !== AUJOURDHUI[k]) ecarts.push(`${f} publie ${k}=${v}, le code utiliserait ${AUJOURDHUI[k]}`);

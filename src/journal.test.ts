@@ -231,6 +231,17 @@ const PRODUITS_HORS_DEPOT = new Set(["exposition.json"]);
  */
 const SANS_PROVENANCE_AU_26_08 = 19;
 
+/**
+ * Ce qui, à la racine, est un FICHIER LIVRÉ que le contrôle des commits doit regarder : les
+ * JSON, sauf l'outillage (package, tsconfig) et sauf les SIGNATURES DÉTACHÉES
+ * (`<releve>.signature.json`, 8/09 : `{alg, cle, valeur}`, la forme que le Dossier vérifie).
+ * Une signature ne porte ni chiffre ni commit : elle signe le sceau d'un relevé qui, lui,
+ * porte les deux. C'est de la provenance, pas un relevé sans provenance ; la compter ferait
+ * monter le plancher à chaque relevé signé, et un plancher qui monte ne garde plus rien.
+ */
+const fichierLivre = (n: string): boolean =>
+  n.endsWith(".json") && !/^(package|package-lock|tsconfig)/.test(n) && !n.endsWith(".signature.json");
+
 test("chaque redirection de commit nomme les relevés qui la citent vraiment", () => {
   /*
    * `citedBy` N'ÉTAIT LU PAR RIEN, ET IL ÉTAIT DÉJÀ FAUX.
@@ -262,7 +273,7 @@ test("chaque redirection de commit nomme les relevés qui la citent vraiment", (
     return acc;
   };
   const parFichier = new Map<string, Set<string>>();
-  for (const n of readdirSync(racine).filter((x) => x.endsWith(".json") && !/^(package|package-lock|tsconfig)/.test(x))) {
+  for (const n of readdirSync(racine).filter(fichierLivre)) {
     try { parFichier.set(n, hashesDe(JSON.parse(readFileSync(join(racine, n), "utf8")))); } catch { /* pas un objet */ }
   }
   assert.ok(parFichier.size >= 10, `${parFichier.size} fichier(s) lu(s) : la lecture a échoué.`);
@@ -294,8 +305,7 @@ test("le nombre de fichiers livrés qu'aucun contrôle de provenance ne regarde 
     }
     return false;
   };
-  const tous = readdirSync(racine)
-    .filter((n) => n.endsWith(".json") && !/^(package|package-lock|tsconfig)/.test(n));
+  const tous = readdirSync(racine).filter(fichierLivre);
   const dehors = tous.filter((n) => {
     try { return !cite(JSON.parse(readFileSync(join(racine, n), "utf8"))); } catch { return true; }
   });

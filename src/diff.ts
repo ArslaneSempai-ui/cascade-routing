@@ -30,6 +30,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { isMain } from "./cli.ts";
 import { pairedVerdict } from "./interval.ts";
+import { estNomDeReleve } from "./nom-de-releve.ts";
 
 type Cellule = { reussites?: string; accuracy: number; items: number };
 /** Un relevé du banc, ou un relevé CLIENT (`<file>-measured.json`) : la même forme, plus la
@@ -85,7 +86,7 @@ export function ordonnerParMesure(entrees: { nom: string; measuredAt?: unknown }
 
 export function relevesDisponibles(): string[] {
   return ordonnerParMesure(readdirSync(RACINE)
-    .filter((f) => /^profiles-.*\.json$/.test(f))
+    .filter(estNomDeReleve)
     .map((nom) => {
       try { return { nom, measuredAt: (JSON.parse(readFileSync(join(RACINE, nom), "utf8")) as { measuredAt?: unknown }).measuredAt }; }
       catch { return { nom }; }

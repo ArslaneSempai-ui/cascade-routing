@@ -1,4 +1,6 @@
 {
+  "kind": "cascade-routing-record",
+  "version": 1,
   "measuredAt": "2026-08-20T10:40:28.826Z",
   "code": {
     "commit": "64bdacf",
@@ -532,5 +534,5 @@
     "gen-4b",
     "gen-8b"
   ],
-  "empreinte": "1151f5a1cfaae0c0"
+  "empreinte": "dbf26abec438515e"
 }
