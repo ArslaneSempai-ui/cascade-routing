@@ -418,6 +418,13 @@ the same (id, field) twice. Nothing about your file leaves this machine.
   }
 }
 
+/* Un refus destiné au client ne sort pas en trace de pile : une pile se lit comme un
+   plantage, un message se lit comme une décision. Même forme que your-cases.ts. */
 if (isMain(import.meta)) {
-  await principal();
+  try {
+    await principal();
+  } catch (e) {
+    console.error(`\n${e instanceof Error ? e.message : String(e)}\n`);
+    process.exit(1);
+  }
 }

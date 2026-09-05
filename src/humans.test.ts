@@ -220,6 +220,17 @@ test("la commande écrit les deux fichiers À CÔTÉ du CSV, et nulle part aille
   /* Un drapeau inconnu SORT EN 2 : ignoré, il répondrait à une autre question. */
   assert.equal(spawnSync(process.execPath, [CMD_HUMANS, "--case=x"],
     { encoding: "utf8", timeout: 60_000 }).status, 2);
+
+  /* UN REFUS EST UN MESSAGE, PAS UNE TRACE DE PILE : la pile se lit comme un plantage, et
+     un client qui lit un plantage n'obéit pas au message — il ouvre un ticket. */
+  const mauvais = join(d, "mauvais.csv");
+  writeFileSync(mauvais, "id,field,truth\n1,name,Anna\n");
+  const refus = spawnSync(process.execPath, [CMD_HUMANS, `--cases=${mauvais}`],
+    { encoding: "utf8", timeout: 60_000 });
+  assert.equal(refus.status, 1, "un CSV refusé doit sortir en 1, pas en 0 ni en plantage");
+  assert.match(refus.stderr, /reviewer1/, "le refus nomme ce qui manque");
+  assert.doesNotMatch(refus.stderr, /at .*humans\.ts|throw new Error/,
+    "la trace de pile part chez le client : il lira un crash, pas un refus.");
 });
 
 test("« assumed » devient « measured » avec le drapeau, et redevient vrai sans lui", () => {
