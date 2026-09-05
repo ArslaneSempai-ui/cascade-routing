@@ -79,6 +79,41 @@ test("un en-tête faux est refusé en nommant ce qui manque et ce qu'on accepte"
 
 test("une cellule de champ vide est refusée : un verdict doit atterrir sous un champ", () => {
   assert.throws(() => lireRelectures(ENTETE + "\n1,,Anna,Anna,,,"), /empty "field"/);
+  assert.throws(() => lireRelectures(ENTETE + "\n,name,Anna,Anna,,,"), /empty "id"/,
+    "un id vide entrerait en collision avec un autre dans les clés de verdicts, sans un mot");
+});
+
+test("LE FICHIER NATUREL — un dossier, cinq lignes, un même id — est mesuré, pas refusé", () => {
+  /*
+   * TROUVÉ PAR LA RELECTURE ADVERSE DU LOT, pas par cette suite : l'aide dit « id names the
+   * case, field names what was reviewed », donc le client dont les relecteurs ont vérifié les
+   * cinq champs du dossier 417 écrit cinq lignes `417,…`. C'était l'usage CENTRAL du format
+   * documenté, et il sortait en erreur — la garde d'unicité du lecteur hérité comptait les
+   * documents, avec les mots d'un autre outil. Aucun des dix cas d'alors n'avait deux lignes
+   * sous le même id : le témoin couvrait le voisinage du format, jamais son centre.
+   */
+  const m = mesureDe([ENTETE,
+    "417,name,Anna Petrova,Anna Petrova,,,",
+    "417,birth,3 May 1990,3 May 1990,,,",
+    "417,document,ES-1234-A,ES-1234-B,,,",
+    "418,name,Marc Dupont,Marc Dupont,,,",
+  ].join("\n"));
+  assert.equal(m.global.n, 4);
+  assert.equal(m.verdicts["name"]!["417"], "clean");
+  assert.equal(m.verdicts["document"]!["417"], "wrong",
+    "les verdicts d'un même dossier restent sous leur champ, jamais fondus");
+
+  /* LA VRAIE CLÉ EST (id, champ) : la même relecture DEUX FOIS compterait deux fois dans le
+     taux. Le refus la nomme, avec les mots d'ici — une relecture, pas « your pipeline ». */
+  assert.throws(() => mesureDe([ENTETE,
+    "417,name,Anna,Anna,,,",
+    "417,name,Anna,Petrova,,,",
+  ].join("\n")), (e: Error) => {
+    assert.match(e.message, /\("417", "name"\) × 2/);
+    assert.match(e.message, /same review twice/);
+    assert.match(e.message, /MAY share an id/, "le refus dit aussi ce qui est PERMIS, sinon il ré-enseigne le défaut d'avant");
+    return true;
+  });
 });
 
 test("le relevé émis ne porte AUCUNE valeur du fichier, et le détecteur sait le voir", () => {

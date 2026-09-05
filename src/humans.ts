@@ -93,7 +93,18 @@ export function lireRelectures(texte: string): { lignes: LigneRelue[]; avertisse
       + `  ISO 8601).`);
   }
 
-  const entete = noms.map((n) => (n === "field" ? "text" : n)).join(",");
+  /*
+   * `id` EST RENOMMÉ AUSSI, ET C'EST LA TROUVAILLE D'UNE RELECTURE ADVERSE. Le lecteur hérité
+   * exige un identifiant UNIQUE par ligne — chez lui une ligne est un document, et un doublon
+   * compte un document deux fois. Ici une ligne est UN CHAMP d'un dossier : le fichier
+   * NATUREL du format documenté ci-dessus porte cinq lignes `417,…`, une par champ relu, et
+   * il était refusé avec le vocabulaire d'un autre outil (« your pipeline », « one document
+   * twice »). Aucun des cas d'alors n'avait deux lignes sous le même id — le témoin couvrait
+   * le voisinage du format, pas son centre. L'identifiant voyage donc comme un champ, le
+   * lecteur fabrique ses propres clés de ligne, et la VRAIE clé d'unicité — (id, champ) —
+   * est tenue ici, avec les mots d'ici.
+   */
+  const entete = noms.map((n) => (n === "field" ? "text" : n === "id" ? "casid" : n)).join(",");
   const l = lireCsv(entete + texte.slice(finEntete === -1 ? texte.length : finEntete));
 
   const avertissements: string[] = [];
@@ -105,7 +116,7 @@ export function lireRelectures(texte: string): { lignes: LigneRelue[]; avertisse
     + `line(s) ${l.courtes.slice(0, 8).map((e) => e.ligne).join(", ")}.`);
 
   const lignes: LigneRelue[] = l.cas.map((c) => ({
-    id: c.id, champ: c.text.trim(),
+    id: (c.truth["casid"] ?? "").trim(), champ: c.text.trim(),
     verite: c.truth["truth"] ?? "", lecture1: c.truth["reviewer1"] ?? "",
     lecture2: c.truth["reviewer2"], debut: c.truth["started"], fin: c.truth["finished"],
   }));
@@ -116,6 +127,34 @@ export function lireRelectures(texte: string): { lignes: LigneRelue[]; avertisse
       `${sansChamp} row(s) have an empty "field" cell.\n`
       + `  A verdict has to land under a field to be counted; an empty name would pool\n`
       + `  unrelated cases into one rate without a word. Name the field, or drop the row.`);
+  }
+  const sansId = lignes.filter((x) => x.id === "").length;
+  if (sansId > 0) {
+    throw new Error(
+      `${sansId} row(s) have an empty "id" cell.\n`
+      + `  The id keys each verdict in the relevé; empty ones would collide in silence.\n`
+      + `  Give each case an identifier — and choose it opaque: ids survive into the output.`);
+  }
+
+  /*
+   * LA CLÉ D'UNICITÉ EST (id, champ). Le MÊME dossier relu sur cinq champs est l'usage
+   * central ; le même dossier relu DEUX FOIS sur le même champ compterait une relecture
+   * deux fois dans le taux, sans un mot.
+   */
+  const paires = new Map<string, number>();
+  for (const x of lignes) {
+    const cle = `${x.id}\u0000${x.champ}`;
+    paires.set(cle, (paires.get(cle) ?? 0) + 1);
+  }
+  const doublons = [...paires.entries()].filter(([, n]) => n > 1);
+  if (doublons.length > 0) {
+    throw new Error(
+      `duplicate (id, field) pair(s): `
+      + doublons.slice(0, 5).map(([cle, n]) => { const [id, ch] = cle.split("\u0000"); return `("${id}", "${ch}") × ${n}`; }).join(", ")
+      + (doublons.length > 5 ? ` and ${doublons.length - 5} more` : "") + `.\n`
+      + `  One row is one field of one reviewed case: the same review twice would count\n`
+      + `  twice in the human tier's rate. Several rows MAY share an id — one per field —\n`
+      + `  but not the same field twice. Deduplicate, and run again. Nothing was measured.`);
   }
   return { lignes, avertissements };
 }
@@ -238,7 +277,9 @@ export function rapport(m: MesureHumaine, releveJson: string): string {
     ``,
     `This replaces an assumption, not a measurement of anyone: the tier is aggregated, no`,
     `per-person figure exists here, and the sealed relevé carries verdicts — never a value,`,
-    `never a timestamp, never a name.`,
+    `never a timestamp, never a name. Two things of yours DO survive into it: the case ids`,
+    `and the file name, because verdicts need keys and provenance needs a source. Choose`,
+    `them opaque — an id that is an account number stays an account number.`,
     ``,
     `## Accuracy of the human tier`,
     ``,
@@ -275,7 +316,9 @@ export function rapport(m: MesureHumaine, releveJson: string): string {
   }
   l.push(``, `## Plugging it in`, ``,
     "```", `npm run optimise -- --humans=${releveJson}`, "```", ``,
-    `The routing then uses these figures where it used the assumption, and says so.`, ``);
+    `The routing then uses the **all fields** line — and the median seconds, when measured —`,
+    `where it used the assumption, and says so. The per-field lines are yours to read; the`,
+    `assumption they replace was a single figure, and a single figure replaces it.`, ``);
   return l.join("\n");
 }
 
@@ -344,7 +387,9 @@ It writes, next to your file and nowhere else:
 
 Then: npm run optimise -- --humans=<file>-humans-measured.json
 The tier is measured AGGREGATED: no per-person output exists, pseudonymous or not.
-Nothing about your file leaves this machine.
+Case ids and the file name survive into the relevé (verdict keys, provenance):
+choose them opaque. Several rows may share an id — one per field reviewed — never
+the same (id, field) twice. Nothing about your file leaves this machine.
 `);
     return;
   }
