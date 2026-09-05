@@ -169,3 +169,35 @@ test("au seuil, les deux chemins citent le même chiffre", () => {
     "un tableau et une console qui divergent d'un point rendraient deux documents\n"
     + "  incomparables issus de la même mesure.");
 });
+
+test("l'intervalle CONTIENT son estimation — aux extrêmes flottants compris", () => {
+  /*
+   * wilson(60, 60) rendait [0,93…, 0,9999999999999999] : une borne haute SOUS l'estimation
+   * (1), par la seule virgule flottante. Un lecteur qui vérifie « taux ≤ borne haute » sur
+   * un relevé scellé aurait eu raison de le refuser — et le relevé aurait eu raison d'être
+   * ce qu'il était. Trouvé par cascade-screening en parcourant toutes les cellules de son
+   * relevé public ; fermé ICI, à la source, pour les deux dépôts.
+   */
+  const contient = (successes: number, n: number) => {
+    const [bas, haut] = wilson(successes, n);
+    const p = successes / n;
+    assert.ok(bas <= p && p <= haut,
+      `wilson(${successes}, ${n}) = [${bas}, ${haut}] ne contient pas p̂ = ${p}`);
+  };
+  /* Les trois cas qui ont payé, nommés : le plein, le vide, l'unité. */
+  contient(60, 60);
+  contient(0, 60);
+  contient(1, 1);
+  /* Et la boucle sur les n courants, extrémités comprises : le flottant ne choisit pas ses
+     victimes là où on l'a déjà vu. */
+  for (const n of [1, 2, 3, 5, 10, 20, 24, 30, 51, 60, 100, 120, 685, 1000]) {
+    for (const s of [0, 1, Math.floor(n / 2), n - 1, n]) {
+      if (s >= 0 && s <= n) contient(s, n);
+    }
+  }
+  /* CONTRE-ÉPREUVE : l'élargissement ne RÉTRÉCIT rien — les valeurs canoniques du fichier
+     tiennent toujours (4/4 rend [51 %, 100 %], l'énoncé du commentaire d'en-tête). */
+  const [bas44, haut44] = wilson(4, 4);
+  assert.ok(Math.abs(bas44 - 0.51) < 0.02 && haut44 === 1,
+    `wilson(4, 4) = [${bas44}, ${haut44}] : l'énoncé « [51 %, 100 %] » du fichier ne tient plus`);
+});
