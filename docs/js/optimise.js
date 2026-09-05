@@ -437,7 +437,7 @@ if (isMain(import.meta)) {
     const { lignesEvaluation } = await import("./evaluation.js");
     for (const l of lignesEvaluation())
         console.log(l);
-    refuserDrapeauxInconnus([]);
+    refuserDrapeauxInconnus(["--humans"]);
     /* Chargé ici et pas en tête : `measure.ts` ouvre des fichiers et tire le runtime des
      * modèles. L'écran importe ce module dans un navigateur, où ni l'un ni l'autre n'existe. */
     const { readProfiles } = await import("./measure.js");
@@ -446,7 +446,35 @@ if (isMain(import.meta)) {
         console.error("No profile measured — start with: npm run measure");
         process.exit(1);
     }
-    const h = ASSUMPTIONS;
+    /*
+     * `--humans=<relevé>` REMPLACE L'HYPOTHÈSE PAR LA MESURE DU CLIENT, quand elle existe.
+     *
+     * Le relevé vient de `npm run measure:humans`, scellé ; `lireMesureHumaine` vérifie le
+     * scellé et refuse un échantillon sous ENOUGH — remplacer une hypothèse annoncée par un
+     * taux sur sept cas serait pire que l'hypothèse. Sans le drapeau, rien ne change : 0,85
+     * supposé, et dit comme tel. Les secondes ne remplacent l'hypothèse que si le fichier
+     * portait des horodatages ; la médiane, pas la moyenne — un dossier laissé ouvert sur une
+     * pause déjeuner tirerait la moyenne hors de tout sens.
+     */
+    const fichierHumains = process.argv.find((a) => a.startsWith("--humans="))?.split("=").slice(1).join("=");
+    const mesureHumaine = await (async () => {
+        if (fichierHumains === undefined)
+            return null;
+        const { lireMesureHumaine } = await import("./humans.js");
+        try {
+            return lireMesureHumaine(fichierHumains);
+        }
+        catch (e) {
+            console.error(e.message);
+            process.exit(1);
+        }
+    })();
+    const h = mesureHumaine === null ? ASSUMPTIONS : {
+        ...ASSUMPTIONS,
+        humanAccuracy: mesureHumaine.global.taux,
+        ...(mesureHumaine.secondes !== null && mesureHumaine.secondes.n > 0
+            ? { humanSeconds: mesureHumaine.secondes.mediane } : {}),
+    };
     /*
      * LE SYMBOLE VIENT DE `symboleDe(UNITS.budget)`, jamais du site de rendu — c'est la règle
      * que le message d'erreur de symboleDe énonce en toutes lettres, et ce helper, nommé `euro`,
@@ -456,7 +484,17 @@ if (isMain(import.meta)) {
     const monnaie = (n) => symboleDe(UNITS.budget) + Math.round(n).toLocaleString("en-GB");
     const pc = (x) => (x * 100).toFixed(1) + " %";
     console.log(`\n${h.volume.toLocaleString("en-GB")} records · budget ${monnaie(h.budget)}`);
-    console.log(`human accuracy assumed at ${pc(h.humanAccuracy)} — this is not a measurement\n`);
+    /* La provenance de la ligne suit le drapeau : « assumed » redevient vrai sans lui, et
+       « measured » ne s'affiche qu'avec le relevé qui le prouve, nommé. */
+    if (mesureHumaine === null) {
+        console.log(`human accuracy assumed at ${pc(h.humanAccuracy)} — this is not a measurement\n`);
+    }
+    else {
+        console.log(`human accuracy measured at ${pc(h.humanAccuracy)} on ${mesureHumaine.global.n} case(s) — from ${fichierHumains}`);
+        console.log(mesureHumaine.secondes !== null && mesureHumaine.secondes.n > 0
+            ? `human seconds measured: median ${h.humanSeconds.toFixed(1)} s over ${mesureHumaine.secondes.n} case(s)\n`
+            : `human seconds still assumed at ${h.humanSeconds} s — the file carried no usable timestamps\n`);
+    }
     const a = optimiseExtraction(p, h);
     if (!a) {
         console.log("No routing fits this budget.\n");
