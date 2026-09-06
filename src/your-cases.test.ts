@@ -1191,6 +1191,7 @@ test("recommander : la mesure du 3 septembre ne recommande plus le palier faible
     { palier: "large", r: rate(23, 24), ms: 10 },
     { palier: "small", r: rate(16, 24), ms: 5 },
   ];
+  assert.equal(Math.round(((23 - 16) / 24) * 100), 29, "le cas met 29 points d'écart entre large et small : le message ci-dessous les cite");
   const sans = recommander("name", rangs, releve);
   assert.ok(sans.some((l) => /small is separably worse than large/.test(l)), sans.join("\n"));
   assert.ok(sans.some((l) => /large wins outright/.test(l)), sans.join("\n"));

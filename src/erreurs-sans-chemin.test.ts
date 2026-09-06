@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { sansChemins, FORMES_PERMISES } from "./server.ts";
 
@@ -75,8 +75,15 @@ test("sansChemins caviarde aussi les racines hors des sept d'origine", () => {
   /* /Volumes (disque externe macOS), /usr/local, /srv, /mnt : un dépôt lancé de là envoyait
      son chemin complet — nom d'utilisateur compris — dans la réponse HTTP. La liste reste une
      liste, et ce cas épingle au moins les racines usuelles des trois systèmes. */
-  for (const chemin of ["/Volumes/WORK/cascade/src/a.ts", "/usr/local/lib/b.js",
-                        "/srv/app/c.ts", "/mnt/d/e.ts", "/Library/Caches/f.bin"]) {
+  /* LES RACINES SONT LUES SUR LE DISQUE, pas récitées : cinq chemins écrits à la main
+     couvraient ce que j'avais imaginé (/Volumes, /usr/local, /srv, /mnt, /Library) ; la
+     machine qui lance ce cas a ses propres racines, et une racine absente de la liste
+     passait sans que rien le dise. Le minimum refuse la dérivation qui ne rend rien. */
+  const racines = readdirSync("/", { withFileTypes: true })
+    .filter((d) => d.isDirectory() && !d.name.startsWith("."))
+    .map((d) => `/${d.name}`);
+  if (racines.length < 5) throw new Error(`la dérivation des racines ne marche plus : ${racines.length} lue(s) sur /`);
+  for (const chemin of racines.map((r) => `${r}/WORK/cascade/src/a.ts`)) {
     /* Le `:12` part avec le chemin — `[^\s"')]*` le consomme, comportement historique du
        motif : un numéro de ligne colle au chemin sans espace. On épingle le comportement réel,
        relevé en le lançant, pas celui que j'avais imaginé. */

@@ -44,7 +44,9 @@ test("l'autre répartition possible, huit contre un : encore séparables, p = 0,
 });
 
 test("trois discordants sur 24 : indécis, et la phrase refuse de conclure sans marge", () => {
-  const a = apparier(bits(24, []), bits(24, [0, 1, 2]));
+  const discordants = [0, 1, 2];
+  assert.equal(discordants.length, 3, "le titre compte trois discordants : le corps les tient");
+  const a = apparier(bits(24, []), bits(24, discordants));
   assert.equal(a.p, 0.25);
   assert.equal(a.separables, false);
   const v = juger(a);

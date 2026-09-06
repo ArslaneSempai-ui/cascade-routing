@@ -83,7 +83,7 @@ test("une cellule de champ vide est refusée : un verdict doit atterrir sous un 
     "un id vide entrerait en collision avec un autre dans les clés de verdicts, sans un mot");
 });
 
-test("LE FICHIER NATUREL — un dossier, cinq lignes, un même id — est mesuré, pas refusé", () => {
+test("LE FICHIER NATUREL — un dossier, trois lignes sous le même id — est mesuré, pas refusé", () => {
   /*
    * TROUVÉ PAR LA RELECTURE ADVERSE DU LOT, pas par cette suite : l'aide dit « id names the
    * case, field names what was reviewed », donc le client dont les relecteurs ont vérifié les
@@ -92,12 +92,14 @@ test("LE FICHIER NATUREL — un dossier, cinq lignes, un même id — est mesur�
    * documents, avec les mots d'un autre outil. Aucun des dix cas d'alors n'avait deux lignes
    * sous le même id : le témoin couvrait le voisinage du format, jamais son centre.
    */
-  const m = mesureDe([ENTETE,
+  const lignes = [
     "417,name,Anna Petrova,Anna Petrova,,,",
     "417,birth,3 May 1990,3 May 1990,,,",
     "417,document,ES-1234-A,ES-1234-B,,,",
     "418,name,Marc Dupont,Marc Dupont,,,",
-  ].join("\n"));
+  ];
+  assert.equal(lignes.filter((l) => l.startsWith("417,")).length, 3, "le titre compte trois lignes sous 417 : le corps les tient");
+  const m = mesureDe([ENTETE, ...lignes].join("\n"));
   assert.equal(m.global.n, 4);
   assert.equal(m.verdicts["name"]!["417"], "clean");
   assert.equal(m.verdicts["document"]!["417"], "wrong",
