@@ -36,8 +36,8 @@ function lire(nom) {
   if (!existsSync(p)) {
     throw new Error(
       `${nom} is missing.\n\n`
-      + "  This reading ships with the repository. If it is gone, the clone is incomplete —\n"
-      + `  restore it with \`git checkout ${nom}\`. Nothing here is typed by hand, so\n`
+      + "  This reading ships with the repository. If it is gone, the clone is incomplete.\n"
+      + `  Restore it with \`git checkout ${nom}\`. Nothing here is typed by hand, so\n`
       + "  without it there is nothing to say.");
   }
   return JSON.parse(readFileSync(p, "utf8"));
@@ -98,10 +98,10 @@ export function reponse(exposition, doc) {
 
   const lignes = [
     "",
-    "  CASCADE — the question is not which model. It is what being wrong costs.",
+    "  CASCADE measures what a wrong value costs, field by field.",
     "",
     `  On our corpus of ${t.n} records, the routing we publish returns`,
-    `  ${t.successes} COMPLETE records out of ${t.n} — ${pct(t.rate)} %, 95 % CI ${pct(t.low)}–${pct(t.high)} %.`,
+    `  ${t.successes} COMPLETE records out of ${t.n}: ${pct(t.rate)} %, 95 % CI ${pct(t.low)} % to ${pct(t.high)} %.`,
     "",
     "  That is the per-RECORD rate, not the per-field average. A record is complete",
     "  or it is not. Averaging across fields flatters: a record missing one field",
@@ -109,18 +109,17 @@ export function reponse(exposition, doc) {
     "",
     `  That routing costs ${nombre(publie.traitement)} ${DEVISE} per ${denominateur} to run.`,
     `  What it lets through costs ${nombre(publie.exposition)}.`,
-    `  A ${denominateur} is ${exposition.periode} — not a calendar year, which nothing here measures.`,
+    `  A ${denominateur} is ${exposition.periode}. No calendar year is measured here.`,
     "",
-    `  ${nombre(rapport)} times more. That is where the money is, and it is almost`,
-    "  always the variable nobody is measuring.",
+    `  ${nombre(rapport)} times more.`,
     "",
     b ? "  The recommendation only flips if one wrong value costs more than"
       : null,
-    b ? `  ${b.bas}–${b.haut}× one blank field. Below that, it holds.` : null,
+    b ? `  ${b.bas} to ${b.haut}× one blank field. Below that, it holds.` : null,
     "",
     "  ───────────────────────────────────────────────────────────────────────",
     "",
-    "  THESE ARE OUR NUMBERS, ON OUR CORPUS. Not yours.",
+    "  THESE ARE OUR NUMBERS, ON OUR CORPUS, not yours.",
     "",
     "  You can reproduce them: everything is here, and `npm test` recomputes them.",
     "  That is stronger evidence than a number taken on your own data, which",

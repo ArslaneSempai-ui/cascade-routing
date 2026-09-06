@@ -380,7 +380,7 @@ export function readProfiles(
     }
     if (attendue !== calculee) {
       throw new Error(
-        `${fichier} has changed since it was measured — fingerprint ${attendue}, content ${calculee}.\n`
+        `${fichier} has changed since it was measured: fingerprint ${attendue}, content ${calculee}.\n`
         + `  A figure in this file was edited by hand, or the file was assembled from two\n`
         + `  separate records. No figure published from it has any value until that is\n`
         + `  cleared up. Measure again, or re-seal if the change is intended and owned.`);
@@ -415,7 +415,7 @@ export function readProfiles(
     }
     if (attendue !== calculee) {
       throw new Error(
-        `${ref.f} has changed since it was measured — fingerprint ${attendue}, content ${calculee}.\n`
+        `${ref.f} has changed since it was measured: fingerprint ${attendue}, content ${calculee}.\n`
         + `  This is the record a fresh clone uses to generate EVERY published figure.\n`
         + `  None of them has any value until that is cleared up.`);
     }
@@ -428,7 +428,7 @@ export function readProfiles(
     refReferenceAnnoncee = true;
     console.warn(`\n⚠ No measurement of your own in data/profiles.json.`);
     console.warn(`  Reading the reference record shipped with the repository: ${ref.f}`);
-    console.warn(`  These are OUR figures, not yours — \`npm run measure\` measures yours.\n`);
+    console.warn(`  These are OUR figures, not yours; \`npm run measure\` measures yours.\n`);
   }
   return ref.p;
 }
@@ -896,7 +896,7 @@ if (isMain(import.meta)) {
   const latenceValide = chargeParCoeur <= CHARGE_MAX_PAR_COEUR || malgreCharge !== undefined;
   if (!latenceValide) {
     console.warn(`\n⚠ load ${loadavg()[0]!.toFixed(2)} on ${coeurs} cores `
-      + `(${(100 * chargeParCoeur).toFixed(0)} %, threshold ${(100 * CHARGE_MAX_PAR_COEUR).toFixed(0)} %) — too high to time.`);
+      + `(${(100 * chargeParCoeur).toFixed(0)} %, threshold ${(100 * CHARGE_MAX_PAR_COEUR).toFixed(0)} %): too high to time.`);
     console.warn(`  Accuracies will be measured, previous latencies kept.`);
     console.warn(`  Close what is running, or --allow-load to record anyway.\n`);
   }
@@ -936,7 +936,7 @@ if (isMain(import.meta)) {
 
   console.log(`\nMeasuring ${aTourner.filter((e) => e !== "human").join(", ")} on ${cases} held-out cases.`);
   if (generatifs.length) console.log("Needs Ollama running. Allow a few minutes per generative tier.");
-  else console.log("Encoders only. First run downloads 1.26 GB of model weights — allow several minutes\non a fast line, longer on a slow one. Add --llm for the generative tiers (eight gigabytes more).");
+  else console.log("Encoders only. First run downloads 1.26 GB of model weights; allow several minutes\non a fast line, longer on a slow one. Add --llm for the generative tiers (eight gigabytes more).");
   console.log("Tiers not measured here keep their frozen figures.\n");
 
   /* `--prompt=C-minimal` : mesurer sous une autre formulation, en l'inscrivant dans le relevé. */
@@ -951,7 +951,7 @@ if (isMain(import.meta)) {
   const p = await measure(cases, { llm, tiers: choisis, cases: parPalier, malgreArbreSale, latenceValide, malgreCharge, prompt });
   const pc = (x: number) => (x * 100).toFixed(1).padStart(5) + " %";
 
-  console.log("CHAIN A — extraction, accuracy per field\n");
+  console.log("CHAIN A: extraction, accuracy per field\n");
   console.log("tier      " + FIELDS.map((c) => c.padStart(10)).join("") + "     latency");
   console.log("─".repeat(76));
   for (const e of (p.tiers ?? [])) {
@@ -960,7 +960,7 @@ if (isMain(import.meta)) {
     console.log(`${e.padEnd(10)}${l}   ${lat.padStart(7)} ms`);
   }
 
-  console.log("\n\nCHAIN B — alert classification\n");
+  console.log("\n\nCHAIN B: alert classification\n");
   console.log("tier         accuracy    latency");
   console.log("─".repeat(36));
   for (const e of (p.tiers ?? [])) {

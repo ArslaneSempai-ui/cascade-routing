@@ -36,9 +36,9 @@ test("aucun chiffre n'est écrit dans le texte d'accueil : il vient des relevés
   assert.doesNotMatch(s, /\bEUR\b|€/, "la devise ne se réinvente pas.");
   assert.match(s, /7,000/);
   assert.match(s, /\b7 times more/, "le rapport est calculé, pas recopié.");
-  assert.match(s, /3–4× one blank field/);
+  assert.match(s, /3 to 4× one blank field/);
   /* Et il ne laisse pas croire que ce sont les chiffres du lecteur. */
-  assert.match(s, /NOT YOURS|Not yours/);
+  assert.match(s, /ON OUR CORPUS, not yours/);
 });
 
 test("un relevé incohérent fait refuser, pas inventer", () => {

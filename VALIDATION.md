@@ -1,4 +1,4 @@
-# Validation file — task-level model routing
+# Validation file: task-level model routing
 
 Generated from the frozen measurement of `2026-08-20T10:40:28.826Z`, produced by commit `64bdacf`. Every figure below is
 produced from that same file: this document cannot disagree with the tables elsewhere in
@@ -31,17 +31,17 @@ decide, and states what the evidence will not support. The decision is the commi
 ## 1. What changes
 
 Each field is assigned to the cheapest tier that is not measurably worse than the best
-available one. Where two tiers cannot be told apart on this sample, the cheaper is taken
-— a difference inside the confidence interval is not a difference to pay for.
+available one. Where two tiers cannot be told apart on this sample, the cheaper is taken.
+A difference inside the confidence interval is not a difference to pay for.
 
 **The free tier is fitted to this corpus, and here is what that costs.** The rules for
 `birth`, `document` and `country` enumerate exactly what the generator emits: the
 country rule lists eight countries and the corpus produces those same eight, and the
 document rule matches the single identifier format the generator uses. Their published
-rate is therefore not a measurement of a capability — it is the two lists having been
-written by the same hand.
+rate therefore reflects two lists written by the same hand, rather than a measured
+capability.
 
-Measured against a distribution we did not write — 300 records from the OFAC SDN list,
+Measured against a distribution we did not write, 300 records from the OFAC SDN list,
 every expected answer verified to appear verbatim in the source text:
 
 | Field | This corpus, rules | OFAC, rules | OFAC, `large` |
@@ -59,7 +59,7 @@ is frozen in the generator, because running `large` over the SDN list needs the 
 
 On a real
 distribution those three fields fall back to a measured tier. That is machine time on the
-client's own hardware, not a provider fee — $3 to
+client's own hardware, not a provider fee, at $3 to
 $6 per period at the declared volume,
 against a published $191 for the whole routing.
 
@@ -74,9 +74,9 @@ moves the headline figure, and that is a decision rather than maintenance.
 
 The interval is **Wilson**, not Wald. The distinction matters at the extremes, which is
 where per-record rates live: Wald leaves [0, 1] near 0 % or 100 % and narrows wrongly on
-a small sample — an interval that is too tight makes a difference look real when it is
+a small sample. An interval that is too tight makes a difference look real when it is
 not, and this table decides on exactly that. Wilson stays inside the bounds and widens
-correctly: 0 of 20 gives [0 – 16.1 %], and 20 of 20 gives [83.9 % – 100 %]. Both values
+correctly: 0 of 20 gives [0 % to 16.1 %], and 20 of 20 gives [83.9 % to 100 %]. Both values
 are pinned in the suite, so no change can move them without saying so.
 
 | Field | Tier | Accuracy | 95 % interval | Sample | Cost at volume |
@@ -92,7 +92,7 @@ Overall: **94.4 %** for **$191** against a budget of $4,000
 against a ceiling of 2000 ms (48.4 % consumed).
 
 **Per record, which is the unit that gets filed: 76.7 % [68–83], n=120.** A record counts as
-complete only when all 5 fields are right together —
+complete only when all 5 fields are right together,
 92 of 120. This is a true proportion and
 carries an interval; the 94.4 % above is a mean of 5 rates measured on
 different samples and carries none, which is why this file does not give it one.
@@ -100,7 +100,8 @@ different samples and carries none, which is why this file does not give it one.
 A routing that optimises for complete records rather than the mean per field delivers
 95 of 120 for $54, worse on no record in this
 sample. On 3 discordant pairs the sample cannot separate the two rates, so
-what it establishes is the cost and not the accuracy. It is not the recommendation above,
+what the sample establishes is a cost difference; on accuracy the two cannot be separated.
+This alternative is not the routing recommended above,
 and the difference is stated here rather than left for a reader to find.
 
 ## 2. Where the sample cannot decide
@@ -149,7 +150,7 @@ whatever was published last under the same name.
 | `gen-4b` | `qwen3:4b` | `359d7dd4bcda` | Apache-2.0 |
 | `gen-8b` | `qwen3:8b` | `500a1f067a9f` | Apache-2.0 |
 
-⚠ **roberta-base-squad2** — CC-BY-4.0: attribution required — the only practical condition in the whole set.
+⚠ **roberta-base-squad2** (CC-BY-4.0): attribution required, the only practical condition in the whole set.
 Every other model here is permissive with no practical condition. A routing that places
 that tier on a field takes on an obligation the others do not, and no accuracy table
 would ever show it.
@@ -161,10 +162,10 @@ reviewer must see. Against the best accuracy available on each field regardless 
 
 | Field | Chosen | Best available | Accuracy given up | Why |
 |---|---|---|---|---|
-| `document` | `rules` | `gen-8b` | 3.6 % | inside the interval — not a measurable loss |
+| `document` | `rules` | `gen-8b` | 3.6 % | inside the interval, not a measurable loss |
 
 The repository also publishes every individual failure with its input and output rather
-than a summary rate — run `npm run failures`. A reviewer who wants to know what the
+than a summary rate. Run `npm run failures`. A reviewer who wants to know what the
 system gets wrong should read those, not this percentage.
 
 ## 5. What is assumed rather than measured
@@ -196,8 +197,8 @@ in the direction that costs the most.
 ## 6. Ongoing monitoring
 
 **A routing decision expires.** It was taken against pinned revisions on a fixed sample;
-a provider updating a model, or your own traffic drifting, invalidates it silently — no
-error is raised, the accuracy simply moves. Three things follow, and they are the
+a provider updating a model, or your own traffic drifting, invalidates it silently. No
+error is raised; the accuracy simply moves. Three things follow, and they are the
 obligation this document creates rather than a recommendation:
 
 1. **Re-measure on a schedule and on every model change.** The harness ships with the
@@ -206,15 +207,15 @@ obligation this document creates rather than a recommendation:
 2. **Compare runs rather than reading the latest one.** A rising aggregate can hide cases
    that used to pass and no longer do; only a run-to-run diff surfaces those.
    `npm run diff <before> <after>` compares two sealed runs case by case, and refuses
-   the comparison — naming the cell and the reason — rather than returning a zero it
+   the comparison, naming the cell and the reason, rather than returning a zero it
    cannot support.
 3. **Watch the input distribution, not only the output.** Accuracy falls after the
    population has already moved, which makes it the last indicator to react.
-   `npm run entree` computes a population stability index on the documents alone — no
+   `npm run entree` computes a population stability index on the documents alone. No
    labels, so it runs where no ground truth exists, which is production. It reports that
    index next to its own noise floor: what the same sample size produces on a population
    that has **not** moved. An index below the floor is a draw, not a drift, and the floor
-   is what decides whether the 0.2 threshold means anything at that sample size — on
+   is what decides whether the 0.2 threshold means anything at that sample size. On
    this corpus it is 0.260 at 120 observations, which is above the threshold, and
    0.061 at 350, which is below it. That is why the tool
    refuses to read under 350: any smaller and the threshold fires

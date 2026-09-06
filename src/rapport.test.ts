@@ -315,7 +315,7 @@ test("« rien n'a été vérifié » rend 2, et ne se confond pas avec un refus"
 
     const absent = lancer(dossier, join(dossier, "pas-la.html"));
     assert.equal(absent.code, 2);
-    assert.match(absent.sortie, /not a failed verification/,
+    assert.match(absent.sortie, /could not be opened; that is different from a report/,
       "un fichier illisible pris pour une falsification enverrait accuser quelqu'un.");
 
     const mauvaiseCle = lancer(dossier, join(dossier, "x.html"), `--cle=${join(dossier, "rien.pem")}`);

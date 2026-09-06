@@ -117,7 +117,7 @@ export function verifier(contenu, clePubliquePem) {
   let sig;
   try { sig = JSON.parse(brutSignature); }
   catch { return { valide: false, motif: "the signature block is not readable JSON." }; }
-  if (sig.alg !== "Ed25519") return { valide: false, motif: `unexpected algorithm "${sig.alg}" — only Ed25519 is recognised.` };
+  if (sig.alg !== "Ed25519") return { valide: false, motif: `unexpected algorithm "${sig.alg}": only Ed25519 is recognised.` };
 
   /*
    * ─── THE SIGNATURE BLOCK IS THE ONE PLACE THE SIGNATURE CANNOT COVER ───
@@ -256,8 +256,8 @@ function principal() {
       : (e && e.code === "EACCES") ? "permission denied"
       : (e instanceof Error ? e.message : String(e));
     console.error(`Cannot read ${chemin}: ${raison}.\n\n`
-      + `  Nothing was verified. This is not a failed verification — it is a file that could\n`
-      + `  not be opened.`);
+      + `  Nothing was verified. The file could not be opened; that is different from a report\n`
+      + `  failing to verify.`);
     process.exit(2);
   }
 
@@ -268,7 +268,7 @@ function principal() {
   }
   const d = r.donnees;
   console.log(
-    `✓ Signature valid — ${r.octets} bytes signed.\n\n`
+    `✓ Signature valid. ${r.octets} bytes signed.\n\n`
     + `  Issued      ${d.emisLe ?? "?"}\n`
     + `  For         ${d.client ?? "?"}\n`
     + `  Corpus      ${d.corpus?.empreinte ?? "?"} (${d.corpus?.dossiers ?? "?"} records)\n`
@@ -276,7 +276,7 @@ function principal() {
     + `What this proves: the report comes from the holder of this repository's key, and no\n`
     + `byte has changed since it was issued.\n\n`
     + `What it does not prove: that the numbers are right. A false report, signed, is still\n`
-    + `false — it merely becomes impossible to attribute it to anyone else. Correctness is\n`
+    + `false. It merely becomes impossible to attribute it to anyone else. Correctness is\n`
     + `held by the measurements, their intervals, and the retraction log.`);
 }
 

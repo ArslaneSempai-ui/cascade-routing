@@ -126,7 +126,7 @@ test("une latence non dérivable porte sa provenance dans le code, et la dit au 
 const PERMIS: { fichier: string; extrait: string; raison: string }[] = [
   { fichier: "dossier.ts", extrait: "Wald leaves [0, 1] near 0 % or 100 %",
     raison: "phrase sur la forme de l'intervalle, aucune mesure citée" },
-  { fichier: "dossier.ts", extrait: "0 of 20 gives [0 – 16.1 %]",
+  { fichier: "dossier.ts", extrait: "0 of 20 gives [0 % to 16.1 %]",
     raison: "les deux bornes Wilson publiées, tenues par precision() dans interval.test.ts" },
   { fichier: "dossier.ts", extrait: '"95 % interval"',
     raison: "l'en-tête d'une colonne, pas un chiffre mesuré" },

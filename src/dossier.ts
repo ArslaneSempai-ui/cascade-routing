@@ -86,11 +86,11 @@ export function dossier(p: Profiles, h: Assumptions): string {
   const out: string[] = [];
   const w = (x: string) => out.push(x);
 
-  w(`# Validation file — task-level model routing`);
+  w(`# Validation file: task-level model routing`);
   w(``);
   w(`Generated from the frozen measurement of \`${p.measuredAt}\`` +
     (p.code ? `, produced by commit \`${p.code.commit}\`${p.code.sale
-      ? " **with uncommitted changes in the working tree — this run is not reproducible by anyone, including its author**"
+      ? " **with uncommitted changes in the working tree. This run is not reproducible by anyone, including its author**"
       : ""}` : "") + `. Every figure below is`);
   w(`produced from that same file: this document cannot disagree with the tables elsewhere in`);
   w(`the repository, because it is not written by hand.`);
@@ -105,7 +105,7 @@ export function dossier(p: Profiles, h: Assumptions): string {
    */
   const prov = paliersMesures(p).flatMap((t) => {
     const v = p.provenance?.[t];
-    if (!v) return [[`\`${t}\``, "—", "—", "not recorded", "—"]];
+    if (!v) return [[`\`${t}\``, "n/a", "n/a", "not recorded", "n/a"]];
     /* Relevé antérieur à la séparation par type : une seule ligne, et on ne prétend pas mieux. */
     if ((v as { accuracy?: unknown }).accuracy === undefined) {
       const plat = v as unknown as { measuredAt: string; commit: string | null; sale: boolean | null };
@@ -114,10 +114,10 @@ export function dossier(p: Profiles, h: Assumptions): string {
     return (["accuracy", "latency"] as const).map((quoi) => {
       const b = v[quoi];
       return [`\`${t}\``, quoi, b.measuredAt, b.commit ? `\`${b.commit}\`` : "not recorded",
-        b.charge ? `${b.charge.externalBefore} external / ${b.charge.coeurs} cores` : "—"];
+        b.charge ? `${b.charge.externalBefore} external / ${b.charge.coeurs} cores` : "n/a"];
     });
   });
-  if (prov.some((r) => r[2] !== "—")) {
+  if (prov.some((r) => r[2] !== "n/a")) {
     w(`Accuracy and latency do not always come from the same pass, and they are not the same`);
     w(`kind of number: accuracy is deterministic, latency measures the machine as much as the`);
     w(`model. Each carries its own provenance rather than borrowing the other's.`);
@@ -133,8 +133,8 @@ export function dossier(p: Profiles, h: Assumptions): string {
   w(`## 1. What changes`);
   w(``);
   w(`Each field is assigned to the cheapest tier that is not measurably worse than the best`);
-  w(`available one. Where two tiers cannot be told apart on this sample, the cheaper is taken`);
-  w(`— a difference inside the confidence interval is not a difference to pay for.`);
+  w(`available one. Where two tiers cannot be told apart on this sample, the cheaper is taken.`);
+  w(`A difference inside the confidence interval is not a difference to pay for.`);
   w(``);
   /*
    * LA MÉTHODE DE L'INTERVALLE EST NOMMÉE, ET ELLE NE L'ÉTAIT PAS.
@@ -175,10 +175,10 @@ export function dossier(p: Profiles, h: Assumptions): string {
   w(`\`birth\`, \`document\` and \`country\` enumerate exactly what the generator emits: the`);
   w(`country rule lists eight countries and the corpus produces those same eight, and the`);
   w(`document rule matches the single identifier format the generator uses. Their published`);
-  w(`rate is therefore not a measurement of a capability — it is the two lists having been`);
-  w(`written by the same hand.`);
+  w(`rate therefore reflects two lists written by the same hand, rather than a measured`);
+  w(`capability.`);
   w(``);
-  w(`Measured against a distribution we did not write — 300 records from the OFAC SDN list,`);
+  w(`Measured against a distribution we did not write, 300 records from the OFAC SDN list,`);
   w(`every expected answer verified to appear verbatim in the source text:`);
   w(``);
   /*
@@ -249,7 +249,7 @@ export function dossier(p: Profiles, h: Assumptions): string {
     const ligne = (champ: Field) => {
       const e = externe.score(champ);
       return [`\`${champ}\``, pc(taux(p, "rules", champ).rate),
-        e ? `**${e.taux.toFixed(1)} %** (n=${e.n})` : "—", OFAC_LARGE[champ] ?? "—"];
+        e ? `**${e.taux.toFixed(1)} %** (n=${e.n})` : "n/a", OFAC_LARGE[champ] ?? "n/a"];
     };
     w(table(["Field", "This corpus, rules", "OFAC, rules", "OFAC, \`large\`"], [
       ligne("birth"),
@@ -278,7 +278,7 @@ export function dossier(p: Profiles, h: Assumptions): string {
     const totaux = vus.map((v) => (v.e ? v.e.n : 0));
     const abstentions = vus.reduce((s2, v) => s2 + (v.e ? v.e.n - v.e.rendus : 0), 0);
     const ecarts = vus.map((v) => {
-      if (!v.e) return nomme(v.c) + " —";
+      if (!v.e) return nomme(v.c) + " (n/a)";
       const d = v.ici - v.e.taux;
       /* « \u22120.0 points » se lit comme une perte ; un ecart qui s'arrondit a zero se dit. */
       if (Math.abs(d) < 0.05) return nomme(v.c) + " unchanged";
@@ -338,7 +338,7 @@ export function dossier(p: Profiles, h: Assumptions): string {
   const coutRattrapage = (ms: number) =>
     Math.round(3 * ASSUMPTIONS.volume * ms / 1000 / 3600 * ASSUMPTIONS.machineHourlyCost);
   w(`distribution those three fields fall back to a measured tier. That is machine time on the`);
-  w(`client's own hardware, not a provider fee — ${symboleDe(UNITS.budget)}${coutRattrapage(msParChamp.small)} to`);
+  w(`client's own hardware, not a provider fee, at ${symboleDe(UNITS.budget)}${coutRattrapage(msParChamp.small)} to`);
   w(`${symboleDe(UNITS.budget)}${coutRattrapage(msParChamp.large)} per period at the declared volume,`);
   /*
    * UNE SEULE SOURCE POUR UNE SEULE GRANDEUR.
@@ -366,9 +366,9 @@ export function dossier(p: Profiles, h: Assumptions): string {
   w(``);
   w(`The interval is **Wilson**, not Wald. The distinction matters at the extremes, which is`);
   w(`where per-record rates live: Wald leaves [0, 1] near 0 % or 100 % and narrows wrongly on`);
-  w(`a small sample — an interval that is too tight makes a difference look real when it is`);
+  w(`a small sample. An interval that is too tight makes a difference look real when it is`);
   w(`not, and this table decides on exactly that. Wilson stays inside the bounds and widens`);
-  w(`correctly: 0 of 20 gives [0 – 16.1 %], and 20 of 20 gives [83.9 % – 100 %]. Both values`);
+  w(`correctly: 0 of 20 gives [0 % to 16.1 %], and 20 of 20 gives [83.9 % to 100 %]. Both values`);
   w(`are pinned in the suite, so no change can move them without saying so.`);
   w(``);
   w(table(["Field", "Tier", "Accuracy", "95 % interval", "Sample", "Cost at volume"],
@@ -407,7 +407,7 @@ export function dossier(p: Profiles, h: Assumptions): string {
   if (parDossier) {
     const t = rate(parDossier.publie.complets, parDossier.publie.n);
     w(`**Per record, which is the unit that gets filed: ${writeRate(t)}.** A record counts as`);
-    w(`complete only when all ${FIELDS.length} fields are right together —`);
+    w(`complete only when all ${FIELDS.length} fields are right together,`);
     w(`${parDossier.publie.complets} of ${parDossier.publie.n}. This is a true proportion and`);
     w(`carries an interval; the ${pc(s.accuracy)} above is a mean of ${FIELDS.length} rates measured on`);
     w(`different samples and carries none, which is why this file does not give it one.`);
@@ -416,7 +416,8 @@ export function dossier(p: Profiles, h: Assumptions): string {
       w(`A routing that optimises for complete records rather than the mean per field delivers`);
       w(`${parDossier.vise.complets} of ${parDossier.vise.n} for ${euro(parDossier.vise.cost)}, worse on no record in this`);
       w(`sample. On ${parDossier.apparie.discordant} discordant pairs the sample cannot separate the two rates, so`);
-      w(`what it establishes is the cost and not the accuracy. It is not the recommendation above,`);
+      w(`what the sample establishes is a cost difference; on accuracy the two cannot be separated.`);
+      w(`This alternative is not the routing recommended above,`);
       w(`and the difference is stated here rather than left for a reader to find.`);
     }
   } else {
@@ -472,16 +473,16 @@ export function dossier(p: Profiles, h: Assumptions): string {
   w(table(["Tier", "Model", "Pinned at", "Licence"], [
     ...Object.entries(REVISIONS).map(([k, v]) => [`\`${k}\``,
       LICENCES[k]?.modele ?? "encoder, local", `\`${v}\``,
-      LICENCES[k] ? LICENCES[k]!.licence + (LICENCES[k]!.note ? " ⚠" : "") : "—"]),
+      LICENCES[k] ? LICENCES[k]!.licence + (LICENCES[k]!.note ? " ⚠" : "") : "n/a"]),
     ...Object.entries(MODELES_LOCAUX)
       .filter(([k]) => paliers.includes(k as TierName))
       .map(([k, v]) => [`\`${k}\``, `\`${v.tag}\``, `\`${v.digest}\``,
-        LICENCES[k]?.licence ?? "—"]),
+        LICENCES[k]?.licence ?? "n/a"]),
   ]));
   const conditionnelles = Object.values(LICENCES).filter((l) => l.note);
   if (conditionnelles.length) {
     w(``);
-    w(`⚠ ${conditionnelles.map((l) => `**${l.modele}** — ${l.licence}: ${l.note}`).join("; ")}.`);
+    w(`⚠ ${conditionnelles.map((l) => `**${l.modele}** (${l.licence}): ${l.note}`).join("; ")}.`);
     w(`Every other model here is permissive with no practical condition. A routing that places`);
     w(`that tier on a field takes on an obligation the others do not, and no accuracy table`);
     w(`would ever show it.`);
@@ -507,13 +508,13 @@ export function dossier(p: Profiles, h: Assumptions): string {
       pertes.map((x) => [`\`${x.c}\``, `\`${x.choisi}\``, `\`${x.meilleur}\``, pc(x.ecart),
         distinguishable(taux(p, x.choisi, x.c), taux(p, x.meilleur, x.c))
           ? "a real loss, taken for cost or latency"
-          : "inside the interval — not a measurable loss"])));
+          : "inside the interval, not a measurable loss"])));
   } else {
     w(`Nothing. The routing takes the best measured tier on every field.`);
   }
   w(``);
   w(`The repository also publishes every individual failure with its input and output rather`);
-  w(`than a summary rate — run \`npm run failures\`. A reviewer who wants to know what the`);
+  w(`than a summary rate. Run \`npm run failures\`. A reviewer who wants to know what the`);
   w(`system gets wrong should read those, not this percentage.`);
 
   /* ── 5. Les hypothèses ── */
@@ -543,8 +544,8 @@ export function dossier(p: Profiles, h: Assumptions): string {
   w(`## 6. Ongoing monitoring`);
   w(``);
   w(`**A routing decision expires.** It was taken against pinned revisions on a fixed sample;`);
-  w(`a provider updating a model, or your own traffic drifting, invalidates it silently — no`);
-  w(`error is raised, the accuracy simply moves. Three things follow, and they are the`);
+  w(`a provider updating a model, or your own traffic drifting, invalidates it silently. No`);
+  w(`error is raised; the accuracy simply moves. Three things follow, and they are the`);
   w(`obligation this document creates rather than a recommendation:`);
   w(``);
   w(`1. **Re-measure on a schedule and on every model change.** The harness ships with the`);
@@ -553,15 +554,15 @@ export function dossier(p: Profiles, h: Assumptions): string {
   w(`2. **Compare runs rather than reading the latest one.** A rising aggregate can hide cases`);
   w(`   that used to pass and no longer do; only a run-to-run diff surfaces those.`);
   w(`   \`npm run diff <before> <after>\` compares two sealed runs case by case, and refuses`);
-  w(`   the comparison — naming the cell and the reason — rather than returning a zero it`);
+  w(`   the comparison, naming the cell and the reason, rather than returning a zero it`);
   w(`   cannot support.`);
   w(`3. **Watch the input distribution, not only the output.** Accuracy falls after the`);
   w(`   population has already moved, which makes it the last indicator to react.`);
-  w(`   \`npm run entree\` computes a population stability index on the documents alone — no`);
+  w(`   \`npm run entree\` computes a population stability index on the documents alone. No`);
   w(`   labels, so it runs where no ground truth exists, which is production. It reports that`);
   w(`   index next to its own noise floor: what the same sample size produces on a population`);
   w(`   that has **not** moved. An index below the floor is a draw, not a drift, and the floor`);
-  w(`   is what decides whether the ${SEUiL} threshold means anything at that sample size — on`);
+  w(`   is what decides whether the ${SEUiL} threshold means anything at that sample size. On`);
   w(`   this corpus it is ${floor120} at 120 observations, which is above the threshold, and`);
   w(`   ${floorMin} at ${OBSERVATIONS_MINIMALES}, which is below it. That is why the tool`);
   w(`   refuses to read under ${OBSERVATIONS_MINIMALES}: any smaller and the threshold fires`);
@@ -598,7 +599,7 @@ export function dossier(p: Profiles, h: Assumptions): string {
     if (!existsSync(chemin)) {
       return `- **Not that these rates survive a scan.** Everything above is measured on text. `
         + `Your documents arrive as images, and the reading stage between the two has not been `
-        + `measured on this machine — run \`npm run ocr\`. An unmeasured step is not a free one.`;
+        + `measured on this machine; run \`npm run ocr\`.`;
     }
     const r = JSON.parse(readFileSync(chemin, "utf8")) as {
       documents: number;
@@ -657,15 +658,15 @@ if (isMain(import.meta)) {
   if (process.argv.includes("--check")) {
     const surDisque = existsSync(FICHIER) ? readFileSync(FICHIER, "utf8") : "";
     if (surDisque === texte) {
-      console.log(`VALIDATION.md is up to date — from the measurement of ${p.measuredAt}.`);
+      console.log(`VALIDATION.md is up to date, from the measurement of ${p.measuredAt}.`);
       process.exit(0);
     }
-    console.error(`VALIDATION.md is stale — it no longer matches the frozen profile.`);
+    console.error(`VALIDATION.md is stale: it no longer matches the frozen profile.`);
     console.error(`  Run: npm run dossier`);
     process.exit(1);
   }
 
   writeFileSync(FICHIER, texte);
-  console.log(`\nValidation file written to VALIDATION.md — ${texte.split("\n").length} lines,`
+  console.log(`\nValidation file written to VALIDATION.md: ${texte.split("\n").length} lines,`
     + ` from the measurement of ${p.measuredAt}.\n`);
 }

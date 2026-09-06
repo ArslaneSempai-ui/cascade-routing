@@ -253,7 +253,7 @@ export const LICENCES: Record<string, { modele: string; licence: string; note?: 
   small: { modele: "distilbert-base-cased-distilled-squad", licence: "Apache-2.0" },
   large: {
     modele: "roberta-base-squad2", licence: "CC-BY-4.0",
-    note: "attribution required — the only practical condition in the whole set",
+    note: "attribution required, the only practical condition in the whole set",
   },
   embSmall: { modele: "all-MiniLM-L6-v2", licence: "Apache-2.0" },
   embLarge: { modele: "multilingual-e5-small", licence: "MIT" },
