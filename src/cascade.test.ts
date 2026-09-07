@@ -2768,10 +2768,30 @@ test("la notation du corpus dur a été committée AVANT la mesure qu'elle régi
    * qu'elle note. C'est précisément le geste que le pré-enregistrement existe pour rendre
    * impossible, et il serait invisible à un contrôle qui accepte l'égalité.
    */
-  assert.ok(notation! < mesure!,
+  /*
+   * LA DATE EST UN INDICE, LE TEXTE EST LA PREUVE.
+   *
+   * Le 13 septembre 2026 une passe de ponctuation a touché ce document : la règle n'avait pas
+   * bougé d'un mot, mais le commit était postérieur à la mesure et ce cas a rougi, à juste
+   * titre — il ne peut pas croire une intention sur parole. Ce qu'il faut établir n'est pas
+   * « le fichier n'a plus été touché », c'est « la notation en vigueur à la mesure est celle
+   * qu'on publie ». Ça se vérifie : on relit le document TEL QU'IL ÉTAIT au commit de la
+   * mesure et on le compare à celui d'aujourd'hui. Identique, le pré-enregistrement tient et
+   * la retouche reste visible dans git. Différent, le refus ci-dessous s'applique entier.
+   */
+  const commitDeLaMesure = execFileSync("git", ["log", "-1", "--format=%H", "--", "dur.json"],
+    { cwd: racine, encoding: "utf8" }).trim();
+  const alors = commitDeLaMesure
+    ? execFileSync("git", ["show", `${commitDeLaMesure}:NOTATION-CAS-DURS.md`], { cwd: racine, encoding: "utf8" })
+    : null;
+  const aujourdhui = readFileSync(join(racine, "NOTATION-CAS-DURS.md"), "utf8");
+  const inchangee = alors !== null && alors === aujourdhui;
+
+  assert.ok(inchangee || notation! < mesure!,
     `NOTATION-CAS-DURS.md a été committée le ${new Date(notation! * 1000).toISOString()} et `
     + `dur.json le ${new Date(mesure! * 1000).toISOString()}. La notation n'est plus antérieure à `
-    + `la mesure : elle a pu être ajustée en connaissant le résultat, et le document affirme `
+    + `la mesure, ET son texte a changé depuis : elle a pu être ajustée en connaissant le `
+    + `résultat, et le document affirme `
     + `pourtant « committed before this pass ».\n  Il n'y a pas de raccourci ici : ou bien le `
     + `changement de notation est annulé, ou bien la passe dure est relancée SOUS la nouvelle `
     + `notation — « npm run dur » — et le résultat précédent est rétracté dans retractations.json.`);

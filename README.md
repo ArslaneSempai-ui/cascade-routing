@@ -174,7 +174,7 @@ then written the regexes against those templates. I was marking my own homework,
 the exact error I had forbidden in writing two projects earlier.
 
 The corpus is now split: the rules were developed on one set of phrasings and are measured
-on another they never saw. Measured honestly, they collapse.
+on another they never saw. Measured that way, they collapse.
 
 <!-- figures:extraction -->
 | Tier | name | birth | document | country | address | Latency | n | ± |
