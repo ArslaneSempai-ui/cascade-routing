@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import {
-  lireEvery, RYTHME_PAR_DEFAUT_JOURS, prochaineEcheance, chargerBaselineDepuis,
+  lireValidite, RYTHME_PAR_DEFAUT_JOURS, prochaineEcheance, chargerBaselineDepuis,
   jugerCellule, verdictDuChamp, codeDeSortie, casJoints, deriveDEntree,
   rendreRecertification, type Decisions, type VerdictCellule,
 } from "./recertify.ts";
@@ -35,14 +35,14 @@ function referenceScellee(): Record<string, unknown> {
 }
 
 test("le rythme se déclare en jours entiers, et tout le reste se refuse en le nommant", () => {
-  assert.equal(lireEvery(undefined), RYTHME_PAR_DEFAUT_JOURS);
-  assert.equal(lireEvery("30d"), 30);
+  assert.equal(lireValidite(undefined), RYTHME_PAR_DEFAUT_JOURS);
+  assert.equal(lireValidite("30d"), 30);
   /* `Number()` accepterait « 90 », «  » et « 0x5a » sans un mot ; le motif, non. Chaque
      refus doit NOMMER ce qui a été reçu, sinon le lecteur relance la même commande. */
   for (const mauvais of ["90j", "", "0d", "abc", "90", "12.5d"]) {
-    assert.throws(() => lireEvery(mauvais), (e: Error) => {
-      assert.match(e.message, /is not a rhythm/);
-      assert.ok(e.message.includes(`--every=${mauvais}`), `le refus de ${JSON.stringify(mauvais)} ne nomme pas ce qui a été reçu`);
+    assert.throws(() => lireValidite(mauvais), (e: Error) => {
+      assert.match(e.message, /is not a validity period/);
+      assert.ok(e.message.includes(`--validity=${mauvais}`), `le refus de ${JSON.stringify(mauvais)} ne nomme pas ce qui a été reçu`);
       return true;
     });
   }
@@ -213,6 +213,25 @@ test("la commande refuse une référence retouchée AVANT de mesurer, code 2, ri
   assert.equal(existsSync(join(temp, "automne-recertified.json")), false, "un refus a quand même écrit le relevé");
 });
 
+test("l'ancien nom du drapeau se refuse en nommant le nouveau", () => {
+  /*
+   * `--every` a été renommé `--validity` le 13 septembre 2026 : VOIX.md range « rhythm » dans
+   * le jargon interne, et le même nom servait déjà à un TOUT autre réglage dans `npm run
+   * egress`. Un refus « unknown flag » aurait laissé chercher ; celui-ci nomme le nouveau nom
+   * et rappelle que `--every` vit toujours ailleurs. Sans ce cas, rien ne garderait l'issue :
+   * il suffirait de retirer `--every` de la liste des drapeaux connus pour la perdre en
+   * silence, et le refus redeviendrait une énigme.
+   */
+  const r = spawnSync(process.execPath, [
+    fileURLToPath(new URL("./recertify.ts", import.meta.url)),
+    "--cases=x.csv", "--baseline=y.json", "--every=90d",
+  ], { encoding: "utf8" });
+  assert.equal(r.status, 2, r.stdout + r.stderr);
+  assert.match(r.stderr, /--every was renamed --validity/, "le refus ne dit pas le nouveau nom");
+  assert.match(r.stderr, /--validity=90d/, "le refus ne réécrit pas la commande pour le lecteur");
+  assert.match(r.stderr, /egress/, "le refus ne dit pas que --every vit toujours ailleurs");
+});
+
 test("un drapeau inconnu se refuse en le nommant — la commande, pas seulement la fonction", () => {
   /* Le refus vient de la garde PARTAGÉE (`refuserDrapeauxInconnus`, cli.ts) : elle nomme le
      drapeau sans sa valeur et liste ce que la commande accepte. */
@@ -222,5 +241,5 @@ test("un drapeau inconnu se refuse en le nommant — la commande, pas seulement 
   ], { encoding: "utf8" });
   assert.equal(r.status, 2);
   assert.match(r.stderr, /--evry/);
-  assert.match(r.stderr, /This command accepts: .*--every/);
+  assert.match(r.stderr, /This command accepts: .*--validity/);
 });

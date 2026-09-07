@@ -61,29 +61,36 @@ import { evaluerRegles } from "./regles-bornees.ts";
 import { GENERATIFS, type TierName } from "./paliers.ts";
 import { table } from "./figures.ts";
 
-/* ───────────────────────────── le rythme, déclaré ─────────────────────────────
+/* ──────────────────── la période de validité, déclarée ────────────────────────
  *
  * « Trimestriel » n'est pas une mesure : personne n'a mesuré qu'une population de dossiers
- * dérive en quatre-vingt-dix jours. C'est une HYPOTHÈSE, elle se déclare (`--every=90d`),
- * elle a une valeur par défaut visible, et le rapport l'écrit comme telle — jamais un
- * chiffre caché dans le code.
+ * dérive en quatre-vingt-dix jours. C'est une HYPOTHÈSE, elle se déclare (`--validity=90d`),
+ * elle a une valeur par défaut visible, et le rapport l'écrit comme telle, jamais un chiffre
+ * caché dans le code.
  *
- * La lecture est stricte parce que `Number()` ne l'est pas : `--every=90j` rendrait NaN,
- * `--every=` rendrait 0, et chaque orthographe de « pas une durée » atterrirait à une borne
- * sans un mot. Le motif exige des chiffres suivis de `d`, et tout le reste se refuse en
+ * LE NOM VIENT DE VOIX.md, tranché par Arslane le 9 septembre 2026 : « rhythm » y est rangé
+ * dans le jargon interne, et le mot du lecteur est « validity period ». Le drapeau s'appelait
+ * `--every`, qui de surcroît porte un TOUT AUTRE sens dans `npm run egress` (un intervalle
+ * d'échantillonnage en millisecondes) : un même nom pour deux réglages dans le même dépôt.
+ * L'ancien nom se refuse en nommant le nouveau, plus bas.
+ *
+ * La lecture est stricte parce que `Number()` ne l'est pas : `--validity=90j` rendrait NaN,
+ * `--validity=` rendrait 0, et chaque orthographe de « pas une durée » atterrirait à une
+ * borne sans un mot. Le motif exige des chiffres suivis de `d`, et tout le reste se refuse en
  * nommant ce qui a été reçu.
  */
 export const RYTHME_PAR_DEFAUT_JOURS = 90;
 
-export function lireEvery(brut: string | undefined): number {
+export function lireValidite(brut: string | undefined): number {
   if (brut === undefined) return RYTHME_PAR_DEFAUT_JOURS;
   const m = /^(\d{1,4})d$/.exec(brut);
   const jours = m ? Number(m[1]) : NaN;
   if (!m || jours < 1) {
     throw new Error(
-      `--every=${brut} is not a rhythm this tool reads. It wants a whole number of days,\n`
-      + `  written like --every=90d. The rhythm is your declaration, not a measurement —\n`
-      + `  without the flag it defaults to ${RYTHME_PAR_DEFAUT_JOURS}d, and the report says so either way.`);
+      `--validity=${brut} is not a validity period this tool reads. It wants a whole number\n`
+      + `  of days, written like --validity=90d. The validity period is your declaration, not\n`
+      + `  a measurement. Without the flag it defaults to ${RYTHME_PAR_DEFAUT_JOURS}d, and the`
+      + ` report says so either way.`);
   }
   return jours;
 }
@@ -358,9 +365,9 @@ export function rendreRecertification(o: {
     }
   }
   parties.push(``, `## Input drift`, ``, ...direLaDerive(o.derive));
-  parties.push(``, `## Rhythm`, ``,
-    `This recertification was run under a ${o.rythme.jours}-day rhythm — `
-    + (o.rythme.declare ? `your declaration (\`--every=${o.rythme.jours}d\`)` : `the default, a declared assumption, not a measurement`)
+  parties.push(``, `## Validity period`, ``,
+    `This recertification was run under a ${o.rythme.jours}-day validity period, `
+    + (o.rythme.declare ? `your declaration (\`--validity=${o.rythme.jours}d\`)` : `the default, a declared assumption, not a measurement`)
     + `. Next one due **${o.rythme.prochaine}**.`);
   parties.push(``, `## What this does not establish`, ``,
     `- That the rates hold on documents other than the ${o.cas} supplied today.`,
@@ -377,7 +384,7 @@ export function rendreRecertification(o: {
 
 /* ─────────────────────────────────── la commande ─────────────────────────────────── */
 
-const DRAPEAUX = ["--cases", "--baseline", "--every", "--rules", "--sorties", "--llm", "--yes-run-it"];
+const DRAPEAUX = ["--cases", "--baseline", "--validity", "--every", "--rules", "--sorties", "--llm", "--yes-run-it"];
 
 async function principal(): Promise<void> {
   const argv = process.argv.slice(2);
@@ -391,7 +398,7 @@ async function principal(): Promise<void> {
     console.log(`
 Does the spring measurement still hold?
 
-  npm run recertify -- --cases=<new.csv> --baseline=<old>-measured.json [--every=90d]
+  npm run recertify -- --cases=<new.csv> --baseline=<old>-measured.json [--validity=90d]
 
 Measures the new file under the SAME protocol as the sealed baseline record — same fields,
 same questions, same tiers — then says, per field: holds (today's rate inside the baseline's
@@ -399,7 +406,7 @@ Wilson interval), or MOVED (outside it, exit code 1). Where cases can be joined,
 that used to pass and no longer do are named by identifier. Input drift is measured on
 document length against its own noise floor when the baseline CSV sits next to the record.
 
---every=90d   the recertification rhythm — your declaration, not a measurement; default ${RYTHME_PAR_DEFAUT_JOURS}d.
+--validity=90d  the validity period you declare, not a measurement; default ${RYTHME_PAR_DEFAUT_JOURS}d.
 --rules=f     the same rules JSON the baseline was measured with, if it has a rules tier.
 --sorties=f   the same declared-outcomes JSON, if the baseline has your own chain as a tier.
 --llm         re-measure the generative tiers too (needs Ollama, like measure:yours).
@@ -411,8 +418,20 @@ Nothing leaves your machine.
 `);
     process.exit(2);
   }
+  /*
+   * L'ANCIEN NOM SE REFUSE EN NOMMANT LE NOUVEAU. `--every` reste dans la liste des drapeaux
+   * connus pour que le refus vienne d'ici, avec l'issue, plutôt que du garde-drapeaux avec un
+   * « unknown flag » qui laisse chercher. Un script d'acheteur écrit avant le 13/09/2026 doit
+   * apprendre le nouveau nom en une ligne.
+   */
+  if (arg("every") !== undefined) {
+    console.error(`\n--every was renamed --validity on 2026-09-13. The setting is the validity`
+      + ` period you\n  declare, and --every still means a sampling interval in \`npm run`
+      + ` egress\`. Write\n  --validity=${arg("every")} instead.\n`);
+    process.exit(2);
+  }
   let jours: number;
-  try { jours = lireEvery(arg("every")); } catch (e) { console.error(`\n${(e as Error).message}\n`); process.exit(2); }
+  try { jours = lireValidite(arg("validity")); } catch (e) { console.error(`\n${(e as Error).message}\n`); process.exit(2); }
 
   /* L'état du dépôt se lit AU DÉPART — le relevé cite le code qui a mesuré, pas celui
      d'après (mesuré le 3 septembre 2026 dans measure:yours, même motif). */
