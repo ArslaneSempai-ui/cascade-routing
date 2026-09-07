@@ -1276,7 +1276,13 @@ const documentBloc = (() => {
           + `the sample**: ${d.apparie.gains} gained, ${d.apparie.regressions} lost, for `
           + `**${moinsCher.toFixed(1)}x less**. But ${d.apparie.discordant} discordant pairs `
           + `cannot separate two rates: what the sample establishes is the cost, not the `
-          + `accuracy. ${d.apparie.note ?? ""}`);
+          /* document.json stores the verdict as WORDED on 24/08 (`note`) beside the figures ; the
+             wording is presentation and the figures are the reading, so the sentence is composed
+             here from `decidable` : the reading stays as measured, and its regeneration stays the
+             licensed component's job. Same two sentences as the shared interval.ts. */
+          + `accuracy. ${d.apparie.decidable
+            ? "The set distinguishes these versions"
+            : "The set cannot distinguish these versions by rate, so judge the broken cases instead"}.`);
 })();
 
 /**

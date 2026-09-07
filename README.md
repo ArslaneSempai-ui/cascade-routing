@@ -225,7 +225,7 @@ Transcription fidelity: **99.4 % [99–100], n=2977** of words recovered.
 <!-- /figures:lecture -->
 
 <!-- figures:obligation -->
-**Why these fields.** 31 CFR 1020.220(a)(2)(i)(A) — Before opening an account a bank must obtain, at a minimum, the customer's name, date of birth for an individual, address, and identification number.
+**Why these fields.** 31 CFR 1020.220(a)(2)(i)(A): Before opening an account a bank must obtain, at a minimum, the customer's name, date of birth for an individual, address, and identification number.
 
 | Field | What the rule names | Measured here |
 |---|---|---|
@@ -452,7 +452,7 @@ No budget buys better: the ceiling is in the tiers available.
 
 *Unlike the headline, this one is a true proportion (a file is complete or it is not), so it carries a Wilson interval. The mean of five rates measured on five different samples cannot, and this report refuses to invent one.*
 
-**Aiming at the file changes the routing, and it is never worse on any file in the sample**: 3 gained, 0 lost, for **3.5x less**. But 3 discordant pairs cannot separate two rates: what the sample establishes is the cost, not the accuracy. the set cannot distinguish these versions by rate — judge the broken cases instead
+**Aiming at the file changes the routing, and it is never worse on any file in the sample**: 3 gained, 0 lost, for **3.5x less**. But 3 discordant pairs cannot separate two rates: what the sample establishes is the cost, not the accuracy. The set cannot distinguish these versions by rate, so judge the broken cases instead.
 <!-- /figures:document -->
 
 <!-- figures:leviers -->
@@ -641,9 +641,9 @@ tool runs on is missing from it.
 <!-- figures:provenance -->
 **4 measured**, **13 assumed**, **6 chosen**. What each kind means, and what you are entitled to ask of it:
 
-- **measured** — running the code in this repository produces it. *run it yourself — the draws are seeded.*
-- **assumed** — an input nobody here can know; yours to supply. *put your own figure in, and read the band around it.*
-- **chosen** — my judgement and nothing else. *check whether the sweep says it decides anything.*
+- **measured**: running the code in this repository produces it. *run it yourself; the draws are seeded.*
+- **assumed**: an input nobody here can know; yours to supply. *put your own figure in, and read the band around it.*
+- **chosen**: my judgement and nothing else. *check whether the sweep says it decides anything.*
 
 | Kind | Name | What it is | Note |
 |---|---|---|---|

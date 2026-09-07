@@ -32,14 +32,10 @@ const README = fileURLToPath(new URL("../README.md", import.meta.url));
  *  dates intact, so the guard now reads it like any other block. */
 const BLOCS_DE_DONNEES = ["gallery"];
 
-/** The lines still allowed to carry a dash, each with the pass that removes it. */
-const PERMIS = [
-  "by rate — judge the broken cases instead",   // interval.ts, shared with four repositories : the interval pass
-  "- **measured** — ",                          // provenance.ts, shared with ten repositories : the shared-layer
-  "- **assumed** — ",                           //   pass (identite, then `node diffuser.mjs`, then every one) ;
-  "- **chosen** — ",                            //   a test refuses a provenance vocabulary that diverges between them
-  "31 CFR ",                                    // regulations.ts (`${r.cite} — ${r.says}`), shared with five : same pass
-];
+/** The lines still allowed to carry a dash, each with the pass that removes it. Emptied on 12/09 :
+ *  the shared layer (interval.ts, provenance.ts, regulations.ts) lost its dashes at the source in
+ *  identite and was copied here by hand ; nothing is allowed any more. */
+const PERMIS: string[] = [];
 
 /** The README with the data blocks blanked, line numbers preserved. */
 function proseSeule(texte: string): string[] {
