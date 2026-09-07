@@ -15,9 +15,8 @@ import { fileURLToPath } from "node:url";
  * file), it lands in the same file.
  *
  * Two kinds of lines are NOT prose of this repository's own hand and stay outside the rule :
- *   - the blocks that print DATA verbatim : the retractations journal (retractations.json, a
- *     dated log ; rewriting a log is not this rule's call) and the gallery (documents the model
- *     read, quoted as they were) ;
+ *   - the block that prints DATA verbatim : the gallery (documents the model read, quoted as
+ *     they were ; a dash inside a simulated document is the document's) ;
  *   - the lines emitted by a file SHARED across the portfolio (interval.ts, provenance.ts,
  *     regulations.ts) : a change there is made in identite, diffused, then committed in every
  *     repository that carries the copy, because a test refuses a copy behind its source. They
@@ -28,8 +27,10 @@ import { fileURLToPath } from "node:url";
  */
 const README = fileURLToPath(new URL("../README.md", import.meta.url));
 
-/** Blocks whose text is data quoted verbatim, not this repository's prose. */
-const BLOCS_DE_DONNEES = ["retractations", "gallery"];
+/** Blocks whose text is data quoted verbatim, not this repository's prose. The retractations
+ *  journal left this list on 12/09 : its punctuation was corrected, entry by entry, meaning and
+ *  dates intact, so the guard now reads it like any other block. */
+const BLOCS_DE_DONNEES = ["gallery"];
 
 /** The lines still allowed to carry a dash, each with the pass that removes it. */
 const PERMIS = [
