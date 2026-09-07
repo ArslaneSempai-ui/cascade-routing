@@ -11,7 +11,6 @@
  */
 
 import { mkdirSync, writeFileSync, readFileSync, existsSync, renameSync, readdirSync } from "node:fs";
-import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { isMain } from "./cli.ts";
 import { ouvrirJournal, issue } from "./journal.ts";
@@ -266,39 +265,15 @@ export const RELEVE_DE_REFERENCE = "profiles-2026-08-20-coeur-rendu.json";
  * et le contrôle devient du bruit que tout le monde apprend à ignorer.
  */
 /*
- * LA CLÉ RETIRÉE EST CELLE DE LA RACINE, ET D'AUCUN AUTRE NIVEAU.
- *
- * Le scellé doit s'exclure lui-même : il vit à la racine du relevé, et l'inclure dans son
- * propre calcul serait circulaire. Mais la version d'avant retirait `empreinte` à CHAQUE
- * niveau, ce qui est une tout autre règle — elle dit « aucune empreinte, où qu'elle soit,
- * n'est scellée ».
- *
- * Aucun relevé livré n'en porte d'imbriquée : relu le 31 août 2026 sur les cinq fichiers
- * `profiles-*.json`, une seule `empreinte` en tout, à la racine. Il n'y a donc rien à
- * exploiter aujourd'hui, et l'empreinte des relevés existants ne bouge pas d'un caractère.
- *
- * CE QUI SE FERME EST LE JOUR D'APRÈS. Qu'un relevé gagne une empreinte par palier ou par
- * corpus — la forme même vers laquelle ce dépôt tend, puisqu'il empreinte déjà ses modules et
- * ses corpus — et elle naîtrait HORS du scellé : on pourrait la changer, le scellé
- * continuerait de correspondre, et le contrôle dirait « intact » sur un relevé modifié. Une
- * garde latente se ferme pendant qu'elle est latente ; après, elle se ferme en cassant des
- * scellés livrés.
+ * Elle vit désormais dans `empreinte.ts`, le MÊME fichier que les quatre autres outils de la
+ * famille portent : un relevé scellé par l'un se vérifie sous l'autre, et la garde de famille
+ * le prouve au byte. Elle est ré-exportée ici parce que ce module est l'adresse que douze
+ * fichiers de ce dépôt connaissent — déplacer le code ne doit pas déplacer les appelants.
  */
-function canonique(x: unknown, racine = true): unknown {
-  if (Array.isArray(x)) return x.map((v) => canonique(v, false));
-  if (x && typeof x === "object") {
-    const o = x as Record<string, unknown>;
-    return Object.keys(o).sort().reduce<Record<string, unknown>>((a, k) => {
-      if (!(racine && k === "empreinte")) a[k] = canonique(o[k], false);
-      return a;
-    }, {});
-  }
-  return x;
-}
-
-export function empreinteDuReleve(profils: unknown): string {
-  return createHash("sha256").update(JSON.stringify(canonique(profils))).digest("hex").slice(0, 16);
-}
+import { empreinteDuReleve } from "./empreinte.ts";
+export { empreinteDuReleve };
+/* Importée ET ré-exportée : une ré-exportation seule ne fait pas entrer le nom dans la
+   portée du module, et `readProfiles` l'appelle ici même. Le test l'a dit avant le commit. */
 /**
  * Écrit un relevé de mesure — SCELLÉ, et par renommage.
  *

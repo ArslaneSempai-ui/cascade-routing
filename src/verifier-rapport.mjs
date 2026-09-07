@@ -1,3 +1,10 @@
+/* PARTAGÉ DANS LA FAMILLE CASCADE — source : cascade
+   Les dépôts de la famille (cascade, -screening, -monitoring, -scoring, -dossier) en portent
+   une copie identique AU BYTE. Corrigez-le dans la source, puis recopiez : la famille est
+   EXCLUE de la diffusion d'identite (depots.json), aucune diffusion ne viendra le faire à
+   votre place. `couche-famille.test.ts` compare les octets, nomme la direction du retard, et
+   refuse aussi un fichier identique dans deux dépôts qui ne porte PAS cet en-tête — c'est
+   ainsi qu'une copie neuve se déclare au lieu de dériver en silence. */
 /**
  * Vérifier qu'un rapport d'audit est authentique et n'a pas été modifié.
  *
