@@ -31,7 +31,7 @@ const WHAT: Record<keyof typeof ASSUMPTIONS, { what: string; note: string }> = {
   },
   machineHourlyCost: {
     what: "what an hour of the machine running a local model costs you",
-    note: "a local model has no tariff — it occupies a box, and your infrastructure bill knows what that costs",
+    note: "a local model has no tariff; it occupies a box, and your infrastructure bill knows what that costs",
   },
   humanAccuracy: {
     what: "how often a human reviewing their fortieth file of the day gets it right",
@@ -46,7 +46,7 @@ const WHAT: Record<keyof typeof ASSUMPTIONS, { what: string; note: string }> = {
   volume: { what: "items to process over the period", note: "your scenario, not mine" },
   budget: { what: "money available over the period", note: "your scenario; it decides which tiers are reachable at all" },
   costWrongValue: { what: "what a false value entering the record costs you", note: "your risk function knows this; it is the number a regulator asks about" },
-  costBlankField: { what: "what a blank field costs you", note: "one analyst review — the only one of the two anybody can price from a timesheet" },
+  costBlankField: { what: "what a blank field costs you", note: "one analyst review, the only one of the two anybody can price from a timesheet" },
 };
 
 export const INVENTORY: Inventory = [
@@ -54,13 +54,13 @@ export const INVENTORY: Inventory = [
     name: "CHARGE_MAX_PAR_COEUR",
     provenance: "chosen",
     what: "the external load per core above which a duration is not recorded",
-    note: "0.5 because it felt right, not because anything was weighed — and it decides whether a pass keeps its own timings or the previous ones. It is compared to `externalBefore`, the load the machine carried before the tier started, never to `totalDuring`: an encoder saturates the cores by doing its job, and comparing that would refuse every measurement",
+    note: "0.5 because it felt right, not because anything was weighed, and it decides whether a pass keeps its own timings or the previous ones. It is compared to `externalBefore`, the load the machine carried before the tier started, never to `totalDuring`: an encoder saturates the cores by doing its job, and comparing that would refuse every measurement",
   },
   {
     name: "CONFIANCE",
     provenance: "chosen",
     what: "the confidence level every interval and every tie is decided at",
-    note: "95 % because that is wilson()'s default, not because anyone weighed it — and it decides which findings survive",
+    note: "95 % because that is wilson()'s default, not because anyone weighed it, and it decides which findings survive",
   },
   /* ── measured ── */
   {
@@ -73,7 +73,7 @@ export const INVENTORY: Inventory = [
     name: "routing",
     provenance: "measured",
     what: "the cheapest assignment of tiers to fields that fits the budget",
-    note: "exhaustive over all 1,024 combinations — no heuristic, nothing to tune",
+    note: "exhaustive over all 1,024 combinations; no heuristic, nothing to tune",
   },
   {
     name: "shadowPrice",

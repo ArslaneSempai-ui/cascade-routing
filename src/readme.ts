@@ -39,7 +39,7 @@ import { TYPOLOGIES } from "./corpus.ts";
 import { fileURLToPath } from "node:url";
 
 const p = readProfiles();
-if (!p) { console.error("No profile measured — start with: npm run measure"); process.exit(1); }
+if (!p) { console.error("No profile measured. Start with: npm run measure"); process.exit(1); }
 const h = ASSUMPTIONS;
 /* Les paliers réellement dans le profil, jamais la liste complète : l'échelle générative
    est optionnelle, et un dépôt cloné puis mesuré n'en contient que quatre. */
@@ -117,7 +117,7 @@ const ouCaTourne = (() => {
 
   const lignes = mesures.map((t) => {
     const a = facture(t), b = surLaMachine(t);
-    const rapport = b > 0 && a / b > 1.05 ? `${(a / b).toFixed(0)}x` : "—";
+    const rapport = b > 0 && a / b > 1.05 ? `${(a / b).toFixed(0)}x` : "n/a";
     const m = FIELDS.map((f) => p!.extraction[t][f].accuracy);
     const moy = (m.reduce((x, y) => x + y, 0) / m.length) * 100;
     return [`\`${t}\``, `${D}${a.toFixed(2)}`, `${D}${b.toFixed(2)}`, rapport, `${moy.toFixed(1)} %`];
@@ -133,7 +133,7 @@ const ouCaTourne = (() => {
   const renverse = local && local.cout < heberge.cout && local.acc > heberge.acc;
 
   return `**What each tier costs depends on where it runs.** Every tier here was measured ON `
-    + `THIS MACHINE. Two of them — \`small\` and \`large\` — are nonetheless priced per call, `
+    + `THIS MACHINE. Two of them (\`small\` and \`large\`) are nonetheless priced per call, `
     + `because the declared assumption is that you would call them at a provider in production. `
     + `The other column prices the same measured time as machine time.\n\n`
     + table(["Tier", "At a provider", "On your machine", "Ratio", "Accuracy"], lignes)
@@ -141,7 +141,7 @@ const ouCaTourne = (() => {
     + `column is an estimate: it is the same measured latency billed under two regimes.*`
     + (renverse
         ? `\n\n**This reverses the table.** \`${local.t}\` running locally costs `
-          + `${D}${local.cout.toFixed(2)} at ${(local.acc * 100).toFixed(1)} % — cheaper AND more `
+          + `${D}${local.cout.toFixed(2)} at ${(local.acc * 100).toFixed(1)} %, cheaper AND more `
           + `accurate than calling \`large\` at a provider for ${D}${heberge.cout.toFixed(2)} at `
           + `${(heberge.acc * 100).toFixed(1)} %. If you are asking whether you need a paid API, `
           + `that is the measured answer on this corpus.`
@@ -159,9 +159,9 @@ const obligation = (() => {
   const absents = FIELDS.filter((f) => !(f in EXIGES));
   return `**Why these fields.** ${citation("customerIdentification")}\n\n`
     + table(["Field", "What the rule names", "Measured here"],
-        FIELDS.map((f) => [`\`${f}\``, EXIGES[f] ?? "—", f in EXIGES ? "yes" : "yes, but not required by name"]))
+        FIELDS.map((f) => [`\`${f}\``, EXIGES[f] ?? "n/a", f in EXIGES ? "yes" : "yes, but not required by name"]))
     + `\n\n${nommes.length} of the ${FIELDS.length} fields are named by the text; `
-    + `${absents.map((f) => `\`${f}\``).join(", ")} ${absents.length > 1 ? "are" : "is"} not — `
+    + `${absents.map((f) => `\`${f}\``).join(", ")} ${absents.length > 1 ? "are" : "is"} not; `
     + `it follows from the address or the document, and no line of the CFR requires it as a `
     + `datum of its own. It is measured anyway, and said so rather than attached by force.\n\n`
     + `*${sourceDuTexte("customerIdentification")}*`;
@@ -187,7 +187,7 @@ const extraction = table(
     ];
   }),
 ) + `\n\n**The \`±\` column is the widest half-interval on that row**, at 95 %, taken over the `
-  + `five fields — so it never flatters. Two rates on the same row that differ by less than `
+  + `five fields, so it never flatters. Two rates on the same row that differ by less than `
   + `twice it are not separated by this sample, and the generative tiers carry roughly `
   + `${Math.max(...FIELDS.map((f) => precision(Math.round(p!.extraction["gen-4b"]![f]!.accuracy * p!.extraction["gen-4b"]![f]!.items), p!.extraction["gen-4b"]![f]!.items))).toFixed(0)} `
   + `points of it against ${Math.max(...FIELDS.map((f) => precision(Math.round(p!.extraction["large"]![f]!.accuracy * p!.extraction["large"]![f]!.items), p!.extraction["large"]![f]!.items))).toFixed(0)} `
@@ -251,10 +251,10 @@ const shadow = (() => {
   if (!f.step) return "No budget buys better: the ceiling is in the tiers available.";
   const m = f.step;
   const changed = FIELDS.filter((c) => m.routing[c] !== best.routing[c]);
-  return `Budget used: **${euro(f.currentCost)} of ${euro(f.currentBudget)}** — ${pc(best.budgetShare)}. ` +
+  return `Budget used: **${euro(f.currentCost)} of ${euro(f.currentBudget)}** (${pc(best.budgetShare)}). ` +
     `The constraint ${f.constraintBinds ? "**binds**" : "**does not bind**"}.\n\n` +
     `The next real gain is **+${m.gainPoints.toFixed(1)} points of accuracy**, it costs ` +
-    `**${euro(m.extra)} more** — ${(m.budgetNeeded / f.currentCost).toFixed(0)}× current spend — ` +
+    `**${euro(m.extra)} more** (${(m.budgetNeeded / f.currentCost).toFixed(0)}× current spend) ` +
     `and it buys exactly one field: ${changed.map((c) => `\`${c}\``).join(", ")}.`;
 })();
 
@@ -288,7 +288,7 @@ const gallery = (() => {
    * peut plus s'écarter de ce que la boucle fait juste au-dessus.
    */
   const commentaire = `Nothing here is curated for flattery. The gallery takes the FIRST failure `
-    + `of a tier-and-field pair, in order, and shows what came back — `
+    + `of a tier-and-field pair, in order, and shows what came back: `
     + `${six.length} of the ${pairesAvecEchec} pairs that have one, not a chosen sample.`;
 
   const examples = six.map((x) =>
@@ -314,7 +314,7 @@ const gallery = (() => {
     + `${six.length} of the ${pairesAvecEchec} tier-and-field pairs that have a failure, `
     + `with their input and output. `
     + (absents.length
-        ? `Not here at all — ${absents.map((t) => `\`${t}\``).join(", ")}: the generative ladder is `
+        ? `Not here at all, ${absents.map((t) => `\`${t}\``).join(", ")}: the generative ladder is `
           + `measured only with \`npm run measure -- --llm\`. `
         : "")
     + `\`npm run failures\` prints every case of the tiers it runs.\n\n${commentaire}\n\n${examples}`;
@@ -362,8 +362,8 @@ const baselines = table(
 const echelles = (() => {
   const gen = mesures.filter((t) => (GENERATIFS as string[]).includes(t));
   if (!gen.length) {
-    return "The generative ladder is not in this profile. `npm run measure -- --llm` adds it "
-      + "— it needs Ollama and about eight gigabytes of models, which is why it is optional.";
+    return "The generative ladder is not in this profile. `npm run measure -- --llm` adds it;"
+      + " it needs Ollama and about eight gigabytes of models, which is why it is optional.";
   }
   /*
    * « BEST » ÉTAIT UN ARGMAX, ET UN ARGMAX N'EST PAS UN RÉSULTAT.
@@ -402,12 +402,12 @@ const echelles = (() => {
   const effectifs = mesures.map((e) => `\`${e}\` ${p!.extraction[e][FIELDS[0]!].items}`).join(" · ");
   const note = indistincts
     ? `\n\n**On ${indistincts} of ${FIELDS.length} fields the leading tier is not separable from `
-      + `the runner-up** at this sample size — written \`a\` = \`b\`, and left unbolded. Picking `
+      + `the runner-up** at this sample size, written \`a\` = \`b\`, and left unbolded. Picking `
       + `the higher number there would be picking noise; the two are interchangeable on `
       + `accuracy and the choice belongs to cost or latency.`
     : "";
   return table(["Field", ...mesures.map((e) => `\`${e}\``), "Best"], lignes)
-    + `\n\nCases behind each column — ${effectifs}.` + note;
+    + `\n\nCases behind each column: ${effectifs}.` + note;
 })();
 
 /*
@@ -430,7 +430,7 @@ const latence = (() => {
     lignes.push(s
       ? [`${ms} ms`, pc(s.accuracy), euro(s.cost), `${s.latencyPerItem.toFixed(1)} ms`,
          FIELDS.map((c) => `\`${s.routing[c]}\``).join(" ")]
-      : [`${ms} ms`, "—", "—", "—", "*no routing is fast enough*"]);
+      : [`${ms} ms`, "n/a", "n/a", "n/a", "*no routing is fast enough*"]);
   }
   /*
    * Le prix fictif du temps, et il n'était pas prévu.
@@ -447,13 +447,13 @@ const latence = (() => {
      qu'une fois pour toute la page : un lecteur qui arrive par un lien d'ancre
      ne lit pas le paragraphe d'à côté. */
   const noteMoyenne = `\n\nEach accuracy is the **mean of the five field rates** of that routing, `
-    + `measured on separate samples — a mean of proportions, so no interval is quoted.`;
+    + `measured on separate samples: a mean of proportions, so no interval is quoted.`;
   const sans = optimiseExtraction(p!, { ...h, latencyBudgetMs: Number.MAX_SAFE_INTEGER });
   const avec = optimiseExtraction(p!, h);
   const note = (sans && avec && sans.cost < avec.cost)
     ? `\n\n**What the promise costs.** Lift the ceiling entirely and the cheapest routing that is `
       + `statistically indistinguishable in accuracy costs ${euro(sans.cost)} instead of `
-      + `${euro(avec.cost)} — it just takes ${sans.latencyPerItem.toFixed(0)} ms per document. `
+      + `${euro(avec.cost)}; it just takes ${sans.latencyPerItem.toFixed(0)} ms per document. `
       /* L'ÉCART SE PREND SUR LES CHIFFRES AFFICHÉS, pas sur les valeurs pleines.
          `euro(avec.cost - sans.cost)` arrondissait la DIFFÉRENCE (123,4 → 123)
          pendant que la phrase affiche les deux opérandes arrondis, 191 et 67 :
@@ -517,7 +517,7 @@ const egalites = (() => {
     egalitesExactes ? `${egalitesExactes} exact tie${egalitesExactes > 1 ? "s" : ""}` : "",
   ].filter(Boolean);
   return `${rendu}\n\n*Showing ${Math.min(MONTREES, lignes.length)} of ${lignes.length + egalitesExactes} `
-    + `indistinguishable pairs — ${parts.join(" and ")} not listed. A table that shows a selection `
+    + `indistinguishable pairs, ${parts.join(" and ")} not listed. A table that shows a selection `
     + `carries the count of what it leaves out.*`;
 })();
 
@@ -532,7 +532,7 @@ const egalites = (() => {
 const fuite = (() => {
   const f = fileURLToPath(new URL("../data/fuite.json", import.meta.url));
   if (!existsSync(f)) {
-    return "Not measured yet — run `npm run fuite`. Until it is, the generative figures on this "
+    return "Not measured yet; run `npm run fuite`. Until it is, the generative figures on this "
       + "page carry a prompt tuned against the half they are scored on, and are optimistic by an "
       + "unknown amount.";
   }
@@ -577,7 +577,7 @@ const deuxfaits = (() => {
   const qRegle = adr["rules"][doc];
   const rRegle = rate(Math.round(qRegle.accuracy * qRegle.items), qRegle.items);
   return `On the address, **the ${grand < petit ? "large model is worse than the small one" : "small model trails the large one"}** `
-    + `— ${writeRate(rGrand)} against ${writeRate(rPetit)} — while costing several times as much. `
+    + `(${writeRate(rGrand)} against ${writeRate(rPetit)}) while costing several times as much. `
     + (tranche
         ? `The sample separates them. `
         : `**The sample does not separate them**: the intervals overlap, so this is a gap we can see and cannot establish. `)
@@ -618,7 +618,7 @@ const retractations = (() => {
  */
 const publicJeu = (() => {
   const f = fileURLToPath(new URL("../benchmarks/banking77.json", import.meta.url));
-  if (!existsSync(f)) return "Not run yet — `npm run benchmark`.";
+  if (!existsSync(f)) return "Not run yet: `npm run benchmark`.";
   const d = JSON.parse(readFileSync(f, "utf8")) as {
     jeu: string; cas: number; etiquettes: number;
     source: { licence: string; citation: string; empreinte: string };
@@ -629,8 +629,8 @@ const publicJeu = (() => {
     .map(([k, v]) => ({ k, r: rate(v.bons, v.sur), ms: v.ms }))
     .sort((a, b) => b.r.rate - a.r.rate);
   const lignes = [
-    [`*always "${d.references.majoritaire.nom}"*`, pc(d.references.majoritaire.taux), "—", "*trivial baseline*"],
-    ["*uniform guess*", pc(d.references.uniforme), "—", "*trivial baseline*"],
+    [`*always "${d.references.majoritaire.nom}"*`, pc(d.references.majoritaire.taux), "n/a", "*trivial baseline*"],
+    ["*uniform guess*", pc(d.references.uniforme), "n/a", "*trivial baseline*"],
     ...rangs.map((x) => [`\`${x.k}\``, pc(x.r.rate),
       `[${(100 * x.r.low).toFixed(0)}–${(100 * x.r.high).toFixed(0)}]`, `${x.ms.toFixed(0)} ms`]),
   ];
@@ -639,7 +639,7 @@ const publicJeu = (() => {
   const verdict = (tete.k !== rapide.k && !distinguishable(tete.r, rapide.r))
     ? `\n\n**${tete.k} and ${rapide.k} are indistinguishable on ${d.cas} real cases**, and `
       + `${tete.k} is ${(tete.ms / Math.max(rapide.ms, 0.01)).toFixed(0)}× slower. Not "there is no `
-      + `difference" — ${((tete.r.rate - rapide.r.rate) * 100).toFixed(1)} points, and this many `
+      + `difference": ${((tete.r.rate - rapide.r.rate) * 100).toFixed(1)} points, and this many `
       + `cases cannot establish them.`
     : "";
   return `${d.cas} cases, ${d.etiquettes} labels. ${d.source.licence}, checksum \`${d.source.empreinte}\`.\n\n`
@@ -690,7 +690,7 @@ const commandes = (() => {
      * pas. La ligne est engendrée comme les autres, donc elle ne peut pas se perdre à la
      * prochaine régénération.
      */
-    ["test", "types, figures and the suite — start here. Downloads nothing: the two cases that need the model weights stand aside, by name, until `npm run poids -- --prime` has fetched them; everything else runs on what git carries"],
+    ["test", "types, figures and the suite. Start here. Downloads nothing: the two cases that need the model weights stand aside, by name, until `npm run poids -- --prime` has fetched them; everything else runs on what git carries"],
     /*
      * CE CHIFFRE ÉTAIT TAPÉ À LA MAIN, ET IL SE CACHAIT DE LA GARDE QUI L'INTERDIT.
      *
@@ -721,9 +721,9 @@ const commandes = (() => {
      */
     ["measure", `measure the encoder tiers and freeze the profile (at least ${
       (Object.values(POIDS_MODELES).reduce((s, m) => s + m.octets, 0) / 1e9).toFixed(1)
-    } GB downloaded on the first run — \`npm run poids\` lists each one)`],
+    } GB downloaded on the first run; \`npm run poids\` lists each one)`],
     ["sceller", "seal a profile: the fingerprint that makes a silently edited measurement fail loudly"],
-    ["diff", "compare two sealed runs case by case — a rising rate can still have lost cases"],
+    ["diff", "compare two sealed runs case by case; a rising rate can still have lost cases"],
     ["entree", "population drift on the documents alone, no labels, read against its own noise floor"],
     ["optimise", "the routing, and what the next improvement would cost"],
     ["failures", "every case it gets wrong, with its input and its output"],
@@ -732,9 +732,9 @@ const commandes = (() => {
     ["regler", "pick each generative tier's formulation on the dev split, never on held-out"],
     ["apparier", "does the tier ranking depend on the prompt? McNemar on the same cases"],
     ["departager", "is each tuned formulation separable from its runner-up? refutes, never confirms"],
-    ["tentatives", "query stored per-attempt outcomes — paired tests and clean rates, no GPU"],
+    ["tentatives", "query stored per-attempt outcomes: paired tests and clean rates, no GPU"],
     ["dur", "measure the hard corpus: broken documents, non-Latin scripts, ambiguous readings"],
-    ["clone-neuf", "clone from HEAD, install fresh, run the suite — the buyer's first action"],
+    ["clone-neuf", "clone from HEAD, install fresh, run the suite: the buyer's first action"],
     /* Le poids total n'est pas écrit ici : la commande le calcule depuis `POIDS_MODELES`, et
        un chiffre recopié dans une phrase de présentation rouille sans que rien ne le dise. */
     ["poids", "report the model weights on this machine; --export/--import carry them across an air gap"],
@@ -744,25 +744,25 @@ const commandes = (() => {
     ["escalade", "does a guided cascade beat a fixed tier at the same budget?"],
     ["abstention", "silence instead of a doubtful value: wrong ones removed per correct one lost"],
     ["figures", "regenerate every table on this page from the frozen profile"],
-    ["landing", "regenerate landing.json — the figures a published page reads, with their provenance"],
+    ["landing", "regenerate landing.json: the figures a published page reads, with their provenance"],
     ["derivees", "refreeze the three landing figures drawn from the journals git does not carry"],
     ["dossier", "the validation file a reviewer signs"],
-    ["sonde", "the generative probe, regenerated from the frozen profile — it was hand-typed and eleven of its figures had gone stale"],
+    ["sonde", "the generative probe, regenerated from the frozen profile; it was hand-typed and eleven of its figures had gone stale"],
     ["start", "the screen, on localhost:4670"],
-    ["measure:yours", "your own cases, from a CSV — nothing leaves your machine. Writes a report beside the file, and a sealed record `<file>-measured.json` (counts and per-case verdicts, never a value) that `diff` compares and `sceller` re-verifies"],
-    ["measure:humans", "the human tier, on cases your reviewers already worked — the one figure every page here calls assumed. Accuracy, agreement and seconds per case, aggregated (no per-person output), written beside your CSV as a report and a sealed record of verdicts, never a value; `optimise -- --humans=<record>` then uses the measurement and says so"],
-    ["recertify", "does the spring measurement still hold? Re-measures a new CSV under the sealed baseline record's own protocol — same fields, same questions, same tiers — and says per field: holds, or MOVED (exit code 1), naming the cases that used to pass and no longer do. Measures input drift against its own noise floor when the spring CSV is still beside the record. Writes `<file>-recertified.md` and a sealed `<file>-recertified.json`, which serves as the next baseline"],
-    ["benchmark", "the same measurement on a public labelled dataset — the one command that downloads: the dataset comes down, nothing of yours goes up"],
+    ["measure:yours", "your own cases, from a CSV; nothing leaves your machine. Writes a report beside the file, and a sealed record `<file>-measured.json` (counts and per-case verdicts, never a value) that `diff` compares and `sceller` re-verifies"],
+    ["measure:humans", "the human tier, on cases your reviewers already worked: the one figure every page here calls assumed. Accuracy, agreement and seconds per case, aggregated (no per-person output), written beside your CSV as a report and a sealed record of verdicts, never a value; `optimise -- --humans=<record>` then uses the measurement and says so"],
+    ["recertify", "does the spring measurement still hold? Re-measures a new CSV under the sealed baseline record's own protocol (same fields, same questions, same tiers) and says per field: holds, or MOVED (exit code 1), naming the cases that used to pass and no longer do. Measures input drift against its own noise floor when the spring CSV is still beside the record. Writes `<file>-recertified.md` and a sealed `<file>-recertified.json`, which serves as the next baseline"],
+    ["benchmark", "the same measurement on a public labelled dataset; the one command that downloads: the dataset comes down, nothing of yours goes up"],
     ["intake", "turn a filled-in questionnaire into the assumptions a run uses"],
     ["egress", "watch the network while a measurement runs, and record what it sees"],
     ["fuite", "what the prompt owes to the half it was tuned against (needs Ollama)"],
-    ["pages", "build docs/ and verify the published screen — required before publishing: docs/ carries a compiled copy of the code and goes stale silently"],
+    ["pages", "build docs/ and verify the published screen; required before publishing: docs/ carries a compiled copy of the code and goes stale silently"],
     ["captures", "re-record the images on this page"],
     ["ocr", "read the same documents as images and measure what the reading stage costs (macOS: Vision, no API)"],
-    ["premiere-reponse", "the conclusion from the sealed records, in under a second, before `npm install` — the one-second version of this page"],
-    ["licences", "regenerate `LICENCES.md`, the licence of every shipped package — `--check` fails the suite when the table drifts"],
-    ["menace", "the threat model, executable rather than written: regenerates `SECURITE.md` from checks that run — `--check` fails the suite when it drifts"],
-    ["hostile", "the hostile pass: every case of the hostile corpus on every tier, sealed in `corpus-hostile.json`; `CORPUS-HOSTILE.md` is generated from it — `--check` refuses if the page moved"],
+    ["premiere-reponse", "the conclusion from the sealed records, in under a second, before `npm install`: the one-second version of this page"],
+    ["licences", "regenerate `LICENCES.md`, the licence of every shipped package; `--check` fails the suite when the table drifts"],
+    ["menace", "the threat model, executable rather than written: regenerates `SECURITE.md` from checks that run; `--check` fails the suite when it drifts"],
+    ["hostile", "the hostile pass: every case of the hostile corpus on every tier, sealed in `corpus-hostile.json`; `CORPUS-HOSTILE.md` is generated from it; `--check` refuses if the page moved"],
   ];
   const classees = new Set(ordre.map(([n]) => n));
   /*
@@ -811,7 +811,7 @@ const commandes = (() => {
    */
   const lignes = [
     ["`npm ci --ignore-scripts`", "install exactly the versions the lockfile pins, and run no "
-      + "install script from any dependency — nothing below runs without it, and it is the only "
+      + "install script from any dependency; nothing below runs without it, and it is the only "
       + "command here that needs the network. It also skips this repository's own `prepare`, so "
       + "run `git config core.hooksPath .githooks` yourself if you intend to commit"] as [string, string],
     ...ordre.filter(([n]) => n in pkg.scripts).map(([n, quoi]) => [`\`npm run ${n}\``, quoi] as [string, string]),
@@ -883,7 +883,7 @@ const poidsATelecharger = (() => {
   const enMo = (n: number): string => Math.round(n / 1e6).toLocaleString("en-GB") + " MB";
   const parTaille = Object.values(POIDS_MODELES).slice().sort((a, b) => b.octets - a.octets);
   const total = parTaille.reduce((s, m) => s + m.octets, 0);
-  return `**${(total / 1e9).toFixed(1)} GB of model weights** on the first \`npm run measure\` — `
+  return `**${(total / 1e9).toFixed(1)} GB of model weights** on the first \`npm run measure\`: `
     /* Le nom court est DÉRIVÉ du dépôt épinglé, jamais réécrit : « distilbert » abrégeait à la
        main un identifiant qui désigne le fichier réellement téléchargé. */
     + parTaille.map((m) => `${enMo(m.octets)} for ${m.depot.split("/")[1]}`).join(", ") + `.`;
@@ -906,7 +906,7 @@ const coutDeReproduction = (() => {
   const min = (new Date(dates.at(-1)!).getTime() - new Date(dates[0]!).getTime()) / 60000;
   return `**What the published pass actually took.** The provenance stamps of the profile `
     + `shipped with this repository run from ${dates[0]!.slice(11, 19)} to `
-    + `${dates.at(-1)!.slice(11, 19)} — **${min.toFixed(0)} minutes** of measurement on the `
+    + `${dates.at(-1)!.slice(11, 19)}, **${min.toFixed(0)} minutes** of measurement on the `
     + `machine named in the seal, on top of the weight download. That is the figure to plan `
     + `for, not a round number: it is read from the relevé, so it moves when the relevé does.`;
 })();
@@ -939,13 +939,13 @@ const embauche = (() => {
   return `**The human tier is priced as a slope, and headcount is a step.** At `
     + `${h.humanSeconds} s per item and ${h.volume.toLocaleString("en-GB")} documents the `
     + `human tier would occupy **${fraction(enUsage).toFixed(2)} of an analyst**, billed pro `
-    + `rata at ${euro(prorata(enUsage))} where a payroll pays ${euro(reel(enUsage))} — a factor `
+    + `rata at ${euro(prorata(enUsage))} where a payroll pays ${euro(reel(enUsage))}, a factor `
     + `of ${rapport(enUsage).toFixed(2)}. You do not hire a fraction of a person. At the bottom `
     /* La borne vient de PLAUSIBLE, jamais recopiée : « bottom of the swept range » avec un 15
        tapé en dur devenait faux le jour où quelqu'un élargit le balayage — la phrase restait,
        l'étiquette mentait, aucun contrôle ne tombait. Audit du 27 août 2026. */
     + `of the swept range the factor reaches ${rapport(PLAUSIBLE.humanSeconds![0]).toFixed(2)}. It does not change the `
-    + `answer here — the routing above does not select the human tier — but the cost model is `
+    + `answer here (the routing above does not select the human tier), but the cost model is `
     + `a slope where the world has steps, and that is stated rather than left to be found.`;
 })();
 
@@ -953,7 +953,7 @@ const provenance = markdown(
   INVENTORY.map((e) => e.name === "routing"
     ? { ...e, note: `exhaustive over all ${nCombinaisons.toLocaleString("en-GB")} combinations of the ${paliersMesures(p).length} tiers in the profile`
         + (nAvecHypothese ? `, ${nAvecHypothese} of which carries an assumed accuracy rather than a measured one` : "")
-        + ` — no heuristic, nothing to tune` }
+        + `; no heuristic, nothing to tune` }
     : e),
   table,
 );
@@ -990,7 +990,7 @@ const finding = (() => {
   const tailles = [...new Set(paliersMesures(p!).filter((e) => e !== "human")
     .map((e) => p!.extraction[e][FIELDS[0]!].items))].sort((a, b) => b - a);
   const melange = tailles.length > 1
-    ? ` Measured on ${tailles.join(" and ")} held-out cases depending on the tier — the tables carry each figure's own \`n\`.`
+    ? ` Measured on ${tailles.join(" and ")} held-out cases depending on the tier; the tables carry each figure's own \`n\`.`
     : "";
   /*
    * CE QUE LE TITRE DISAIT, ET POURQUOI IL A CHANGE.
@@ -1032,7 +1032,7 @@ const finding = (() => {
   const unite = doc
     ? ` **But the unit that gets filed is the record, and it is not the headline:** `
       + `${doc.publie.complets} of ${doc.publie.n} records come out with all `
-      + `${FIELDS.length} fields right — ${writeRate(rate(doc.publie.complets, doc.publie.n))} — `
+      + `${FIELDS.length} fields right: ${writeRate(rate(doc.publie.complets, doc.publie.n))}, `
       + `where the mean per field reads ${(s2.accuracy * 100).toFixed(1)} %.`
       + (doc.identiques ? ``
         : ` Aiming at the record instead delivers ${doc.vise.complets} of ${doc.vise.n} for `
@@ -1041,8 +1041,8 @@ const finding = (() => {
     : ` Total: **${(s2.accuracy * 100).toFixed(1)} % for ${D}${Math.round(s2.cost)}**.`;
 
   const levier = lev
-    ? ` **And the larger lever is not routing at all:** abstaining — returning nothing when a `
-      + `signal says the value is doubtful — pays off about ${lev} times sooner than moving a `
+    ? ` **And the larger lever is not routing at all:** abstaining (returning nothing when a `
+      + `signal says the value is doubtful) pays off about ${lev} times sooner than moving a `
       + `field to another tier.`
     : ``;
 
@@ -1077,7 +1077,7 @@ const finding = (() => {
 const lecture = (() => {
   const chemin = fileURLToPath(new URL("../ocr.json", import.meta.url));
   if (!existsSync(chemin)) {
-    throw new Error("ocr.json is missing — this block publishes a measurement. Run: npm run ocr");
+    throw new Error("ocr.json is missing: this block publishes a measurement. Run: npm run ocr");
   }
   const r = JSON.parse(readFileSync(chemin, "utf8"));
 
@@ -1114,15 +1114,15 @@ const lecture = (() => {
     + `Transcription fidelity: **${writeRate(fid)}** of words recovered.\n\n`
     + table(["Tier", "From text", "From the image", "Gap", "Beyond noise"], lignes)
     + `\n\n${verdictLecture}\n\n`
-    + `**What this does not measure.** The images are rendered, not photographed — clean, `
-    + `square, no glare or fold — and the documents average `
+    + `**What this does not measure.** The images are rendered, not photographed (clean, `
+    + `square, no glare or fold), and the documents average `
     + `${r.lignesParDocument.moyenne.toFixed(1)} lines (at most ${r.lignesParDocument.maximum}). `
     + `A photographed full page brings problems these do not: columns, reading order, skew. `
     + `**The gaps above are a floor, not a production cost.**`
     + (r.paliersEcartes.length
-        ? ` ${r.paliersEcartes.length} tier${r.paliersEcartes.length === 1 ? " was" : "s were"} excluded — `
+        ? ` ${r.paliersEcartes.length} tier${r.paliersEcartes.length === 1 ? " was" : "s were"} excluded, `
           + r.paliersEcartes.map((t: string) => `\`${t}\``).join(", ")
-          + ` — because ${r.paliersEcartes.length === 1 ? "it returns" : "they return"} the right `
+          + `, because ${r.paliersEcartes.length === 1 ? "it returns" : "they return"} the right `
           + `answer from scrambled text: ${r.paliersEcartes.length === 1 ? "it never reads" : "they never read"} `
           + `the document, so degrading it cannot move ${r.paliersEcartes.length === 1 ? "it" : "them"}. `
           + `${r.paliersEcartes.length === 1 ? "Its" : "Their"} gap would be 0.0 points by construction, `
@@ -1218,7 +1218,7 @@ const expositionBloc = (() => {
     + `\n\n**The recommendation is robust.** `
     + (r.seuil
         ? `A wrong value would have to cost **${r.seuil.bas} reviews** before the optimal `
-          + `routing changes — bracketed by bisection between ${r.seuil.bas} and ${r.seuil.haut}, `
+          + `routing changes; bracketed by bisection between ${r.seuil.bas} and ${r.seuil.haut}, `
           + `not a point. Below that ratio, the published routing is also the one that minimises `
           + `total exposure.`
         : `Across every price ratio tested, the optimal routing never moves away from the `
@@ -1226,7 +1226,7 @@ const expositionBloc = (() => {
     + `\n\n**And the number that matters most is not the one being optimised.** At equal `
     + `prices, the same volume costs ${D}${Math.round(base.traitement ?? 0).toLocaleString("en-GB")} `
     + `to process and ${D}${Math.round(base.exposition ?? 0).toLocaleString("en-GB")} in expected `
-    + `cost of being wrong — **${facteur}x more**. The optimiser argues about the small `
+    + `cost of being wrong, **${facteur}x more**. The optimiser argues about the small `
     + `variable. Both prices are yours to set: they are assumptions, marked as such, and only `
     + `you know what a misfiled record costs.`;
 })();
@@ -1267,13 +1267,13 @@ const documentBloc = (() => {
     + `mean of ${FIELDS.length} per-field rates. A file is only complete when all `
     + `${FIELDS.length} fields are right **together**, and that is what gets filed.\n\n`
     + table(["", "Routing", "Complete files", "Cost"], lignes)
-    + `\n\n*Unlike the headline, this one is a true proportion — a file is complete or it is `
-    + `not — so it carries a Wilson interval. The mean of five rates measured on five `
+    + `\n\n*Unlike the headline, this one is a true proportion (a file is complete or it is `
+    + `not), so it carries a Wilson interval. The mean of five rates measured on five `
     + `different samples cannot, and this report refuses to invent one.*`
     + (d.identiques
         ? `\n\nAiming at the file changes nothing here: both objectives pick the same routing.`
         : `\n\n**Aiming at the file changes the routing, and it is never worse on any file in `
-          + `the sample** — ${d.apparie.gains} gained, ${d.apparie.regressions} lost, for `
+          + `the sample**: ${d.apparie.gains} gained, ${d.apparie.regressions} lost, for `
           + `**${moinsCher.toFixed(1)}x less**. But ${d.apparie.discordant} discordant pairs `
           + `cannot separate two rates: what the sample establishes is the cost, not the `
           + `accuracy. ${d.apparie.note ?? ""}`);
@@ -1320,7 +1320,7 @@ const leviers = (() => {
   /* survivant:ok inatteignable — le témoin de la ligne 1113 couvre entièrement ce chemin :
      l'absence n'y descend jamais, elle meurt sur le `readFileSync` d'au-dessus. Lui écrire un
      cas rendrait un vert qui ne regarde rien. Marqué pour ne pas être resignalé à chaque passe. */
-  if (!existsSync(cheminExp)) throw new Error("exposition.json is missing — restore it with `git checkout exposition.json`.");
+  if (!existsSync(cheminExp)) throw new Error("exposition.json is missing. Restore it with `git checkout exposition.json`.");
   const exp = JSON.parse(readFileSync(cheminExp, "utf8")) as { seuil: { bas: number; haut: number } | null };
 
   const abst = (() => {
@@ -1340,20 +1340,20 @@ const leviers = (() => {
   const ecart = seuilRoutage ? Math.round(seuilRoutage / seuilAbstention) : null;
 
   return `**There are two levers, and they are not equally close.** Both reduce the cost of `
-    + `being wrong, and both reduce to one dimensionless question — *how many reviews is one `
-    + `wrong value worth to you?* — so both transfer to your numbers without extrapolating `
+    + `being wrong, and both reduce to one dimensionless question: *how many reviews is one `
+    + `wrong value worth to you?* Both transfer to your numbers without extrapolating `
     + `anything.\n\n`
     + table(["Lever", "Pays off once a wrong value is worth", "What it does"], [
       ["**Abstain**", `**${seuilAbstention} reviews**`,
-        `returns nothing when a signal says the value is doubtful — ${abst.wrongRemoved} wrong `
+        `returns nothing when a signal says the value is doubtful; ${abst.wrongRemoved} wrong `
         + `values removed for ${abst.correctSacrificed} correct ones lost, precision `
         + `${abst.baselinePrecisionPct} % → ${abst.deliveredPrecisionPct} %`],
       ["Re-route", seuilRoutage ? `${seuilRoutage} reviews` : "never, in the range tested",
-        "moves a field to a different tier — the published recommendation is stable below that"],
+        "moves a field to a different tier; the published recommendation is stable below that"],
     ])
     + `\n\n${ecert(ecart)}`
-    + `\n\n*The abstention figures are measured on the **hard corpus** — `
-    + `${abst.documents} deliberately difficult documents, ${abst.valuesMeasured} values — not `
+    + `\n\n*The abstention figures are measured on the **hard corpus** (`
+    + `${abst.documents} deliberately difficult documents, ${abst.valuesMeasured} values), not `
     + `on the main sample. That is where abstention is worth measuring, and it is also why the `
     + `baseline precision there is ${abst.baselinePrecisionPct} % rather than the headline. The `
     + `ratio itself carries no unit and does not depend on that choice.*`;
@@ -1362,7 +1362,7 @@ const leviers = (() => {
     return n === null
       ? `Abstention pays almost immediately; re-routing never became worthwhile in the range tested.`
       : `**Abstention pays roughly ${n} times sooner than re-routing.** For almost any client, `
-        + `the lever is refusing to answer — not moving fields between tiers. That is the `
+        + `the lever is refusing to answer, not moving fields between tiers. That is the `
         + `opposite of where attention usually goes.`;
   }
 })();
@@ -1409,14 +1409,14 @@ const frontiere = (() => {
      */
     const precision = r.delivered >= ENOUGH && r.deliveredPrecisionPct !== null
       ? `${r.deliveredPrecisionPct} % [${r.deliveredPrecisionInterval![0]}–${r.deliveredPrecisionInterval![1]}]`
-      : `— (${r.delivered} delivered, too few to quote)`;
+      : `n/a (${r.delivered} delivered, too few to quote)`;
     return [
       `**${r.signalsRequired}**`,
       `${relectures.toFixed(0)} reviews · ${heures(relectures).toFixed(1)} h`,
       `${evites.toFixed(0)}`,
       `${parCent(r.correctSacrificed).toFixed(0)}`,
       precision,
-      r.breakEvenCostRatio === null ? "—" : `${r.breakEvenCostRatio}`,
+      r.breakEvenCostRatio === null ? "n/a" : `${r.breakEvenCostRatio}`,
     ];
   });
 
@@ -1428,7 +1428,7 @@ const frontiere = (() => {
     + `reviews and in errors that never reach a file.\n\n`
     + table(["Signals required", "Reviews added", "Wrong values avoided", "Correct values lost",
       "Precision of what is delivered", "Break-even ratio"], lignes)
-    + `\n\n*Reviews are converted at ${h.humanSeconds} seconds each — the one assumption in `
+    + `\n\n*Reviews are converted at ${h.humanSeconds} seconds each: the one assumption in `
     + `this table, and it is yours to change. Everything else is counted.*`
     + (fort
         ? `\n\n**At ${fort.signalsRequired} signal${fort.signalsRequired > 1 ? "s" : ""}, the trade `
@@ -1436,7 +1436,7 @@ const frontiere = (() => {
           + `removed for every correct one lost**, and precision goes from `
           + `${a.baselinePrecisionPct} % to ${fort.deliveredPrecisionPct} %. Whether that is worth `
           + `${heures(parCent(fort.abstentions)).toFixed(1)} hours per hundred values is your `
-          + `arithmetic, not ours — it depends on what a misfiled record costs you.`
+          + `arithmetic, not ours; it depends on what a misfiled record costs you.`
         : ``)
     /* DEUX TAUX VOISINS NE DISENT RIEN. Le seuil prudent ameliore-t-il la precision, ou
        est-ce du bruit ? La question se tranche, elle ne se laisse pas suggerer. */
@@ -1449,13 +1449,13 @@ const frontiere = (() => {
           ? `\n\n**And the cautious threshold does move precision**, separably: `
             + `${a.baselinePrecisionPct} % to ${prudent.deliveredPrecisionPct} %, intervals apart.`
           : `\n\n**And the cautious threshold moves nothing.** ${a.baselinePrecisionPct} % to `
-            + `${prudent.deliveredPrecisionPct} % — the intervals overlap almost entirely, so the `
+            + `${prudent.deliveredPrecisionPct} %: the intervals overlap almost entirely, so the `
             + `sample cannot tell the two apart. It is nearly free and nearly useless, which is `
             + `worth saying rather than letting two adjacent numbers suggest a gain.`;
       })()
     + (gratuit && gratuit.wrongRemoved < ENOUGH
         ? `\n\n**And a caution on the row that looks free.** At ${gratuit.signalsRequired} signals `
-          + `no correct value is lost at all — but on ${gratuit.abstentions} abstentions, which is `
+          + `no correct value is lost at all, but on ${gratuit.abstentions} abstentions, which is `
           + `below this repository's floor of ${ENOUGH}. "Never sacrifices a correct value" is a `
           + `claim that sample cannot carry`
           + (gratuit.neverSacrificesInterval
@@ -1463,7 +1463,7 @@ const frontiere = (() => {
                 + `${gratuit.neverSacrificesInterval[1]} %.`
               : `.`)
         : ``)
-    + `\n\n*Measured on the **hard corpus** — ${a.documents} deliberately difficult documents, `
+    + `\n\n*Measured on the **hard corpus**: ${a.documents} deliberately difficult documents, `
     + `${a.valuesMeasured} values. The break-even ratio carries no unit and transfers as is; the `
     + `hours transfer only in proportion to how many of your values are doubtful, which we do `
     + `not know.*`;
@@ -1520,9 +1520,9 @@ const documents = (() => {
     "NOTATION-CAS-DURS.md": "how the hard cases were graded, and by whom",
     "retractations.json": "every conclusion published here that turned out to be wrong",
     "sbom.json": "the dependency inventory, CycloneDX, for a procurement team",
-    "cle-publique.pem": "the key that signs reports — verify one with `node src/verifier-rapport.mjs`",
-    "rules-example.json": "an example `--rules` file for `measure:yours`: one regular expression per column of your CSV, the whole match is the value — copy it, keep the columns you have",
-    "rapport-exemple.html": "an example of the signed report, issued on cascade's own held-out corpus with the repository's key — verify it before buying anything: `node src/verifier-rapport.mjs rapport-exemple.html`",
+    "cle-publique.pem": "the key that signs reports; verify one with `node src/verifier-rapport.mjs`",
+    "rules-example.json": "an example `--rules` file for `measure:yours`: one regular expression per column of your CSV, the whole match is the value; copy it, keep the columns you have",
+    "rapport-exemple.html": "an example of the signed report, issued on cascade's own held-out corpus with the repository's key; verify it before buying anything: `node src/verifier-rapport.mjs rapport-exemple.html`",
   };
   const presents = readdirSync(racine).filter((n) => n in decrit).sort();
   if (presents.length === 0) {

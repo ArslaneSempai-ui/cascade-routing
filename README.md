@@ -1,4 +1,4 @@
-<!-- piege:ok compte-en-prose — un contrôle plus fin vit dans src/cascade.test.ts : il liste
+<!-- piege:ok compte-en-prose, un contrôle plus fin vit dans src/cascade.test.ts : il liste
      phrase par phrase ce qu'on s'autorise à compter en toutes lettres, avec la raison pour
      laquelle ce compte-là ne bougera pas, et il tombe si une de ces exceptions cesse de
      correspondre à quoi que ce soit. L'exemption ici vaut pour le fichier entier ; elle n'est
@@ -11,10 +11,10 @@
 <!-- /figures:chapeau -->
 
 <!-- figures:finding -->
-**The finding.** Routing every field to the same tier is the default and it is wrong. Measured per field, 3 of the 5 fields are carried by regexes at **zero cost and up to 100 % accuracy**, and the money is worth spending on exactly the ones that need it. **But the unit that gets filed is the record, and it is not the headline:** 92 of 120 records come out with all 5 fields right — 76.7 % [68–83], n=120 — where the mean per field reads 94.4 %. Aiming at the record instead delivers 95 of 120 for $54 rather than $191, worse on no record in the sample. **And the larger lever is not routing at all:** abstaining — returning nothing when a signal says the value is doubtful — pays off about 26 times sooner than moving a field to another tier. Measured on 1000 and 120 held-out cases depending on the tier — the tables carry each figure's own `n`.
+**The finding.** Routing every field to the same tier is the default and it is wrong. Measured per field, 3 of the 5 fields are carried by regexes at **zero cost and up to 100 % accuracy**, and the money is worth spending on exactly the ones that need it. **But the unit that gets filed is the record, and it is not the headline:** 92 of 120 records come out with all 5 fields right: 76.7 % [68–83], n=120, where the mean per field reads 94.4 %. Aiming at the record instead delivers 95 of 120 for $54 rather than $191, worse on no record in the sample. **And the larger lever is not routing at all:** abstaining (returning nothing when a signal says the value is doubtful) pays off about 26 times sooner than moving a field to another tier. Measured on 1000 and 120 held-out cases depending on the tier; the tables carry each figure's own `n`.
 <!-- /figures:finding -->
 
-**[Try it in your browser →](https://arslanesempai-ui.github.io/cascade-routing/)** — take a
+**[Try it in your browser →](https://arslanesempai-ui.github.io/cascade-routing/)**. Take a
 cell to send a field to another tier and read what your routing costs. No model is called:
 the accuracy of each tier was measured once on held-out records and frozen, and the page
 replays the arithmetic on those measurements. Measuring them yourself is `npm run measure`;
@@ -25,11 +25,11 @@ what that pass actually cost is stated below, read from the relevé rather than 
 <!-- figures:commandes -->
 | Command | What it does, in the order that makes sense |
 |---|---|
-| `npm ci --ignore-scripts` | install exactly the versions the lockfile pins, and run no install script from any dependency — nothing below runs without it, and it is the only command here that needs the network. It also skips this repository's own `prepare`, so run `git config core.hooksPath .githooks` yourself if you intend to commit |
-| `npm run test` | types, figures and the suite — start here. Downloads nothing: the two cases that need the model weights stand aside, by name, until `npm run poids -- --prime` has fetched them; everything else runs on what git carries |
-| `npm run measure` | measure the encoder tiers and freeze the profile (at least 1.3 GB downloaded on the first run — `npm run poids` lists each one) |
+| `npm ci --ignore-scripts` | install exactly the versions the lockfile pins, and run no install script from any dependency; nothing below runs without it, and it is the only command here that needs the network. It also skips this repository's own `prepare`, so run `git config core.hooksPath .githooks` yourself if you intend to commit |
+| `npm run test` | types, figures and the suite. Start here. Downloads nothing: the two cases that need the model weights stand aside, by name, until `npm run poids -- --prime` has fetched them; everything else runs on what git carries |
+| `npm run measure` | measure the encoder tiers and freeze the profile (at least 1.3 GB downloaded on the first run; `npm run poids` lists each one) |
 | `npm run sceller` | seal a profile: the fingerprint that makes a silently edited measurement fail loudly |
-| `npm run diff` | compare two sealed runs case by case — a rising rate can still have lost cases |
+| `npm run diff` | compare two sealed runs case by case; a rising rate can still have lost cases |
 | `npm run entree` | population drift on the documents alone, no labels, read against its own noise floor |
 | `npm run optimise` | the routing, and what the next improvement would cost |
 | `npm run failures` | every case it gets wrong, with its input and its output |
@@ -38,9 +38,9 @@ what that pass actually cost is stated below, read from the relevé rather than 
 | `npm run regler` | pick each generative tier's formulation on the dev split, never on held-out |
 | `npm run apparier` | does the tier ranking depend on the prompt? McNemar on the same cases |
 | `npm run departager` | is each tuned formulation separable from its runner-up? refutes, never confirms |
-| `npm run tentatives` | query stored per-attempt outcomes — paired tests and clean rates, no GPU |
+| `npm run tentatives` | query stored per-attempt outcomes: paired tests and clean rates, no GPU |
 | `npm run dur` | measure the hard corpus: broken documents, non-Latin scripts, ambiguous readings |
-| `npm run clone-neuf` | clone from HEAD, install fresh, run the suite — the buyer's first action |
+| `npm run clone-neuf` | clone from HEAD, install fresh, run the suite: the buyer's first action |
 | `npm run poids` | report the model weights on this machine; --export/--import carry them across an air gap |
 | `npm run contrainte` | what the output constraint buys, at a token cap shown not to bind |
 | `npm run mur` | how far the exhaustive solver goes, in fields and tiers, measured |
@@ -48,25 +48,25 @@ what that pass actually cost is stated below, read from the relevé rather than 
 | `npm run escalade` | does a guided cascade beat a fixed tier at the same budget? |
 | `npm run abstention` | silence instead of a doubtful value: wrong ones removed per correct one lost |
 | `npm run figures` | regenerate every table on this page from the frozen profile |
-| `npm run landing` | regenerate landing.json — the figures a published page reads, with their provenance |
+| `npm run landing` | regenerate landing.json: the figures a published page reads, with their provenance |
 | `npm run derivees` | refreeze the three landing figures drawn from the journals git does not carry |
 | `npm run dossier` | the validation file a reviewer signs |
-| `npm run sonde` | the generative probe, regenerated from the frozen profile — it was hand-typed and eleven of its figures had gone stale |
+| `npm run sonde` | the generative probe, regenerated from the frozen profile; it was hand-typed and eleven of its figures had gone stale |
 | `npm run start` | the screen, on localhost:4670 |
-| `npm run measure:yours` | your own cases, from a CSV — nothing leaves your machine. Writes a report beside the file, and a sealed record `<file>-measured.json` (counts and per-case verdicts, never a value) that `diff` compares and `sceller` re-verifies |
-| `npm run measure:humans` | the human tier, on cases your reviewers already worked — the one figure every page here calls assumed. Accuracy, agreement and seconds per case, aggregated (no per-person output), written beside your CSV as a report and a sealed record of verdicts, never a value; `optimise -- --humans=<record>` then uses the measurement and says so |
-| `npm run recertify` | does the spring measurement still hold? Re-measures a new CSV under the sealed baseline record's own protocol — same fields, same questions, same tiers — and says per field: holds, or MOVED (exit code 1), naming the cases that used to pass and no longer do. Measures input drift against its own noise floor when the spring CSV is still beside the record. Writes `<file>-recertified.md` and a sealed `<file>-recertified.json`, which serves as the next baseline |
-| `npm run benchmark` | the same measurement on a public labelled dataset — the one command that downloads: the dataset comes down, nothing of yours goes up |
+| `npm run measure:yours` | your own cases, from a CSV; nothing leaves your machine. Writes a report beside the file, and a sealed record `<file>-measured.json` (counts and per-case verdicts, never a value) that `diff` compares and `sceller` re-verifies |
+| `npm run measure:humans` | the human tier, on cases your reviewers already worked: the one figure every page here calls assumed. Accuracy, agreement and seconds per case, aggregated (no per-person output), written beside your CSV as a report and a sealed record of verdicts, never a value; `optimise -- --humans=<record>` then uses the measurement and says so |
+| `npm run recertify` | does the spring measurement still hold? Re-measures a new CSV under the sealed baseline record's own protocol (same fields, same questions, same tiers) and says per field: holds, or MOVED (exit code 1), naming the cases that used to pass and no longer do. Measures input drift against its own noise floor when the spring CSV is still beside the record. Writes `<file>-recertified.md` and a sealed `<file>-recertified.json`, which serves as the next baseline |
+| `npm run benchmark` | the same measurement on a public labelled dataset; the one command that downloads: the dataset comes down, nothing of yours goes up |
 | `npm run intake` | turn a filled-in questionnaire into the assumptions a run uses |
 | `npm run egress` | watch the network while a measurement runs, and record what it sees |
 | `npm run fuite` | what the prompt owes to the half it was tuned against (needs Ollama) |
-| `npm run pages` | build docs/ and verify the published screen — required before publishing: docs/ carries a compiled copy of the code and goes stale silently |
+| `npm run pages` | build docs/ and verify the published screen; required before publishing: docs/ carries a compiled copy of the code and goes stale silently |
 | `npm run captures` | re-record the images on this page |
 | `npm run ocr` | read the same documents as images and measure what the reading stage costs (macOS: Vision, no API) |
-| `npm run premiere-reponse` | the conclusion from the sealed records, in under a second, before `npm install` — the one-second version of this page |
-| `npm run licences` | regenerate `LICENCES.md`, the licence of every shipped package — `--check` fails the suite when the table drifts |
-| `npm run menace` | the threat model, executable rather than written: regenerates `SECURITE.md` from checks that run — `--check` fails the suite when it drifts |
-| `npm run hostile` | the hostile pass: every case of the hostile corpus on every tier, sealed in `corpus-hostile.json`; `CORPUS-HOSTILE.md` is generated from it — `--check` refuses if the page moved |
+| `npm run premiere-reponse` | the conclusion from the sealed records, in under a second, before `npm install`: the one-second version of this page |
+| `npm run licences` | regenerate `LICENCES.md`, the licence of every shipped package; `--check` fails the suite when the table drifts |
+| `npm run menace` | the threat model, executable rather than written: regenerates `SECURITE.md` from checks that run; `--check` fails the suite when it drifts |
+| `npm run hostile` | the hostile pass: every case of the hostile corpus on every tier, sealed in `corpus-hostile.json`; `CORPUS-HOSTILE.md` is generated from it; `--check` refuses if the page moved |
 <!-- /figures:commandes -->
 
 ```bash
@@ -76,7 +76,7 @@ npm test           # types, README figures, landing.json, and the suite
 ## Running it where the network is closed
 
 This tool never sends your data anywhere. It does, on **first run only**, download its model
-weights from `huggingface.co` — and on a corporate network that host is usually blocked.
+weights from `huggingface.co`, and on a corporate network that host is usually blocked.
 Nothing about that is your firewall being wrong; it is the ordinary default. `npm run poids`
 lists those weights with their exact sizes, read from the pinned revisions rather than from a
 sentence someone typed.
@@ -100,8 +100,8 @@ npm run poids -- --import /media/usb/cascade-weights
 ```
 
 Every file is checked against its SHA-256 and against the revision this repository pins,
-**before anything is written**. A half-written cache is worse than an empty one — it crashes
-the process natively without naming the file — so a failed check leaves the cache untouched
+**before anything is written**. A half-written cache is worse than an empty one. It crashes
+the process natively without naming the file, so a failed check leaves the cache untouched
 and tells you which file disagreed.
 
 Then run any command with the network refused outright:
@@ -111,12 +111,12 @@ CASCADE_OFFLINE=1 npm run optimise
 ```
 
 Under that flag the library is told not to reach the network at all. If a model is missing it
-says so, names it, gives its size, and stops — instead of stalling on a download that cannot
+says so, names it, gives its size, and stops, instead of stalling on a download that cannot
 finish. `npm run poids` with no argument reports what is on this machine.
 
 The encoder tiers run fully air-gapped. The model library asks for one tokenizer file at
 revision `main` whatever revision is pinned, and reads it from the cache before the network;
-the loader places a copy of the pinned file under that cache key, so no call remains — with
+the loader places a copy of the pinned file under that cache key, so no call remains, with
 the network open or refused. Measured on 3 September 2026: with the copies in place,
 `CASCADE_OFFLINE=1 npm run measure:yours` measures every cell without a single outbound
 request; the suite holds it.
@@ -136,31 +136,31 @@ several scripts chain shell commands, which hold under Git Bash and not under `c
 | [`SECURITE.md`](SECURITE.md) | the attack surface, checked rather than described |
 | [`SONDE.md`](SONDE.md) | real generative models on the same corpus, judged by the same grader |
 | [`VALIDATION.md`](VALIDATION.md) | what was measured, on which corpus, and what the numbers do not establish |
-| [`cle-publique.pem`](cle-publique.pem) | the key that signs reports — verify one with `node src/verifier-rapport.mjs` |
-| [`rapport-exemple.html`](rapport-exemple.html) | an example of the signed report, issued on cascade's own held-out corpus with the repository's key — verify it before buying anything: `node src/verifier-rapport.mjs rapport-exemple.html` |
+| [`cle-publique.pem`](cle-publique.pem) | the key that signs reports; verify one with `node src/verifier-rapport.mjs` |
+| [`rapport-exemple.html`](rapport-exemple.html) | an example of the signed report, issued on cascade's own held-out corpus with the repository's key; verify it before buying anything: `node src/verifier-rapport.mjs rapport-exemple.html` |
 | [`retractations.json`](retractations.json) | every conclusion published here that turned out to be wrong |
-| [`rules-example.json`](rules-example.json) | an example `--rules` file for `measure:yours`: one regular expression per column of your CSV, the whole match is the value — copy it, keep the columns you have |
+| [`rules-example.json`](rules-example.json) | an example `--rules` file for `measure:yours`: one regular expression per column of your CSV, the whole match is the value; copy it, keep the columns you have |
 | [`sbom.json`](sbom.json) | the dependency inventory, CycloneDX, for a procurement team |
 <!-- /figures:documents -->
 
 <!-- figures:tests -->
-**650 tests** across 73 files, counted from the sources rather than typed here.
+**652 tests** across 74 files, counted from the sources rather than typed here.
 <!-- /figures:tests -->
 
 Everything runs locally, and that is enforced rather than promised. The one call that could
-carry your documents — the generative host — is checked against this machine immediately
+carry your documents (the generative host) is checked against this machine immediately
 before it is made, on every path that reaches it; a run pointed anywhere else refuses to
 start unless you write `--remote-ollama` in the command yourself. No API key, and anyone who
 clones this reproduces the numbers below.
 
 **What it actually costs you to reproduce it:** about 400 MB of npm packages, then
 <!-- figures:poidsATelecharger -->
-**1.3 GB of model weights** on the first `npm run measure` — 497 MB for roberta-base-squad2-ONNX, 470 MB for multilingual-e5-small, 261 MB for distilbert-base-cased-distilled-squad, 90 MB for all-MiniLM-L6-v2.
+**1.3 GB of model weights** on the first `npm run measure`: 497 MB for roberta-base-squad2-ONNX, 470 MB for multilingual-e5-small, 261 MB for distilbert-base-cased-distilled-squad, 90 MB for all-MiniLM-L6-v2.
 <!-- /figures:poidsATelecharger -->
 On a 50 Mbit line that is three and a half minutes of download before anything is measured.
 
 <!-- figures:coutDeReproduction -->
-**What the published pass actually took.** The provenance stamps of the profile shipped with this repository run from 10:08:32 to 10:40:28 — **32 minutes** of measurement on the machine named in the seal, on top of the weight download. That is the figure to plan for, not a round number: it is read from the relevé, so it moves when the relevé does.
+**What the published pass actually took.** The provenance stamps of the profile shipped with this repository run from 10:08:32 to 10:40:28, **32 minutes** of measurement on the machine named in the seal, on top of the weight download. That is the figure to plan for, not a round number: it is read from the relevé, so it moves when the relevé does.
 <!-- /figures:coutDeReproduction -->
  The generative ladder is a further eight gigabytes and is
 optional for exactly that reason.
@@ -169,7 +169,7 @@ optional for exactly that reason.
 
 ## The first measurement was worthless, and that is the point
 
-The rules scored **100 % on all five fields**. Not a result — I had written the templates,
+The rules scored **100 % on all five fields**. Not a result. I had written the templates,
 then written the regexes against those templates. I was marking my own homework, which is
 the exact error I had forbidden in writing two projects earlier.
 
@@ -186,24 +186,24 @@ on another they never saw. Measured honestly, they collapse.
 | `gen-4b` | 89.2 % | 99.2 % | 79.2 % | 100.0 % | 95.8 % | 788.0 ms | 120 | ±7.2 |
 | `gen-8b` | 91.7 % | 100.0 % | 83.3 % | 100.0 % | 82.5 % | 1194.5 ms | 120 | ±6.8 |
 
-**The `±` column is the widest half-interval on that row**, at 95 %, taken over the five fields — so it never flatters. Two rates on the same row that differ by less than twice it are not separated by this sample, and the generative tiers carry roughly 7 points of it against 3 for the encoders, because they were measured on fewer cases.
+**The `±` column is the widest half-interval on that row**, at 95 %, taken over the five fields, so it never flatters. Two rates on the same row that differ by less than twice it are not separated by this sample, and the generative tiers carry roughly 7 points of it against 3 for the encoders, because they were measured on fewer cases.
 <!-- /figures:extraction -->
 
 <!-- figures:ouCaTourne -->
-**What each tier costs depends on where it runs.** Every tier here was measured ON THIS MACHINE. Two of them — `small` and `large` — are nonetheless priced per call, because the declared assumption is that you would call them at a provider in production. The other column prices the same measured time as machine time.
+**What each tier costs depends on where it runs.** Every tier here was measured ON THIS MACHINE. Two of them (`small` and `large`) are nonetheless priced per call, because the declared assumption is that you would call them at a provider in production. The other column prices the same measured time as machine time.
 
 | Tier | At a provider | On your machine | Ratio | Accuracy |
 |---|---|---|---|---|
-| `rules` | $0.00 | $0.00 | — | 55.9 % |
+| `rules` | $0.00 | $0.00 | n/a | 55.9 % |
 | `small` | $1.00 | $0.03 | 31x | 69.0 % |
 | `large` | $8.00 | $0.08 | 106x | 78.8 % |
-| `gen-0.6b` | $0.39 | $0.39 | — | 79.3 % |
-| `gen-4b` | $1.31 | $1.31 | — | 92.7 % |
-| `gen-8b` | $1.99 | $1.99 | — | 91.5 % |
+| `gen-0.6b` | $0.39 | $0.39 | n/a | 79.3 % |
+| `gen-4b` | $1.31 | $1.31 | n/a | 92.7 % |
+| `gen-8b` | $1.99 | $1.99 | n/a | 91.5 % |
 
 *Per thousand documents of five fields each, from the same frozen profile. Neither column is an estimate: it is the same measured latency billed under two regimes.*
 
-**This reverses the table.** `gen-4b` running locally costs $1.31 at 92.7 % — cheaper AND more accurate than calling `large` at a provider for $8.00 at 78.8 %. If you are asking whether you need a paid API, that is the measured answer on this corpus.
+**This reverses the table.** `gen-4b` running locally costs $1.31 at 92.7 %, cheaper AND more accurate than calling `large` at a provider for $8.00 at 78.8 %. If you are asking whether you need a paid API, that is the measured answer on this corpus.
 <!-- /figures:ouCaTourne -->
 
 ### Reading the document, not the transcript
@@ -221,7 +221,7 @@ Transcription fidelity: **99.4 % [99–100], n=2977** of words recovered.
 
 **1 of 3 tiers loses more than noise.** `small` gives up 10.5 points when the same document arrives as an image instead of as text.
 
-**What this does not measure.** The images are rendered, not photographed — clean, square, no glare or fold — and the documents average 2.0 lines (at most 6). A photographed full page brings problems these do not: columns, reading order, skew. **The gaps above are a floor, not a production cost.** 1 tier was excluded — `human` — because it returns the right answer from scrambled text: it never reads the document, so degrading it cannot move it. Its gap would be 0.0 points by construction, which measures the instrument rather than the scan. The OCR step runs on the machine, through the operating system: no API, no per-page fee.
+**What this does not measure.** The images are rendered, not photographed (clean, square, no glare or fold), and the documents average 2.0 lines (at most 6). A photographed full page brings problems these do not: columns, reading order, skew. **The gaps above are a floor, not a production cost.** 1 tier was excluded, `human`, because it returns the right answer from scrambled text: it never reads the document, so degrading it cannot move it. Its gap would be 0.0 points by construction, which measures the instrument rather than the scan. The OCR step runs on the machine, through the operating system: no API, no per-page fee.
 <!-- /figures:lecture -->
 
 <!-- figures:obligation -->
@@ -232,10 +232,10 @@ Transcription fidelity: **99.4 % [99–100], n=2977** of words recovered.
 | `name` | Name | yes |
 | `birth` | Date of birth, for an individual | yes |
 | `document` | Identification number | yes |
-| `country` | — | yes, but not required by name |
+| `country` | n/a | yes, but not required by name |
 | `address` | Address | yes |
 
-4 of the 5 fields are named by the text; `country` is not — it follows from the address or the document, and no line of the CFR requires it as a datum of its own. It is measured anyway, and said so rather than attached by force.
+4 of the 5 fields are named by the text; `country` is not; it follows from the address or the document, and no line of the CFR requires it as a datum of its own. It is measured anyway, and said so rather than attached by force.
 
 *31 CFR 1020.220(a)(2)(i)(A) · https://www.law.cornell.edu/cfr/text/31/1020.220 · retrieved 2026-08-24*
 <!-- /figures:obligation -->
@@ -243,7 +243,7 @@ Transcription fidelity: **99.4 % [99–100], n=2977** of words recovered.
 Two things fall out of that table, and neither is guessable:
 
 <!-- figures:deuxfaits -->
-On the address, **the large model is worse than the small one** — 32.8 % [30–36], n=1000 against 43.0 % [40–46], n=1000 — while costing several times as much. The sample separates them. And on the identity number, **the free regex beats 4 of the 5 model tiers**: 79.7 % [77–82], n=1000 against 57.7 % [55–61], n=1000, 64.4 % [61–67], n=1000, 70.0 % [61–77], n=120, 79.2 % [71–85], n=120, for nothing.
+On the address, **the large model is worse than the small one** (32.8 % [30–36], n=1000 against 43.0 % [40–46], n=1000) while costing several times as much. The sample separates them. And on the identity number, **the free regex beats 4 of the 5 model tiers**: 79.7 % [77–82], n=1000 against 57.7 % [55–61], n=1000, 64.4 % [61–67], n=1000, 70.0 % [61–77], n=120, 79.2 % [71–85], n=120, for nothing.
 <!-- /figures:deuxfaits -->
 
 The second chain, classifying alert narratives, is where the keyword collapse is starkest:
@@ -266,8 +266,8 @@ narratives phrased by someone else, three quarters of that performance was never
 
 ## The second ladder: real generative models
 
-The fair objection to everything above is that these are encoder models — an extractive
-question-answering head and a pair of embedding models — and that measuring them says nothing
+The fair objection to everything above is that these are encoder models, an extractive
+question-answering head and a pair of embedding models, and that measuring them says nothing
 about routing between generative ones. So the same corpus, the same held-out split and the
 same scorer were run against a local Qwen3 ladder at 0.6B, 4B and 8B parameters.
 
@@ -280,14 +280,14 @@ same scorer were run against a local Qwen3 ladder at 0.6B, 4B and 8B parameters.
 | `country` | 100.0 % | 100.0 % | 100.0 % | 83.3 % | 100.0 % | 100.0 % | `rules` = `small` |
 | `address` | 0.0 % | 43.0 % | 32.8 % | 75.0 % | **95.8 %** | 82.5 % | `gen-4b` |
 
-Cases behind each column — `rules` 1000 · `small` 1000 · `large` 1000 · `gen-0.6b` 120 · `gen-4b` 120 · `gen-8b` 120.
+Cases behind each column: `rules` 1000 · `small` 1000 · `large` 1000 · `gen-0.6b` 120 · `gen-4b` 120 · `gen-8b` 120.
 
-**On 4 of 5 fields the leading tier is not separable from the runner-up** at this sample size — written `a` = `b`, and left unbolded. Picking the higher number there would be picking noise; the two are interchangeable on accuracy and the choice belongs to cost or latency.
+**On 4 of 5 fields the leading tier is not separable from the runner-up** at this sample size, written `a` = `b`, and left unbolded. Picking the higher number there would be picking noise; the two are interchangeable on accuracy and the choice belongs to cost or latency.
 <!-- /figures:echelles -->
 
 **No family wins everywhere, and that is the entire finding.** A specialised extractive head
 keeps one field, free regexes keep three, and a generative model takes the one nothing else
-could read. The best assignment crosses all three families at once — which is precisely what
+could read. The best assignment crosses all three families at once, which is precisely what
 routing per document prevents you from discovering.
 
 The ladders also disagree with themselves. On one chain a bigger generative model is worse
@@ -296,7 +296,7 @@ same machine, same run, opposite verdicts depending on the task.
 
 **It stays optional.** The encoder ladder is what `npm run measure` measures: no server and
 no API key, against the eight gigabytes and the running Ollama the generative ladder needs.
-Its own download and duration are stated above — this paragraph said "a few tens of megabytes"
+Its own download and duration are stated above. This paragraph said "a few tens of megabytes"
 and "two minutes" while the paragraph above said 1.3 GB, which is the kind of contradiction a
 reader finds before any accuracy figure. The generative ladder needs Ollama running and about eight gigabytes of models,
 so it lives behind `npm run measure -- --llm`, and a run without the flag leaves its frozen
@@ -309,7 +309,7 @@ the model answers with the field's own name, or with the whole document, and sco
 example that fixed it was arrived at by running the measurement on the **held-out** half,
 reading 0 %, changing the prompt, and running it again on the same half.
 
-That is precisely the leak the split exists to prevent — the same error as writing regexes
+That is precisely the leak the split exists to prevent, the same error as writing regexes
 against your own templates, which this repository already made once and documents above. It
 was made again two months later, on a different object, by the person who had written the
 defence.
@@ -319,11 +319,11 @@ has three halves, not two: `training` for writing rules, `dev` for tuning prompt
 read once and deciding nothing but the published figure. A test fails if any two of them share
 a phrasing.
 
-And the size of the leak is a measurement rather than an apology — `npm run fuite` produces
+And the size of the leak is a measurement rather than an apology. `npm run fuite` produces
 it, and until it has been run this page says so instead of guessing:
 
 <!-- figures:fuite -->
-Not measured yet — run `npm run fuite`. Until it is, the generative figures on this page carry a prompt tuned against the half they are scored on, and are optimistic by an unknown amount.
+Not measured yet; run `npm run fuite`. Until it is, the generative figures on this page carry a prompt tuned against the half they are scored on, and are optimistic by an unknown amount.
 <!-- /figures:fuite -->
 
 The number that matters is the gap. A prompt that transfers to phrasings it was never tuned
@@ -347,15 +347,15 @@ good many of those rankings are noise. These pairs are **not distinguishable** h
 | `birth` | `small` | 97.9 % [97–99], n=1000 | `gen-8b` | 100.0 % [97–100], n=120 |
 | `birth` | `large` | 100.0 % [100–100], n=1000 | `gen-4b` | 99.2 % [95–100], n=120 |
 
-*Showing 8 of 30 indistinguishable pairs — 9 further pairs this sample cannot separate and 13 exact ties not listed. A table that shows a selection carries the count of what it leaves out.*
+*Showing 8 of 30 indistinguishable pairs, 9 further pairs this sample cannot separate and 13 exact ties not listed. A table that shows a selection carries the count of what it leaves out.*
 <!-- /figures:egalites -->
 
 This section exists because it caught me. An earlier headline for this project claimed the
-large model was worse than the small one on more fields than the sample could support — the
+large model was worse than the small one on more fields than the sample could support. The
 retraction table below records what it said. It held on one field, and on the sample measured
 then the gap was 4.2 points with intervals that overlapped almost completely. The direction
 was right, the claim was not supported, and I would have published it. The larger sample has
-since separated that pair, which is the finding reported above — and being right in the end
+since separated that pair, which is the finding reported above, and being right in the end
 is not the same as having been entitled to say it.
 
 The optimiser now applies the same rule rather than merely reporting it: **where two tiers
@@ -367,7 +367,7 @@ ask about.
 
 Latency used to be recorded and play no part in the routing, which meant the optimiser would
 happily send a real-time field to the slowest tier available. On the encoder ladder that was
-nearly harmless — five fields summed to about fifty milliseconds. A generative tier costs
+nearly harmless: five fields summed to about fifty milliseconds. A generative tier costs
 around a second per field, so the constraint stops being decorative.
 
 <!-- figures:latence -->
@@ -379,9 +379,9 @@ around a second per field, so the constraint stops being decorative.
 | 50 ms | 75.3 % | $160 | 48.0 ms | `large` `rules` `rules` `rules` `rules` |
 | 30 ms | 65.3 % | $20 | 18.0 ms | `small` `rules` `rules` `rules` `rules` |
 
-Each accuracy is the **mean of the five field rates** of that routing, measured on separate samples — a mean of proportions, so no interval is quoted.
+Each accuracy is the **mean of the five field rates** of that routing, measured on separate samples: a mean of proportions, so no interval is quoted.
 
-**What the promise costs.** Lift the ceiling entirely and the cheapest routing that is statistically indistinguishable in accuracy costs $67 instead of $191 — it just takes 2021 ms per document. **Your latency promise is worth $124**, and the money budget never binds at all. That is the shadow price nobody prices.
+**What the promise costs.** Lift the ceiling entirely and the cheapest routing that is statistically indistinguishable in accuracy costs $67 instead of $191; it just takes 2021 ms per document. **Your latency promise is worth $124**, and the money budget never binds at all. That is the shadow price nobody prices.
 <!-- /figures:latence -->
 
 Read it as the price list for a service level agreement: each row is what a tighter promise
@@ -393,7 +393,7 @@ the two budgets bind independently.
 ## Against doing no work at all
 
 A percentage without its baseline invites the one question you cannot answer. The keyword
-classifier scores what it scores — is that bad? It was unanswerable until the trivial baseline was
+classifier scores what it scores. Is that bad? It was unanswerable until the trivial baseline was
 computed.
 
 <!-- figures:baselines -->
@@ -437,9 +437,9 @@ No budget buys better: the ceiling is in the tiers available.
 <!-- figures:exposition -->
 **A tier can be wrong in two ways, and they do not cost the same.** A blank field says "I do not know" and triggers a review. A wrong value enters the record. This repository measures the split for every tier and field, and the asymmetry is the part the accuracy figure hides: **regexes fail by abstaining, models fail by inventing.** On 2 of the 5 fields, `rules` produces blanks and **not one wrong value**.
 
-**The recommendation is robust.** A wrong value would have to cost **29.14 reviews** before the optimal routing changes — bracketed by bisection between 29.14 and 29.38, not a point. Below that ratio, the published routing is also the one that minimises total exposure.
+**The recommendation is robust.** A wrong value would have to cost **29.14 reviews** before the optimal routing changes; bracketed by bisection between 29.14 and 29.38, not a point. Below that ratio, the published routing is also the one that minimises total exposure.
 
-**And the number that matters most is not the one being optimised.** At equal prices, the same volume costs $191 to process and $16,358 in expected cost of being wrong — **86x more**. The optimiser argues about the small variable. Both prices are yours to set: they are assumptions, marked as such, and only you know what a misfiled record costs.
+**And the number that matters most is not the one being optimised.** At equal prices, the same volume costs $191 to process and $16,358 in expected cost of being wrong, **86x more**. The optimiser argues about the small variable. Both prices are yours to set: they are assumptions, marked as such, and only you know what a misfiled record costs.
 <!-- /figures:exposition -->
 
 <!-- figures:document -->
@@ -450,22 +450,22 @@ No budget buys better: the ceiling is in the tiers available.
 | what the published routing delivers | `large, rules, rules, rules, gen-4b` | 76.7 % [68–83], n=120 | $191 |
 | what aiming at the file delivers | `gen-4b, rules, rules, rules, gen-4b` | 79.2 % [71–85], n=120 | $54 |
 
-*Unlike the headline, this one is a true proportion — a file is complete or it is not — so it carries a Wilson interval. The mean of five rates measured on five different samples cannot, and this report refuses to invent one.*
+*Unlike the headline, this one is a true proportion (a file is complete or it is not), so it carries a Wilson interval. The mean of five rates measured on five different samples cannot, and this report refuses to invent one.*
 
-**Aiming at the file changes the routing, and it is never worse on any file in the sample** — 3 gained, 0 lost, for **3.5x less**. But 3 discordant pairs cannot separate two rates: what the sample establishes is the cost, not the accuracy. the set cannot distinguish these versions by rate — judge the broken cases instead
+**Aiming at the file changes the routing, and it is never worse on any file in the sample**: 3 gained, 0 lost, for **3.5x less**. But 3 discordant pairs cannot separate two rates: what the sample establishes is the cost, not the accuracy. the set cannot distinguish these versions by rate — judge the broken cases instead
 <!-- /figures:document -->
 
 <!-- figures:leviers -->
-**There are two levers, and they are not equally close.** Both reduce the cost of being wrong, and both reduce to one dimensionless question — *how many reviews is one wrong value worth to you?* — so both transfer to your numbers without extrapolating anything.
+**There are two levers, and they are not equally close.** Both reduce the cost of being wrong, and both reduce to one dimensionless question: *how many reviews is one wrong value worth to you?* Both transfer to your numbers without extrapolating anything.
 
 | Lever | Pays off once a wrong value is worth | What it does |
 |---|---|---|
-| **Abstain** | **1.141 reviews** | returns nothing when a signal says the value is doubtful — 85 wrong values removed for 12 correct ones lost, precision 30 % → 62.3 % |
-| Re-route | 29.14 reviews | moves a field to a different tier — the published recommendation is stable below that |
+| **Abstain** | **1.141 reviews** | returns nothing when a signal says the value is doubtful; 85 wrong values removed for 12 correct ones lost, precision 30 % → 62.3 % |
+| Re-route | 29.14 reviews | moves a field to a different tier; the published recommendation is stable below that |
 
-**Abstention pays roughly 26 times sooner than re-routing.** For almost any client, the lever is refusing to answer — not moving fields between tiers. That is the opposite of where attention usually goes.
+**Abstention pays roughly 26 times sooner than re-routing.** For almost any client, the lever is refusing to answer, not moving fields between tiers. That is the opposite of where attention usually goes.
 
-*The abstention figures are measured on the **hard corpus** — 30 deliberately difficult documents, 150 values — not on the main sample. That is where abstention is worth measuring, and it is also why the baseline precision there is 30 % rather than the headline. The ratio itself carries no unit and does not depend on that choice.*
+*The abstention figures are measured on the **hard corpus** (30 deliberately difficult documents, 150 values), not on the main sample. That is where abstention is worth measuring, and it is also why the baseline precision there is 30 % rather than the headline. The ratio itself carries no unit and does not depend on that choice.*
 <!-- /figures:leviers -->
 
 <!-- figures:frontiere -->
@@ -476,20 +476,20 @@ No budget buys better: the ceiling is in the tiers available.
 | **1** | 65 reviews · 0.8 h | 57 | 8 | 62.3 % [48.8–74.1] | 1.141 |
 | **2** | 3 reviews · 0.0 h | 3 | 0 | 30.8 % [23.9–38.7] | 1 |
 
-*Reviews are converted at 45 seconds each — the one assumption in this table, and it is yours to change. Everything else is counted.*
+*Reviews are converted at 45 seconds each: the one assumption in this table, and it is yours to change. Everything else is counted.*
 
-**At 1 signal, the trade is 7.1 wrong values removed for every correct one lost**, and precision goes from 30 % to 62.3 %. Whether that is worth 0.8 hours per hundred values is your arithmetic, not ours — it depends on what a misfiled record costs you.
+**At 1 signal, the trade is 7.1 wrong values removed for every correct one lost**, and precision goes from 30 % to 62.3 %. Whether that is worth 0.8 hours per hundred values is your arithmetic, not ours; it depends on what a misfiled record costs you.
 
-**And the cautious threshold moves nothing.** 30 % to 30.8 % — the intervals overlap almost entirely, so the sample cannot tell the two apart. It is nearly free and nearly useless, which is worth saying rather than letting two adjacent numbers suggest a gain.
+**And the cautious threshold moves nothing.** 30 % to 30.8 %: the intervals overlap almost entirely, so the sample cannot tell the two apart. It is nearly free and nearly useless, which is worth saying rather than letting two adjacent numbers suggest a gain.
 
-**And a caution on the row that looks free.** At 2 signals no correct value is lost at all — but on 4 abstentions, which is below this repository's floor of 20. "Never sacrifices a correct value" is a claim that sample cannot carry: the interval on it runs from 51 % to 100 %.
+**And a caution on the row that looks free.** At 2 signals no correct value is lost at all, but on 4 abstentions, which is below this repository's floor of 20. "Never sacrifices a correct value" is a claim that sample cannot carry: the interval on it runs from 51 % to 100 %.
 
-*Measured on the **hard corpus** — 30 deliberately difficult documents, 150 values. The break-even ratio carries no unit and transfers as is; the hours transfer only in proportion to how many of your values are doubtful, which we do not know.*
+*Measured on the **hard corpus**: 30 deliberately difficult documents, 150 values. The break-even ratio carries no unit and transfers as is; the hours transfer only in proportion to how many of your values are doubtful, which we do not know.*
 <!-- /figures:frontiere -->
 
 That last sentence is the one worth carrying into a budget meeting. The instinct in the
 room is "we need a bigger model" or "we need more budget". The measurement says the money
-is not the constraint — no ENCODER tier can read an address, and what fixes it is a step to
+is not the constraint: no ENCODER tier can read an address, and what fixes it is a step to
 another family, not more budget. That prediction has since been paid out: a local 4B
 generative model reads it, and the encoders' extra euros never would have.
 
@@ -517,9 +517,9 @@ model's actual output beside the expected one is something you can check.
 | 38 | small · address · wrong span |
 | 27 | large · document · over-long |
 
-Shown above: the 6 most common of 20 kinds. Below: 5 of the 9 tier-and-field pairs that have a failure, with their input and output. Not here at all — `gen-0.6b`, `gen-4b`, `gen-8b`: the generative ladder is measured only with `npm run measure -- --llm`. `npm run failures` prints every case of the tiers it runs.
+Shown above: the 6 most common of 20 kinds. Below: 5 of the 9 tier-and-field pairs that have a failure, with their input and output. Not here at all, `gen-0.6b`, `gen-4b`, `gen-8b`: the generative ladder is measured only with `npm run measure -- --llm`. `npm run failures` prints every case of the tiers it runs.
 
-Nothing here is curated for flattery. The gallery takes the FIRST failure of a tier-and-field pair, in order, and shows what came back — 5 of the 9 pairs that have one, not a chosen sample.
+Nothing here is curated for flattery. The gallery takes the FIRST failure of a tier-and-field pair, in order, and shows what came back: 5 of the 9 pairs that have one, not a chosen sample.
 
 ```
 rules · name · empty   [D-0001]
@@ -567,12 +567,12 @@ Every other figure on this page comes from a corpus I wrote. That is the fair ob
 a held-out split does not answer it: it defends against marking your own homework, it does not
 turn invented documents into real ones.
 
-So the same measurement — same scorer, same intervals, same trivial baselines — is wired to
+So the same measurement (same scorer, same intervals, same trivial baselines) is wired to
 run on a public labelled set that somebody else published, with their labels and their
 oddities. The block below reports it, or says it has not been run:
 
 <!-- figures:public -->
-Not run yet — `npm run benchmark`.
+Not run yet: `npm run benchmark`.
 <!-- /figures:public -->
 
 The dataset is not vendored here; its address, its checksum and the raw record are, which is
@@ -582,7 +582,7 @@ reproduces it.
 ## What this tool got wrong
 
 Every measurement page shows what the system under test fails at. Almost none shows what the
-**measurement** failed at — and that is the only evidence a figure was ever subjected to
+**measurement** failed at, and that is the only evidence a figure was ever subjected to
 anything. A validator can audit a history; they cannot audit a promise.
 
 <!-- figures:retractations -->
@@ -625,14 +625,14 @@ anything. A validator can audit a history; they cannot audit a promise.
 <!-- /figures:retractations -->
 
 Each line names what caught it, because that is the part worth copying. Two were caught by a
-person re-reading, and the rest by a check that runs in continuous integration on every push
-— not on every commit: there is no local hook, so a commit stays unverified until it leaves
+person re-reading, and the rest by a check that runs in continuous integration on every push,
+not on every commit: there is no local hook, so a commit stays unverified until it leaves
 the machine. Turning a lesson into a test rather than a note is still the whole argument.
 
 ## Where every number comes from
 
 The separation is the most important thing in this repository, and it used to be a
-paragraph I wrote by hand — which is the one form it must not take. A page that classifies
+paragraph I wrote by hand, which is the one form it must not take. A page that classifies
 its own figures, typed out, goes stale the first time somebody adds one, and it goes stale
 in the flattering direction: the figure you forget to declare is the one you were least
 comfortable declaring. It is generated from the code now, and a test fails if anything the
@@ -648,7 +648,7 @@ tool runs on is missing from it.
 | Kind | Name | What it is | Note |
 |---|---|---|---|
 | measured | `profiles` | per-field accuracy and latency for each tier | real models pinned by revision, scored on a held-out split, on the chosen corpus below |
-| measured | `routing` | the cheapest assignment of tiers to fields that fits the budget | exhaustive over all 16,807 combinations of the 7 tiers in the profile, 1 of which carries an assumed accuracy rather than a measured one — no heuristic, nothing to tune |
+| measured | `routing` | the cheapest assignment of tiers to fields that fits the budget | exhaustive over all 16,807 combinations of the 7 tiers in the profile, 1 of which carries an assumed accuracy rather than a measured one; no heuristic, nothing to tune |
 | measured | `shadowPrice` | the smallest budget increase that actually buys a better routing | a step, not a slope: differentiating a staircase says the next euro buys nothing |
 | measured | `REVISIONS` | the exact model revisions the figures were produced with | pinned, so a stranger reproduces the table rather than a different one |
 | assumed | `humanAccuracy` | how often a human reviewing their fortieth file of the day gets it right | moved here from being infallible by construction, which made the human tier unbeatable |
@@ -658,22 +658,22 @@ tool runs on is missing from it.
 | assumed | `workingDaysPerYear` | working days in your calendar | your HR calendar knows this exactly |
 | assumed | `pricePerThousandSmall` | cost per thousand calls to the small model | your provider's price list, on your traffic |
 | assumed | `pricePerThousandLarge` | cost per thousand calls to the large model | same, and it moves faster than any other figure here |
-| assumed | `machineHourlyCost` | what an hour of the machine running a local model costs you | a local model has no tariff — it occupies a box, and your infrastructure bill knows what that costs |
+| assumed | `machineHourlyCost` | what an hour of the machine running a local model costs you | a local model has no tariff; it occupies a box, and your infrastructure bill knows what that costs |
 | assumed | `volume` | items to process over the period | your scenario, not mine |
 | assumed | `budget` | money available over the period | your scenario; it decides which tiers are reachable at all |
 | assumed | `latencyBudgetMs` | milliseconds allowed for one whole document, end to end | your service level agreement knows this exactly; it binds independently of the money |
 | assumed | `costWrongValue` | what a false value entering the record costs you | your risk function knows this; it is the number a regulator asks about |
-| assumed | `costBlankField` | what a blank field costs you | one analyst review — the only one of the two anybody can price from a timesheet |
-| chosen | `CHARGE_MAX_PAR_COEUR` | the external load per core above which a duration is not recorded | 0.5 because it felt right, not because anything was weighed — and it decides whether a pass keeps its own timings or the previous ones. It is compared to `externalBefore`, the load the machine carried before the tier started, never to `totalDuring`: an encoder saturates the cores by doing its job, and comparing that would refuse every measurement |
-| chosen | `CONFIANCE` | the confidence level every interval and every tie is decided at | 95 % because that is wilson()'s default, not because anyone weighed it — and it decides which findings survive |
+| assumed | `costBlankField` | what a blank field costs you | one analyst review, the only one of the two anybody can price from a timesheet |
+| chosen | `CHARGE_MAX_PAR_COEUR` | the external load per core above which a duration is not recorded | 0.5 because it felt right, not because anything was weighed, and it decides whether a pass keeps its own timings or the previous ones. It is compared to `externalBefore`, the load the machine carried before the tier started, never to `totalDuring`: an encoder saturates the cores by doing its job, and comparing that would refuse every measurement |
+| chosen | `CONFIANCE` | the confidence level every interval and every tie is decided at | 95 % because that is wilson()'s default, not because anyone weighed it, and it decides which findings survive |
 | chosen | `corpus` | the synthetic documents the models are scored on, and their ground truth | the first measurement scored rules at 100 % because I wrote the regexes against my own templates |
 | chosen | `TRAINING / HELDOUT` | which phrasings the rules may see and which they are scored on | the defence against marking my own homework; a test fails if the two share a shape |
 | chosen | `FIELDS` | the 5 fields extracted from each document | a real onboarding form has more, and more of them ambiguous |
 | chosen | `TIERS` | the 7 tiers a field may be routed to | more tiers make the routing finer and the optimisation no harder |
 <!-- /figures:provenance -->
 
-The load-bearing chosen thing is the corpus. The accuracies above are real measurements —
-real models, pinned by revision, scored on a held-out split — taken on documents I wrote.
+The load-bearing chosen thing is the corpus. The accuracies above are real measurements:
+real models, pinned by revision, scored on a held-out split, taken on documents I wrote.
 The split defends against the worst version of that problem, which this repository already
 walked into once: the first measurement scored the rules at 100 % because I had written the
 regexes against my own templates. A held-out split stops you marking your own homework. It
@@ -681,7 +681,7 @@ does not turn an invented corpus into documents a bank would send.
 
 What survives is exact: **the method is the finding, the accuracies are illustration.**
 That a cheap model carries some fields and not others, that its ceiling is a property of
-the field rather than of the budget, that routing per field beats routing per document —
+the field rather than of the budget, that routing per field beats routing per document.
 that holds for any corpus with this structure. That birth dates reach 100 % on the small
 model holds for mine.
 
@@ -698,7 +698,7 @@ src/
   assumptions.ts everything that is not measured, and why it cannot be
   optimise.ts    exhaustive routing under budget, and the price of the next step
   failures.ts    what it gets wrong, classified by what kind of wrong
-  interval.ts    Wilson intervals — a rate without its sample size is not a measurement
+  interval.ts    Wilson intervals, a rate without its sample size is not a measurement
   figures.ts     these tables, generated from the code rather than typed
 ```
 
@@ -707,11 +707,11 @@ for extraction, `all-MiniLM-L6-v2` and `multilingual-e5-small` for classificatio
 local through `@huggingface/transformers`.
 
 **The routing is exhaustive, not heuristic.** Every combination of the measured tiers is
-enumerated — the count is in the provenance table above, and it grows with the ladder — which
+enumerated, the count is in the provenance table above, and it grows with the ladder, which
 is instant, and it guarantees the optimum, which no heuristic does.
 
 **The shadow price measures the step, not the slope.** A first version relaxed the budget
-by 10 % and concluded "the next euro buys nothing" — true, and useless. The next gain does
+by 10 % and concluded "the next euro buys nothing", true, and useless. The next gain does
 not cost 10 % more; it costs an entire tier.
 
 ---
@@ -723,7 +723,7 @@ not cost 10 % more; it costs an entire tier.
 - **No streaming, no batching, no caching.** All three change the economics substantially
   and none is modelled here.
 - **Synthetic corpora.** Held-out, seeded and reproducible, but written by me. On your
-  documents every figure needs re-measuring — which is the first finding of this whole set
+  documents every figure needs re-measuring, which is the first finding of this whole set
   of tools, and the reason the measurement harness ships with it.
 - **No human in the loop actually in the loop.** The human tier is a price and an
   assumption, not a queue.
@@ -736,7 +736,7 @@ agent that escalates when it isn't
 confident](https://github.com/ArslaneSempai-ui/kyc-triage-agent), [a bench that says
 whether either still works](https://github.com/ArslaneSempai-ui/regression-bench),
 [what a detection threshold costs](https://github.com/ArslaneSempai-ui/alert-triage-economics),
-and this — where the next euro should go.
+and this, where the next euro should go.
 
 ---
 
@@ -752,7 +752,7 @@ turn invented documents into real ones. The method travels; the number does not.
 
 **Not "the budget does not matter."** It does not bind *here*, at this volume, with these
 prices. Multiply the volume by fifty or drop the budget by a hundred and it binds
-immediately — which the sensitivity sweep says explicitly rather than reporting the tiers
+immediately, which the sensitivity sweep says explicitly rather than reporting the tiers
 as insensitive.
 
 **Not "the human tier is not worth it."** The human tier costs more than the entire budget
@@ -770,14 +770,14 @@ took a full rebuild of the corpus to fix, and thirty minutes of discipline up fr
 have avoided it.
 
 **Check the scorer before believing the scores.** 133 of 685 recorded failures were format
-mismatches — `10 / 07 / 1987` against `10/07/1987`. Correcting the comparison moved one
+mismatches: `10 / 07 / 1987` against `10/07/1987`. Correcting the comparison moved one
 field from 51.7 % to 100 % and retired a claim on this page. A scorer that measures
 formatting is worse than no scorer, because it produces confident wrong numbers.
 
 **A measurement you record and never use is a measurement you do not have.** Latency was
 recorded from the first version and played no part in the routing for months: the optimiser
 would happily send a real-time field to the slowest tier, and nothing said so. It took a
-generative tier — a second per field instead of twenty milliseconds — to make the omission
+generative tier (a second per field instead of twenty milliseconds) to make the omission
 visible. There is a budget in seconds beside the budget in dollars now, and it turns out to
 be the one that binds. The lesson is not about latency: it is that a column in a data file
 proves nothing until a decision reads it.
@@ -787,7 +787,7 @@ proves nothing until a decision reads it.
 ## What a reviewer can check without running anything
 
 <!-- figures:embauche -->
-**The human tier is priced as a slope, and headcount is a step.** At 45 s per item and 100,000 documents the human tier would occupy **0.95 of an analyst**, billed pro rata at $58,712 where a payroll pays $62,000 — a factor of 1.06. You do not hire a fraction of a person. At the bottom of the swept range the factor reaches 3.17. It does not change the answer here — the routing above does not select the human tier — but the cost model is a slope where the world has steps, and that is stated rather than left to be found.
+**The human tier is priced as a slope, and headcount is a step.** At 45 s per item and 100,000 documents the human tier would occupy **0.95 of an analyst**, billed pro rata at $58,712 where a payroll pays $62,000, a factor of 1.06. You do not hire a fraction of a person. At the bottom of the swept range the factor reaches 3.17. It does not change the answer here (the routing above does not select the human tier), but the cost model is a slope where the world has steps, and that is stated rather than left to be found.
 <!-- /figures:embauche -->
 
 
@@ -796,11 +796,11 @@ proves nothing until a decision reads it.
 | Every figure on this page | Generated from the frozen profile; `npm test` fails if the page drifts |
 | The models | Pinned by exact revision, so a clone measures the same thing |
 | The split | A test fails if training and held-out phrasings share a shape |
-| Every assumption | The values we guessed are declared in the inventory and swept, with "priced out" told apart from "irrelevant". The three inputs *you* set — volume, budget, latency ceiling — are not in that sweep: the ceiling has its own table above and the budget has the shadow price, and a test fails if a fourth ever joins them unannounced |
-| The routing | Exhaustive over every combination of the measured tiers — no heuristic, nothing tuned |
+| Every assumption | The values we guessed are declared in the inventory and swept, with "priced out" told apart from "irrelevant". The three inputs *you* set (volume, budget, latency ceiling) are not in that sweep: the ceiling has its own table above and the budget has the shadow price, and a test fails if a fourth ever joins them unannounced |
+| The routing | Exhaustive over every combination of the measured tiers, no heuristic, nothing tuned |
 | Every failure | Counted by kind rather than summarised into a rate, with the examples shown alongside their input and output. The gallery states which tiers it covers and which it does not; `npm run failures` prints every case of the tiers it runs |
 
 ---
 
-**Arslane Chaouche Ramdane** — six years in AML/KYC and financial crime operations,
+**Arslane Chaouche Ramdane**, six years in AML/KYC and financial crime operations,
 moving into AI transformation work.
