@@ -313,7 +313,7 @@ export function empreinteDuReleve(profils: unknown): string {
  * appelle `readProfiles()` à chaque palier pour reprendre les précédents. Depuis l'ajout du
  * scellé, `npm run measure` mourait donc au DEUXIÈME palier, sur un refus parfaitement juste
  * déclenché par sa propre écriture. Reproduit avant correction : un relevé partiel écrit tel
- * quel, `readProfiles` lève « carries no content fingerprint ». La commande la plus chère du
+ * quel, `readProfiles` lève « carries no content hash ». La commande la plus chère du
  * dépôt était cassée, et rien ne le disait parce que personne ne la lance — elle demande une
  * heure et un accord explicite.
  *
@@ -374,13 +374,13 @@ export function readProfiles(
     const calculee = empreinteDuReleve(p);
     if (typeof attendue !== "string") {
       throw new Error(
-        `${fichier} carries no content fingerprint: there is no way to tell whether its\n`
+        `${fichier} carries no content hash: there is no way to tell whether its\n`
         + `  figures are the ones that were measured. Re-seal it with \u201cnpm run sceller\u201d, or\n`
         + `  measure again with \u201cnpm run measure\u201d.`);
     }
     if (attendue !== calculee) {
       throw new Error(
-        `${fichier} has changed since it was measured: fingerprint ${attendue}, content ${calculee}.\n`
+        `${fichier} has changed since it was measured: content hash ${attendue}, now ${calculee}.\n`
         + `  A figure in this file was edited by hand, or the file was assembled from two\n`
         + `  separate records. No figure published from it has any value until that is\n`
         + `  cleared up. Measure again, or re-seal if the change is intended and owned.`);
@@ -410,12 +410,12 @@ export function readProfiles(
     const calculee = empreinteDuReleve(ref.p);
     if (typeof attendue !== "string") {
       throw new Error(
-        `${ref.f} carries no content fingerprint: there is no way to tell whether its\n`
+        `${ref.f} carries no content hash: there is no way to tell whether its\n`
         + `  figures are the ones that were measured. Re-seal it: npm run sceller -- ${ref.f}`);
     }
     if (attendue !== calculee) {
       throw new Error(
-        `${ref.f} has changed since it was measured: fingerprint ${attendue}, content ${calculee}.\n`
+        `${ref.f} has changed since it was measured: content hash ${attendue}, now ${calculee}.\n`
         + `  This is the record a fresh clone uses to generate EVERY published figure.\n`
         + `  None of them has any value until that is cleared up.`);
     }

@@ -722,7 +722,7 @@ const commandes = (() => {
     ["measure", `measure the encoder tiers and freeze the profile (at least ${
       (Object.values(POIDS_MODELES).reduce((s, m) => s + m.octets, 0) / 1e9).toFixed(1)
     } GB downloaded on the first run; \`npm run poids\` lists each one)`],
-    ["sceller", "seal a profile: the fingerprint that makes a silently edited measurement fail loudly"],
+    ["sceller", "seal a profile: the content hash that makes a silently edited measurement fail loudly"],
     ["diff", "compare two sealed runs case by case; a rising rate can still have lost cases"],
     ["entree", "population drift on the documents alone, no labels, read against its own noise floor"],
     ["optimise", "the routing, and what the next improvement would cost"],

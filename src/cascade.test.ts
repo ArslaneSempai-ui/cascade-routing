@@ -1956,7 +1956,7 @@ test("un relevé de travail sans scellé est refusé, et le refus nomme le fichi
   let e: Error | null = null;
   try { readProfiles(fichier, d); } catch (x) { e = x as Error; }
   assert.ok(e, "un relevé sans scellé a été LU : n'importe quel chiffre tapé à la main se publierait.");
-  assert.match(e!.message, /carries no content fingerprint/,
+  assert.match(e!.message, /carries no content hash/,
     "le refus ne dit pas ce qui manque.");
   assert.ok(e!.message.includes(fichier),
     "le refus ne nomme pas le fichier : impossible de le localiser depuis le message.");
@@ -2010,7 +2010,7 @@ test("le relevé qu'un clone neuf lit est refusé s'il ne porte pas de scellé",
   try { readProfiles(absent, d); } catch (x) { e = x as Error; }
   assert.ok(e, "le relevé de référence non scellé a été LU : c'est LUI qui engendre les chiffres publiés\n"
     + "  chez quiconque clone, puisque data/ est ignoré par git.");
-  assert.match(e!.message, /carries no content fingerprint/,
+  assert.match(e!.message, /carries no content hash/,
     "le refus ne dit pas ce qui manque.");
   assert.ok(e!.message.startsWith(RELEVE_DE_REFERENCE),
     "le refus ne nomme pas le relevé en cause : plusieurs profiles-*.json vivent à la racine,\n"

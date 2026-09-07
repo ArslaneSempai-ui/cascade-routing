@@ -83,7 +83,7 @@ test("le serveur reste lié à la boucle locale", () => {
 test("le document nomme ce qui n'est pas tenu, il ne le compte pas", () => {
   const sale: Controle[] = [
     { nom: "Listening address", verdict: "non tenu", constat: "listens on all interfaces.", denominateur: "src/server.ts" },
-    { nom: "Dependency fingerprints", verdict: "tenu", constat: "all fingerprinted.", denominateur: "82 dependencies" },
+    { nom: "Dependency content hashes", verdict: "tenu", constat: "all carry a content hash.", denominateur: "82 dependencies" },
   ];
   const md = document(sale, null);
   assert.match(md, /## To fix/);

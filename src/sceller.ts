@@ -64,6 +64,6 @@ if (isMain(import.meta)) {
   console.log(`  ${cible}`);
   console.log(avant
     ? `  seal REPLACED: ${avant} → ${apres}\n  The content had changed since the last seal. You have just declared that the\n  current content is the one that stands.`
-    : `  seal placed: ${apres}\n  This file carried none. The fingerprint now proves it does not move any more;\n  it says nothing about what it held before today.`);
+    : `  seal placed: ${apres}\n  This file carried none. The content hash now proves it does not move any more;\n  it says nothing about what it held before today.`);
 
 }

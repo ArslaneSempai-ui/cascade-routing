@@ -119,14 +119,14 @@ export function chargerBaselineDepuis(brut: string, nom: string): Baseline {
   }
   if (typeof r.empreinte !== "string" || !r.empreinte) {
     throw new Error(
-      `${nom} carries no content fingerprint, so there is no telling whether it is the record\n`
+      `${nom} carries no content hash, so there is no telling whether it is the record\n`
       + `  that was measured. A recertification against an unverifiable baseline certifies nothing.\n`
       + `  → re-run \`npm run measure:yours\` on the original file to produce a sealed record.`);
   }
   const calculee = empreinteDuReleve(r);
   if (calculee !== r.empreinte) {
     throw new Error(
-      `${nom} does not match its own fingerprint: it carries ${r.empreinte}, its content\n`
+      `${nom} does not match its own content hash: it carries ${r.empreinte}, its content\n`
       + `  computes to ${calculee}. The file changed after it was sealed. Nothing was measured.\n`
       + `  If the edit is yours and deliberate, \`npm run sceller -- ${nom}\` re-declares it —\n`
       + `  that is a declaration on the record, not a way to make this refusal go away.`);

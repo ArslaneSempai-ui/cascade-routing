@@ -97,7 +97,7 @@ test("le relevé du client sans empreinte est refusé", () => {
   const { empreinte, ...sansScelle } = releveValide();
   void empreinte;
   avecProfilsClient(sansScelle, (f, r) => {
-    assert.throws(() => readProfiles(f, r), /carries no content fingerprint/,
+    assert.throws(() => readProfiles(f, r), /carries no content hash/,
       "un relevé sans empreinte ne peut pas dire si ses chiffres sont ceux qui ont été "
       + "mesurés ; le publier reviendrait à publier un chiffre dont personne ne répond");
   });
@@ -132,7 +132,7 @@ test("le relevé de référence du dépôt sans empreinte est refusé", () => {
   const { empreinte, ...sansScelle } = releveValide();
   void empreinte;
   avecReference(sansScelle, (f, r) => {
-    assert.throws(() => readProfiles(f, r), /carries no content fingerprint/);
+    assert.throws(() => readProfiles(f, r), /carries no content hash/);
   });
 });
 

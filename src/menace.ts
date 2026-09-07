@@ -439,13 +439,13 @@ export function controles(racine: string): Controle[] {
     ".gitignore");
 
   const verrou = lire("package-lock.json");
-  if (verrou === null) ajout("Dependency fingerprints", null, "package-lock.json is missing.", "0 files read");
+  if (verrou === null) ajout("Dependency content hashes", null, "package-lock.json is missing.", "0 files read");
   else {
     const i = integriteDuVerrou(JSON.parse(verrou));
-    ajout("Dependency fingerprints", i.sans.length === 0,
+    ajout("Dependency content hashes", i.sans.length === 0,
       i.sans.length === 0
-        ? "Every dependency carries a content fingerprint: the package installed is the one that was measured."
-        : `Without a fingerprint: ${i.sans.join(", ")}.`,
+        ? "Every dependency carries a content hash: the package installed is the one that was measured."
+        : `Without a content hash: ${i.sans.join(", ")}.`,
       /* LE DÉNOMINATEUR NOMME CE QUI A ÉTÉ LU, PAS SEULEMENT COMBIEN. Il annonçait « 82
          dependencies » — un compte. Tous les autres contrôles nomment leur fichier, et c'est
          la règle que ce document énonce lui-même : « chaque ligne porte ce qui a été lu ».
@@ -1000,14 +1000,14 @@ function principal() {
     if (locaux.length > 0) {
       console.error(`\n${locaux.length} undeclared match(es) reachable ONLY from local refs — `
         + `a clone of this repository does not contain them:`);
-      for (const t of locaux) console.error(`  ${t.forme} in ${t.fichier}  (fingerprint ${t.empreinte})`);
+      for (const t of locaux) console.error(`  ${t.forme} in ${t.fichier}  (content hash ${t.empreinte})`);
       console.error("  These live in backup branches or refs/original/ left by a history rewrite.\n"
         + "  Nothing is published today. Pushing one of those refs would publish all of it, so\n"
         + "  they are named rather than ignored — and deleting a ref is not this tool's call.");
     }
     if (publies.length > 0) {
       console.error("\nUndeclared match(es) IN THE PUBLISHED HISTORY — treat them as real secrets until declared:");
-      for (const t of publies) console.error(`  ${t.forme} in ${t.fichier}  (fingerprint ${t.empreinte})`);
+      for (const t of publies) console.error(`  ${t.forme} in ${t.fichier}  (content hash ${t.empreinte})`);
       console.error("\n  If it is a test decoy, declare it in secrets-declares.json with its reason.\n"
         + "  If it is real: it is in the history forever, and it must be REVOKED —\n"
         + "  not removed from the last commit.");

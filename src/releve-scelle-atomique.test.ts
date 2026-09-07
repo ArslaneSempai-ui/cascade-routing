@@ -64,7 +64,7 @@ test("un relevé écrit SANS passer par là est refusé — la garde tient toujo
     const f = join(d, "data", "profiles.json");
     ecrireReleve(f, releveDeTest());
     writeFileSync(f, JSON.stringify({ tiers: ["rules"], extraction: { rules: {} } }, null, 2));
-    assert.throws(() => readProfiles(f, d), /no content fingerprint/,
+    assert.throws(() => readProfiles(f, d), /no content hash/,
       "un relevé sans empreinte doit rester refusé.");
 
     const scelle = JSON.parse(readFileSync(f, "utf8"));

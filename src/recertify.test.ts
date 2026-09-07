@@ -160,7 +160,7 @@ test("une référence retouchée se refuse, en citant les deux empreintes et l'i
   const retouche = JSON.parse(JSON.stringify(bon)) as Record<string, unknown>;
   (retouche.extraction as Record<string, Record<string, { accuracy: number }>>).small!.name!.accuracy = 0.999;
   assert.throws(() => chargerBaselineDepuis(JSON.stringify(retouche), "x.json"), (e: Error) => {
-    assert.match(e.message, /does not match its own fingerprint/);
+    assert.match(e.message, /does not match its own content hash/);
     assert.ok(e.message.includes(String(bon.empreinte)), "le refus ne cite pas l'empreinte portée");
     assert.ok(e.message.includes(empreinteDuReleve(retouche)), "le refus ne cite pas l'empreinte calculée");
     assert.match(e.message, /npm run sceller/, "un refus sans issue se fait commenter");
@@ -169,7 +169,7 @@ test("une référence retouchée se refuse, en citant les deux empreintes et l'i
 
   const sansScelle = { ...bon } as Record<string, unknown>;
   delete sansScelle.empreinte;
-  assert.throws(() => chargerBaselineDepuis(JSON.stringify(sansScelle), "x.json"), /carries no content fingerprint/);
+  assert.throws(() => chargerBaselineDepuis(JSON.stringify(sansScelle), "x.json"), /carries no content hash/);
   assert.throws(() => chargerBaselineDepuis(JSON.stringify({ kind: "autre" }), "x.json"), /not a client record/);
 });
 
@@ -208,7 +208,7 @@ test("la commande refuse une référence retouchée AVANT de mesurer, code 2, ri
     `--cases=${csv}`, `--baseline=${baseline}`,
   ], { encoding: "utf8" });
   assert.equal(r.status, 2, `code ${r.status} — sortie :\n${r.stdout}\n${r.stderr}`);
-  assert.match(r.stderr, /does not match its own fingerprint/);
+  assert.match(r.stderr, /does not match its own content hash/);
   assert.equal(existsSync(join(temp, "automne-recertified.md")), false, "un refus a quand même écrit le rapport");
   assert.equal(existsSync(join(temp, "automne-recertified.json")), false, "un refus a quand même écrit le relevé");
 });
