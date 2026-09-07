@@ -253,7 +253,7 @@ test("« assumed » devient « measured » avec le drapeau, et redevient vrai sa
 
   const sans = spawnSync(process.execPath, [CMD_OPTIMISE], { encoding: "utf8", timeout: 120_000 });
   assert.equal(sans.status, 0, `optimise sans drapeau a échoué :\n${sans.stderr}`);
-  assert.match(sans.stdout, /human accuracy assumed at 85\.0 % — this is not a measurement/,
+  assert.match(sans.stdout, /human accuracy assumed at 85\.0 %; this is not a measurement/,
     "sans le drapeau, l'hypothèse reste ET reste dite hypothèse — c'est la moitié qui empêche "
     + "un « measured » de déteindre sur les exécutions ordinaires");
 });

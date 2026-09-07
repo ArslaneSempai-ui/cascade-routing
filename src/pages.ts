@@ -172,7 +172,7 @@ window.LOCAL_POSE && window.LOCAL_POSE();
 ` + "</" + "script>\n";
 
 const BANNIERE = `<p class="renvoi" style="margin-bottom:1.5rem">
-This runs entirely in your browser — no server, nothing uploaded, and no model is called:
+This runs entirely in your browser; no server, nothing uploaded, and no model is called:
 the accuracy of each tier was <b>measured once on held-out records</b> and frozen.
 <b>Take a cell</b> to send a field to another tier and read what your routing costs.
 <a href="https://github.com/ArslaneSempai-ui/cascade-routing">Source and method</a>.

@@ -265,7 +265,7 @@ export function paliersMesures(p: Profiles): TierName[] {
     && (p.extraction[e] !== undefined || p.classification[e] !== undefined));
   if (partiels.length) {
     console.warn(`incomplete profile: ${partiels.join(", ")} is measured on one chain only `
-      + `and will be ignored — rerun \`npm run measure --tiers=${partiels.join(",")}\``);
+      + `and will be ignored; rerun \`npm run measure --tiers=${partiels.join(",")}\``);
   }
   return complets;
 }
@@ -486,7 +486,7 @@ if (isMain(import.meta)) {
    * modèles. L'écran importe ce module dans un navigateur, où ni l'un ni l'autre n'existe. */
   const { readProfiles } = await import("./measure.ts");
   const p = readProfiles();
-  if (!p) { console.error("No profile measured — start with: npm run measure"); process.exit(1); }
+  if (!p) { console.error("No profile measured. Start with: npm run measure"); process.exit(1); }
   /*
    * `--humans=<relevé>` REMPLACE L'HYPOTHÈSE PAR LA MESURE DU CLIENT, quand elle existe.
    *
@@ -523,19 +523,19 @@ if (isMain(import.meta)) {
   /* La provenance de la ligne suit le drapeau : « assumed » redevient vrai sans lui, et
      « measured » ne s'affiche qu'avec le relevé qui le prouve, nommé. */
   if (mesureHumaine === null) {
-    console.log(`human accuracy assumed at ${pc(h.humanAccuracy)} — this is not a measurement\n`);
+    console.log(`human accuracy assumed at ${pc(h.humanAccuracy)}; this is not a measurement\n`);
   } else {
     /* « review(s) » : une par couple (dossier, champ) — « 120 cases » se lirait 120 dossiers. */
-    console.log(`human accuracy measured at ${pc(h.humanAccuracy)} on ${mesureHumaine.global.n} review(s) — from ${fichierHumains}`);
+    console.log(`human accuracy measured at ${pc(h.humanAccuracy)} on ${mesureHumaine.global.n} review(s), from ${fichierHumains}`);
     console.log(mesureHumaine.secondes !== null && mesureHumaine.secondes.n > 0
       ? `human seconds measured: median ${h.humanSeconds.toFixed(1)} s over ${mesureHumaine.secondes.n} case(s)\n`
-      : `human seconds still assumed at ${h.humanSeconds} s — the file carried no usable timestamps\n`);
+      : `human seconds still assumed at ${h.humanSeconds} s; the file carried no usable timestamps\n`);
   }
 
   const a = optimiseExtraction(p, h);
   if (!a) { console.log("No routing fits this budget.\n"); process.exit(0); }
 
-  console.log("CHAIN A — optimal routing, field by field\n");
+  console.log("CHAIN A: optimal routing, field by field\n");
   console.log("field         tier chosen    accuracy    cost");
   console.log("─".repeat(52));
   for (const c of FIELDS) {
@@ -547,7 +547,7 @@ if (isMain(import.meta)) {
   console.log(`${"".padEnd(13)}${"total".padEnd(15)}${pc(a.accuracy).padStart(7)}   ${monnaie(a.cost).padStart(8)}`);
 
   const b = optimiseClassification(p, h);
-  console.log("\n\nCHAIN B — one tier for everyone\n");
+  console.log("\n\nCHAIN B: one tier for everyone\n");
   console.log("tier         accuracy       cost   affordable");
   console.log("─".repeat(45));
   for (const o of b.options) {
@@ -557,14 +557,14 @@ if (isMain(import.meta)) {
   const f = budgetShadowPrice(p, h);
   if (f) {
     console.log("\n\nPRICE OF THE NEXT IMPROVEMENT\n");
-    console.log(`  budget used: ${monnaie(f.currentCost)} of ${monnaie(f.currentBudget)} — ${pc(a.budgetShare)}`);
+    console.log(`  budget used: ${monnaie(f.currentCost)} of ${monnaie(f.currentBudget)}, ${pc(a.budgetShare)}`);
     console.log(`  the constraint ${f.constraintBinds ? "BINDS" : "does not bind"}`);
     if (!f.step) {
-      console.log("  no budget buys anything better — the ceiling is in the tiers available.\n");
+      console.log("  no budget buys anything better; the ceiling is in the tiers available.\n");
     } else {
       const m = f.step;
       console.log(`  next gain: +${m.gainPoints.toFixed(1)} point(s) of accuracy`);
-      console.log(`  it costs ${monnaie(m.extra)} more — ${(m.budgetNeeded / f.currentCost).toFixed(0)}x current spend`);
+      console.log(`  it costs ${monnaie(m.extra)} more, ${(m.budgetNeeded / f.currentCost).toFixed(0)}x current spend`);
       console.log(`  yield: ${m.pointsPerThousandEuros.toFixed(3)} points per thousand ${symboleDe(UNITS.budget) === "$" ? "dollars" : "euros"}`);
       const change = FIELDS.filter((c) => m.routing[c] !== a.routing[c]);
       console.log(`  what changes: ${change.map((c) => `${c} -> ${m.routing[c]}`).join(", ")}\n`);

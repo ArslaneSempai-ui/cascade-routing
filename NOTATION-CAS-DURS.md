@@ -7,8 +7,8 @@ this repository's retraction journal.
 
 ## The three kinds of expected answer
 
-**A value.** The tier must return it. Formatting is normalised on both sides —
-spaces around separators, trailing punctuation, case — because a tokeniser adding
+**A value.** The tier must return it. Formatting is normalised on both sides
+(spaces around separators, trailing punctuation, case) because a tokeniser adding
 a space is not a model failing to read. Content is not normalised: a missing
 word, a wrong span or a different value stays wrong.
 
@@ -19,7 +19,7 @@ ambiguous document where two readings are each defensible. Both are declared in
 the corpus, before measurement, case by case.
 
 **Silence.** For twenty-one of the hundred and fifty fields, the correct answer
-is to return nothing — either the document is cut and the value is unrecoverable,
+is to return nothing: either the document is cut and the value is unrecoverable,
 or the field is genuinely absent. Here a blank is correct and a value is wrong.
 This is the inverse of the clean corpus, where a blank is always a failure, and
 it is the reason these cases are worth measuring at all.
@@ -28,7 +28,7 @@ it is the reason these cases are worth measuring at all.
 
 A tier that returns a reading a competent human would defend has not failed.
 Marking it wrong for choosing the other valid reading measures its agreement with
-our preference, not its accuracy — and accuracy is what is being sold. The
+our preference, not its accuracy, and accuracy is what is being sold. The
 penalty would land on whichever tier happens to disagree with whoever wrote the
 key, which is not noise but a bias with a direction.
 
@@ -40,15 +40,15 @@ session rather than directly.
 
 **Any accuracy figure from this corpus states its rule in the same sentence:**
 *correct = any defensible reading declared before measurement.* A rate whose
-scoring rule is not readable beside it is a number without its method — the same
+scoring rule is not readable beside it is a number without its method: the same
 defect as an accuracy with no formulation recorded in its provenance.
 
 ## Two failures counted separately, never folded into the rate
 
-**Over-refusal** — the tier returns nothing where a value was recoverable. On a
+**Over-refusal**: the tier returns nothing where a value was recoverable. On a
 cut document this is the cheap, visible failure: someone sees the blank.
 
-**Over-answering** — the tier returns a value where the correct answer was
+**Over-answering**: the tier returns a value where the correct answer was
 silence. This is the expensive one. It enters the record looking like data, and
 nothing downstream marks it as invented.
 

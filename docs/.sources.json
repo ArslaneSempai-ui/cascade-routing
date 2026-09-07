@@ -1,16 +1,16 @@
 {
   "quoi": "sha256 of each SOURCE at build time. A freshness check compares these to the sources on disk; a modification date would compare the machine instead.",
   "empreintes": {
-    "ui.html": "296d916414081a011092a355579b06e10c11551041a4441d1e40979dac97b927",
-    "pages.ts": "87c18cf4cfd06559f76bbd7b3e6cf6c79770220fe0edfd801f6366ef9d397970",
+    "ui.html": "b3015b1ca4394e16299d9eb9fd0bb2bc77edbd9239e043ce0e8d9113dbca4e00",
+    "pages.ts": "83ae99bf23cd3c5359d202406931515fc23e568e37d2386df00ec5d54dce1013",
     "registre.css": "3906ec1da36f1cda9d07b96393e339a4a8016f9e310cf2ac07344e13ad492c51",
     "graphes.js": "b333003147c4f532a8a890bdf1f172cdc8da665e2049c2d41de87933685a0b80",
     "js/corpus.js": "bd1419fd6379045538b2e90ef558e6461fbb062d68e453246a85737d0752657c",
     "js/paliers.js": "e1b82e9b7c65001650493a19e328ad7982178f276e4e0252e2ad73f36855763e",
-    "js/optimise.js": "227433384fad5034f5a9ba8fe0f075cfd8118ee64a9fe8ff7525ebe9b7a2adfe",
+    "js/optimise.js": "de3d30478f0bb3992ba86d08f74a215a49a9dac5293003d894a8a4cdc8cf7c9c",
     "js/cli.js": "8379818b314de1c1f9a3f2de69f444a8cf6057e31f655e21ced39cf21bf172e8",
     "js/assumptions.js": "039546dd24d88b8aba1b1ef4163aae2c588f0d4fc3c46438a6d9f000faedd43a",
-    "js/interval.js": "9b1880eaea72298bb1f94b9d88c7c4e0f71a5566eba611ef8d6e477d1441d0ed"
+    "js/interval.js": "996ff920b1ed5a026da7853faa0f620af9a0bb494ca8524373f948319ddb2541"
   },
   "releve": {
     "attendu": "profiles-2026-08-20-coeur-rendu.json",
@@ -19,9 +19,9 @@
   "publies": {
     "js/corpus.js": "e122ba7e9f3286949d19522c7af6a78d984760a0ca44eb782518b54de4b6522a",
     "js/paliers.js": "07624d345a149330a487c5edc516f193f685ea05ad589be8b3859f8d6deffa8f",
-    "js/optimise.js": "613116ac42d8bea2d427fade9258538a344ed6b77f82ba68342d8c21e1ac871e",
+    "js/optimise.js": "2d7c5a9bfa56b070ee879151283a20cb8f9c6dfa30382cf6cfa925770f149f1c",
     "js/cli.js": "10c30ff2b7140f16ea367f1c745ff5efe08b9664bc59df6f24c5340c5dc3ab41",
     "js/assumptions.js": "833740f0e4fcbecf9bde57bd36f29f6ded7c9c8fbcd9a52aac90fa8914361898",
-    "js/interval.js": "f0a3b55b10004c080ce0fd1b93e843d410cdd7f6344c5e1c45333e5af49f09f6"
+    "js/interval.js": "692fab5360bf61c8624188a820ce456f5e6b5e563ec2a78a7e864f355b57f1da"
   }
 }

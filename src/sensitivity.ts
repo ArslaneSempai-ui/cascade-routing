@@ -218,7 +218,7 @@ export const ETIQUETTE: Record<Band["reason"], string> = {
 
 if (isMain(import.meta)) {
   const p = readProfiles();
-  if (!p) { console.error("No profile measured — start with: npm run measure"); process.exit(1); }
+  if (!p) { console.error("No profile measured. Start with: npm run measure"); process.exit(1); }
 
   console.log("\nWhich assumptions actually decide the answer?\n");
   console.log("assumption                 in use    same answer from ... to     verdict");

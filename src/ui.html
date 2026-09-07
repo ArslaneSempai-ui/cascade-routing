@@ -58,7 +58,7 @@ const T = {
      tableau juste dessous en montrait sept : l'échelle générative locale est optionnelle, donc
      un clone sans Ollama en a quatre et cette machine en a sept. Une phrase qui compte à la
      main se dément toute seule le jour où la mesure grandit. */
-  lede: (n) => `${n} tiers, from a regular expression to a human — measured on held-out data. `
+  lede: (n) => `${n} tiers, from a regular expression to a human, measured on held-out data. `
     + `Route each field to a tier and read what your routing costs.`,
 
   releve: "Your routing, priced",
@@ -67,7 +67,7 @@ const T = {
   duree: "processing time for the volume",
   budget: "share of the budget",
 
-  mieux: (j, d, f) => `<b>The model would route it differently.</b> Its assignment reaches ${j} for ${d} — ${f}. Take its cells, or press the button, and see which three fields it moves.`,
+  mieux: (j, d, f) => `<b>The model would route it differently.</b> Its assignment reaches ${j} for ${d}, ${f}. Take its cells, or press the button, and see which three fields it moves.`,
   optimal: "<b>This is the assignment the model would choose.</b> Nothing here buys accuracy for less.",
   prendreOptimum: "Take the model's assignment",
 
@@ -116,19 +116,19 @@ const T = {
     + `routed to that tier; the cost of each is noted underneath.`,
   coutSous: (d) => `${d} a year`,
   reflexeSuite: (meilleurUniforme, jUniforme, dUniforme, jOpt, dOpt) =>
-    `The best single tier is <b>${meilleurUniforme}</b> at ${jUniforme} for ${dUniforme}. Mixing reaches <b>${jOpt}</b> for <b>${dOpt}</b> — more accurate and cheaper, because three of the five fields are carried by regexes that cost nothing.`,
+    `The best single tier is <b>${meilleurUniforme}</b> at ${jUniforme} for ${dUniforme}. Mixing reaches <b>${jOpt}</b> for <b>${dOpt}</b>: more accurate and cheaper, because three of the five fields are carried by regexes that cost nothing.`,
 
   titreHyp: "The assumptions",
-  hypQuoi: "The accuracies and the latencies are measured. Everything below is not: no human was available to measure, and no price is a fact. Change them and the answer may change — that is what they are for.",
+  hypQuoi: "The accuracies and the latencies are measured. Everything below is not: no human was available to measure, and no price is a fact. Change them and the answer may change; that is what they are for.",
   humanAccuracy: "Human accuracy", humanSeconds: "Human seconds per field",
   analystAnnualCost: "Loaded cost per analyst ($/yr)", productiveHoursPerDay: "Productive hours per day",
   workingDaysPerYear: "Working days per year", pricePerThousandSmall: "Small model, $ / 1,000",
   pricePerThousandLarge: "Large model, $ / 1,000", volume: "Records a year", budget: "Budget ($/yr)",
   defaut: "Reset the assumptions",
-  prochain: (d, f) => `The next real improvement needs a budget of <b>${d}</b> — ${f} what this routing spends — and it buys one field.`,
+  prochain: (d, f) => `The next real improvement needs a budget of <b>${d}</b> (${f} what this routing spends) and it buys one field.`,
   prochainRien: (n) => `No further improvement is reachable at any budget with these ${n} tiers.`,
 
-  provenance: "The accuracy and latency of each tier are <b>measured</b> on held-out records, once, and frozen. The human tier, the prices, the volume and the budget are <b>assumed</b> — none of them is observable here. The README says which is which, one by one.",
+  provenance: "The accuracy and latency of each tier are <b>measured</b> on held-out records, once, and frozen. The human tier, the prices, the volume and the budget are <b>assumed</b>: none of them is observable here. The README says which is which, one by one.",
 };
 const t = () => T;
 
@@ -147,7 +147,7 @@ function blocReleve() {
     <div class="titre">${esc(L.releve)}</div>
     ${ligne(L.cout, dollars(m.cost))}
     ${ligne(L.duree, nb(m.seconds / 3600) + " h")}
-    ${ligne(L.budget, m.budgetShare === Infinity ? "—" : pcCourt(m.budgetShare))}
+    ${ligne(L.budget, m.budgetShare === Infinity ? "n/a" : pcCourt(m.budgetShare))}
     <div class="ligne total"><span class="intitule">${esc(L.justesse)}</span>
       <span class="valeur">${pc(m.accuracy)}</span></div>
   </section>`;

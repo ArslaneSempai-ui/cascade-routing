@@ -2,7 +2,7 @@
 
 Ce qui est **mécanisable** vit dans les tests et dans `scripts/pieges.mjs` du skill
 `equipe` : une règle qui peut se déclencher toute seule ne se met pas dans un document.
-Ce fichier porte le reste — ce qui demande un jugement, et que plusieurs sessions
+Ce fichier porte le reste : ce qui demande un jugement, et que plusieurs sessions
 travaillant sur ce dépôt perdraient sinon en même temps.
 
 Chaque entrée dit **ce qui s'est passé**, pas ce qu'il faudrait faire en général.
@@ -11,7 +11,7 @@ Chaque entrée dit **ce qui s'est passé**, pas ce qu'il faudrait faire en gén�
 
 ## Entre sessions : toujours des chemins absolus
 
-`scratchpad/correctifs/` ne désigne rien depuis une autre session — chacune a le sien, sous
+`scratchpad/correctifs/` ne désigne rien depuis une autre session : chacune a le sien, sous
 un identifiant différent. Un chemin relatif échangé entre sessions est un chemin qui ne
 mène nulle part, et le destinataire perd le temps de le chercher avant de le demander.
 
@@ -49,14 +49,14 @@ Le cas qui exige `refuserDrapeauxInconnus` dans chaque commande cherchait d'abor
 dans le fichier. **La ligne d'`import` suffisait à le satisfaire** : en retirant l'appel de
 `mur.ts`, le cas restait vert.
 
-**Remède :** chercher l'**appel**, en excluant les lignes d'import — et le prouver en
+**Remède :** chercher l'**appel**, en excluant les lignes d'import, et le prouver en
 cassant **une seule** garde puis en la remettant. Un témoin qui ne peut pas échouer est une
 décoration.
 
 ## Un témoin qui compare à un compteur non vide passe dans les deux sens
 
 Le même fichier vérifiait qu'un `--` seul ne déclenche rien avec
-`assert.deepEqual(sorties, [2])` — alors qu'un `2` s'y trouvait déjà depuis le cas
+`assert.deepEqual(sorties, [2])`, alors qu'un `2` s'y trouvait déjà depuis le cas
 précédent. Il passait que `--` ait tiré ou non.
 
 **Remède :** remettre le compteur à zéro avant chaque assertion, ou repartir d'un état neuf.
@@ -68,7 +68,7 @@ importe `cli.ts`. Toute modification de `cli.ts` change donc la clé, et le cas 
 versionnée porte encore la clé que le code produit » passe au rouge.
 
 Ce n'est pas un défaut : c'est la garde qui fait son travail. Mais la régénération **charge
-les encodeurs**, donc elle se planifie — voir la règle suivante.
+les encodeurs**, donc elle se planifie : voir la règle suivante.
 
 **Comment retrouver que c'est ça**, parce qu'aucune lecture du code ne le révèle : le cas qui
 tombe parle de la galerie, et la modification qui l'a fait tomber n'a rien à voir avec elle.
@@ -99,14 +99,14 @@ la précédente ait rendu la main. Vérifier plutôt qu'annoncer : `sysctl -n vm
 alors rien trouver, et son zéro se lit « rien ne tourne ». Conséquence payée : une passe de
 calcul crue morte, relancée par-dessus, deux passes à 330 % de CPU chacune.
 
-**Remède :** `pgrep -f 'a|b'`, et prouver le relevé pendant que la chose cherchée tourne —
+**Remède :** `pgrep -f 'a|b'`, et prouver le relevé pendant que la chose cherchée tourne,
 trois secondes suffisent à démasquer un motif muet.
 
 ## Un message de commit posé sur le mauvais diff ne se fait jamais attraper
 
 Trois commits sont partis avec le message d'un autre : le contenu de chacun était juste, la
 suite était verte, et rien dans l'outillage ne compare un message à son diff. La cause était
-une boucle qui extrayait les messages à l'envers — `for i in 3 2 1 … HEAD~$((i-1))` — et
+une boucle qui extrayait les messages à l'envers (`for i in 3 2 1 … HEAD~$((i-1))`) et
 l'inversion est invisible tant qu'on ne lit pas les deux côte à côte.
 
 C'est la faute la plus durable qu'on puisse commettre ici : **un message de commit faux
@@ -134,24 +134,24 @@ Le pendant du témoin planté dans la forme de la garde, et il se paie dans l'au
 la garde était bonne et **la contre-épreuve rassurait au lieu d'éprouver**.
 
 En recalculant la binomiale appariée, deux sondes successives sur des couples plausibles n'ont
-rendu **aucun** verdict inversé. La conclusion tentante — « la formule tient » — était fausse :
+rendu **aucun** verdict inversé. La conclusion tentante, « la formule tient », était fausse :
 les deux régimes de débordement tombaient juste par accident, l'un rendant `p = 0` là où le p
 exact était minuscule, l'autre `NaN` là où le p exact était grand. **Les deux erreurs
 s'annulaient sur les cas qu'on avait envie d'essayer.**
 
 Ce qui a marché n'est pas d'essayer plus de couples : c'est de **calculer la fenêtre** où les
-deux régimes cessent de coïncider avec la vérité — `2^n` fini, queue finie, p exact au-dessus
-du seuil — puis d'y aller directement. Elle existait, elle faisait deux entiers de large, et
+deux régimes cessent de coïncider avec la vérité : `2^n` fini, queue finie, p exact au-dessus
+du seuil, puis d'y aller directement. Elle existait, elle faisait deux entiers de large, et
 aucun tâtonnement raisonnable ne serait tombé dedans.
 
 **Remède :** quand une sonde passe, se demander *quelle propriété du cas essayé la fait
 passer*, et si cette propriété est partagée par tous les cas essayés. Si oui, on a mesuré une
-famille, pas la fonction. Et pour un défaut arithmétique, la fenêtre se calcule — les bornes de
+famille, pas la fonction. Et pour un défaut arithmétique, la fenêtre se calcule : les bornes de
 débordement d'un flottant sont connues, elles ne se cherchent pas à l'aveugle.
 
 ## Le terminal refuse, le fichier publie
 
-Deux sorties pour un même chiffre, deux règles différentes — et c'est celle qui survit qui n'a
+Deux sorties pour un même chiffre, deux règles différentes, et c'est celle qui survit qui n'a
 pas de garde.
 
 Mesuré dans `your-cases.ts`. Le rapport écrit au client construit ses lignes à la main :
@@ -161,13 +161,13 @@ Mesuré dans `your-cases.ts`. Le rapport écrit au client construit ses lignes �
 sans jamais lire `q.reportable`. `writeRate`, qui refuse de citer un taux sous `ENOUGH = 20`
 observations, n'est employé que sur la **sortie console**. Résultat :
 
-    n=1    console : « — (n=1, too few to quote) »      fichier : « 100.0 % [21–100] »
+    n=1    console : « n/a (n=1, too few to quote) »    fichier : « 100.0 % [21–100] »
     n=3    console : refuse                             fichier : « 100.0 % [44–100] »
     n=19   console : refuse                             fichier : « 78.9 % [57–91] »
     n=20   les deux citent
 
 **Le terminal défile et se perd ; le fichier est classé, transféré, cité.** La garde protège
-l'artefact éphémère et laisse passer le durable — et un « 100 % » sur un dossier est
+l'artefact éphémère et laisse passer le durable, et un « 100 % » sur un dossier est
 exactement le chiffre qu'un acheteur montrera à quelqu'un d'autre.
 
 Corollaire mesuré au passage : un fichier réduit à sa ligne d'en-tête est accepté et rend
@@ -175,7 +175,7 @@ Corollaire mesuré au passage : un fichier réduit à sa ligne d'en-tête est ac
 n'établit rien.
 
 **Remède :** une valeur qui porte une condition de publication ne se formate qu'à un seul
-endroit. Si deux chemins l'écrivent, le second oubliera la condition — et ce sera celui qu'on
+endroit. Si deux chemins l'écrivent, le second oubliera la condition, et ce sera celui qu'on
 garde.
 
 ## Un témoin écrit dans la forme de la garde n'éprouve que la garde
@@ -184,11 +184,11 @@ Formulé par la session qui l'a payé : *« un témoin posé dans la même forme
 que la garde lit cette forme, pas que la forme est là où se trouve la vérité. »*
 
 C'est plus profond que le négatif sans dénominateur, dont c'est la cause. Le contre-témoin
-existait, il était sincère, il tirait — et il tirait sur le modèle mental de celui qui avait
+existait, il était sincère, il tirait, et il tirait sur le modèle mental de celui qui avait
 écrit la garde, pas sur le fichier réel.
 
 Mesuré : une garde d'audit lisait `packages[].scripts.postinstall` dans le verrou npm. **npm
-n'y écrit jamais les scripts d'une dépendance** — il pose un booléen `hasInstallScript`. Le
+n'y écrit jamais les scripts d'une dépendance** : il pose un booléen `hasInstallScript`. Le
 champ était donc toujours absent, la collection toujours vide, et le zéro publié ne disait
 rien. Le contre-témoin plantait un `postinstall` **dans `scripts`**, exactement là où la garde
 regardait : il prouvait que la garde lisait `scripts`, pas que `scripts` était l'endroit où npm
@@ -196,11 +196,11 @@ regardait : il prouvait que la garde lisait `scripts`, pas que `scripts` était 
 
 **La faille est structurelle, pas individuelle** : elle atteint tout témoin écrit par la main
 qui a écrit la garde, parce que les deux partagent la même croyance sur la forme des données.
-Une autre main l'attrape en une lecture — c'est ce qui s'est passé ici, dans les deux sens, le
+Une autre main l'attrape en une lecture : c'est ce qui s'est passé ici, dans les deux sens, le
 même jour.
 
 **Remède :** le témoin se plante dans le **producteur**, pas dans le lecteur. Ici : installer
-un vrai paquet qui déclare un `postinstall`, et regarder ce que npm écrit — plutôt que d'écrire
+un vrai paquet qui déclare un `postinstall`, et regarder ce que npm écrit, plutôt que d'écrire
 soi-même ce qu'on croit qu'il écrit. Quand c'est impossible, lire deux sources et **traiter leur
 désaccord comme une trouvaille** au lieu de choisir la plus commode.
 
@@ -210,7 +210,7 @@ Instance de « une garde ne couvre que l'unité qu'elle compte », et elle vaut 
 part parce que la garde existait *pour* attraper ce cas.
 
 `poidsEnCache()` vérifie que le poids **total** du cache dépasse 50 Mo. Un `model.onnx` tronqué
-à 57 Mo — au lieu de 496 — le franchit tout seul, donc la fonction rend « cache présent » sur
+à 57 Mo (au lieu de 496) le franchit tout seul, donc la fonction rend « cache présent » sur
 un cache cassé. Le processus sort ensuite en SIGABRT à 0,2 s sur `mutex lock failed`, message
 qui ne désigne rien, et on met ça sur le compte de la charge.
 
@@ -225,7 +225,7 @@ problème : le cas où elles divergent est celui où la phrase ment.
 
 Mesuré dans `your-cases.ts` : `avecRegles: Boolean(regles)` décide ce que le client lit. Avec
 `--rules=["supplier","total"]`, `Object.entries` d'un **tableau** rend les clés `"0"` et `"1"`
-— aucune colonne ne porte ces noms, **aucune ligne `rules` n'apparaît dans le tableau
+(aucune colonne ne porte ces noms), **aucune ligne `rules` n'apparaît dans le tableau
 d'exactitude**. La phrase honnête « no `--rules` was given, so none was measured » est alors
 **supprimée**, puisqu'un fichier a bien été donné, et le rapport écrit à la place : *« That
 your regexes generalise beyond these cases. »*
@@ -236,8 +236,8 @@ C'est le cousin du négatif sans dénominateur : là un compte manquait, ici une
 est substituée à la bonne. Dans les deux cas la phrase publiée a la forme d'un relevé et
 l'appui d'une conviction.
 
-**Remède :** la valeur qui décide une phrase se lit dans le relevé — seul endroit qui sache ce
-qui a tourné — jamais dans les arguments d'entrée.
+**Remède :** la valeur qui décide une phrase se lit dans le relevé, seul endroit qui sache ce
+qui a tourné, jamais dans les arguments d'entrée.
 
     avecRegles: Object.values(releve).some((r) => "rules" in r)
 
@@ -259,7 +259,7 @@ qu'aucune ne dit « au-delà de N **secondes** ».
 ## Le remède aussi se mesure
 
 Corollaire du précédent, payé le même jour. La parade au motif catastrophique allait s'écrire
-« il faudrait un worker avec une échéance » — plausible, et invérifiée. **V8 aurait très bien
+« il faudrait un worker avec une échéance », plausible, et invérifiée. **V8 aurait très bien
 pu ne pas interrompre une expression régulière en cours**, auquel cas la parade était
 décorative et personne ne l'aurait su avant un client.
 
@@ -275,18 +275,18 @@ un contrat.
 Formulé par la session qui l'a payé : *« le fait et son implication ne se vérifient pas au
 même endroit, et je n'avais vérifié que le fait. »*
 
-Un contrôle établit qu'une chose est vraie ici, et on en tire ce qu'elle implique ailleurs —
+Un contrôle établit qu'une chose est vraie ici, et on en tire ce qu'elle implique ailleurs,
 sans aller voir ailleurs. Les deux moitiés ont l'air d'une seule vérification parce qu'elles
 sont dites dans la même phrase.
 
 Trois instances du même jour :
 
-- « la question affichée est celle qui est posée » — vrai du gabarit, faux du chemin qui
+- « la question affichée est celle qui est posée » : vrai du gabarit, faux du chemin qui
   l'emprunte ; personne n'avait comparé les deux **chaînes**.
-- « `identite/provenance.ts` n'est pas modifié » — les trois contrôles disaient *propre
+- « `identite/provenance.ts` n'est pas modifié » : les trois contrôles disaient *propre
   maintenant*, la conclusion écrite disait *n'a jamais été modifié*. Une copie prise avant
   restauration a tranché : le marqueur avait bel et bien disparu.
-- « aucune dépendance n'exécute de code à l'installation » — voir l'entrée suivante.
+- « aucune dépendance n'exécute de code à l'installation » : voir l'entrée suivante.
 
 **Remède :** écrire la vérification et l'implication comme deux phrases, et se demander pour
 la seconde *quel fichier je devrais ouvrir pour l'établir*. Si la réponse est « aucun, ça
@@ -301,7 +301,7 @@ pinned. »* Mesuré depuis, sur l'arbre réel :
       onnxruntime-node, protobufjs@7.6.5 (postinstall: node scripts/postinstall)
     npm config ignore-scripts : false
 
-L'affirmation est fausse, et **elle l'était probablement au moment où elle a été écrite** — ce
+L'affirmation est fausse, et **elle l'était probablement au moment où elle a été écrite**, ce
 qui n'a pas été vu, c'est qu'aucun compte ne l'accompagnait. « Aucune dépendance n'exécute de
 code » se lit comme un relevé alors que c'est une conviction ; « 0 sur 216 » aurait obligé à
 compter, et compter aurait rendu 2.
@@ -315,7 +315,7 @@ ensuite, sur deux machines par deux sessions :
       onnxruntime-node@1.21.0 (postinstall: node ./script/install)
       protobufjs@7.6.5        (postinstall: node scripts/postinstall)
 
-**Le blocage existe — et il n'est pas dans ce dépôt.** C'est `allowScripts`, une porte de npm
+**Le blocage existe, et il n'est pas dans ce dépôt.** C'est `allowScripts`, une porte de npm
 12 fermée par défaut. Un acheteur sur npm ≤ 11, sur yarn ou sur pnpm exécute les deux scripts.
 
 C'est la vraie conclusion et elle vaut plus que l'erreur d'origine : **la sûreté de la chaîne
@@ -324,34 +324,34 @@ dépôt.** Un audit vendu à une banque doit dire lequel des deux, parce que le 
 pas notre code mais choisit son gestionnaire de paquets.
 
 Une supposition qui tombe au passage, mesurée par la session qui l'avait faite : le postinstall
-bloqué d'`onnxruntime-node` **ne laisse pas le binaire natif absent** — `bin/napi-v3/**` est
+bloqué d'`onnxruntime-node` **ne laisse pas le binaire natif absent** : `bin/napi-v3/**` est
 identique, 208 Mo, entre un arbre où le script a été bloqué et un où il ne l'a pas été. Les
 binaires voyagent dans le tarball. Le blocage est sans conséquence fonctionnelle ici, ce qui
 est une raison de plus de ne pas le confondre avec une garde.
 
 **Remède :** tout énoncé d'absence porte son dénominateur et la commande qui l'a produit. Sans
-ça, c'est une opinion bien présentée — et celle-là a traversé un audit de sécurité.
+ça, c'est une opinion bien présentée, et celle-là a traversé un audit de sécurité.
 
 ## Toute copie en bloc lit la liste d'exceptions AVANT d'écrire
 
 Deux sessions, le même jour, à une heure d'intervalle, ont recopié une couche partagée en
-bloc et écrasé les fichiers qu'une liste déclarait divergents **par construction** — l'une
+bloc et écrasé les fichiers qu'une liste déclarait divergents **par construction**, l'une
 `DETACHES` dans `cascade` (dont le fichier de test qui porte la liste), l'autre `ADAPTES` et
 `baselines.ts`, ce qui a cassé la compilation d'un dépôt voisin.
 
 Les deux listes existaient, étaient justes, et portaient leur raison écrite. **Aucune des
 deux copies ne les a lues.** Ce n'est donc pas une question d'attention : une copie « tous
-les fichiers de même nom » est un motif, et **un motif est une affirmation** — celui-ci
+les fichiers de même nom » est un motif, et **un motif est une affirmation** : celui-ci
 affirme que tout fichier partageant un nom doit partager un contenu, ce que la liste
 d'exceptions dit précisément être faux.
 
 **Et une comparaison en bloc doit la lire autant qu'une copie.** Une boucle qui compare
-fichier à fichier sans lire les dispenses rend des divergences qui n'en sont pas — six d'un
-coup, toutes `baselines.ts` — avec l'aplomb d'un relevé. La forme *mesure* du même piège, et
+fichier à fichier sans lire les dispenses rend des divergences qui n'en sont pas : six d'un
+coup, toutes `baselines.ts`, avec l'aplomb d'un relevé. La forme *mesure* du même piège, et
 elle est plus discrète : elle ne casse rien, elle fait chercher.
 
 **Remède :** la liste se lit dans le dépôt CIBLE, à chaque copie, jamais reportée de mémoire
-d'un dépôt à l'autre — deux dépôts n'ont pas les mêmes dispenses.
+d'un dépôt à l'autre : deux dépôts n'ont pas les mêmes dispenses.
 
     EX=$(grep -oE '^\s+"[a-z.-]+\.(ts|mjs|js|css)":' "$d/src/registre.test.ts" | tr -d ' ":')
     for f in identite/*; do
@@ -367,11 +367,11 @@ exactement à une copie qui s'est bien passée.
 
 `find . -name graphes.js | head -1` rend `./docs/graphes.js`, pas `./src/graphes.js`. La
 copie atterrit donc dans la page construite ; puis `npm run pages` la réécrit depuis la
-source, **qui n'a jamais été mise à jour** — et la garde d'identité reste rouge exactement
+source, **qui n'a jamais été mise à jour**, et la garde d'identité reste rouge exactement
 sur les fichiers dont la copie publiée est un artefact de construction.
 
 **Le symptôme désigne le mauvais endroit** : on regarde `docs/`, qui vient d'être régénéré et
-paraît correct, alors que le défaut est dans `src/`. C'est ce qui rend ce piège cher — il se
+paraît correct, alors que le défaut est dans `src/`. C'est ce qui rend ce piège cher : il se
 répare en apparence tout seul à chaque construction.
 
 **Remède :** exclure les dossiers construits de toute recherche de source.
@@ -399,8 +399,8 @@ résolution des modules **avant d'atteindre le code qu'on teste**, et la sortie 
 une exécution : quatre cas « vérifiés », quatre fois le même code, aucun n'ayant chargé le
 fichier modifié.
 
-**Remède :** un contrôle positif avant toute série — `node -e 'console.log("ok")'` depuis le
-clone — ou lier les dépendances : `ln -sfn ../vrai-depot/node_modules node_modules`.
+**Remède :** un contrôle positif avant toute série : `node -e 'console.log("ok")'` depuis le
+clone, ou lier les dépendances : `ln -sfn ../vrai-depot/node_modules node_modules`.
 
 ## `timeout` n'existe pas sur macOS
 
@@ -412,7 +412,7 @@ C'est la famille du tube qui mange le code de sortie, en pire : là, la commande
 que **la ligne entière n'a pas d'effet**, donc il n'y a même pas de code faux à lire.
 
 **Remède :** ne pas dépendre d'un binaire non garanti. Pour borner une commande bavarde, le
-tube suffit — `head` ferme le tuyau et la commande reçoit SIGPIPE :
+tube suffit : `head` ferme le tuyau et la commande reçoit SIGPIPE :
 
     node src/cmd.ts --option 2>&1 | head -3
 
@@ -423,7 +423,7 @@ présence, jamais `timeout` supposé.
 
 Un tube remplace le code de sortie par celui du **dernier** maillon : `cmd | head -2` rend
 le code de `head`, qui vaut 0 quoi qu'il arrive. La commande a beau refuser en 2, la mesure
-lit 0 — et on conclut que la garde ne refuse pas.
+lit 0, et on conclut que la garde ne refuse pas.
 
 Signalé par une session à une autre, puis commis par celle qui l'avait signalé quatre heures
 plus tard, sur la garde qu'elle venait d'installer. **Le connaître ne protège pas ; seule
@@ -450,10 +450,10 @@ C'est la bibliothèque native des encodeurs qui s'abat **pendant sa fermeture**,
 machine est chargée. Vérifié au calme : `readme.ts --check` sort 0 quand il passe et 1 quand
 il échoue, proprement, sur les deux chemins. Le plantage n'arrive que sous charge.
 
-**Il sort en 134**, donc il ne se déguise pas en succès — c'est sa seule qualité. Mais il
+**Il sort en 134**, donc il ne se déguise pas en succès : c'est sa seule qualité. Mais il
 ressemble à un défaut du code, et il coûte le temps qu'on met à chercher dans le code.
 
-**CORRECTION DU 25 AOÛT 2026 — LA CHARGE N'EST PAS LA SEULE CAUSE, ET CE N'EST
+**CORRECTION DU 25 AOÛT 2026 : LA CHARGE N'EST PAS LA SEULE CAUSE, ET CE N'EST
 PROBABLEMENT PAS LA PLUS FRÉQUENTE.** Le même message, le même code 134, se produit **de
 façon déterministe et en 0,2 seconde** quand un `model.onnx` du cache est tronqué :
 
@@ -473,7 +473,7 @@ Reproduit le 25 août 2026, même fichier tronqué, `node --test src/cascade.tes
       # sous-processus tué par le délai
 
 Le garde répondait « les poids sont là », le cas s'exécutait, l'enfant s'abattait, et le cas
-se déclarait **ignoré en accusant le délai** — en 242 millisecondes, c'est-à-dire nulle part
+se déclarait **ignoré en accusant le délai**, en 242 millisecondes, c'est-à-dire nulle part
 près d'un délai. Le contrôle le plus important du dépôt passait pour un ignoré ordinaire, et
 son message envoyait chercher une lenteur. **Un ignoré qui nomme la mauvaise cause coûte plus
 cher qu'un rouge.** `diagnosticDesPoids()` rend maintenant la phrase juste, et distingue
@@ -487,14 +487,14 @@ charge :
 
 `poidsEnCache()` compare désormais chaque modèle épinglé à sa taille servie et le chemin de
 chargement refuse **avant** `pipeline(...)` en nommant le fichier, sa taille, celle qu'il
-devrait avoir et la commande. Le seuil précédent — un total supérieur à 50 Mo — laissait
+devrait avoir et la commande. Le seuil précédent (un total supérieur à 50 Mo) laissait
 passer 57 Mo de fichier coupé ; **le bon ordre de grandeur était écrit trois lignes plus
 haut, dans le commentaire du garde appelant : « un téléchargement de 740 Mo »**. Deux
 fichiers, deux chiffres, personne ne les avait lus ensemble.
 
-**Ce qu'il ne faut PAS en conclure** : qu'un `npm test` rouge est toujours la charge — ni,
+**Ce qu'il ne faut PAS en conclure** : qu'un `npm test` rouge est toujours la charge, ni,
 depuis cette correction, qu'un 134 est toujours la charge. Un **1** reste un vrai échec, et
-le distinguer prend une seconde — c'est le code de sortie qui le dit, à condition de ne pas
+le distinguer prend une seconde : c'est le code de sortie qui le dit, à condition de ne pas
 l'avoir lu à travers un tube. « Relancer au calme et voir si ça passe » reste utile, mais
 **après** avoir regardé les poids : un cache tronqué échoue au calme aussi, et l'ancien
 conseil envoyait chercher dans le code.
@@ -502,13 +502,13 @@ conseil envoyait chercher dans le code.
 ## Un instrument qui ne lit rien rend zéro, et zéro se lit « ça ne monte pas »
 
 Une sonde mesurait la mémoire du serveur pendant qu'on lui envoyait 100 Mo. Elle a rendu
-`-0 Mo` **au repos, pendant, et après** — un `require` laissé dans un module ESM, donc une
+`-0 Mo` **au repos, pendant, et après** : un `require` laissé dans un module ESM, donc une
 lecture morte. La conclusion qui attendait était « la mémoire ne monte pas », c'est-à-dire
 exactement ce qu'on espérait lire.
 
 **Un chiffre qui ne bouge JAMAIS est suspect avant d'être rassurant.** Un instrument sain
 bouge : la même mesure refaite avec `execFileSync("ps", …)` donne 135 Mo au repos et 144 Mo
-après 300 Mo de corps — elle varie, donc elle lit. Le verdict final (« l'impact est nul »)
+après 300 Mo de corps : elle varie, donc elle lit. Le verdict final (« l'impact est nul »)
 s'est trouvé identique, et c'est le piège : **la bonne réponse obtenue par un instrument
 cassé reste une réponse qu'on n'a pas mesurée.**
 
@@ -518,12 +518,12 @@ autre chose. Une valeur de repos plausible (135 Mo, pas `-0`) est déjà un test
 ## Une règle importée porte le contexte de qui l'a écrite
 
 Le skill `security-audit` interdit toute requête HTTP : « code tracing only, never test
-against live APIs ». La règle est juste — elle protège d'un audit qui frappe un système
+against live APIs ». La règle est juste : elle protège d'un audit qui frappe un système
 tiers. Elle ne s'appliquait pas ici : la cible était notre propre serveur, sur notre machine,
 dans un clone à nous, et le lot demandait explicitement de l'éprouver en marche.
 
 **Une règle qu'on suit sans savoir pourquoi elle existe se suit aussi quand elle ne
-s'applique pas** — et l'audit se serait réduit à relire du code qui, précisément, a l'air
+s'applique pas**, et l'audit se serait réduit à relire du code qui, précisément, a l'air
 correct. Les deux défauts trouvés ce jour-là ne se voyaient qu'en lançant : 437 ms par
 requête, et une route POST qui répond 200 à 100 Mo.
 
@@ -535,12 +535,12 @@ silencieuse se découvre.
 
 `PLAFOND_CORPS` était appliqué par `corps()`, que deux routes POST sur trois appelaient.
 `/api/optimum` n'avait pas besoin du corps, donc ne le lisait pas, donc échappait à la
-borne : 100 Mo y répondaient 200. L'impact mesuré était nul — Node jette ce que personne ne
-lit — mais **c'est un usage, pas une garde**, et la route suivante copiera peut-être celle
+borne : 100 Mo y répondaient 200. L'impact mesuré était nul : Node jette ce que personne ne
+lit, mais **c'est un usage, pas une garde**, et la route suivante copiera peut-être celle
 qui ne l'a pas.
 
 **Remède :** un cas qui dérive la liste des routes du routeur lui-même, jamais d'une liste
-écrite à la main — sinon la quatrième route arrive non couverte exactement comme la
+écrite à la main, sinon la quatrième route arrive non couverte exactement comme la
 troisième, et le vert du cas dit seulement que les trois routes connues vont bien.
 
 ## Corriger la lenteur avant de poser une limite
@@ -557,30 +557,30 @@ La limite reste utile ensuite, mais elle protège d'un abus au lieu de cacher un
 question qui tranche : *deux appels identiques rendent-ils le même résultat ?*
 ## `npm install` efface les caches que les bibliothèques rangent sous `node_modules`
 
-**Le fait.** Ajouter deux dépendances de développement — `fast-check` et
-`@stryker-mutator/core` — a effacé **1,3 Go de poids d'encodeur** rangés par
+**Le fait.** Ajouter deux dépendances de développement (`fast-check` et
+`@stryker-mutator/core`) a effacé **1,3 Go de poids d'encodeur** rangés par
 `@huggingface/transformers` dans `node_modules/@huggingface/transformers/.cache`. npm élague
 tout ce qui n'appartient pas à l'arbre qu'il vient de résoudre, et un cache n'y appartient pas.
 
 **Ce que ça a coûté.** Le cas qui garantit qu'aucune valeur du client n'entre dans le fichier
 qu'on lui rend s'est mis à s'ignorer : `poidsEnCache()` rend `false`, et le contrôle le plus
 important du dépôt ne tourne plus localement. Il tourne encore en intégration continue, qui
-met ce dossier en cache exprès — c'est d'ailleurs pourquoi cette mise en cache existe.
+met ce dossier en cache exprès : c'est d'ailleurs pourquoi cette mise en cache existe.
 
 **Comment le repérer.** Après tout `npm install`, `npm ci`, ou toute commande qui touche aux
 dépendances : `node -e 'import("./src/tiers.ts").then(t=>console.log(t.poidsEnCache()))'`.
-Un `false` inattendu est ça. Le symptôme visible est « skipped 1 » à la fin de la suite —
+Un `false` inattendu est ça. Le symptôme visible est « skipped 1 » à la fin de la suite,
 et une suite verte avec un ignoré ressemble à une suite verte.
 
 **Le remède.** Ranger un cache coûteux HORS de `node_modules`, ou accepter le
 retéléchargement et le dire dans le rapport. La leçon générale : `node_modules` n'est pas un
-endroit où garder quoi que ce soit qu'on ne veut pas reperdre — c'est un dossier dérivé, et
+endroit où garder quoi que ce soit qu'on ne veut pas reperdre : c'est un dossier dérivé, et
 npm se réserve le droit de le reconstruire entièrement.
 
-**Un second symptôme, plus cher que « skipped 1 » — 25 août 2026.** Quand le cache est
+**Un second symptôme, plus cher que « skipped 1 », 25 août 2026.** Quand le cache est
 effacé mais que la commande suivante charge quand même les modèles, il n'y a **aucun message** :
 la bibliothèque retélécharge en silence. Ce qu'on voit est **une exécution de 3 secondes qui
-prend 70 secondes**. Ça ne ressemble pas à une panne, ça ressemble à une machine lente — et on
+prend 70 secondes**. Ça ne ressemble pas à une panne, ça ressemble à une machine lente, et on
 va chercher la lenteur ailleurs. Ce qui le prouve en une commande, sur le process node :
 
     lsof -nP -p <pid> | grep TCP
@@ -588,7 +588,7 @@ va chercher la lenteur ailleurs. Ce qui le prouve en une commande, sur le proces
 Une connexion ouverte pendant un « calcul » local est un téléchargement, pas un calcul.
 
 **Et si ce retéléchargement est interrompu**, le fichier reste tronqué à son emplacement final
-et abat le processus à chaque exécution suivante — voir « `Abort trap: 6` » plus haut. Les deux
+et abat le processus à chaque exécution suivante : voir « `Abort trap: 6` » plus haut. Les deux
 pièges s'enchaînent : le premier retélécharge sans le dire, le second transforme l'interruption
 en plantage natif.
 
@@ -604,13 +604,13 @@ un dossier qu'un outil considère comme le sien.
 
 ## Deux exécutions ne se comparent que si elles ont atteint le même point
 
-Deux mesures de mémoire ont été publiées côte à côte — 147 Mo pour un mégaoctet réparti en
-lignes, 2 457 Mo pour le même mégaoctet dans une cellule — et l'écart annoncé, un facteur
+Deux mesures de mémoire ont été publiées côte à côte : 147 Mo pour un mégaoctet réparti en
+lignes, 2 457 Mo pour le même mégaoctet dans une cellule, et l'écart annoncé, un facteur
 seize, n'existait pas. **Les deux fichiers n'avaient pas parcouru le même chemin** : celui à
 22 310 lignes était refusé au plafond d'appels **avant qu'aucun modèle ne soit chargé**,
 l'autre allait au bout. On comparait un refus à une mesure complète.
 
-Remesuré au même point, l'écart réel était de 414 Mo — le reste était le coût de charger les
+Remesuré au même point, l'écart réel était de 414 Mo : le reste était le coût de charger les
 modèles, présent des deux côtés.
 
 **Ce qui rend le piège difficile : la bifurcation vient d'une garde qui fait bien son
@@ -623,13 +623,13 @@ canal est ouvert, il ne porte simplement pas l'information qui décide.
 qu'elles se terminent sur la **même dernière ligne de sortie**, ou qu'elles écrivent le même
 artefact. Trois secondes, et le faux écart se démasque.
 
-**Et pourquoi ce n'est PAS mécanisé.** L'idée d'un contrôle — chaque garde annoncerait
-qu'elle est un point d'arrêt — a été examinée et abandonnée : il faudrait que des dizaines de
+**Et pourquoi ce n'est PAS mécanisé.** L'idée d'un contrôle (chaque garde annoncerait
+qu'elle est un point d'arrêt) a été examinée et abandonnée : il faudrait que des dizaines de
 sites le sachent et le disent dans une forme stable, ce qui coûte plus que le défaut.
 **Toute règle mécanisable ne l'est pas au bon prix**, et une règle mécanisée à contrecœur se
 retire à la première gêne. Celle-ci reste une habitude de lecture, et c'est sa place.
 
-## `git commit -- <chemins>` lit l'arbre, pas l'index — et vide l'index au passage
+## `git commit -- <chemins>` lit l'arbre, pas l'index, et vide l'index au passage
 
 Payé le 25 août 2026, sur un relevé de mesure.
 
@@ -637,7 +637,7 @@ La forme `git commit -- <chemins>` est celle qu'on conseille pour n'emporter que
 travail quand plusieurs sessions écrivent dans le même dépôt. Elle fait deux choses
 qu'on n'attend pas :
 
-- elle commite le contenu de **l'arbre de travail**, pas celui de l'index — donc une
+- elle commite le contenu de **l'arbre de travail**, pas celui de l'index : donc une
   version soigneusement indexée n'est pas celle qui part ;
 - elle **vide l'index** des chemins nommés au passage : `git diff --cached` retombe à
   zéro après, sans un mot.
@@ -657,7 +657,7 @@ travail » pendant qu'il tourne. **C'est faux, et ça n'a jamais été vérifié
 ne contient aucune commande qui touche à l'arbre : la seule occurrence de `git stash` y
 est un texte de conseil dans un `printf`. Une session voisine l'a lu ligne à ligne.
 
-Le fait observé — l'arbre revenu à sa version committée — est réel et sa cause est
+Le fait observé, l'arbre revenu à sa version committée, est réel et sa cause est
 inconnue. Le mécanisme publié était une explication plausible écrite à la place d'une
 mesure, et il est resté dans un message de commit, c'est-à-dire à un endroit qu'on ne
 peut plus corriger. C'est la faute la plus chère des deux : le commit vide se rattrape
@@ -679,7 +679,7 @@ Trois fois le 26 août 2026, dans trois fichiers différents.
   d'un fichier de données figé.
 
 Aucune de ces trois divergences n'était visible : les deux sources rendaient le même
-résultat le jour où on les a écrites. **C'est précisément ce qui les rend chères** —
+résultat le jour où on les a écrites. **C'est précisément ce qui les rend chères**,
 elles ne se contredisent qu'après une modification, donc longtemps après que celui qui
 les a écrites soit passé à autre chose, et jamais au moment où on les regarde.
 
@@ -693,19 +693,19 @@ avec soin.
 
 ### Le contrôle
 
-Le motif qui l'attrape n'est pas syntaxique — c'est une question à se poser à la
+Le motif qui l'attrape n'est pas syntaxique : c'est une question à se poser à la
 relecture : *cette valeur, qui d'autre sait la calculer ?* Si la réponse n'est pas
 « personne », soit on supprime l'autre, soit on écrit le cas qui les confronte.
 
 Le symptôme, quand ça a déjà cassé : deux nombres qui devraient être égaux et qu'on
 se met à expliquer. **Avant de discuter la méthode, échanger l'empreinte de ce qu'on
-a mesuré** — la divergence est presque toujours dans l'objet, pas dans le raisonnement.
+a mesuré** : la divergence est presque toujours dans l'objet, pas dans le raisonnement.
 
 ## Une base vérifiée au départ n'est pas une base tenue
 
 Le balayage des gardes vérifie que la suite est verte avant de commencer, puis mute un
 site à la fois. Le 26 août 2026, une session voisine a commité dans le dossier partagé
-`identite` à 02:23 et 02:43 — pendant une mesure d'une heure et demie qui en dépendait.
+`identite` à 02:23 et 02:43, pendant une mesure d'une heure et demie qui en dépendait.
 
 Le cas qui compare les copies de cascade à leur source est passé au rouge et y est resté.
 À partir de là, **chaque site éprouvé a été enregistré « attrapé » sans qu'aucune garde
@@ -728,13 +728,13 @@ résultat se remarque ; un défaut qui l'améliore se publie.
   temps et jette jusqu'à dix verdicts ; à chaque site, ça coûte 100 % et ne jette rien.
 - Et la règle humaine, qui ne remplace pas la parade mécanique : **on ne touche pas à une
   couche partagée pendant qu'une mesure en dépend**, et celui qui doit le faire prévient
-  avant. La parade mécanique reste nécessaire — elle attrape les fois où personne n'y pense.
+  avant. La parade mécanique reste nécessaire : elle attrape les fois où personne n'y pense.
 
 ### Le contre-témoin qui l'a trouvé
 
 Un site en commentaire semblait faire tomber la suite, ce qui est impossible. La tentation
-était de publier « muter un commentaire peut rougir un cas ». **Le contre-témoin — la même
-suite, au même commit, sans aucune mutation — était rouge lui aussi.** Sans lui, une
+était de publier « muter un commentaire peut rougir un cas ». **Le contre-témoin (la même
+suite, au même commit, sans aucune mutation) était rouge lui aussi.** Sans lui, une
 deuxième cause inventée partait dans un message.
 
 ## Expliquer un symptôme juste assez pour le contourner, et s'arrêter là
@@ -743,20 +743,20 @@ Le 26 août 2026, deux sessions ont rencontré le même symptôme à des heures 
 contrôle positif qui refuse de démarrer, parce qu'un arbre de travail isolé se déclare
 modifié dès sa création.
 
-La première a regardé, trouvé la cause — `.gitignore` porte `node_modules/`, un motif
-qui ne désigne qu'un répertoire, alors que dans un arbre isolé c'est un lien symbolique
-— et a écrit : *« pas un défaut du dépôt, c'est mon montage. »* Elle a contourné chez
+La première a regardé, trouvé la cause : `.gitignore` porte `node_modules/`, un motif
+qui ne désigne qu'un répertoire, alors que dans un arbre isolé c'est un lien symbolique,
+et a écrit : *« pas un défaut du dépôt, c'est mon montage. »* Elle a contourné chez
 elle avec un `.git/info/exclude` local et elle est passée à autre chose.
 
 **L'explication était exacte. C'est la conséquence qui n'a pas été cherchée.** Tout
 arbre isolé était rapporté sale dès sa naissance, donc les trois commandes qui refusent
 de mesurer sur un arbre modifié refusaient précisément là où une mesure doit tourner. Il
-ne restait que l'arbre partagé — celui qu'on protège toute la journée.
+ne restait que l'arbre partagé, celui qu'on protège toute la journée.
 
 ### Pourquoi ça passe
 
 Une explication fausse se fait attraper : elle prédit mal la suite. **Une explication
-vraie mais incomplète ne prédit rien du tout** — elle rend le symptôme acceptable, ce qui
+vraie mais incomplète ne prédit rien du tout** : elle rend le symptôme acceptable, ce qui
 est exactement ce qu'on cherchait, et l'enquête s'arrête sur un sentiment de résolution.
 
 Le contournement local aggrave le silence : il retire le symptôme du chemin de celui qui
@@ -767,7 +767,7 @@ plus loin.
 
 Après avoir expliqué un symptôme, avant de le contourner : **qui d'autre rencontre cette
 cause, et qu'est-ce qu'elle lui fait ?** Si la réponse est « je ne sais pas », l'enquête
-n'est pas finie — elle est seulement devenue confortable.
+n'est pas finie : elle est seulement devenue confortable.
 
 Et un contournement local est une décision qui se rapporte, pas un détail de montage : ce
 qui gêne une session en bloque cinq, et personne ne le saura si elle ne le dit pas.

@@ -28,7 +28,7 @@ the 4b.
 | held-out extraction pass, 120 cases × 5 fields | ~3 min |
 | classification chain, 120 alerts | ~40 s |
 | hard corpus, 164 fields | ~1 min |
-| paired tests against every existing tier | **free** — a query over stored rows |
+| paired tests against every existing tier | **free**: a query over stored rows |
 | **to have it as a measured tier** | **~5 minutes** |
 | formulation sweep on dev, 5 × 5 × 120 (optional) | ~16 min |
 
@@ -40,7 +40,7 @@ everywhere. Adding a tier does not revive that question.
 
 **No existing tier is re-measured.** Provenance is recorded per tier and `n` is
 decoupled per tier, so the seven current tiers keep their numbers, their commits
-and their loads untouched. Before that work — the same morning — adding an eighth
+and their loads untouched. Before that work (the same morning) adding an eighth
 tier meant re-measuring everything, about forty minutes of GPU and a fresh set of
 numbers to re-audit.
 
@@ -67,4 +67,4 @@ curve.
 And the day's finding applies to it in advance: indistinguishability belongs to
 the tier, the formulation and the corpus together. If `1.7b` is indistinguishable
 from `4b` on the clean corpus, that says nothing about broken documents, where
-`gen-4b` and `gen-8b` — indistinguishable on clean cases — separate 2–17.
+`gen-4b` and `gen-8b`, indistinguishable on clean cases, separate 2–17.
