@@ -1,10 +1,6 @@
-/* PARTAGÉ DANS LA FAMILLE CASCADE — source : cascade
-   Les dépôts de la famille (cascade, -screening, -monitoring, -scoring, -dossier) en portent
-   une copie identique AU BYTE. Corrigez-le dans la source, puis recopiez : la famille est
-   EXCLUE de la diffusion d'identite (depots.json), aucune diffusion ne viendra le faire à
-   votre place. `couche-famille.test.ts` compare les octets, nomme la direction du retard, et
-   refuse aussi un fichier identique dans deux dépôts qui ne porte PAS cet en-tête — c'est
-   ainsi qu'une copie neuve se déclare au lieu de dériver en silence. */
+/* PARTAGÉ — la source de ce fichier est ~/Documents/identite ; les dépôts du portfolio
+   en portent une copie identique. Corrigez-le DANS identite, puis recopiez. Corriger une
+   copie sur place fait refuser le commit, et le refus arrive après le travail. */
 /* AJOUTÉ tel quel dans les dix dépôts du portfolio (arbitrage, banc, cycle, derive,
    economics, funnel, rag, remediation, triage, vitrine) — le fichier est le MÊME partout :
    le corriger dans l'un impose de le recopier dans les neuf autres. */
