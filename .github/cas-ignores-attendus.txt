@@ -12,8 +12,14 @@
 # — `identite` est le dépôt de développement des couches partagées ; il ne vit pas sur un
 #   runner public, et n'a pas à y vivre.
 #
-# Ces six cas S'EXÉCUTENT sur la machine de développement, où la suite exige toujours
-# zéro ignoré local.
+# ─ Les dépôts de la famille Cascade (cascade-screening, -monitoring, -scoring, -dossier)
+#   sont des voisins de développement, comme identite : ils ne vivent pas sur un runner
+#   public. Le gardien de la couche de famille, et le contrôle des couches partagées d'un
+#   dépôt exclu de la diffusion, se sautent donc là, en le disant (depuis 2b3866e, 12/09 ;
+#   la liste ne les portait pas, et le vérificateur a été rouge jusqu'au 28/09).
+#
+# Ces huit cas S'EXÉCUTENT sur la machine de développement, où les cinq dépôts et identite
+# sont côte à côte, et où la suite exige toujours zéro ignoré local.
 #
 # ─── POURQUOI LA COUCHE PARTAGÉE NE SE MET PAS EN CHAÎNE, ET QUE PERSONNE NE LE RETENTE ───
 #
@@ -49,3 +55,5 @@ les couches partagées sont bien celles d'identite
 un binaire de zéro octet est recompilé, pas accepté pour toujours
 un palier qui lit vraiment traverse la sélection, et la passe va jusqu'au bout
 une compilation qui échoue ne se fait pas passer pour un swiftc absent
+la couche de famille est identique dans les dépôts présents
+les couches partagées sont bien celles d'identite (dépôt exclu : recopie à la main)
