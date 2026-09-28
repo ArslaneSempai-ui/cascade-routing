@@ -43,7 +43,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { mkdtempSync, mkdirSync, readdirSync, readFileSync, writeFileSync, existsSync, statSync, utimesSync, rmSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { basename, join } from "node:path";
+import { basename, join, relative, sep } from "node:path";
 import { tmpdir } from "node:os";
 
 const racine = fileURLToPath(new URL("..", import.meta.url));
@@ -88,7 +88,10 @@ export function releverLesCopies(depots: { nom: string; src: string }[]): Map<st
     for (const e of readdirSync(d.src, { recursive: true, withFileTypes: true })) {
       if (!e.isFile() || !codePartage(e.name)) continue;
       const p = join(e.parentPath ?? d.src, e.name);
-      const cle = p.slice(d.src.replace(/\/?$/, "/").length);
+      /* La clé est le chemin relatif à src/, écrit avec `/` quel que soit le système : sous Windows,
+         `join` rend des `\`, et « matchers/profond.ts » ne se lirait plus comme un même fichier
+         (job Windows du 28/09/2026, run 36407647483). */
+      const cle = relative(d.src, p).split(sep).join("/");
       const liste = par_nom.get(cle) ?? [];
       liste.push({ depot: d.nom, texte: readFileSync(p, "utf8"), date: statSync(p).mtimeMs });
       par_nom.set(cle, liste);

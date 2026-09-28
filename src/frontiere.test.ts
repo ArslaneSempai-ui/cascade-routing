@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { join } from "node:path";
+import { join, sep } from "node:path";
 import { exigerHoteLocal, estLocal } from "./tiers.ts";
 
 const dossier = fileURLToPath(new URL(".", import.meta.url));
@@ -45,7 +45,9 @@ test("LA FRONTIÈRE EST AU PASSAGE, PAS À CHAQUE PORTE D'ENTRÉE", () => {
   // RÉCURSIF : l'énumération s'arrêtait au premier niveau de src/ ; un envoi planté dans un
   // sous-dossier (src/ocr/) laissait ce cas vert (constat de Mesure sur l'outil bleu, 7/09).
   // Le témoin porte sur l'énumération elle-même : elle doit voir au moins un chemin imbriqué.
-  const tout = readdirSync(dossier, { recursive: true }) as string[];
+  /* Les chemins rendus portent le séparateur du système (`\` sous Windows) : ramenés à `/`, pour que
+     « imbriqué » et AUTORISES se lisent pareil partout. */
+  const tout = (readdirSync(dossier, { recursive: true }) as string[]).map((n) => n.split(sep).join("/"));
   assert.ok(tout.some((n) => n.includes("/")),
     "aucun chemin imbriqué énuméré : l'énumération n'est pas récursive, les sous-dossiers échappent à la garde");
   const fichiers = tout.filter((n) => /\.(ts|mjs)$/.test(n) && !n.endsWith(".test.ts"));
