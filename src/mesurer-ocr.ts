@@ -27,7 +27,7 @@ import { ouvrirJournal, issue } from "./journal.ts";
 import { loadavg } from "node:os";
 import { generateRecords, FIELDS, type ClientFile } from "./corpus.ts";
 import { loadExtractors, extract, correct, ENCODEURS } from "./tiers.ts";
-import { lire, texte as texteDesBlocs, ceQuiManque } from "./ocr.ts";
+import { lire, texte as texteDesBlocs, ceQuiManque, aDesBas } from "./ocr.ts";
 import { rate, writeRate, distinguishable } from "./interval.ts";
 import type { TierName } from "./paliers.ts";
 import { casDemandes } from "./cas-demandes.ts";
@@ -45,13 +45,28 @@ export const CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chr
  * Police à chasse fixe et fond blanc : c'est le cas le plus favorable, et c'est voulu — on
  * cherche le PLANCHER du coût de l'étage, pas sa valeur sur une photographie de téléphone.
  */
+/*
+ * F6 (2026-09-29): the page the text is rendered on, in numbers the ceiling below is derived
+ * from. The body is LARGEUR_PX wide with MARGE_PX of padding each side, the text is set in
+ * Courier New at CORPS_PX, and Courier New advances 1229 of 2048 units per character, so the
+ * number of characters that fit on one rendered line follows; `white-space: pre-wrap` wraps a
+ * longer line at a space. An expected line longer than that comes back on two OCR lines
+ * whatever the reader does with it. Measured on the 120 held-out documents on 2026-09-29:
+ * 97 of 235 lines are longer than the page (the longest is 219 characters), so whole lines
+ * could not exceed 138 of 235 there, and a line fidelity of 54 % read as a reading failure
+ * when most of it was the page. The record carries the ceiling, and the fidelity among the
+ * lines that fit is the figure that speaks about the reader.
+ */
+const LARGEUR_PX = 820, MARGE_PX = 56, CORPS_PX = 16, AVANCE_COURIER = 1229 / 2048;
+export const LARGEUR_RENDUE_EN_CARACTERES = Math.floor((LARGEUR_PX - 2 * MARGE_PX) / (CORPS_PX * AVANCE_COURIER));
+
 function rendre(doc: ClientFile, dossier: string, chrome: string = CHROME): string {
   const html = join(dossier, `${doc.id}.html`);
   const png = join(dossier, `${doc.id}.png`);
   const jpg = join(dossier, `${doc.id}.jpg`);
   writeFileSync(html, `<!doctype html><meta charset="utf-8"><style>`
-    + `body{width:820px;margin:0;padding:48px 56px;font-family:"Courier New",monospace;`
-    + `font-size:16px;line-height:1.7;background:#fff;color:#111;white-space:pre-wrap}</style>`
+    + `body{width:${LARGEUR_PX}px;margin:0;padding:48px ${MARGE_PX}px;font-family:"Courier New",monospace;`
+    + `font-size:${CORPS_PX}px;line-height:1.7;background:#fff;color:#111;white-space:pre-wrap}</style>`
     + doc.text.replace(/&/g, "&amp;").replace(/</g, "&lt;"));
   execFileSync(chrome, ["--headless", "--disable-gpu", `--screenshot=${png}`,
     "--window-size=900,460", "--hide-scrollbars", html], { stdio: ["ignore", "ignore", "ignore"] });
@@ -127,19 +142,29 @@ export type EntreesDeLaPasse = {
  * previous line found, the first line found counting as in order; a line printed twice is
  * looked for after the last one found first, so a repeated line matches in order. Counts,
  * not rates, so that documents add up and `rate` gives the interval once.
+ *
+ * F6: `largeur` is how many characters the page fits on one line (see
+ * LARGEUR_RENDUE_EN_CARACTERES). An expected line longer than that, measured as written,
+ * wraps when rendered and cannot come back whole; `tiennent` counts the lines that fit and
+ * `intactesQuiTiennent` the whole ones among them. Without a width every line fits.
  */
-export function fideliteDesLignes(attendu: string, lu: string): { lignes: number; intactes: number; enOrdre: number } {
-  const plier = (s: string) => s.split("\n").map((l) => l.replace(/\s+/g, " ").trim()).filter((l) => l.length > 0);
-  const voulues = plier(attendu), lues = plier(lu);
-  let intactes = 0, enOrdre = 0, derniere = -1;
-  for (const l of voulues) {
+export function fideliteDesLignes(attendu: string, lu: string, largeur = Infinity):
+    { lignes: number; intactes: number; enOrdre: number; tiennent: number; intactesQuiTiennent: number } {
+  const plier = (l: string) => l.replace(/\s+/g, " ").trim();
+  const brutes = attendu.split("\n").filter((l) => plier(l).length > 0);
+  const voulues = brutes.map(plier), lues = lu.split("\n").map(plier).filter((l) => l.length > 0);
+  let intactes = 0, enOrdre = 0, tiennent = 0, intactesQuiTiennent = 0, derniere = -1;
+  voulues.forEach((l, i) => {
+    const tient = brutes[i]!.length <= largeur;
+    if (tient) tiennent++;
     const apres = lues.findIndex((x, k) => k > derniere && x.includes(l));
     const ou = apres >= 0 ? apres : lues.findIndex((x) => x.includes(l));
-    if (ou < 0) continue;
+    if (ou < 0) return;
     intactes++;
+    if (tient) intactesQuiTiennent++;
     if (ou > derniere) { enOrdre++; derniere = ou; }
-  }
-  return { lignes: voulues.length, intactes, enOrdre };
+  });
+  return { lignes: voulues.length, intactes, enOrdre, tiennent, intactesQuiTiennent };
 }
 
 export async function mesurer(
@@ -216,7 +241,8 @@ export async function mesurer(
   /* La fidélité de la transcription, avant toute extraction : elle explique les écarts
      d'exactitude qui suivent, et un écart inexpliqué est un écart qu'on ne peut pas défendre. */
   let motsAttendus = 0, motsLus = 0;
-  let lignesVoulues = 0, lignesIntactes = 0, lignesEnOrdre = 0;
+  let lignesVoulues = 0, lignesIntactes = 0, lignesEnOrdre = 0, lignesQuiTiennent = 0, lignesIntactesQuiTiennent = 0;
+  let documentsSansBas = 0;
   let lignesTotal = 0, lignesMax = 0;
   const parPalier: Record<string, { texte: number; image: number; sur: number }> = {};
   for (const t of paliers) parPalier[t] = { texte: 0, image: 0, sur: 0 };
@@ -229,8 +255,10 @@ export async function mesurer(
     const mots = d.text.split(/\s+/).filter((w) => w.length > 1);
     motsAttendus += mots.length;
     motsLus += mots.filter((w) => luOCR.includes(w)).length;
-    const fl = fideliteDesLignes(d.text, luOCR);
+    const fl = fideliteDesLignes(d.text, luOCR, LARGEUR_RENDUE_EN_CARACTERES);
     lignesVoulues += fl.lignes; lignesIntactes += fl.intactes; lignesEnOrdre += fl.enOrdre;
+    lignesQuiTiennent += fl.tiennent; lignesIntactesQuiTiennent += fl.intactesQuiTiennent;
+    if (!blocs.every(aDesBas)) documentsSansBas++;
 
     for (const t of paliers) {
       for (const f of FIELDS) {
@@ -252,6 +280,7 @@ export async function mesurer(
 
   const fidelite = rate(motsLus, motsAttendus);
   const intactes = rate(lignesIntactes, lignesVoulues), enOrdre = rate(lignesEnOrdre, lignesVoulues);
+  const intactesQuiTiennent = rate(lignesIntactesQuiTiennent, lignesQuiTiennent);
   const paliersMesures = paliers.map((t) => {
     const p = parPalier[t]!;
     const surTexte = rate(p.texte, p.sur), surImage = rate(p.image, p.sur);
@@ -280,11 +309,18 @@ export async function mesurer(
         + `document. Dégrader l'image ne peut pas les faire baisser, donc leur coût serait 0,0 `
         + `point quel que soit l'état du scan. Ce n'est pas une mesure, c'est un instrument aveugle.`,
     fideliteDeLaTranscription: { taux: fidelite.rate, bas: fidelite.low, haut: fidelite.high, n: fidelite.n },
-    /* F5: the lines, which the word count cannot see (see `fideliteDesLignes`). */
+    /* F5: the lines, which the word count cannot see (see `fideliteDesLignes`); F6: their
+       ceiling, the lines wider than the page, and the fidelity among the lines that fit. */
     fideliteDesLignes: {
       intactes: { taux: intactes.rate, bas: intactes.low, haut: intactes.high, n: intactes.n },
       enOrdre: { taux: enOrdre.rate, bas: enOrdre.low, haut: enOrdre.high, n: enOrdre.n },
+      plafond: { largeurEnCaracteres: LARGEUR_RENDUE_EN_CARACTERES, lignesPlusLargesQueLaPage: lignesVoulues - lignesQuiTiennent, sur: lignesVoulues },
+      intactesParmiCellesQuiTiennent: { taux: intactesQuiTiennent.rate, bas: intactesQuiTiennent.low, haut: intactesQuiTiennent.high, n: intactesQuiTiennent.n },
     },
+    /* F6: which rule grouped the blocks into lines. "espacement" means the reader gave no
+       bottom corners on at least one document, which a binary older than its source does. */
+    lignesGroupeesPar: documentsSansBas === 0 ? "recouvrement" : "espacement",
+    documentsSansBas,
     paliers: paliersMesures,
     mesureLe: new Date().toISOString(),
     ...(version ? { code: version } : {}),
@@ -307,6 +343,10 @@ if (isMain(import.meta)) {
     const taux = (x: { taux: number; n: number }) => writeRate(rate(Math.round(x.taux * x.n), x.n));
     console.log(`  Line fidelity: ${taux(li.intactes)} of printed lines read whole on one line, `
       + `${taux(li.enOrdre)} in their printed order.`);
+    console.log(`  ${li.plafond.lignesPlusLargesQueLaPage} of ${li.plafond.sur} expected lines are wider than the rendered page `
+      + `(${li.plafond.largeurEnCaracteres} characters) and wrap, so whole lines cannot exceed `
+      + `${li.plafond.sur - li.plafond.lignesPlusLargesQueLaPage} of ${li.plafond.sur}; among the lines that fit: `
+      + `${taux(li.intactesParmiCellesQuiTiennent)} whole. Lines grouped by ${r.lignesGroupeesPar === "recouvrement" ? "vertical overlap" : "top edges (the reader gave no bottom corners)"}.`);
     console.log(`  Over ${r.documents} documents rendered as images, of `
       + `${r.lignesParDocument.moyenne.toFixed(1)} line(s) on average (at most ${r.lignesParDocument.maximum}).`);
     if (r.paliersEcartes.length) {

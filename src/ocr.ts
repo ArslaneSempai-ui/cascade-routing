@@ -36,8 +36,35 @@ export type Bloc = {
   texte: string;
   /** Les deux coins hauts, en fraction de l'image. L'angle du document s'y lit. */
   tlx: number; tly: number; trx: number; try: number;
+  /** The two bottom corners, emitted by the reader since F6 (2026-09-29). Absent from a
+   *  reading made by an older binary; `lignes` then falls back to the top-edge rule. */
+  blx?: number; bly?: number; brx?: number; bry?: number;
   confiance: number;
 };
+
+/** A block whose bottom corners are there: it has a height. */
+export type BlocEntier = Bloc & { blx: number; bly: number; brx: number; bry: number };
+
+export function aDesBas(b: Bloc): b is BlocEntier {
+  return [b.blx, b.bly, b.brx, b.bry].every((v) => typeof v === "number" && Number.isFinite(v));
+}
+
+/**
+ * Whether the compiled reader can be used as it is. F6 (2026-09-29): the reader's output
+ * changed with its source (the bottom corners), and a binary compiled before the change
+ * would read every page without them, silently, under the old line rule. A binary that is
+ * missing, empty, or OLDER than its source is therefore compiled again. Git does not keep
+ * modification times, so a checkout that touches the source makes it newer than any binary
+ * left from before, which is exactly the case to catch; a source that is not there leaves
+ * nothing to compare with, and the binary is what there is.
+ */
+export function binaireAJour(binaire: string, source: string): boolean {
+  if (!existsSync(binaire)) return false;
+  const b = statSync(binaire);
+  if (b.size === 0) return false;
+  if (!existsSync(source)) return true;
+  return b.mtimeMs >= statSync(source).mtimeMs;
+}
 
 /** Ce qui manque pour lire une image ici, ou `null` si tout est là. */
 export function ceQuiManque(
@@ -74,7 +101,7 @@ export function ceQuiManque(
    * système de fichiers, et le dernier arrivé gagne sans jamais laisser un demi-binaire. Et
    * l'acceptation exige un fichier non vide.
    */
-  if (existsSync(binaire) && statSync(binaire).size > 0) return null;
+  if (binaireAJour(binaire, source)) return null;
   const provisoire = `${binaire}.${process.pid}`;
   try {
     execFileSync("swiftc", ["-O", source, "-o", provisoire], { stdio: ["ignore", "ignore", "pipe"] });
@@ -216,8 +243,86 @@ export function inclinaison(blocs: Bloc[]): number {
  * Reviewed 2026-09-29 (F5): the reader returns one block per run of text, and a receipt line
  * such as `TAX        5.455` arrives as two blocks. The first version wrote one block per
  * line, so the value landed on the line below its label and every extractor that reads a
- * label and the number beside it lost the pair. A line is now the blocks whose top edges,
- * once the page is deskewed, sit at the same height.
+ * label and the number beside it lost the pair. Two rules, chosen by what the blocks carry:
+ *
+ *   with the bottom corners (every reading since F6)   `lignesParRecouvrement`
+ *   top corners only (a reading by an older binary)    `lignesParEspacement`
+ *
+ * Both sort the blocks of a line by x, join them with a single space, and return the lines
+ * top to bottom.
+ */
+export function lignes(blocs: Bloc[]): string[] {
+  if (blocs.length === 0) return [];
+  return blocs.every(aDesBas) ? lignesParRecouvrement(blocs) : lignesParEspacement(blocs);
+}
+
+/** A block's own slope (the tangent of its top edge's angle), when it is wide enough to
+ *  carry one; `inclinaison` trusts the same width. */
+const LARGEUR_FIABLE = 0.05;
+function penteDe(b: Bloc): number | null {
+  return b.trx - b.tlx > LARGEUR_FIABLE ? (b.try - b.tly) / (b.trx - b.tlx) : null;
+}
+
+/**
+ * F6 (2026-09-29): the rule that has the height. Measured on the 100 CORD receipts with the
+ * top-edge rule below, the amount sat on the same line as its label 47 times out of the 84
+ * it was read at all (subtotal 27 of 64, tax 18 of 38): a bold label and a lighter value do
+ * not share a top edge, a value can sit farther from its label's top edge than the tolerance
+ * on a dense or photographed receipt, and a page of two lines barely has a pitch to derive
+ * a tolerance from. Two boxes are one line when their deskewed vertical extents OVERLAP BY
+ * AT LEAST HALF OF THE SMALLER HEIGHT: a small value beside a tall label overlaps it over its
+ * whole height, a block of the next line overlaps nothing.
+ *
+ * Every line has its own angle, because a curved or photographed receipt does not share
+ * one: a line's frame is the slope of its widest block (a block narrower than
+ * LARGEUR_FIABLE has no reliable slope, and the page's median angle stands in), and a
+ * candidate wider than that block is measured in its own frame. In a frame of slope p a
+ * block's extent is the mean of its two top corners' y - p * x to the mean of its two bottom
+ * corners'. A candidate is compared with the MEDIAN extent of a line's members, not with
+ * any one of them, so a block two lines tall (a logo, a brace) joins one line without
+ * bridging the next, and a line's extent does not drift with its last member. The blocks
+ * are visited from the top of the page and every open line is tried, since two lines of
+ * different angles can interleave their blocks in any single ordering.
+ */
+function lignesParRecouvrement(blocs: BlocEntier[]): string[] {
+  const penteGlobale = Math.tan(inclinaison(blocs));
+  const etendue = (b: BlocEntier, p: number) => ({
+    haut: ((b.tly - p * b.tlx) + (b.try - p * b.trx)) / 2,
+    bas: ((b.bly - p * b.blx) + (b.bry - p * b.brx)) / 2,
+  });
+  const mediane = (xs: number[]) => { const t = [...xs].sort((a, b) => a - b); return t[Math.floor(t.length / 2)]!; };
+  type Ligne = { pente: number; largeur: number; membres: BlocEntier[] };
+  const ouvertes: Ligne[] = [];
+  const ordre = [...blocs].sort((a, b) => etendue(a, penteGlobale).haut - etendue(b, penteGlobale).haut);
+  for (const b of ordre) {
+    const propre = penteDe(b), largeur = b.trx - b.tlx;
+    let meilleure: Ligne | null = null, meilleurTaux = 0;
+    for (const l of ouvertes) {
+      const p = propre !== null && largeur > l.largeur ? propre : l.pente;
+      const membres = l.membres.map((m) => etendue(m, p));
+      const ligne = { haut: mediane(membres.map((e) => e.haut)), bas: mediane(membres.map((e) => e.bas)) };
+      const x = etendue(b, p);
+      const plusPetite = Math.min(ligne.bas - ligne.haut, x.bas - x.haut);
+      if (!(plusPetite > 0)) continue;
+      const taux = (Math.min(ligne.bas, x.bas) - Math.max(ligne.haut, x.haut)) / plusPetite;
+      if (taux >= 0.5 && taux > meilleurTaux) { meilleure = l; meilleurTaux = taux; }
+    }
+    if (meilleure) {
+      meilleure.membres.push(b);
+      if (propre !== null && largeur > meilleure.largeur) { meilleure.pente = propre; meilleure.largeur = largeur; }
+    } else {
+      ouvertes.push({ pente: propre ?? penteGlobale, largeur: propre === null ? 0 : largeur, membres: [b] });
+    }
+  }
+  return ouvertes
+    .map((l) => ({ y: mediane(l.membres.map((m) => etendue(m, penteGlobale).haut)), membres: l.membres }))
+    .sort((a, b) => a.y - b.y)
+    .map((l) => l.membres.sort((a, b) => a.tlx - b.tlx).map((m) => m.texte).join(" "));
+}
+
+/**
+ * The rule for a reading without bottom corners: a line is the blocks whose top edges, once
+ * the page is deskewed, sit at the same height.
  *
  * HOW THE TOLERANCE IS DERIVED. A block carries only its two top corners, so there is no
  * height to overlap; what there is, is the spacing of the blocks themselves. After deskewing
@@ -237,11 +342,9 @@ export function inclinaison(blocs: Bloc[]): number {
  *
  * A block joins the current line when its y' is within the tolerance of the FIRST block of
  * that line, not of the last one: chaining on the last block would let a staircase of hairs
- * climb from one line into the next. Within a line the blocks are sorted by x and joined
- * with a single space; the lines are returned top to bottom.
+ * climb from one line into the next.
  */
-export function lignes(blocs: Bloc[]): string[] {
-  if (blocs.length === 0) return [];
+function lignesParEspacement(blocs: Bloc[]): string[] {
   const pente = Math.tan(inclinaison(blocs));
   const ranges = blocs.map((b) => ({ b, y: b.tly - pente * b.tlx })).sort((p, q) => p.y - q.y);
   const PLANCHER = 0.003, PLAFOND = 0.012;

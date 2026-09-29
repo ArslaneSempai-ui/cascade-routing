@@ -1120,7 +1120,17 @@ const lecture = (() => {
         ? `Line fidelity: **${writeRate(rate(Math.round(r.fideliteDesLignes.intactes.taux * r.fideliteDesLignes.intactes.n), r.fideliteDesLignes.intactes.n))}** `
           + `of printed lines recovered whole on one line, `
           + `**${writeRate(rate(Math.round(r.fideliteDesLignes.enOrdre.taux * r.fideliteDesLignes.enOrdre.n), r.fideliteDesLignes.enOrdre.n))}** `
-          + `in their printed order.\n\n`
+          + `in their printed order.`
+          /* F6: the ceiling the page sets, so the figure above is read for what it is. */
+          + (r.fideliteDesLignes.plafond
+              ? ` ${r.fideliteDesLignes.plafond.lignesPlusLargesQueLaPage} of ${r.fideliteDesLignes.plafond.sur} expected lines are `
+                + `wider than the rendered page (${r.fideliteDesLignes.plafond.largeurEnCaracteres} characters) and wrap, so whole `
+                + `lines cannot exceed ${r.fideliteDesLignes.plafond.sur - r.fideliteDesLignes.plafond.lignesPlusLargesQueLaPage} of `
+                + `${r.fideliteDesLignes.plafond.sur}; among the lines that fit, `
+                + `**${writeRate(rate(Math.round(r.fideliteDesLignes.intactesParmiCellesQuiTiennent.taux * r.fideliteDesLignes.intactesParmiCellesQuiTiennent.n), r.fideliteDesLignes.intactesParmiCellesQuiTiennent.n))}** `
+                + `come back whole.`
+              : "")
+          + `\n\n`
         : "")
     + table(["Tier", "From text", "From the image", "Gap", "Beyond noise"], lignes)
     + `\n\n${verdictLecture}\n\n`
