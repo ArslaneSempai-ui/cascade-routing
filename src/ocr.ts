@@ -210,10 +210,61 @@ export function inclinaison(blocs: Bloc[]): number {
   return angles.length ? angles[Math.floor(angles.length / 2)]! : 0;
 }
 
-/** Le texte du document, remis dans l'ordre de lecture après redressement. */
-export function texte(blocs: Bloc[]): string {
+/**
+ * The blocks grouped into PRINTED LINES, in reading order.
+ *
+ * Reviewed 2026-09-29 (F5): the reader returns one block per run of text, and a receipt line
+ * such as `TAX        5.455` arrives as two blocks. The first version wrote one block per
+ * line, so the value landed on the line below its label and every extractor that reads a
+ * label and the number beside it lost the pair. A line is now the blocks whose top edges,
+ * once the page is deskewed, sit at the same height.
+ *
+ * HOW THE TOLERANCE IS DERIVED. A block carries only its two top corners, so there is no
+ * height to overlap; what there is, is the spacing of the blocks themselves. After deskewing
+ * (y' = tly - tan(angle) * tlx, the angle read from the corners by `inclinaison`), the
+ * blocks are sorted by y' and the gaps between neighbours are taken. Gaps under a noise
+ * floor (0.003 of the page, a few pixels on a page a thousand pixels tall) are the hairs
+ * between blocks of ONE line; everything above it is taken as a step between lines, and the
+ * median of those steps is the line pitch P. Hairs that clear the floor pull the median down
+ * only if they outnumber the steps, which two or three blocks a line on a page of more than
+ * a few lines cannot do. Two blocks of one printed line differ in top edge by at most about
+ * a quarter of the pitch (an x-height word beside a word with capitals, a value printed a
+ * hair higher than its label), and two consecutive lines by at least about three quarters
+ * of it, so the tolerance is 0.4 * P, held between the noise floor and 0.012 (a dense
+ * receipt prints some fifty lines on its page, a pitch near 0.02; a wider tolerance would
+ * merge two close lines of a page whose pitch is mostly white space). A page without a
+ * step has no pitch to read, and the floor alone tells hairs from lines.
+ *
+ * A block joins the current line when its y' is within the tolerance of the FIRST block of
+ * that line, not of the last one: chaining on the last block would let a staircase of hairs
+ * climb from one line into the next. Within a line the blocks are sorted by x and joined
+ * with a single space; the lines are returned top to bottom.
+ */
+export function lignes(blocs: Bloc[]): string[] {
+  if (blocs.length === 0) return [];
   const pente = Math.tan(inclinaison(blocs));
-  return [...blocs]
-    .sort((a, b) => (a.tly - pente * a.tlx) - (b.tly - pente * b.tlx))
-    .map((b) => b.texte).join("\n");
+  const ranges = blocs.map((b) => ({ b, y: b.tly - pente * b.tlx })).sort((p, q) => p.y - q.y);
+  const PLANCHER = 0.003, PLAFOND = 0.012;
+  const pas: number[] = [];
+  for (let i = 1; i < ranges.length; i++) {
+    const d = ranges[i]!.y - ranges[i - 1]!.y;
+    if (d > PLANCHER) pas.push(d);
+  }
+  pas.sort((a, b) => a - b);
+  const pitch = pas.length ? pas[Math.floor(pas.length / 2)]! : 0;
+  const tolerance = Math.min(PLAFOND, Math.max(PLANCHER, 0.4 * pitch));
+
+  const groupes: { y: number; blocs: Bloc[] }[] = [];
+  for (const r of ranges) {
+    const courant = groupes[groupes.length - 1];
+    if (courant && r.y - courant.y <= tolerance) courant.blocs.push(r.b);
+    else groupes.push({ y: r.y, blocs: [r.b] });
+  }
+  return groupes.map((g) => g.blocs.sort((a, b) => a.tlx - b.tlx).map((b) => b.texte).join(" "));
+}
+
+/** Le texte du document, remis dans l'ordre de lecture après redressement, une ligne
+ *  imprimée par ligne (voir `lignes`). */
+export function texte(blocs: Bloc[]): string {
+  return lignes(blocs).join("\n");
 }

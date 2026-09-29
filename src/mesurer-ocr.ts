@@ -118,6 +118,30 @@ export type EntreesDeLaPasse = {
   argv?: readonly string[];
 };
 
+/**
+ * F5 (2026-09-29): the fidelity of the LINES, next to the fidelity of the words. The word
+ * count cannot see a printed line broken in two or a page read out of order: every word is
+ * still there. Of the expected lines (the document's text, one printed line each, blank
+ * lines dropped, runs of white space folded to one space), `intactes` is how many appear
+ * whole on ONE line of the OCR text, and `enOrdre` how many of those come after the
+ * previous line found, the first line found counting as in order; a line printed twice is
+ * looked for after the last one found first, so a repeated line matches in order. Counts,
+ * not rates, so that documents add up and `rate` gives the interval once.
+ */
+export function fideliteDesLignes(attendu: string, lu: string): { lignes: number; intactes: number; enOrdre: number } {
+  const plier = (s: string) => s.split("\n").map((l) => l.replace(/\s+/g, " ").trim()).filter((l) => l.length > 0);
+  const voulues = plier(attendu), lues = plier(lu);
+  let intactes = 0, enOrdre = 0, derniere = -1;
+  for (const l of voulues) {
+    const apres = lues.findIndex((x, k) => k > derniere && x.includes(l));
+    const ou = apres >= 0 ? apres : lues.findIndex((x) => x.includes(l));
+    if (ou < 0) continue;
+    intactes++;
+    if (ou > derniere) { enOrdre++; derniere = ou; }
+  }
+  return { lignes: voulues.length, intactes, enOrdre };
+}
+
 export async function mesurer(
   combien = 120, paliers: TierName[] = [...ENCODEURS], env: EntreesDeLaPasse = {},
 ) {
@@ -192,6 +216,7 @@ export async function mesurer(
   /* La fidélité de la transcription, avant toute extraction : elle explique les écarts
      d'exactitude qui suivent, et un écart inexpliqué est un écart qu'on ne peut pas défendre. */
   let motsAttendus = 0, motsLus = 0;
+  let lignesVoulues = 0, lignesIntactes = 0, lignesEnOrdre = 0;
   let lignesTotal = 0, lignesMax = 0;
   const parPalier: Record<string, { texte: number; image: number; sur: number }> = {};
   for (const t of paliers) parPalier[t] = { texte: 0, image: 0, sur: 0 };
@@ -204,6 +229,8 @@ export async function mesurer(
     const mots = d.text.split(/\s+/).filter((w) => w.length > 1);
     motsAttendus += mots.length;
     motsLus += mots.filter((w) => luOCR.includes(w)).length;
+    const fl = fideliteDesLignes(d.text, luOCR);
+    lignesVoulues += fl.lignes; lignesIntactes += fl.intactes; lignesEnOrdre += fl.enOrdre;
 
     for (const t of paliers) {
       for (const f of FIELDS) {
@@ -224,6 +251,7 @@ export async function mesurer(
   }
 
   const fidelite = rate(motsLus, motsAttendus);
+  const intactes = rate(lignesIntactes, lignesVoulues), enOrdre = rate(lignesEnOrdre, lignesVoulues);
   const paliersMesures = paliers.map((t) => {
     const p = parPalier[t]!;
     const surTexte = rate(p.texte, p.sur), surImage = rate(p.image, p.sur);
@@ -252,6 +280,11 @@ export async function mesurer(
         + `document. Dégrader l'image ne peut pas les faire baisser, donc leur coût serait 0,0 `
         + `point quel que soit l'état du scan. Ce n'est pas une mesure, c'est un instrument aveugle.`,
     fideliteDeLaTranscription: { taux: fidelite.rate, bas: fidelite.low, haut: fidelite.high, n: fidelite.n },
+    /* F5: the lines, which the word count cannot see (see `fideliteDesLignes`). */
+    fideliteDesLignes: {
+      intactes: { taux: intactes.rate, bas: intactes.low, haut: intactes.high, n: intactes.n },
+      enOrdre: { taux: enOrdre.rate, bas: enOrdre.low, haut: enOrdre.high, n: enOrdre.n },
+    },
     paliers: paliersMesures,
     mesureLe: new Date().toISOString(),
     ...(version ? { code: version } : {}),
@@ -270,6 +303,10 @@ if (isMain(import.meta)) {
     const r = await mesurer(combien);
     console.log(`\n  Transcription fidelity: `
       + `${writeRate(rate(Math.round(r.fideliteDeLaTranscription.taux * r.fideliteDeLaTranscription.n), r.fideliteDeLaTranscription.n))}`);
+    const li = r.fideliteDesLignes;
+    const taux = (x: { taux: number; n: number }) => writeRate(rate(Math.round(x.taux * x.n), x.n));
+    console.log(`  Line fidelity: ${taux(li.intactes)} of printed lines read whole on one line, `
+      + `${taux(li.enOrdre)} in their printed order.`);
     console.log(`  Over ${r.documents} documents rendered as images, of `
       + `${r.lignesParDocument.moyenne.toFixed(1)} line(s) on average (at most ${r.lignesParDocument.maximum}).`);
     if (r.paliersEcartes.length) {

@@ -91,10 +91,15 @@ export function readValues(path: string, fields: readonly string[]): { values: R
     if (typeof v === "number" || typeof v === "boolean") return String(v);
     throw new Error(`${path}: ${where} is ${Array.isArray(v) ? "an array" : typeof v}, not a value.`);
   };
+  /* F4 (2026-09-29): a case written as an empty object, `"CORD-TEST-056": {}`, is in the
+     file; it is a case the chain ran on and said nothing about, blank on every field the
+     file carries. Read from `out` alone it left no trace and counted as absent. */
+  const named = new Set<string>();
   for (const [k1, inner] of Object.entries(top)) {
     if (!inner || typeof inner !== "object" || Array.isArray(inner)) {
       throw new Error(`${path}: the entry "${k1}" must be an object of values.`);
     }
+    if (!perField) named.add(k1);
     for (const [k2, v] of Object.entries(inner as Record<string, unknown>)) {
       const [field, id] = perField ? [k1, k2] : [k2, k1];
       if (!fieldSet.has(field)) continue;   /* a column the CSV does not have: counted below */
@@ -107,7 +112,7 @@ export function readValues(path: string, fields: readonly string[]): { values: R
   }
   /* Every case the file names, under any field; a field the file carries is then blank for
      the cases it does not name. */
-  const present = new Set<string>();
+  const present = new Set<string>(named);
   for (const byId of Object.values(out)) for (const id of Object.keys(byId)) present.add(id);
   let silences = 0;
   for (const field of Object.keys(out)) {

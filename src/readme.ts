@@ -1113,6 +1113,15 @@ const lecture = (() => {
     + `Vision OCR, and put through the same extractors. Nothing else changed, so the difference `
     + `is the reading stage and nothing else.\n\n`
     + `Transcription fidelity: **${writeRate(fid)}** of words recovered.\n\n`
+    /* F5 (2026-09-29): the line fidelity is printed once a run has measured it. The record
+       on disk predates the measure until `npm run ocr` is run again on a Mac; a block that
+       invented the figure from nothing would publish a number no command produced. */
+    + (r.fideliteDesLignes
+        ? `Line fidelity: **${writeRate(rate(Math.round(r.fideliteDesLignes.intactes.taux * r.fideliteDesLignes.intactes.n), r.fideliteDesLignes.intactes.n))}** `
+          + `of printed lines recovered whole on one line, `
+          + `**${writeRate(rate(Math.round(r.fideliteDesLignes.enOrdre.taux * r.fideliteDesLignes.enOrdre.n), r.fideliteDesLignes.enOrdre.n))}** `
+          + `in their printed order.\n\n`
+        : "")
     + table(["Tier", "From text", "From the image", "Gap", "Beyond noise"], lignes)
     + `\n\n${verdictLecture}\n\n`
     + `**What this does not measure.** The images are rendered, not photographed (clean, `

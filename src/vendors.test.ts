@@ -774,3 +774,31 @@ test("F2: a case in the values file that says nothing for a field is a blank; on
     assert.deepEqual(o.coverage.date, { graded: 1, absent: 1, noTruth: 1, clean: 1, wrong: 0, blank: 0 });
   } finally { rmSync(d, { recursive: true, force: true }); }
 });
+
+test("F4: a case written as an empty object in the per-case layout is in the file, blank on every field the file carries", () => {
+  const d = mkdtempSync(join(tmpdir(), "values-empty-case-"));
+  try {
+    const fields = ["total", "date"];
+    const write = (name: string, o: unknown) => { const p = join(d, name); writeFileSync(p, JSON.stringify(o)); return p; };
+    /* Red before: "CORD-TEST-056" left no value under any field, so it was not in `present`
+       and graded ABSENT, out of the denominator, as if the chain had never seen it. */
+    const lu = readValues(write("case.json", { "1": { total: "5", date: "2026-01-01" }, "CORD-TEST-056": {} }), fields);
+    assert.equal(lu.cases, 2, "the empty case is in the file");
+    assert.equal(lu.values["total"]!["CORD-TEST-056"], "", "blank on total");
+    assert.equal(lu.values["date"]!["CORD-TEST-056"], "", "blank on date");
+    assert.equal(lu.silences, 2, "one blank per field the file carries");
+    const { champs, cas, kinds } = lireCsv("id,text,total:amount,date:date\n1,x,5,2026-01-01\nCORD-TEST-056,x,7,2026-01-02\n");
+    const g = gradeValues(cas, champs, kinds, lu.values);
+    assert.deepEqual(g.coverage["total"], { graded: 2, absent: 0, noTruth: 0, clean: 1, wrong: 0, blank: 1 });
+    assert.deepEqual(g.coverage["date"], { graded: 2, absent: 0, noTruth: 0, clean: 1, wrong: 0, blank: 1 });
+    assert.equal(g.issues["total"]!["CORD-TEST-056"], "blank");
+    /* The blank is on the fields the FILE carries, not on every field of the CSV: a file
+       that never names the date grades no date, empty case or not. */
+    const seulement = readValues(write("only.json", { "1": { total: "5" }, "CORD-TEST-056": {} }), fields);
+    assert.equal(seulement.values["date"], undefined);
+    assert.equal(seulement.values["total"]!["CORD-TEST-056"], "");
+    assert.equal(seulement.silences, 1);
+    /* A file of empty cases only still names no field and is refused: nothing would be graded. */
+    assert.throws(() => readValues(write("nothing.json", { "1": {}, "2": {} }), fields), /none of its keys names a field/);
+  } finally { rmSync(d, { recursive: true, force: true }); }
+});
