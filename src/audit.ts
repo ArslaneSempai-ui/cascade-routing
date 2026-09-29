@@ -113,6 +113,10 @@ export type SourceVerdict = {
       tier, the page price for a vendor (paid once, whatever the number of fields); null for
       a chain without a price. */
   costPerThousandPages: number | null;
+  /** F9 (2026-09-29): the price as declared, in its own unit, for a priced chain; null for a
+      local tier (machine time, per page by construction) and for an unpriced chain. The lines
+      print this, never the per-page conversion under the other unit's name. */
+  declaredPrice: { perThousand: number; billing: "page" | "document" } | null;
   standing: Standing;
   paired?: Paired;
   /** With the standing too-few-paired: how many cases both graded. */
@@ -141,8 +145,13 @@ export type Audit = {
   fields: Record<string, FieldAudit>;
   routing: Record<string, string | null>;
   cost: {
-    recommended: { perThousandPages: number; vendors: string[]; localPerThousandPages: number; complete: boolean } | null;
-    current: { chain: string; perThousandPages: number } | null;
+    recommended: {
+      perThousandPages: number; vendors: string[]; localPerThousandPages: number; complete: boolean;
+      /** F9: the unit the total is stated in: "document" when every vendor routed to bills per
+          document, "page" otherwise (a mixed routing is stated per page, with the conversion). */
+      unit: "page" | "document";
+    } | null;
+    current: { chain: string; perThousandPages: number; declared: { perThousand: number; billing: "page" | "document" } } | null;
     annual: { pagesPerYear: number; current: number; recommended: number; saving: number } | null;
   };
   /** Pairs the sample cannot separate: with a margin, the pick against another source in the
@@ -288,6 +297,10 @@ export function audit(inputs: AuditInputs): Audit {
     const chain = chainByName.get(name);
     return chain ? vendorCostPerThousandPages(chain, pagesPerDocument) : localCostPerThousandPages(c.ms, machineHourlyCost, pagesPerDocument);
   };
+  const declaredOf = (name: string): SourceVerdict["declaredPrice"] => {
+    const chain = chainByName.get(name);
+    return chain && chain.pricePerThousand !== null && chain.billing ? { perThousand: chain.pricePerThousand, billing: chain.billing } : null;
+  };
 
   /* 1. Per field: the head, every source's standing against it, and the admissible set. */
   for (const field of fields) {
@@ -304,7 +317,7 @@ export function audit(inputs: AuditInputs): Audit {
       const base: SourceVerdict = {
         successes: r.successes, n: r.n,
         accuracy: r.reportable ? r.rate : null, low: r.reportable ? r.low : null, high: r.reportable ? r.high : null,
-        costPerThousandPages: costOf(name, c), standing: "too-few",
+        costPerThousandPages: costOf(name, c), declaredPrice: declaredOf(name), standing: "too-few",
       };
       if (!r.reportable) { sources[name] = base; continue; }
       if (name === head) { sources[name] = { ...base, standing: "head" }; continue; }
@@ -430,7 +443,8 @@ export function audit(inputs: AuditInputs): Audit {
       }
     }
     if (best && fields.some((f) => routing[f] !== null)) {
-      recommended = { perThousandPages: best.total, vendors: best.vendors, localPerThousandPages: best.local, complete: best.complete };
+      const perDocument = best.vendors.length > 0 && best.vendors.every((v) => chainByName.get(v)?.billing === "document");
+      recommended = { perThousandPages: best.total, vendors: best.vendors, localPerThousandPages: best.local, complete: best.complete, unit: perDocument ? "document" : "page" };
     }
   }
 
@@ -439,7 +453,7 @@ export function audit(inputs: AuditInputs): Audit {
   if (inputs.current) {
     const c = chainByName.get(inputs.current);
     const cost = c ? vendorCostPerThousandPages(c, pagesPerDocument) : null;
-    if (cost !== null) current = { chain: inputs.current, perThousandPages: cost };
+    if (cost !== null) current = { chain: inputs.current, perThousandPages: cost, declared: { perThousand: c!.pricePerThousand!, billing: c!.billing! } };
     else omitted.push(`the current chain "${inputs.current}" has no price, so no saving against it can be stated`);
   }
   let annual: Audit["cost"]["annual"] = null;
@@ -507,6 +521,8 @@ function standingWords(s: SourceVerdict, head: string): string {
 /** The audit as lines for the console and the report: the same words in both. */
 export function auditLines(a: Audit): string[] {
   const out: string[] = [];
+  const ppd = a.assumptions.pagesPerDocument;
+  const pagesWords = `${ppd} page${ppd === 1 ? "" : "s"}`;
   out.push(`AUDIT: per field, the cheapest source this sample cannot show to be worse than the best`);
   out.push(a.margin === null ? `  (no margin declared: nothing is recommended, the options are listed)` : `  (margin: ${marginWords(a.margin)}, your declaration)`);
   out.push(``);
@@ -518,7 +534,9 @@ export function auditLines(a: Audit): string[] {
       const s = fa.sources[name]!;
       /* The shared formatter, which refuses to quote a rate under ENOUGH cases (item 13). */
       const quoted = writeRate(rate(s.successes, s.n));
-      const cost = s.costPerThousandPages === null ? "unpriced" : `${money(s.costPerThousandPages)} per 1,000 pages`;
+      /* F9: a declared price in its own unit; machine time per page, as it is computed. */
+      const cost = s.declaredPrice ? `${money(s.declaredPrice.perThousand)} per 1,000 ${s.declaredPrice.billing}s`
+        : s.costPerThousandPages === null ? "unpriced" : `${money(s.costPerThousandPages)} per 1,000 pages`;
       const mark = name === fa.chosen ? "→ " : "  ";
       out.push(`    ${mark}${name.padEnd(18)} ${quoted.padEnd(30)} ${cost.padEnd(26)} ${standingWords(s, fa.head)}`);
     }
@@ -538,16 +556,37 @@ export function auditLines(a: Audit): string[] {
     const r = a.cost.recommended;
     out.push(`  Recommended routing: ${Object.entries(a.routing).map(([f, s]) => `${f} ← ${s ?? "none"}`).join(", ")}`
       + (r.complete ? "" : " (incomplete: a field above has no admissible costed source)"));
-    out.push(`  Cost: ${money(r.perThousandPages)} per 1,000 pages`
-      + (r.vendors.length ? ` (vendor pages: ${r.vendors.join(" + ")}` : " (no vendor pages")
-      + `, local machine time ${money(r.localPerThousandPages)}).`);
+    /*
+     * F9 (2026-09-29): every price in its declared unit. The founder's run declared both chains
+     * per thousand documents and this line printed them "per 1,000 pages"; with one page a
+     * document the numbers were equal, and item 6 says a price is never shown under the other
+     * unit's name. When every vendor routed to bills per document the total is stated per
+     * thousand documents; a routing that mixes units is stated per thousand pages and says
+     * how many pages a document the per-document prices were counted at.
+     */
+    const priced = (v: string): string => {
+      const p = a.assumptions.prices.find((x) => x.name === v);
+      return p && p.pricePerThousand !== null ? `${v} ${money(p.pricePerThousand)} per 1,000 ${p.billing}s` : v;
+    };
+    const mixed = r.unit === "page" && r.vendors.some((v) => a.assumptions.prices.find((x) => x.name === v)?.billing === "document");
+    const factor = r.unit === "document" ? ppd : 1;
+    out.push(`  Cost: ${money(r.perThousandPages * factor)} per 1,000 ${r.unit}s`
+      + (r.vendors.length ? ` (vendor prices: ${r.vendors.map(priced).join(" + ")}` : " (no vendor pages")
+      + `, local machine time ${money(r.localPerThousandPages * factor)}`
+      + (mixed ? `; per-document prices counted at ${pagesWords} a document` : "") + `).`);
   } else {
     out.push(`  No routing: no field has an admissible costed source within your margin.`);
   }
-  if (a.cost.current) out.push(`  Current chain ${a.cost.current.chain}: ${money(a.cost.current.perThousandPages)} per 1,000 pages.`);
+  if (a.cost.current) {
+    const d = a.cost.current.declared;
+    out.push(`  Current chain ${a.cost.current.chain}: ${money(d.perThousand)} per 1,000 ${d.billing}s.`);
+  }
   if (a.cost.annual) {
     const y = a.cost.annual;
-    out.push(`  At ${y.pagesPerYear.toLocaleString("en-GB")} pages a year: ${money(y.current)} today, ${money(y.recommended)} recommended, `
+    const anyPerDocument = a.cost.current?.declared.billing === "document"
+      || (a.cost.recommended?.vendors ?? []).some((v) => a.assumptions.prices.find((x) => x.name === v)?.billing === "document");
+    out.push(`  At ${y.pagesPerYear.toLocaleString("en-GB")} pages a year${anyPerDocument ? ` (${pagesWords} a document)` : ""}: `
+      + `${money(y.current)} today, ${money(y.recommended)} recommended, `
       + `${y.saving >= 0 ? "saving" : "COSTING"} ${money(Math.abs(y.saving))} a year.`);
   }
   if (a.inseparable.length) {

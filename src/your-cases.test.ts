@@ -1464,3 +1464,57 @@ test("F7: the presence check looks for the expected value as its kind reads it, 
   assert.equal(direLaPresence([{ champ: "total", litteral: 0, reordonne: 0, vides: 0, total: 95, genre: "amount-grouped", parLeGenre: 84 }]), undefined,
     "found as the kind reads it in 84 of 95: nothing to say");
 });
+
+test("F8: the per-field lines name what they test, and never say \"No recommendation\" for a field the audit routes", async () => {
+  const { recommander, rapportPourLeClient, releveClient } = await import("./your-cases.ts");
+  const { audit, auditLines } = await import("./audit.ts");
+  const { rate } = await import("./interval.ts");
+  /* The founder's run: gemini the best on total, google the current chain, seven disagreements
+     five of which go to gemini, both declared per thousand documents, a two-point margin. */
+  const gemini = "1".repeat(91) + "0".repeat(4), google = "1".repeat(86) + "0".repeat(5) + "1".repeat(2) + "0".repeat(2);
+  const cellule = (bits: string) => ({ bons: bits.split("").filter((b) => b === "1").length, sur: bits.length, ms: Number.NaN, reussites: bits });
+  const releve = { total: { gemini: cellule(gemini), google: cellule(google) } } as never;
+  const prix = [
+    { kind: "vendor", name: "gemini", pricePerThousand: 4.29, billing: "document", provenance: "declared" },
+    { kind: "vendor", name: "google", pricePerThousand: 100, billing: "document", provenance: "declared" },
+  ] as never;
+  const a = audit({ fields: ["total"], kinds: { total: "amount-grouped" }, releve, chains: prix, current: "google",
+    pagesPerDocument: 1, pagesPerYear: 1_000_000, machineHourlyCost: 1.2, margin: 0.02 });
+  assert.equal(a.routing["total"], "gemini");
+  const rangs = [{ palier: "gemini", r: rate(91, 95), ms: Number.NaN }, { palier: "google", r: rate(88, 95), ms: Number.NaN }];
+
+  /* Red before: "google may be up to 5.9 points worse ...: no recommendation." then "No
+     recommendation for total.", two screens above "Recommended routing: total ← gemini". */
+  const lignes = recommander("total", rangs, releve, 0.02, { actuelle: "google", audit: { chosen: a.routing["total"]!, head: a.fields["total"]!.head } });
+  assert.ok(lignes.some((l) => /^Keeping google, your current chain, is not supported by this sample: it may be up to [\d.]+ points worse than gemini, above your 2-point margin \(7 disagreements, p = 0\.453\)\. The observed gap, 3\.2 points, is itself above the margin: no sample size would show non-inferiority\.$/.test(l)), lignes.join("\n"));
+  assert.ok(lignes.some((l) => /^gemini stays the source for total: nothing cheaper is supported within your margin on this sample, and the audit below routes total to it\.$/.test(l)), lignes.join("\n"));
+  assert.ok(!lignes.some((l) => /No recommendation/.test(l)), lignes.join("\n"));
+  assert.ok(!lignes.some((l) => /: no recommendation\./.test(l)), "the shared phrase's verdict-sounding tail is not printed for a candidate");
+
+  /* The same lines travel into the report and the record, word for word. */
+  const md = rapportPourLeClient({ cas: 95, champs: ["total"], date: "2026-09-29", questions: { total: { texte: "What is the total?", provenance: "fournie" } },
+    lignes: [], avecRegles: false, verdicts: [{ champ: "total", lignes }], marge: 0.02, kinds: { total: "amount-grouped" }, audit: auditLines(a) });
+  assert.ok(!md.includes("No recommendation for total"), md);
+  assert.match(md, /Keeping google, your current chain, is not supported/);
+  assert.match(md, /Recommended routing: total ← gemini/);
+  const record = releveClient({ fichier: "receipts.csv", octets: Buffer.from("id,text,total:amount-grouped\n"), cas: 95, casDansLeFichier: 95, champs: ["total"],
+    questions: { total: { texte: "What is the total?", provenance: "fournie" } }, releve, verdicts: [{ champ: "total", lignes }], marge: 0.02,
+    measuredAt: "2026-09-29T00:00:00.000Z", code: null, kinds: { total: "amount-grouped" }, audit: a });
+  assert.ok(!JSON.stringify(record.recommendation).includes("No recommendation"));
+  assert.deepEqual(record.recommendation["total"], lignes);
+
+  /* The invariant, whatever the sample: a field the audit routes never closes on "No
+     recommendation"; a candidate that is not the current chain is named as a replacement. */
+  const autre = recommander("total", rangs, releve, 0.02, { actuelle: "someone-else", audit: { chosen: "gemini", head: "gemini" } });
+  assert.ok(autre.some((l) => /^Taking google instead of gemini is not supported by this sample/.test(l)), autre.join("\n"));
+  assert.ok(!autre.some((l) => /No recommendation/.test(l)));
+  /* The audit routing to a cheaper source the per-field comparison did not retain: the closing
+     line follows the audit. */
+  const versGoogle = recommander("total", rangs, releve, 0.02, { actuelle: "google", audit: { chosen: "google", head: "gemini" } });
+  assert.ok(versGoogle.some((l) => /^Recommendation for total: google, the cheapest costed source this sample cannot show to be worse than gemini within your margin \(the audit below\)\.$/.test(l)), versGoogle.join("\n"));
+  /* Without an audit (no chain given) and without a margin, the old lines stand. */
+  const sansAudit = recommander("total", rangs, releve, 0.02);
+  assert.ok(sansAudit.some((l) => /^No recommendation for total\.$/.test(l)), sansAudit.join("\n"));
+  const sansMarge = recommander("total", rangs, releve, undefined, { actuelle: "google", audit: { chosen: null, head: "gemini" } });
+  assert.ok(sansMarge.some((l) => /there is no recommendation without it/.test(l)) && sansMarge.some((l) => /^No recommendation for total\.$/.test(l)), sansMarge.join("\n"));
+});

@@ -356,3 +356,51 @@ test("the lines name the recommended routing, the saving and every unseparated p
   assert.match(text, /the money is not/);
   assert.ok(!/\$[\d,.]+ \[/.test(text), "no interval is attached to a dollar figure");
 });
+
+test("F9: every price is printed in its declared unit; a total in mixed units says the conversion", () => {
+  /* The founder's run: both chains declared per thousand documents (gemini 4.29, google 100),
+     one page a document, and the table and the Cost line printed them "per 1,000 pages". */
+  const perDocument = (name: string, price: number): SourcePrice => ({ kind: "vendor", name, pricePerThousand: price, billing: "document", provenance: "declared" });
+  const gemini = "1".repeat(91) + "0".repeat(4), google = "1".repeat(86) + "0".repeat(5) + "1".repeat(2) + "0".repeat(2);
+  const cellule = (bits: string) => ({ bons: bits.split("").filter((b) => b === "1").length, sur: bits.length, ms: Number.NaN, reussites: bits });
+  const releve = { total: { gemini: cellule(gemini), google: cellule(google) } };
+  const a = audit(base({ kinds: { total: "amount-grouped" }, releve, chains: [perDocument("gemini", 4.29), perDocument("google", 100)],
+    current: "google", pagesPerDocument: 1, pagesPerYear: 1_000_000, margin: 0.02 }));
+  assert.equal(a.routing["total"], "gemini", "the head is priced and nothing else is admissible within two points");
+  const lines = auditLines(a);
+  const text = lines.join("\n");
+  assert.ok(!text.includes("$4.29 per 1,000 pages") && !text.includes("$100 per 1,000 pages"), `a per-document price under the per-page label:\n${text}`);
+  assert.ok(lines.some((l) => /gemini\s+.*\$4\.29 per 1,000 documents/.test(l)), text);
+  assert.ok(lines.some((l) => /google\s+.*\$100 per 1,000 documents/.test(l)), text);
+  assert.ok(lines.some((l) => /^  Cost: \$4\.29 per 1,000 documents \(vendor prices: gemini \$4\.29 per 1,000 documents, local machine time \$0\.00\)\.$/.test(l)), text);
+  assert.ok(lines.some((l) => /^  Current chain google: \$100 per 1,000 documents\.$/.test(l)), text);
+  assert.ok(lines.some((l) => /^  At 1,000,000 pages a year \(1 page a document\): \$100,000 today, \$4,290 recommended, saving \$95,710 a year\.$/.test(l)), text);
+  /* The record says the unit of each price and of the total; nothing in it reads "per 1,000 pages". */
+  assert.deepEqual(a.fields["total"]!.sources["gemini"]!.declaredPrice, { perThousand: 4.29, billing: "document" });
+  assert.deepEqual(a.cost.current?.declared, { perThousand: 100, billing: "document" });
+  assert.equal(a.cost.recommended?.unit, "document");
+  assert.ok(!JSON.stringify(a).includes("per 1,000 pages"));
+  /* A per-page chain still reads per page, and a local tier's machine time is per page. */
+  const b = audit(base({ kinds: { total: "amount" }, releve: { total: { vendor: cellule(gemini), rules: { ...cellule(google), ms: 2 } } },
+    chains: [vendor("vendor", 50)], current: "vendor", margin: 0.02 }));
+  const tb = auditLines(b).join("\n");
+  assert.match(tb, /vendor\s+.*\$50\.00 per 1,000 pages/);
+  assert.match(tb, /Current chain vendor: \$50\.00 per 1,000 pages\./);
+  assert.equal(b.fields["total"]!.sources["rules"]!.declaredPrice, null);
+
+  /* Mixed units, two pages a document: total ← gemini (per document), tax ← google (per page).
+     The total is stated per thousand pages and says how the per-document price was counted. */
+  const perPage = (name: string, price: number): SourcePrice => ({ kind: "vendor", name, pricePerThousand: price, billing: "page", provenance: "declared" });
+  const c = audit(base({ fields: ["total", "tax"], kinds: { total: "amount-grouped", tax: "amount-grouped" },
+    releve: { total: { gemini: cellule(gemini), google: cellule(google) }, tax: { gemini: cellule(google), google: cellule(gemini) } },
+    chains: [perDocument("gemini", 4.29), perPage("google", 100)], current: "google", pagesPerDocument: 2, pagesPerYear: 1_000_000, margin: 0.02 }));
+  assert.deepEqual(c.routing, { total: "gemini", tax: "google" });
+  assert.equal(c.cost.recommended?.unit, "page");
+  const tc = auditLines(c);
+  const cost = tc.find((l) => l.startsWith("  Cost:"))!;
+  /* 4.29 over two pages plus 100: 102.145, which the money formatter rounds above a hundred. */
+  assert.match(cost, /^  Cost: \$102 per 1,000 pages \(vendor prices: gemini \$4\.29 per 1,000 documents \+ google \$100 per 1,000 pages, local machine time \$0\.00; per-document prices counted at 2 pages a document\)\.$/);
+  assert.ok(!tc.join("\n").includes("$4.29 per 1,000 pages"));
+  assert.ok(tc.some((l) => /gemini\s+.*\$4\.29 per 1,000 documents/.test(l)));
+  assert.ok(tc.some((l) => /At 1,000,000 pages a year \(2 pages a document\)/.test(l)));
+});

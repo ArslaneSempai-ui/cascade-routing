@@ -1392,11 +1392,36 @@ export function casCommuns(a: Bits, b: Bits): number {
   return n;
 }
 
+/**
+ * F8 (2026-09-29): what the per-field lines say when the audit has spoken. The per-field
+ * comparison asks ONE question: can a source cheaper than the best one on this field (in
+ * measured time; a declared chain, whose time is unknown, is always a candidate) stand in
+ * for it within the margin? In the founder's run the current chain was that candidate, so the
+ * line tested whether keeping it is supported, then closed with "No recommendation for
+ * total", and the audit two screens down routed total to the best source and stated a
+ * saving: a buyer read a contradiction. The closing line now follows the audit's routing
+ * when there is one, and a candidate that is the current chain is named as such.
+ */
+export type ContexteDeRecommandation = {
+  /** The chain the client runs today, when one was named or taken as the first given. */
+  actuelle?: string;
+  /** The audit's decision on this field: what it routes to, and its head. Absent when no
+   *  audit is printed (no chain was given). */
+  audit?: { chosen: string | null; head: string | null };
+};
+
+/* The shared formatters of comparaison-appariee.ts are not exported and that file is not
+   edited here; these three write the same forms. */
+const pointsDe = (x: number): string => (100 * x).toFixed(1);
+const pDe = (p: number | null): string => (p === null ? "no disagreement" : p < 0.001 ? "p < 0.001" : `p = ${p.toFixed(3)}`);
+const margeDe = (m: number): string => `${(100 * m) % 1 === 0 ? (100 * m).toFixed(0) : (100 * m).toFixed(1)}-point`;
+
 export function recommander(
   champ: string,
   rangs: { palier: string; r: Rate; ms: number }[],
   releve: Record<string, Record<TierName, EntreeDuReleve>>,
   marge?: number,
+  contexte: ContexteDeRecommandation = {},
 ): string[] {
   const tete = rangs[0]!;
   const bitsDe = (p: string) => releve[champ]?.[p as TierName]?.reussites;
@@ -1404,8 +1429,21 @@ export function recommander(
   const candidats = rangs.slice(1)
     .filter((x) => !Number.isFinite(x.ms) || x.ms < tete.ms)
     .sort((a, b) => cout(a.ms) - cout(b.ms));
+  /* F8: the audit's routing for this field, when an audit is printed. */
+  const route = contexte.audit?.chosen ?? null;
+  const teteDeLAudit = contexte.audit?.head ?? tete.palier;
+  const suitLAudit = (retenu: string | undefined): string | undefined => {
+    if (route === null) return undefined;
+    if (route === teteDeLAudit) {
+      return `${route} stays the source for ${champ}: nothing cheaper is supported within your margin on this sample, and the audit below routes ${champ} to it.`;
+    }
+    if (retenu === route) return undefined;   /* the sentence written for `retenu` says the same */
+    return `Recommendation for ${champ}: ${route}, the cheapest costed source this sample cannot show to be worse than ${teteDeLAudit} within your margin (the audit below).`;
+  };
   if (candidats.length === 0) {
-    return [`${tete.palier} wins outright on this sample: nothing cheaper to compare it with.`];
+    const seul = `${tete.palier} wins outright on this sample: nothing cheaper to compare it with.`;
+    const suite = suitLAudit(undefined);
+    return suite && route !== teteDeLAudit ? [seul, suite] : [seul];
   }
   const lignes: string[] = [];
   let retenu: string | undefined;
@@ -1425,11 +1463,27 @@ export function recommander(
     }
     const a = apparier(bt, bx);
     const v = juger(a, marge);
-    lignes.push(phrase({ tete: tete.palier, candidat: x.palier, a, v, msTete: tete.ms, msCandidat: x.ms }));
+    if (v.genre === "indecis" && v.marge !== undefined) {
+      /* F8: say what was tested. "X may be up to 6.2 points worse ...: no recommendation" read
+         as a verdict on the field; it is a verdict on taking X in place of the best source. */
+      const qui = x.palier === contexte.actuelle
+        ? `Keeping ${x.palier}, your current chain, is not supported by this sample`
+        : `Taking ${x.palier} instead of ${tete.palier} is not supported by this sample`;
+      lignes.push(`${qui}: it may be up to ${pointsDe(a.bornes[1])} points worse than ${tete.palier}, above your `
+        + `${margeDe(v.marge)} margin (${a.discordants} disagreement${a.discordants === 1 ? "" : "s"}, ${pDe(a.p)}). `
+        + (v.casEstimes === null
+          ? `The observed gap, ${pointsDe(a.ecart)} points, is itself above the margin: no sample size would show non-inferiority.`
+          : `About ${v.casEstimes.toLocaleString("en-GB")} cases would settle it at this rate of disagreement, an estimate, not a measurement.`));
+    } else {
+      lignes.push(phrase({ tete: tete.palier, candidat: x.palier, a, v, msTete: tete.ms, msCandidat: x.ms }));
+    }
     if (v.genre === "non-inferieur" && retenu === undefined) retenu = x.palier;
     if (!(v.genre === "separable" && v.sens === "tete")) tousPires = false;
   }
-  if (retenu !== undefined) {
+  const suite = suitLAudit(retenu);
+  if (suite !== undefined) {
+    lignes.push(suite);
+  } else if (retenu !== undefined) {
     lignes.push(`Recommendation for ${champ}: ${retenu} — the cheapest tier non-inferior to ${tete.palier} within your margin.`);
   } else if (tousPires) {
     lignes.push(`${tete.palier} wins outright on this sample.`);
@@ -2262,6 +2316,20 @@ Nothing leaves your machine: the models are local and this path makes no network
     process.argv.includes("--journal"), chaines,
     Object.fromEntries(Object.entries(questions).map(([k, v]) => [k, v.texte])), traceur, kinds);
 
+  /*
+   * THE AUDIT: per field, the cheapest source the sample cannot show to be worse, costed per
+   * page. Computed always (it is cheap and it goes into the record), printed after the
+   * per-field lines when at least one chain was given: without a vendor there is nothing to
+   * save against. F8: computed BEFORE the per-field lines, whose closing sentence follows its
+   * routing, so the two never contradict each other.
+   */
+  const chaineActuelle = chaineCourante ?? (chaines.length ? chaines[0]!.nom : null);
+  const resultatAudit = calculerAudit({
+    fields: champs, kinds, releve: releve as Record<string, Record<string, { bons: number; sur: number; ms: number; reussites?: string }>>,
+    chains: prix, current: chaineActuelle,
+    pagesPerDocument: pagesParDocument, pagesPerYear: pagesParAn, machineHourlyCost: coutHoraire, margin: marge,
+  });
+
   console.log("\nACCURACY PER FIELD, with the interval at "
     + `${(CONFIANCE.niveau * 100).toFixed(0)} %\n`);
   const verdicts: { champ: string; lignes: string[] }[] = [];
@@ -2296,7 +2364,10 @@ Nothing leaves your machine: the models are local and this path makes no network
       verdicts.push({ champ, lignes: [ligne] });
       continue;
     }
-    const lignes = recommander(champ, rangs, releve, marge);
+    const lignes = recommander(champ, rangs, releve, marge, {
+      actuelle: chaineActuelle ?? undefined,
+      audit: chaines.length > 0 ? { chosen: resultatAudit.routing[champ] ?? null, head: resultatAudit.fields[champ]?.head ?? null } : undefined,
+    });
     for (const l of lignes) console.log(`    → ${l}`);
     console.log("");
     verdicts.push({ champ, lignes });
@@ -2305,16 +2376,6 @@ Nothing leaves your machine: the models are local and this path makes no network
   const desordres = direLesDesordres(releve);
   if (desordres) console.log(`\n${desordres}\n`);
 
-  /*
-   * THE AUDIT: per field, the cheapest source the sample cannot show to be worse, costed per
-   * page. Computed always (it is cheap and it goes into the record), printed when at least
-   * one chain was given: without a vendor there is nothing to save against.
-   */
-  const resultatAudit = calculerAudit({
-    fields: champs, kinds, releve: releve as Record<string, Record<string, { bons: number; sur: number; ms: number; reussites?: string }>>,
-    chains: prix, current: chaineCourante ?? (chaines.length ? chaines[0]!.nom : null),
-    pagesPerDocument: pagesParDocument, pagesPerYear: pagesParAn, machineHourlyCost: coutHoraire, margin: marge,
-  });
   const lignesAudit = auditLines(resultatAudit);
   if (chaines.length > 0) {
     console.log("");
