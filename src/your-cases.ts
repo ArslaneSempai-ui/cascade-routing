@@ -47,7 +47,7 @@ import { etatDuDepot } from "./arbre-propre.ts";
 import { scoreDeDoute, doutesVides, compterDoute, signauxApplicables, type Doutes } from "./doute.ts";
 import { evaluerRegles, direLesRefus, type ReglesEvaluees } from "./regles-bornees.ts";
 import { table } from "./figures.ts";
-import { splitHeader, graded, outcome as outcomeTyped, GRADER, type FieldKind } from "./grader.ts";
+import { splitHeader, graded, outcome as outcomeTyped, canonical, GRADER, type FieldKind } from "./grader.ts";
 import { audit as calculerAudit, auditLines, priceOf, priceWords, readListPrices, PRICE_KEYS, type Audit, type SourcePrice, type ListPrices } from "./audit.ts";
 import { readJsonFile } from "./json-file.ts";
 import { ASSUMPTIONS, symboleDe, UNITS } from "./assumptions.ts";
@@ -227,6 +227,10 @@ export type PresenceChamp = {
   /** Cas où le client n'a rien mis : il n'y a pas de vérité à trouver. */
   vides: number;
   total: number;
+  /** F7: the kind the field was declared with, and the cases found only as that kind reads
+   *  them ("60.000" for "60000"). Absent from a count made before kinds existed. */
+  genre?: FieldKind;
+  parLeGenre?: number;
 };
 
 /**
@@ -262,20 +266,70 @@ export function sansVerite(cas: readonly Cas[], champs: readonly string[]): Reco
   return Object.fromEntries(champs.map((champ) => [champ, cas.filter((c) => !aUneVerite(c, champ)).length]));
 }
 
-export function presenceDeLaVerite(cas: Cas[], champs: string[]): PresenceChamp[] {
+/** The kinds whose presence check stays literal: they have no canonical form to compare. */
+export function genreLitteral(kind: FieldKind | undefined): boolean {
+  return kind === undefined || kind === "exact" || kind === "free-text";
+}
+
+/**
+ * F7 (2026-09-29): whether the expected value is in the text AS ITS KIND READS IT. The
+ * literal check looked for the cell as written; on CORD the truth is canonical ("60000")
+ * and the receipt prints "60.000", so it reported the total found in 7 of 95 cases, the
+ * subtotal in 5 of 65, the tax in 3 of 40, while the amounts were there (84, 64 and 38), and
+ * a reader took a sound corpus for a broken one. The truth and every run of the text that
+ * could carry the value are put through the kind's own parser, and the canonical values are
+ * compared; `exact` and `free-text` have no canonical form and stay literal.
+ *
+ *   amount, amount-grouped   a token that carries a digit, alone or with the token before
+ *                            it (a currency mark, "Rp", a sign), so "TOTAL 60.000" and
+ *                            "Rp 91,000" read;
+ *   date, date-dmy           one to three tokens starting at a token with a digit or a month,
+ *                            so "3 May 1990", "May 3, 1990" and "03/05/1990" read;
+ *   currency                 one or two tokens, and each currency symbol on its own, so
+ *                            "USD", "$12.50" and "mexican pesos" read;
+ *   id                       the text and the value stripped to their letters and digits,
+ *                            upper-cased, so "FR 1856 M" holds "FR-1856-M".
+ * A window is tried as written and shorn of the punctuation that may end it.
+ */
+export function trouveSousLeGenre(texte: string, attendu: string, kind: FieldKind): boolean {
+  if (genreLitteral(kind)) return false;
+  const voulu = canonical(attendu, kind);
+  if (voulu === null) return false;
+  if (kind === "id") return (canonical(texte, "id") ?? "").includes(voulu);
+  const lit = (run: string): boolean => canonical(run, kind) === voulu
+    || canonical(run.replace(/[.,;:!?"'\u201d]+$/, "").replace(/^["'\u201c]+/, ""), kind) === voulu;
+  const jetons = texte.split(/[\s:;=]+/).filter((t) => t.length > 0);
+  const fenetres = (depart: (t: string) => boolean, largeurs: number[]): boolean =>
+    jetons.some((t, i) => depart(t) && largeurs.some((l) => i + l <= jetons.length && lit(jetons.slice(i, i + l).join(" "))));
+  switch (kind) {
+    case "amount": case "amount-grouped":
+      return fenetres((t) => /\d/.test(t), [1, 2]) || jetons.some((t, i) => i > 0 && /\d/.test(t) && lit(`${jetons[i - 1]} ${t}`));
+    case "date": case "date-dmy":
+      return fenetres((t) => /\d|^[A-Za-z]+\.?$/.test(t), [1, 2, 3]);
+    case "currency":
+      return fenetres(() => true, [1, 2]) || [...texte.matchAll(/US\$|CA\$|AU\$|MX\$|C\$|A\$|[$\u20ac\u00a3\u00a5\u20b9\u20a9\u20bd\u20ba]/g)].some((m) => lit(m[0]));
+    default:
+      return false;
+  }
+}
+
+export function presenceDeLaVerite(cas: Cas[], champs: string[], kinds: Record<string, FieldKind> = {}): PresenceChamp[] {
   const enMots = (x: string) => normaliserReponse(x).split(/[^\p{L}\p{N}]+/u).filter(Boolean);
   return champs.map((champ) => {
-    let litteral = 0, reordonne = 0, vides = 0;
+    const genre: FieldKind = kinds[champ] ?? "exact";
+    let litteral = 0, reordonne = 0, vides = 0, parLeGenre = 0;
     for (const c of cas) {
       if (!aUneVerite(c, champ)) { vides++; continue; }
       const attendu = normaliserReponse(c.truth[champ] ?? "");
       const texte = normaliserReponse(c.text);
       if (texte.includes(attendu)) { litteral++; continue; }
+      /* F7: written another way the kind reads, "60.000" for "60000" under amount-grouped. */
+      if (trouveSousLeGenre(c.text, c.truth[champ] ?? "", genre)) { parLeGenre++; continue; }
       const presents = new Set(enMots(texte));
       const mots = enMots(attendu);
       if (mots.length > 0 && mots.every((m) => presents.has(m))) reordonne++;
     }
-    return { champ, litteral, reordonne, vides, total: cas.length };
+    return { champ, litteral, reordonne, vides, total: cas.length, genre, parLeGenre };
   });
 }
 
@@ -289,8 +343,9 @@ export function presenceDeLaVerite(cas: Cas[], champs: string[]): PresenceChamp[
  */
 export function direLaPresence(p: PresenceChamp[]): string | undefined {
   const renseignes = (x: PresenceChamp) => x.total - x.vides;
+  const trouves = (x: PresenceChamp) => x.litteral + x.reordonne + (x.parLeGenre ?? 0);
   const maigres = p.filter((x) => renseignes(x) > 0
-    && (x.litteral + x.reordonne) * 2 < renseignes(x));
+    && trouves(x) * 2 < renseignes(x));
   const desordonnes = p.filter((x) => renseignes(x) > 0
     && x.reordonne * 2 >= renseignes(x));
   const sansValeur = p.filter((x) => x.vides > 0);
@@ -307,13 +362,19 @@ export function direLaPresence(p: PresenceChamp[]): string | undefined {
   if (maigres.length) {
     blocs.push(`⚠ ${maigres.length} field(s) whose expected value is mostly NOT in the text `
       + `you supplied:\n`
-      + maigres.map((x) => `    ${x.champ}: found in ${x.litteral + x.reordonne} of the `
+      + maigres.map((x) => `    ${x.champ}: found in ${trouves(x)} of the `
         + `${renseignes(x)} case(s) that have an expected value`
+        + (genreLitteral(x.genre) ? `` : ` (looked for as ${x.genre} reads it)`)
         + (x.vides > 0 ? `, and ${x.vides} case(s) have none at all` : ``)).join("\n")
       + `\n  No tier can extract what is not there; the rate below would read as a failed\n`
-      + `  extraction and would in fact be measuring your corpus.\n`
-      + `  This count is a LOWER bound: a value written another way — "3 May 1990" for\n`
-      + `  "1990-05-03" — is present without being found this way.`);
+      + `  extraction and would in fact be measuring your corpus.`
+      /* F7: the lower-bound caveat belongs to the kinds that are still compared literally. */
+      + (maigres.some((x) => genreLitteral(x.genre))
+          ? `\n  For a field without a kind this count is a LOWER bound: a value written another way\n`
+            + `  ("3 May 1990" for "1990-05-03") is present without being found this way; declare\n`
+            + `  the kind in the header (total:amount-grouped, birth:date) and it is looked for as\n`
+            + `  that kind reads it.`
+          : ``));
   }
   if (desordonnes.length) {
     blocs.push(`⚠ ${desordonnes.length} field(s) whose expected value is in the text with its `
@@ -2084,7 +2145,7 @@ Nothing leaves your machine: the models are local and this path makes no network
    */
   /* Ce qui se sait sans modèle se dit avant de charger quoi que ce soit : un champ dont la
      réponse n'est pas dans le texte ne mesure pas le palier, il mesure le corpus. */
-  const presence = direLaPresence(presenceDeLaVerite(cas, champs));
+  const presence = direLaPresence(presenceDeLaVerite(cas, champs, kinds));
   if (presence) console.log(`\n${presence}\n`);
 
   const regles = reglesBrutes

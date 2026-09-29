@@ -989,7 +989,7 @@ test("les deux annonces sont branchées, l'une avant la mesure et l'autre après
    */
   const src = readFileSync(fileURLToPath(new URL("./your-cases.ts", import.meta.url)), "utf8");
 
-  const annonce = src.indexOf("direLaPresence(presenceDeLaVerite(cas, champs))");
+  const annonce = src.indexOf("direLaPresence(presenceDeLaVerite(cas, champs, kinds))");
   const mesure = src.indexOf("await mesurerVosCas(");
   assert.ok(annonce > 0 && annonce < mesure,
     "ce qui se sait sans modèle se dit avant d'en charger un : sinon le client attend la\n"
@@ -1418,4 +1418,49 @@ test("F1: a case with no expected value is graded by nobody in measure:yours, an
   const dit = direLaPresence(presenceDeLaVerite(cas, ["total"])) ?? "";
   assert.match(dit, /1 field\(s\) with cases that have NO expected value:\n\s+total: 1 of 3 case\(s\)/);
   assert.match(dit, /unknown, not "expected blank"/);
+});
+
+test("F7: the presence check looks for the expected value as its kind reads it, and stays literal without a kind", async () => {
+  const { presenceDeLaVerite, direLaPresence, trouveSousLeGenre } = await import("./your-cases.ts");
+  /* CORD: the truth is canonical, the receipt prints the amount grouped. Red before: "60000"
+     is not in "TOTAL 60.000" and the field read as mostly absent. */
+  const cas = [
+    { id: "r1", text: "SUB TOTAL 55.000\nTAX 5.000\nTOTAL 60.000\nCASH 100.000", truth: { total: "60000", tax: "5000" } },
+    { id: "r2", text: "TOTAL Rp. 91,000\nCASH Rp. 100,000", truth: { total: "91000", tax: "" } },
+    { id: "r3", text: "total: 12.500,00 (two items)", truth: { total: "12500", tax: "0" } },
+  ];
+  const groupe = Object.fromEntries(presenceDeLaVerite(cas, ["total", "tax"], { total: "amount-grouped", tax: "amount-grouped" }).map((x) => [x.champ, x]));
+  assert.equal(groupe["total"]!.litteral, 0, "never written as the truth spells it");
+  assert.equal(groupe["total"]!.parLeGenre, 3, "found as amount-grouped reads it: 60.000, Rp. 91,000, 12.500,00");
+  assert.equal(groupe["total"]!.genre, "amount-grouped");
+  assert.equal(groupe["tax"]!.parLeGenre, 1, "5.000 is there; a truth of 0 is not printed on r3");
+  const exact = Object.fromEntries(presenceDeLaVerite(cas, ["total"]).map((x) => [x.champ, x]));
+  assert.equal(exact["total"]!.litteral + (exact["total"]!.parLeGenre ?? 0), 0, "without a kind the check stays literal, as today");
+  assert.equal(exact["total"]!.genre, "exact");
+
+  /* The other kinds with a canonical form. */
+  assert.equal(trouveSousLeGenre("Name: Ada, born 3 May 1990 in London.", "1990-05-03", "date"), true);
+  assert.equal(trouveSousLeGenre("Issued May 3, 1990.", "1990-05-03", "date"), true);
+  assert.equal(trouveSousLeGenre("Issued 03/05/1990.", "1990-05-03", "date-dmy"), true);
+  assert.equal(trouveSousLeGenre("Issued 03/05/1990.", "1990-05-03", "date"), false, "under month-first, 03/05 is March the fifth");
+  assert.equal(trouveSousLeGenre("Amount due: $12.50", "USD", "currency"), true, "the symbol alone names the currency");
+  assert.equal(trouveSousLeGenre("Paid in mexican pesos.", "MXN", "currency"), true);
+  assert.equal(trouveSousLeGenre("Paid in euros.", "USD", "currency"), false);
+  assert.equal(trouveSousLeGenre("doc no FR 1856 M, Portugal", "FR-1856-M", "id"), true);
+  assert.equal(trouveSousLeGenre("doc no FR 1857 M", "FR-1856-M", "id"), false);
+  assert.equal(trouveSousLeGenre("Total 1,234.56 USD", "1234.56", "amount"), true);
+  assert.equal(trouveSousLeGenre("Total (12.50)", "-12.5", "amount"), true, "the parentheses travel with the token");
+  assert.equal(trouveSousLeGenre("TOTAL 60.000", "60000", "exact"), false, "no canonical form: literal only");
+  assert.equal(trouveSousLeGenre("TOTAL 60.000", "60000", "free-text"), false);
+  assert.equal(trouveSousLeGenre("TOTAL 60.000", "not a number", "amount-grouped"), false, "a truth its kind cannot read is not found by it");
+
+  /* The message: the kind is named, and the lower-bound caveat belongs to the literal kinds. */
+  const type = direLaPresence([{ champ: "total", litteral: 0, reordonne: 0, vides: 0, total: 95, genre: "amount-grouped", parLeGenre: 7 }])!;
+  assert.match(type, /total: found in 7 of the 95 case\(s\) that have an expected value \(looked for as amount-grouped reads it\)/);
+  assert.doesNotMatch(type, /LOWER bound/, "the value was looked for every way the kind reads it: the count is not a lower bound");
+  const litteral = direLaPresence([{ champ: "adresse", litteral: 0, reordonne: 0, vides: 0, total: 300 }])!;
+  assert.match(litteral, /LOWER bound/);
+  assert.match(litteral, /declare\n\s+the kind in the header/);
+  assert.equal(direLaPresence([{ champ: "total", litteral: 0, reordonne: 0, vides: 0, total: 95, genre: "amount-grouped", parLeGenre: 84 }]), undefined,
+    "found as the kind reads it in 84 of 95: nothing to say");
 });
