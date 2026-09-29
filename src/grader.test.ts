@@ -34,6 +34,58 @@ test("an amount is content, its thousands separators are formatting", () => {
   assert.ok(!graded("total", "1234.5", "amount"), "a word does not parse, and falls back to the default");
 });
 
+test("review 2026-09-29: one negative marker is minus, two do not parse, and never a toggle back to plus", () => {
+  /* Items 14 and 25: "(-250.00)" and "-250.00-" toggled back to positive and matched 250.00. */
+  for (const written of ["(-250.00)", "-250.00-", "(-1,234.50)", "(250.00)-"]) {
+    assert.equal(parseAmount(written), null, `${written} carries two negative markers and must not parse`);
+    assert.ok(!graded(written, "250.00", "amount"), `${written} must not equal 250.00`);
+    assert.ok(!graded(written, "1234.50", "amount"), `${written} must not equal 1234.50`);
+  }
+  assert.equal(parseAmount("-250.00"), "-250");
+  assert.equal(parseAmount("(250.00)"), "-250");
+  assert.equal(parseAmount("250.00-"), "-250");
+  /* Item 25: accounting parentheses after the currency mark, in every position. */
+  for (const written of ["$(1,234.50)", "$ (1,234.50)", "USD (1,234.50)", "(1,234.50) USD", "($1,234.50)", "(1,234.50 USD)"]) {
+    assert.equal(parseAmount(written), "-1234.5", written);
+    assert.ok(graded(written, "-1234.50", "amount"), written);
+  }
+});
+
+test("review 2026-09-29: a letter that is not a currency code changes the amount, so the string does not parse", () => {
+  /* Item 26: "1.2M" read as 1.20, "12k" as 12, "1e3" as 13, and CR equalled DR. */
+  for (const written of ["$1.2M", "12k", "1e3", "1,250.00 CR", "1,250.00 DR", "3 apples", "12 kr"]) {
+    assert.equal(parseAmount(written), null, `${written} must not parse as an amount`);
+  }
+  assert.ok(!graded("1,250.00 CR", "1,250.00 DR", "amount"));
+  assert.ok(!graded("$1.2M", "1.20", "amount"));
+  /* Three-letter codes still strip, at either end, with or without a blank, and only whole. */
+  assert.equal(parseAmount("EUR 1.234,50"), "1234.5");
+  assert.equal(parseAmount("1,234.50USD"), "1234.5");
+  assert.equal(parseAmount("CHF 12"), "12");
+  assert.equal(parseAmount("US$ 12.00"), "12");
+  assert.equal(parseAmount("1234.5 USDX"), null, "four letters are not a code");
+});
+
+test("review 2026-09-29: a lone comma groups thousands only where a leading group can stand before it", () => {
+  /* Item 27: "0,500" read as five hundred and "1234,567" as one million. */
+  assert.equal(parseAmount("0,500"), "0.5");
+  assert.equal(parseAmount("1234,567"), "1234.567");
+  assert.equal(parseAmount("1,234"), "1234");
+  assert.equal(parseAmount("12,345"), "12345");
+  assert.equal(parseAmount("123,456"), "123456");
+  assert.equal(parseAmount("01,500"), "1.5", "a leading zero is not a thousands group");
+});
+
+test("review 2026-09-29: free text keeps the marks of non-Latin scripts", () => {
+  /* Item 28: every combining mark was stripped, so two Japanese words graded equal. */
+  assert.ok(!graded("パス", "バス", "free-text"), "pa-su and ba-su differ by a mark that is meaning");
+  assert.ok(!graded("ガス", "カス", "free-text"));
+  assert.equal(parseFreeText("パス"), "パス");
+  assert.equal(parseFreeText("कि"), "कि", "a Devanagari vowel sign stays");
+  assert.ok(graded("Café Régence", "Cafe Regence", "free-text"), "Latin diacritics are still formatting");
+  assert.ok(graded("Façade Élève", "facade eleve", "free-text"));
+});
+
 test("the default grader still counts these as mismatches, which is why the kind exists", () => {
   assert.ok(!correct("1,234.50", "1234.50"));
   assert.ok(!correct("09/29/2026", "2026-09-29"));
@@ -123,6 +175,10 @@ const formats: ((n: number, cents: number, neg: boolean) => string)[] = [
   (n, c, neg) => `${neg ? "-" : ""}${n.toLocaleString("fr-FR")},${String(c).padStart(2, "0")} €`,
   (n, c, neg) => neg ? `(${n.toLocaleString("en-US")}.${String(c).padStart(2, "0")})` : `${n}.${String(c).padStart(2, "0")}`,
   (n, c, neg) => `${n.toLocaleString("en-US")}.${String(c).padStart(2, "0")}${neg ? "-" : ""}`,
+  /* Review 2026-09-29: the currency mark outside the accounting parentheses, both sides. */
+  (n, c, neg) => neg ? `$(${n.toLocaleString("en-US")}.${String(c).padStart(2, "0")})` : `$${n}.${String(c).padStart(2, "0")}`,
+  (n, c, neg) => neg ? `(${n.toLocaleString("en-US")}.${String(c).padStart(2, "0")}) USD` : `${n}.${String(c).padStart(2, "0")} USD`,
+  (n, c, neg) => `${neg ? "-" : ""}CHF ${n.toLocaleString("de-CH")}.${String(c).padStart(2, "0")}`,
 ];
 
 test("law: every written form of the same amount grades equal to its plain form", () => {

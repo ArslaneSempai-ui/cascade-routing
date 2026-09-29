@@ -72,19 +72,46 @@ export function splitHeader(cell: string): { name: string; kind: FieldKind | und
  * fractional digits without trailing zeros. Strings rather than numbers, so that "0.1" and
  * "0.10" are equal and no floating-point rounding ever enters a verdict.
  */
+/**
+ * What may surround a number without being part of it: currency symbols, a three-letter
+ * code, and blanks. Nothing else. "1.2M", "12k", "1e3" and "1,250.00 CR" carry a letter
+ * that changes the amount, and the first version deleted every ASCII letter before parsing
+ * them, so "1.2M" read as 1.20 and "1,250.00 CR" equalled "1,250.00 DR". Reviewed 2026-09-29.
+ */
+const CURRENCY_MARK = /^(?:US\$|CA\$|AU\$|MX\$|C\$|A\$|[$€£¥₹₩₽₺]|[A-Za-z]{3}(?![A-Za-z]))/;
+
+function stripCurrency(s: string): string {
+  let out = s.trim();
+  for (;;) {
+    const before = out;
+    const lead = CURRENCY_MARK.exec(out);
+    if (lead) out = out.slice(lead[0].length).trim();
+    const tail = /(?:US\$|CA\$|AU\$|MX\$|C\$|A\$|[$€£¥₹₩₽₺]|(?<![A-Za-z])[A-Za-z]{3})$/.exec(out);
+    if (tail) out = out.slice(0, out.length - tail[0].length).trim();
+    if (out === before) return out;
+  }
+}
+
 export function parseAmount(raw: string): string | null {
-  let s = raw.trim();
+  let s = stripCurrency(raw.replace(/[  ]/g, " "));
   if (s.length === 0) return null;
-  /* Accounting negatives: (1,234.50) is minus. A trailing minus is minus too. */
-  let negative = false;
-  if (/^\(.*\)$/.test(s)) { negative = true; s = s.slice(1, -1); }
-  if (/-\s*$/.test(s)) { negative = true; s = s.replace(/-\s*$/, ""); }
-  /* Currency codes, symbols and words around the number are formatting. */
-  s = s.replace(/[A-Za-z$€£¥₹₩₽₺ \s]/g, "");
-  if (s.startsWith("-")) { negative = !negative; s = s.slice(1); }
-  if (s.startsWith("+")) s = s.slice(1);
-  /* Apostrophes and thin spaces are thousands separators in some locales. */
-  s = s.replace(/['’ ]/g, "");
+  /*
+   * Negative markers: parentheses around the number, a leading minus, a trailing minus. ONE
+   * of them makes the amount negative; two are not a double negative, they are a string
+   * nobody writes for money, and it does not parse. The first version toggled a flag per
+   * marker, so "(-250.00)" came out positive and matched 250.00. Reviewed 2026-09-29.
+   */
+  let markers = 0;
+  if (/^\(.*\)$/.test(s)) { markers++; s = stripCurrency(s.slice(1, -1)); }
+  if (/-\s*$/.test(s)) { markers++; s = s.replace(/-\s*$/, "").trim(); }
+  if (s.startsWith("-")) { markers++; s = s.slice(1).trim(); }
+  else if (s.startsWith("+")) s = s.slice(1).trim();
+  if (markers > 1) return null;
+  const negative = markers === 1;
+  /* The sign may have stood before the currency mark ("-CHF 12.50"): strip again. */
+  s = stripCurrency(s);
+  /* Apostrophes and blanks are thousands separators in some locales. */
+  s = s.replace(/['’ ]/g, "");
   if (!/^[\d.,]+$/.test(s) || !/\d/.test(s)) return null;
 
   const lastComma = s.lastIndexOf(","), lastPoint = s.lastIndexOf(".");
@@ -105,8 +132,10 @@ export function parseAmount(raw: string): string | null {
       /* Several of the same separator: grouping, every group of three. */
       if (!groupsWellFormed(s, sep)) return null;
       integer = parts.join(""); fraction = "";
-    } else if (sep === "," && parts[1]!.length === 3 && parts[0]!.length > 0) {
-      /* The convention stated in the header comment: one comma, three digits, grouping. */
+    } else if (sep === "," && parts[1]!.length === 3 && /^[1-9]\d{0,2}$/.test(parts[0]!)) {
+      /* The convention stated in the header comment: one comma, three digits, grouping. Only
+         when the group before it could be a leading group: "0,500" and "1234,567" are
+         decimals, not "0500" and "1234567". Reviewed 2026-09-29. */
       integer = parts[0]! + parts[1]!; fraction = "";
     } else {
       integer = parts[0]!; fraction = parts[1]!;
@@ -220,8 +249,15 @@ export function parseId(raw: string): string | null {
 }
 
 export function parseFreeText(raw: string): string | null {
-  const s = raw.normalize("NFD").replace(/\p{M}/gu, "")
-    .toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+  /*
+   * Only the diacritics of LATIN letters are formatting: "Cafe" for "Café". A combining mark
+   * on any other script is meaning: the dakuten that separates the Japanese "pa" from "ha",
+   * the vowel signs of Devanagari. The first version stripped every mark after NFD, so
+   * two different Japanese words graded equal. Reviewed 2026-09-29. The text is recomposed
+   * (NFC) before the punctuation pass so that the marks kept are not swept as punctuation.
+   */
+  const s = raw.normalize("NFD").replace(/(\p{Script=Latin})[̀-ͯ]+/gu, "$1").normalize("NFC")
+    .toLowerCase().replace(/[^\p{L}\p{N}\p{M}]+/gu, " ").trim();
   return s.length > 0 ? s : null;
 }
 
