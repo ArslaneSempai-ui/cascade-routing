@@ -1,0 +1,22 @@
+# The cases the suite EXPECTS to skip on the Windows runner of `verifier`, one per line, exact
+# name. Same gate as `.github/cas-ignores-attendus.txt` (which is the Linux list): a skipped
+# case not listed here fails the build (a control just went dark), and a listed case that now
+# runs fails it too (the list lies; tighten it, never widen it without a written reason).
+#
+# What is structural to a Windows runner, and why:
+#
+# - swiftc and the Vision framework are macOS only: the five image-reader cases skip here, as
+#   on Linux, and say so.
+# - `identite` and the Cascade family repositories are development neighbours that live on no
+#   public runner: the three layer-comparison cases skip here too.
+#
+# Anything else that a Windows runner cannot run belongs here WITH its reason, added when the
+# suite names it, never in advance and never in silence.
+le lecteur d'image distingue ses pannes, et une page sans texte n'en est pas une
+les couches partagées sont bien celles d'identite
+3 compilations simultanées laissent UN binaire entier, et rien d'autre
+un binaire de zéro octet est recompilé, pas accepté pour toujours
+un palier qui lit vraiment traverse la sélection, et la passe va jusqu'au bout
+une compilation qui échoue ne se fait pas passer pour un swiftc absent
+la couche de famille est identique dans les dépôts présents
+les couches partagées sont bien celles d'identite (dépôt exclu : recopie à la main)

@@ -124,8 +124,10 @@ request; the suite holds it.
 
 ## Requirements
 
-Node 24 or newer, on **macOS or Linux**. Windows has not been tested and is not claimed;
-several scripts chain shell commands, which hold under Git Bash and not under `cmd.exe`.
+Node 24 or newer. The suite runs in continuous integration on Linux, macOS and Windows
+runners; what a system cannot run is named, case by case, in the expected-skips file of that
+system under `.github/`, never skipped in silence. Several scripts chain shell commands,
+which hold under Git Bash and not under `cmd.exe`.
 
 ## The extraction cost audit
 
