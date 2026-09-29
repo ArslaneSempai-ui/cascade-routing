@@ -3505,6 +3505,32 @@ test("la version de sharp installée est au-dessus des CVE de libvips", () => {
     + `ou rien. Vérifier que l'override est toujours honoré : \`npm install\` puis \`npm audit\`.`);
 });
 
+/*
+ * Dependabot, 2026-09-29: three alerts on main, all inherited. sharp (libvips) high, fixed in
+ * 0.35.4; adm-zip high, an uncontrolled allocation from the declared uncompressed size, fixed
+ * in 0.6.1; adm-zip medium, extraction following a symlink in the destination, WITHOUT a fix
+ * upstream. adm-zip reaches this tree through onnxruntime-node alone, whose postinstall
+ * extracts Microsoft's NuGet package into a temp directory it creates, and that script never
+ * runs here (`npm ci --ignore-scripts`, the README's and CI's install line; the install-script
+ * witness in journal.test.ts says so). This repository's own code extracts no archive: the
+ * weights import (`src/poids.ts`) copies files after checking a manifest of sha256, the model
+ * library fetches model files one by one. So the two fixed advisories are closed by the
+ * overrides below, and the unfixed one has no reachable surface, which is said in SECURITE.md.
+ * Like the sharp case, this reads the local condition, not `npm audit`.
+ */
+test("the installed adm-zip is at or above 0.6.1, and both overrides are pinned", () => {
+  const racine = fileURLToPath(new URL("..", import.meta.url));
+  const pkg = JSON.parse(readFileSync(join(racine, "package.json"), "utf8"));
+  assert.equal(pkg.overrides?.["adm-zip"], "0.6.1", "the adm-zip override is the exact fixed version, not a range npm could resolve below it");
+  assert.equal(pkg.overrides?.sharp, "0.35.5", "the sharp override is the exact version the fix was measured with");
+  const installee = join(racine, "node_modules", "adm-zip", "package.json");
+  if (!existsSync(installee)) return;   /* dependencies not installed: nothing to read */
+  const version = JSON.parse(readFileSync(installee, "utf8")).version as string;
+  const [majeur, mineur, correctif] = version.split(".").map(Number) as [number, number, number];
+  assert.ok(majeur > 0 || mineur > 6 || (mineur === 6 && correctif >= 1),
+    `adm-zip ${version} is installed; the memory advisory is fixed in 0.6.1. \`npm ci --ignore-scripts\`, then look again.`);
+});
+
 
 /*
  * UNE CLAUSE DE CONTRAT QU'AUCUN TEST NE PROTEGEAIT.

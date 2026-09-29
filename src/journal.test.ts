@@ -1698,7 +1698,15 @@ test("aucune dépendance n'exécute de code à l'installation, et toutes sont é
       + "l'installation de ce projet, et elle doit être dite à un acheteur, pas cachée. "
       + "`npm ci --ignore-scripts`, que le README donne maintenant comme installation par "
       + "défaut, la ferme : ce dépôt ne configure aucun fournisseur CUDA, donc le drapeau ne "
-      + "lui coûte rien qu'il demande",
+      + "lui coûte rien qu'il demande. Dependabot, 2026-09-29: adm-zip carries an advisory "
+      + "WITHOUT an upstream fix, extraction following a symlink in the destination. The only "
+      + "extraction in this tree is this script's, into a directory it creates under the "
+      + "system temp directory, named with the time (`mkdirSync`, then `extractEntryTo` into "
+      + "`extracted/`), from an archive fetched over HTTPS from api.nuget.org; a predictable "
+      + "name is the local precondition that advisory needs, and it never runs under "
+      + "`npm ci --ignore-scripts`; this "
+      + "repository's own code extracts no archive (`src/poids.ts` copies files after checking "
+      + "a manifest). No reachable surface, said here and in SECURITE.md",
   };
   const inconnus = surLeDisque.filter((k) => !(k in DECLARES));
   assert.deepEqual(inconnus, [],
@@ -1820,7 +1828,10 @@ test("adm-zip reste au-dessus du seuil de son avis, et l'override qui l'y tient 
     + "  l'override de package.json ET ce cas — mais vérifiez-le avant de conclure, parce qu'un\n"
     + "  zéro obtenu sur une liste vide ressemble exactement à un zéro obtenu sur une garde.");
 
-  const SEUIL = [0, 6, 0];   // GHSA-xcpc-8h2w-3j85 : corrigé à partir de 0.6.0
+  /* Dependabot, 2026-09-29: a second high advisory on adm-zip, an uncontrolled allocation from
+     the declared uncompressed size, fixed in 0.6.1; the threshold follows, and the override is
+     the exact fixed version, as cascade-screening pinned it, so npm cannot resolve below it. */
+  const SEUIL = [0, 6, 1];   // GHSA-xcpc-8h2w-3j85 : corrigé à partir de 0.6.0 ; l'allocation non bornée : 0.6.1
   const trop_vieilles = resolutions.filter(({ version }) => {
     /* La CONVERSION AVANT LA COMPARAISON : une version illisible ne doit pas atterrir du
        côté rassurant du seuil. Tout ce qui ne se lit pas est traité comme trop vieux. */
@@ -1834,11 +1845,12 @@ test("adm-zip reste au-dessus du seuil de son avis, et l'override qui l'y tient 
   });
 
   assert.deepEqual(trop_vieilles, [],
-    `adm-zip résolu sous 0.6.0 : ${trop_vieilles.map((r) => `${r.chemin}@${r.version}`).join(", ")}\n`
-    + "  GHSA-xcpc-8h2w-3j85 (high) — une archive fabriquée déclenche une allocation de 4 Go.\n"
+    `adm-zip résolu sous 0.6.1 : ${trop_vieilles.map((r) => `${r.chemin}@${r.version}`).join(", ")}\n`
+    + "  GHSA-xcpc-8h2w-3j85 (high) : une archive fabriquée déclenche une allocation de 4 Go ;\n"
+    + "  et sous 0.6.1, l'allocation non bornée depuis la taille déclarée (high, 2026-09-29).\n"
     + "  Ce décompacteur tourne dans le postinstall d'onnxruntime-node, actif sur le coureur\n"
     + "  Linux : il n'est pas hors de portée.\n"
-    + "  → rétablissez `\"adm-zip\": \"^0.6.0\"` dans `overrides` de package.json, puis\n"
+    + "  → rétablissez `\"adm-zip\": \"0.6.1\"` dans `overrides` de package.json, puis\n"
     + "    `npm install`. NE désactivez PAS l'audit et n'inscrivez PAS d'exception : une\n"
     + "    vulnérabilité rendue invisible est pire que celle qu'on a vue.");
 
@@ -1847,7 +1859,7 @@ test("adm-zip reste au-dessus du seuil de son avis, et l'override qui l'y tient 
   const paquet = JSON.parse(readFileSync(join(racine, "package.json"), "utf8")) as {
     overrides?: Record<string, string>;
   };
-  assert.equal(paquet.overrides?.["adm-zip"], "^0.6.0",
+  assert.equal(paquet.overrides?.["adm-zip"], "0.6.1",
     "le verrou est bon mais l'override a disparu de package.json : c'est le hasard de la\n"
     + "  résolution qui tient la correction, et il ne tiendra pas au prochain `npm install`.");
 });
