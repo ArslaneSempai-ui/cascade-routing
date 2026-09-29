@@ -28,14 +28,15 @@ test("measure:yours with two priced chains writes the audit into the console, th
     for (const f of ["receipts.csv", "receipts-vendor-a-outcomes.json", "receipts-vendor-b-outcomes.json"]) copyFileSync(join(EXAMPLE, f), join(d, f));
     const r = spawnSync(process.execPath, [CMD, `--cases=${join(d, "receipts.csv")}`,
       `--sorties=${join(d, "receipts-vendor-a-outcomes.json")}`, `--sorties=${join(d, "receipts-vendor-b-outcomes.json")}`,
-      `--rules=${join(EXAMPLE, "rules.json")}`, "--current=vendor-a", "--pages-per-year=1000000", "--pages-per-document=1"],
+      `--rules=${join(EXAMPLE, "rules.json")}`, "--current=vendor-a", "--pages-per-year=1000000", "--pages-per-document=1", "--margin=5"],
       { encoding: "utf8", timeout: 600_000, env: { ...process.env, CASCADE_OFFLINE: "1" } });
     assert.equal(r.status, 0, `the command failed:\n${(r.stdout + r.stderr).slice(-2000)}`);
     const out = r.stdout;
     assert.match(out, /Your chain: "vendor-a"\./);
     assert.match(out, /price: \$50 per thousand pages, billed per page: declared by you/);
     assert.match(out, /Your chain: "vendor-b"\./);
-    assert.match(out, /AUDIT: the cheapest source per field/);
+    assert.match(out, /AUDIT: per field, the cheapest source this sample cannot show to be worse than the best/);
+    assert.match(out, /\(margin: 5-point, your declaration\)/);
     assert.match(out, /Recommended routing: total/);
     assert.match(out, /Current chain vendor-a: \$50/);
     assert.match(out, /pages a year: .* a year\./, "the annual figure is stated once a yearly volume is declared");
@@ -47,15 +48,18 @@ test("measure:yours with two priced chains writes the audit into the console, th
     assert.ok(scelleIntact(record));
     assert.deepEqual(record.kinds, { total: "amount", receipt_date: "date", receipt_id: "id", currency: "currency" });
     assert.deepEqual(Object.keys(record.audit.routing).sort(), ["currency", "receipt_date", "receipt_id", "total"]);
+    assert.equal(record.audit.margin, 0.05, "the margin the routing was made within travels in the record");
+    assert.ok(Object.values<string | null>(record.audit.routing).every((s) => s !== null), "every field has an admissible priced source within five points");
     assert.equal(record.audit.cost.current.chain, "vendor-a");
     assert.equal(record.audit.cost.current.perThousandPages, 50);
     assert.equal(record.audit.cost.annual.pagesPerYear, 1_000_000);
     assert.equal(record.declared["vendor-a"].pricePerThousandPages, 50);
     assert.equal(record.declared["vendor-b"].pricePerThousandPages, 10);
     for (const field of Object.keys(record.audit.fields)) {
-      for (const [name, s] of Object.entries<{ n: number; low: number; high: number; accuracy: number }>(record.audit.fields[field].sources)) {
-        assert.ok(s.n >= 1 && s.low <= s.accuracy && s.accuracy <= s.high, `${field}/${name}: a rate outside its own interval`);
+      for (const [name, s] of Object.entries<{ n: number; low: number | null; high: number | null; accuracy: number | null }>(record.audit.fields[field].sources)) {
+        assert.ok(s.n >= 20 && s.accuracy !== null && s.low! <= s.accuracy && s.accuracy <= s.high!, `${field}/${name}: sixty cases were graded, the rate is quoted inside its interval`);
       }
+      assert.ok(record.graded["vendor-a"].kinds.total === "amount" && record.graded["vendor-a"].casesSha256.length === 64, "the record says which kinds and which file each chain was graded under");
     }
     /* Both chains and the local tiers sit in the same table, and no value entered anything written. */
     assert.ok(["vendor-a", "vendor-b", "rules", "small", "large"].every((n) => record.tiers.includes(n)), record.tiers.join(", "));

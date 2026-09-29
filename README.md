@@ -124,10 +124,13 @@ request; the suite holds it.
 
 ## Requirements
 
-Node 24 or newer. The suite runs in continuous integration on Linux, macOS and Windows
-runners; what a system cannot run is named, case by case, in the expected-skips file of that
-system under `.github/`, never skipped in silence. Several scripts chain shell commands,
-which hold under Git Bash and not under `cmd.exe`.
+Node 24 or newer. The suite runs in continuous integration on Linux and macOS runners, and
+on Windows minus one shared test file, the screenshot driver's, named with its reason in
+`.github/fichiers-exclus-windows.txt` and printed at the top of the suite's output there;
+what a system cannot run is named, case by case, in the expected-skips file of that system
+under `.github/`, never skipped in silence. Windows is claimed only as far as that leg of the
+matrix is green. Several scripts chain shell commands, which hold under Git Bash and not
+under `cmd.exe`.
 
 ## The extraction cost audit
 
@@ -146,13 +149,19 @@ Three commands, in this order:
    labelled CSV, and writes an outcomes file: clean, wrong or blank per case and field, the
    grader's version, and the kind each field was declared as. The values stay where they were.
 2. `npm run measure:yours` takes several such files at once, one per vendor, each with the
-   price per thousand pages the client declares (or a list price from `vendor-prices.json`,
-   dated and marked as such), measures the local tiers on the same cases, and writes the
-   audit into the sealed record.
+   price per thousand pages or documents the client declares (or a list price from
+   `vendor-prices.json`, dated and marked as such), measures the local tiers on the same
+   cases, and writes the audit into the sealed record. Nothing is recommended without a
+   margin declared with `--margin`: "not separable from the best" is not "not worse", and
+   only the client can say what loss they accept. Without one the audit lists, per field,
+   the options the sample cannot separate from the best, and states no saving.
 3. The record, `cascade-client-record` version two, carries per vendor and per field the
-   accuracy with its Wilson bounds and its `n`, the cost per thousand pages, the recommended
-   routing, the annual saving against the current chain, and a flag on every pick the sample
-   cannot separate. The visual report is built from that JSON; it is not in this repository.
+   accuracy with its Wilson bounds and its `n` (no rate under twenty cases, anywhere), the
+   cost per thousand pages, the recommended routing within the margin, the annual saving
+   against the current chain, and a flag on every pick the sample cannot separate, on every
+   pick measurably worse than another admissible source, and on every pair that shares too
+   few cases to be compared. The visual report is built from that JSON; it is not in this
+   repository.
 
 A field's header declares its kind (`total:amount`, `closing_date:date`, `tax_id:id`,
 `currency:currency`, `vendor_name:free-text`) and the comparison follows: a thousands
@@ -162,7 +171,12 @@ A typed comparison can only add matches to the default one, and a property test 
 A vendor bills per page, once, whatever the number of fields taken from it, so the audit
 costs a routing per page and a routing that reads two vendors pays both. That is why its
 cost model lives beside the published optimiser rather than inside it, and why no figure on
-this page moves because of it.
+this page moves because of it. Two sources graded on the same cases are compared case for
+case: McNemar's exact test says whether the sample separates them, and the paired-difference
+interval of `src/paired-difference.ts` (Newcombe's hybrid score) bounds how far behind the
+cheaper one may be, which is what the margin is checked against. A list price is a
+first-tier price: above the vendor's monthly tier no annual figure is stated until a price
+is declared.
 
 ## What else is in here
 
@@ -183,7 +197,7 @@ this page moves because of it.
 <!-- /figures:documents -->
 
 <!-- figures:tests -->
-**729 tests** across 85 files, counted from the sources rather than typed here.
+**767 tests** across 87 files, counted from the sources rather than typed here.
 <!-- /figures:tests -->
 
 Everything runs locally, and that is enforced rather than promised. The one call that could

@@ -56,13 +56,15 @@ npm run measure:yours -- --cases=examples/extraction-audit/receipts.csv \
     --sorties=examples/extraction-audit/receipts-vendor-a-outcomes.json \
     --sorties=examples/extraction-audit/receipts-vendor-b-outcomes.json \
     --rules=examples/extraction-audit/rules.json \
-    --current=vendor-a --pages-per-year=1000000
+    --current=vendor-a --pages-per-year=1000000 --margin=5
 ```
 
 It measures the local tiers on the same sixty receipts, then prints and writes the audit:
 per field, the cheapest source the sample cannot show to be worse, its cost per thousand
-pages, the recommended routing, the saving a year against vendor A, and every pick the sample
-cannot separate. **No output of that command is committed here**: the environment that wrote
+pages, the recommended routing within the declared five-point margin, the saving a year
+against vendor A, and every pick the sample cannot separate. Without `--margin` it lists, per
+field, the options the sample cannot separate from the best and recommends nothing: "not
+separable" is not "not worse". **No output of that command is committed here**: the environment that wrote
 this example could not download the weights, so the run was not made, and a result that was
 not produced is not published. The suite runs the same command where the weights exist
 (`src/audit-command.test.ts`).

@@ -1,0 +1,29 @@
+{
+  "_synthetic": "Hand-written against the AnalyzeID response schema: two IdentityDocuments, one per side, the back FIRST. A field not printed on a side comes back with an empty Text. The person and the numbers do not exist.",
+  "DocumentMetadata": { "Pages": 2 },
+  "AnalyzeIDModelVersion": "1.0",
+  "IdentityDocuments": [
+    {
+      "DocumentIndex": 1,
+      "IdentityDocumentFields": [
+        { "Type": { "Text": "FIRST_NAME" }, "ValueDetection": { "Text": "", "Confidence": 3.0 } },
+        { "Type": { "Text": "LAST_NAME" }, "ValueDetection": { "Text": "", "Confidence": 3.0 } },
+        { "Type": { "Text": "DATE_OF_BIRTH" }, "ValueDetection": { "Text": "", "Confidence": 2.0 } },
+        { "Type": { "Text": "ADDRESS" }, "ValueDetection": { "Text": "2 SAMPLE ROAD SPRINGFIELD IL 00000", "Confidence": 91.0 } },
+        { "Type": { "Text": "ID_TYPE" }, "ValueDetection": { "Text": "DRIVER LICENSE BACK", "Confidence": 99.0 } },
+        { "Type": { "Text": "ENDORSEMENTS" }, "ValueDetection": { "Text": "", "Confidence": 4.0 } }
+      ]
+    },
+    {
+      "DocumentIndex": 2,
+      "IdentityDocumentFields": [
+        { "Type": { "Text": "FIRST_NAME" }, "ValueDetection": { "Text": "JANE", "Confidence": 99.0 } },
+        { "Type": { "Text": "LAST_NAME" }, "ValueDetection": { "Text": "SAMPLE", "Confidence": 99.0 } },
+        { "Type": { "Text": "DATE_OF_BIRTH" }, "ValueDetection": { "Text": "05/03/1990", "NormalizedValue": { "Value": "1990-05-03T00:00:00", "ValueType": "Date" }, "Confidence": 98.0 } },
+        { "Type": { "Text": "ADDRESS" }, "ValueDetection": { "Text": "", "Confidence": 5.0 } },
+        { "Type": { "Text": "ID_TYPE" }, "ValueDetection": { "Text": "DRIVER LICENSE FRONT", "Confidence": 99.0 } },
+        { "Type": { "Text": "ENDORSEMENTS" }, "ValueDetection": { "Text": "", "Confidence": 4.0 } }
+      ]
+    }
+  ]
+}

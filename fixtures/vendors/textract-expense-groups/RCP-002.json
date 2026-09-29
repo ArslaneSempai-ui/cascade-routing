@@ -1,0 +1,26 @@
+{
+  "_synthetic": "Hand-written against the AnalyzeExpense response schema with GroupProperties: the same type (NAME, ADDRESS) once per party, VENDOR and RECEIVER_BILL_TO. No real invoice, no real company.",
+  "DocumentMetadata": { "Pages": 1 },
+  "ExpenseDocuments": [
+    {
+      "ExpenseIndex": 1,
+      "SummaryFields": [
+        { "Type": { "Text": "NAME", "Confidence": 99.0 }, "ValueDetection": { "Text": "Sample Vendor LLC (synthetic)", "Confidence": 98.0 }, "PageNumber": 1,
+          "GroupProperties": [ { "Types": ["VENDOR"], "Id": "group-vendor" } ] },
+        { "Type": { "Text": "ADDRESS", "Confidence": 97.0 }, "ValueDetection": { "Text": "1 Sample Street, Springfield IL 00000", "Confidence": 96.0 }, "PageNumber": 1,
+          "GroupProperties": [ { "Types": ["VENDOR"], "Id": "group-vendor" } ] },
+        { "Type": { "Text": "NAME", "Confidence": 98.0 }, "ValueDetection": { "Text": "Sample Buyer Inc (synthetic)", "Confidence": 97.0 }, "PageNumber": 1,
+          "GroupProperties": [ { "Types": ["RECEIVER_BILL_TO"], "Id": "group-bill-to" } ] },
+        { "Type": { "Text": "ADDRESS", "Confidence": 96.0 }, "ValueDetection": { "Text": "9 Buyer Avenue, Springfield IL 00001", "Confidence": 95.0 }, "PageNumber": 1,
+          "GroupProperties": [ { "Types": ["RECEIVER_BILL_TO"], "Id": "group-bill-to" } ] },
+        { "Type": { "Text": "TAX_PAYER_ID", "Confidence": 90.0 }, "ValueDetection": { "Text": "00-0000000", "Confidence": 89.0 }, "PageNumber": 1,
+          "GroupProperties": [ { "Types": ["VENDOR"], "Id": "group-vendor" } ] },
+        { "Type": { "Text": "TAX_PAYER_ID", "Confidence": 90.0 }, "ValueDetection": { "Text": "00-0000000", "Confidence": 89.0 }, "PageNumber": 1,
+          "GroupProperties": [ { "Types": ["RECEIVER_BILL_TO"], "Id": "group-bill-to" } ] },
+        { "Type": { "Text": "TOTAL", "Confidence": 99.0 }, "LabelDetection": { "Text": "Total Due" }, "ValueDetection": { "Text": "1,980.00", "Confidence": 97.0 }, "PageNumber": 1 },
+        { "Type": { "Text": "INVOICE_RECEIPT_ID", "Confidence": 99.0 }, "ValueDetection": { "Text": "INV-2026-0045", "Confidence": 97.0 }, "PageNumber": 1 }
+      ],
+      "LineItemGroups": []
+    }
+  ]
+}

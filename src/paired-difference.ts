@@ -16,6 +16,14 @@
  * interval around zero and a candidate that only loses cases has a bound that moves with
  * every case it loses. A property test holds the second part: turning a case both got
  * right into a case only the head got right never lowers the head's worst-case advantage.
+ * When every case is concordant and right (b = c = d = 0) a marginal total is zero and phi is
+ * taken as zero, as Newcombe prescribes: the interval is then as wide as two independent
+ * samples give, about six points on sixty cases, which is what a sample with no observed
+ * disagreement can bound.
+ *
+ * Separation stays McNemar's exact test on the discordant pairs, the test every other paired
+ * phrase of the report uses: the interval is the bound the margin is checked against, not a
+ * second verdict on the same pair.
  *
  * `comparaison-appariee.ts` keeps the older bound: it is a shared file whose source is the
  * identite repository, copied byte for byte across the family, and it is not edited here.
@@ -43,7 +51,9 @@ export type PairedDifference = {
   high: number;
   /** McNemar exact on the discordant pairs; null without a disagreement. */
   p: number | null;
-  /** The interval excludes zero: the sample separates the two. */
+  /** McNemar exact on the discordant pairs, p < 0.05: the sample separates the two. The
+      repository's paired verdicts all use this test (`interval.ts`), so a reader never sees
+      two separation verdicts on one pair; the interval above is the BOUND, not the test. */
   separable: boolean;
   /** Fewer paired cases than the floor: nothing here should decide anything. */
   tooFew: boolean;
@@ -88,7 +98,7 @@ export function newcombe(t: PairedTable, z = 1.96): PairedDifference | null {
   const p = discordant === 0 ? null : (verdict as { p: number }).p;
   return {
     n, table: { a: t.a, b: t.b, c: t.c, d: t.d }, difference, low, high, p,
-    separable: low > 0 || high < 0,
+    separable: p !== null && p < 0.05,
     tooFew: n < ENOUGH,
   };
 }

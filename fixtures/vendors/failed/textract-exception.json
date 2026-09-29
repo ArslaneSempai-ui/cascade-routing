@@ -1,0 +1,5 @@
+{
+  "_synthetic": "Hand-written: the error body the Textract API returns for a failed synchronous call (an AWS JSON-protocol exception). No real bucket, no real document.",
+  "__type": "InvalidS3ObjectException",
+  "Message": "Unable to get object metadata from S3. Check object key, region and/or access permissions."
+}

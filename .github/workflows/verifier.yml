@@ -169,8 +169,12 @@ jobs:
       # file is chosen from the runner's system, and a system whose file is missing is red,
       # never quietly tolerant. `shell: bash` is explicit because the default shell on a
       # Windows runner is PowerShell, which has no `set -o pipefail`.
+      # A HANG IS A NAMED FAILURE, NOT A SIX-HOUR JOB. `npm test` caps every case at twenty minutes
+      # (src/suite.ts), and this step caps the whole suite: the first Windows run of the matrix
+      # (2026-09-29) went silent after one shared file and ran until someone cancelled it.
       - name: suite, et aucun cas ignoré hors de la liste nominative
         shell: bash
+        timeout-minutes: 60
         run: |
           set -o pipefail
           case "$RUNNER_OS" in

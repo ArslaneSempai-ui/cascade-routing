@@ -13,8 +13,10 @@
  * on 2026-09-29: AnalyzedDocument.fields as a dictionary of DocumentField; DocumentField
  * with `type`, `content` and one typed value among valueString, valueDate, valueTime,
  * valuePhoneNumber, valueNumber, valueInteger, valueCurrency (amount, currencySymbol,
- * currencyCode), valueAddress, valueCountryRegion, valueBoolean, valueArray, valueObject;
- * DocumentKeyValuePair with key.content and value.content.
+ * currencyCode), valueAddress (houseNumber, poBox, road, city, state, postalCode,
+ * countryRegion, streetAddress, unit, cityDistrict, stateDistrict, suburb, house, level),
+ * valueCountryRegion, valueBoolean, valueArray, valueObject; DocumentKeyValuePair with
+ * key.content and value.content; the operation result's `status` and `error` (code, message).
  *
  * By default the adapter returns `content`, the value as printed on the page, because the
  * audit grades what a vendor READ. `{ "field": "InvoiceTotal", "value": true }` returns the
@@ -54,6 +56,46 @@ export function azureShape(exported: unknown): "analyze-result" | null {
   return Array.isArray(r.documents) || Array.isArray(r.keyValuePairs) || typeof r.apiVersion === "string" ? "analyze-result" : null;
 }
 
+function oneLine(s: string): string {
+  return s.replace(/\s+/g, " ").trim().slice(0, 200);
+}
+
+/**
+ * A failed operation or a refused request, or `null` for a result. Reviewed 2026-09-29
+ * (item 32): such a file has no analyzeResult, read as the wrong shape and dropped out of the
+ * denominator. Two spellings: the operation result with `status: "failed"` and its `error`
+ * (and no analyzeResult), and the bare error body `{ "error": { "code", "message" } }` the
+ * service writes when it refuses the request itself. A result that carries documents or
+ * key-value pairs is never a failure, whatever sits beside them; an operation still
+ * "running" or "notStarted" is not a failure either, only not a result yet, and keeps
+ * reading as the wrong shape. One line, no value.
+ */
+export function azureFailed(exported: unknown): string | null {
+  if (!exported || typeof exported !== "object" || Array.isArray(exported)) return null;
+  const o = exported as { status?: unknown; error?: unknown; analyzeResult?: unknown } & Result;
+  const err = o.error && typeof o.error === "object" ? o.error as { code?: unknown; message?: unknown } : undefined;
+  const detail = err
+    ? `${typeof err.code === "string" ? err.code : "error"}: ${typeof err.message === "string" ? err.message : "no message"}`
+    : "no error detail";
+  if (typeof o.status === "string" && o.status.toLowerCase() === "failed") return oneLine(`status failed: ${detail}`);
+  if (err && !o.analyzeResult && !Array.isArray(o.documents) && !Array.isArray(o.keyValuePairs)) return oneLine(detail);
+  return null;
+}
+
+/** What a selector family reads, for the message that says a selector matched nothing (item 19). */
+export function azureNeeds(selector: AzureSelector): string {
+  return "field" in selector
+    ? `"documents[].fields" as a prebuilt or custom model writes them`
+    : `"keyValuePairs" as the key-value pair feature writes them`;
+}
+
+/** Whether the export carries the part this selector's family reads (item 19). */
+export function azureFits(exported: unknown, selector: AzureSelector): boolean {
+  const r = unwrap(exported);
+  if (!r) return false;
+  return "field" in selector ? Array.isArray(r.documents) : Array.isArray(r.keyValuePairs);
+}
+
 export function isAzureSelector(x: unknown): x is AzureSelector {
   if (!x || typeof x !== "object") return false;
   const o = x as Record<string, unknown>;
@@ -66,6 +108,22 @@ export function isAzureSelector(x: unknown): x is AzureSelector {
 
 export function normaliseKey(s: string): string {
   return s.toLowerCase().replace(/[:\s]+$/g, "").replace(/\s+/g, " ").trim();
+}
+
+/**
+ * A typed address on one line, in a fixed order. Reviewed 2026-09-29 (item 29): the
+ * 2024-11-30 API writes `streetAddress` NEXT TO `houseNumber` and `road` (it is their
+ * combination), and joining every key wrote the street twice. The order:
+ *   streetAddress when present, else houseNumber then road;
+ *   unit, poBox, city, cityDistrict, state, stateDistrict, postalCode, countryRegion.
+ * Empty parts are skipped and any other key (suburb, house, level) is ignored: each repeats
+ * or refines one of the above, and a second spelling of the same line is what this fixes.
+ */
+export function addressLine(a: Record<string, string | undefined>): string {
+  const part = (k: string): string => (typeof a[k] === "string" ? a[k]!.trim() : "");
+  const street = part("streetAddress") || [part("houseNumber"), part("road")].filter((p) => p.length > 0).join(" ");
+  return [street, ...["unit", "poBox", "city", "cityDistrict", "state", "stateDistrict", "postalCode", "countryRegion"].map(part)]
+    .filter((p) => p.length > 0).join(" ");
 }
 
 /** The typed value of a field as a string; `content` when the type carries none. */
@@ -81,9 +139,7 @@ export function typedValue(f: Field): string {
   if (typeof f.valueInteger === "number") return String(f.valueInteger);
   if (typeof f.valueBoolean === "boolean") return String(f.valueBoolean);
   if (f.valueCurrency && typeof f.valueCurrency.amount === "number") return String(f.valueCurrency.amount);
-  if (f.valueAddress) {
-    return Object.values(f.valueAddress).filter((v): v is string => typeof v === "string" && v.length > 0).join(" ").trim();
-  }
+  if (f.valueAddress && typeof f.valueAddress === "object") return addressLine(f.valueAddress);
   return f.content ?? "";
 }
 

@@ -51,10 +51,11 @@ function recordV2(): ReleveClient {
   const a = audit({
     fields: ["total"], kinds: { total: "amount" }, releve,
     chains: [
-      { kind: "vendor", name: "textract", pricePerThousandPages: 50, billing: "page", provenance: "declared" },
-      { kind: "vendor", name: "azure", pricePerThousandPages: 10, billing: "page", provenance: "list-price", listPrice: { key: "azure-document-intelligence-prebuilt", readOn: "2026-09-29", url: "https://azure.microsoft.com/en-us/pricing/details/ai-document-intelligence/", verified: false } },
+      { kind: "vendor", name: "textract", pricePerThousand: 50, billing: "page", provenance: "declared" },
+      { kind: "vendor", name: "azure", pricePerThousand: 10, billing: "page", provenance: "list-price", listPrice: { key: "azure-document-intelligence-prebuilt", readOn: "2026-09-29", url: "https://azure.microsoft.com/en-us/pricing/details/ai-document-intelligence/", verified: false, tierPagesPerMonth: 1_000_000 } },
     ],
-    current: "textract", pagesPerDocument: 2, pagesPerYear: 600_000, machineHourlyCost: 1.2,
+    /* A margin is declared: without one the audit recommends nothing and states no saving. */
+    current: "textract", pagesPerDocument: 2, pagesPerYear: 600_000, machineHourlyCost: 1.2, margin: 0.15,
   });
   const r = releveClient({
     fichier: "/home/someone/private/cas.csv", octets: Buffer.from("id,text,total:amount\n1,Total 5.00,5.00\n"),
@@ -80,20 +81,22 @@ test("version 2 carries the kinds, the grader, the audit and the prices, and sti
   /* Per vendor and field: accuracy with its bounds and n. */
   const t = a.fields["total"]!.sources["textract"]!;
   assert.equal(t.n, 40);
-  assert.ok(t.low < t.accuracy && t.accuracy <= t.high);
+  assert.ok(t.low! < t.accuracy! && t.accuracy! <= t.high!);
   assert.equal(t.costPerThousandPages, 50);
+  assert.equal(a.margin, 0.15);
   /* The routing, the cost at the declared volume, the saving, and the flags. On forty cases
-     the local tier (two misses) is not separable from either vendor (one miss each), and its
-     machine time costs next to nothing against a page price: it takes the field, and both
-     vendor pages go unpaid. The saving is then the whole current page price a year. */
-  assert.equal(a.routing["total"], "large", "the local tier is not separable from the vendors and costs machine time only");
+     the local tier (two misses) is non-inferior to the head within fifteen points and not
+     separable from it (one miss each for the vendors), and its machine time costs next to
+     nothing against a page price: it takes the field, and both vendor pages go unpaid. The
+     saving is then the whole current page price a year. */
+  assert.equal(a.routing["total"], "large", "the local tier is non-inferior within the margin and costs machine time only");
   assert.ok(a.cost.recommended!.perThousandPages < 0.01, String(a.cost.recommended?.perThousandPages));
   assert.deepEqual(a.cost.recommended?.vendors, []);
   /* Ten milliseconds of `large` per document, at the declared hourly rate, over six hundred
      thousand pages: one dollar of machine time a year against the vendor's page price. */
   assert.ok(a.cost.annual!.saving >= 29_998 && a.cost.annual!.saving <= 30_000, String(a.cost.annual?.saving));
-  assert.ok(a.inseparable.some((p) => p.chosen === "large" && p.other === "textract"), "an explicit flag where accuracies cannot be separated");
-  assert.ok(a.inseparable.some((p) => p.chosen === "large" && p.other === "azure"));
+  assert.ok(a.inseparable.some((p) => p.source === "large" && p.against === "textract"), "an explicit flag where accuracies cannot be separated");
+  assert.ok(a.inseparable.some((p) => p.source === "large" && p.against === "azure"));
   assert.equal(a.fields["total"]!.sources["azure"]!.costPerThousandPages, 10, "the list price is carried per source");
   assert.equal(a.assumptions.prices.find((p) => p.name === "azure")?.provenance, "list-price");
   const text = JSON.stringify(r);

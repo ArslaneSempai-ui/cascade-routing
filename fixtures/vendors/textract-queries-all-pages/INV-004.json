@@ -1,0 +1,20 @@
+{
+  "_synthetic": "Hand-written against the AnalyzeDocument response schema: QUERIES run with Pages [\"*\"], so the same alias has one QUERY block per page. Page one has no answer, page two has it. No real document.",
+  "DocumentMetadata": { "Pages": 2 },
+  "AnalyzeDocumentModelVersion": "1.0",
+  "Blocks": [
+    { "BlockType": "PAGE", "Id": "page-1", "Page": 1, "Relationships": [ { "Type": "CHILD", "Ids": ["q-1-p1", "q-2-p1"] } ] },
+    { "BlockType": "QUERY", "Id": "q-1-p1", "Page": 1, "Query": { "Text": "What is the invoice number?", "Alias": "invoice_number", "Pages": ["*"] } },
+    { "BlockType": "QUERY", "Id": "q-2-p1", "Page": 1, "Query": { "Text": "What is the total?", "Alias": "total", "Pages": ["*"] },
+      "Relationships": [ { "Type": "ANSWER", "Ids": ["qr-2-p1"] } ] },
+    { "BlockType": "QUERY_RESULT", "Id": "qr-2-p1", "Text": "980.00", "Confidence": 62.0, "Page": 1 },
+    { "BlockType": "PAGE", "Id": "page-2", "Page": 2, "Relationships": [ { "Type": "CHILD", "Ids": ["q-1-p2", "q-2-p2", "q-3-p2"] } ] },
+    { "BlockType": "QUERY", "Id": "q-1-p2", "Page": 2, "Query": { "Text": "What is the invoice number?", "Alias": "invoice_number", "Pages": ["*"] },
+      "Relationships": [ { "Type": "ANSWER", "Ids": ["qr-1-p2"] } ] },
+    { "BlockType": "QUERY_RESULT", "Id": "qr-1-p2", "Text": "INV-2026-0043", "Confidence": 93.0, "Page": 2 },
+    { "BlockType": "QUERY", "Id": "q-2-p2", "Page": 2, "Query": { "Text": "What is the total?", "Alias": "total", "Pages": ["*"] },
+      "Relationships": [ { "Type": "ANSWER", "Ids": ["qr-2-p2"] } ] },
+    { "BlockType": "QUERY_RESULT", "Id": "qr-2-p2", "Text": "1,980.00", "Confidence": 88.0, "Page": 2 },
+    { "BlockType": "QUERY", "Id": "q-3-p2", "Page": 2, "Query": { "Text": "What is the purchase order number?", "Alias": "po_number", "Pages": ["*"] } }
+  ]
+}

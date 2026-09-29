@@ -1,0 +1,13 @@
+# The test files the suite does NOT run on a Windows machine, and why. Read by src/suite.ts,
+# which prints every exclusion at the top of the suite's output; a file listed here that does
+# not exist fails the suite (the list lies). Same discipline as the expected-skips lists: never
+# in advance, never in silence, and with the reason written right above the file.
+
+# capturer.test.mjs is a shared file (source: identite, copied byte for byte across the family)
+# and is not edited in this repository. Its cases drive `sleep`, `ps -o lstart`, `python3 -m
+# http.server` and `curl`, the tools of the screenshot driver, and on the first Windows run of
+# the matrix (2026-09-29, run 36608247909) the file never finished: the suite went silent after
+# the file before it in the order and the job was cancelled 48 minutes later. The driver is a
+# macOS tool (it captures the README images on the developer's machine); a Windows-aware
+# version of its cases belongs in identite, and this line goes when it lands.
+src/capturer.test.mjs

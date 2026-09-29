@@ -39,7 +39,7 @@ test("the table is counted on the cases graded on both sides only, and nothing p
   assert.equal(few.tooFew, true, "ten paired cases are under the floor");
 });
 
-test("separable when the interval excludes zero, in either direction", () => {
+test("separable by McNemar exact, in either direction, and the bound points the same way", () => {
   const head = ones(80);
   const worse = pairedDifference(head, ones(80, Array.from({ length: 20 }, (_, i) => i)))!;
   assert.ok(worse.separable && worse.low > 0);

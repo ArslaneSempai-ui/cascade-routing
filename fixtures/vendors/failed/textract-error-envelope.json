@@ -1,0 +1,5 @@
+{
+  "_synthetic": "Hand-written: the error envelope the AWS CLI and SDK v2 write for a failed Textract call. No real document.",
+  "Error": { "Code": "UnsupportedDocumentException", "Message": "Request has unsupported document format" },
+  "ResponseMetadata": { "HTTPStatusCode": 400 }
+}

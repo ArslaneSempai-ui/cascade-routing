@@ -1295,3 +1295,99 @@ test("releveClient : la forme du banc, des comptes et des bits, jamais une valeu
   const altere = { ...r, extraction: { ...r.extraction, large: { name: { ...r.extraction.large!.name!, accuracy: 1 } } } };
   assert.notEqual(empreinteDuReleve(altere), r.empreinte, "un taux modifié à la main doit casser le scellé.");
 });
+
+/*
+ * ─── Review of 2026-09-29: what an outcomes file may say, and what is checked before measuring ───
+ */
+
+test("review item 20: a negative declared price or duration is refused by the loader, naming file and key", async () => {
+  const { chargerSorties } = await import("./your-cases.ts");
+  const d = mkdtempSync(join(tmpdir(), "sorties-neg-"));
+  try {
+    for (const [cle, v] of [["pricePerThousandPages", -5], ["coutParMilleDocuments", -1], ["msParDocument", -3], ["pricePerThousandDocuments", -0.5]] as const) {
+      const f = join(d, `${cle}.json`);
+      writeFileSync(f, JSON.stringify({ nom: "mine", issues: { name: { d1: "clean" } }, declares: { [cle]: v } }));
+      assert.throws(() => chargerSorties(f), new RegExp(`${cle}\\.json: declares\\.${cle} is ${v}, below zero`), cle);
+    }
+    const ok = join(d, "ok.json");
+    writeFileSync(ok, JSON.stringify({ nom: "mine", issues: { name: { d1: "clean" } }, declares: { pricePerThousandDocuments: 40 } }));
+    assert.equal(chargerSorties(ok).declares?.pricePerThousandDocuments, 40, "the per-document key is read");
+  } finally { rmSync(d, { recursive: true, force: true }); }
+});
+
+test("review item 21: the loader keeps the kinds and the source file the outcomes answer, and the check refuses another file or other kinds", async () => {
+  const { chargerSorties, verifierSorties } = await import("./your-cases.ts");
+  const d = mkdtempSync(join(tmpdir(), "sorties-src-"));
+  try {
+    const f = join(d, "a.json");
+    writeFileSync(f, JSON.stringify({
+      nom: "mine", issues: { total: { d1: "clean" }, date: { d1: "wrong" } },
+      notePar: { outil: "cascade", version: "abc", correcteur: "grader v1", kinds: { total: "amount", date: "date" } },
+      source: { cases: "old.csv", sha256: "a".repeat(64) },
+    }));
+    const s = chargerSorties(f);
+    assert.deepEqual(s.notePar?.kinds, { total: "amount", date: "date" }, "the kinds travel with the outcomes");
+    assert.deepEqual(s.source, { cases: "old.csv", sha256: "a".repeat(64) });
+    /* Another file: refused by name and hash. */
+    assert.throws(() => verifierSorties([s], "/x/new.csv", "b".repeat(64), { total: "amount", date: "date" }, ["total", "date"]),
+      /"mine" was graded against old\.csv \(sha256 aaaaaaaaaaaa…\), not against new\.csv \(sha256 bbbbbbbbbbbb…\)/);
+    /* The same file, other kinds: refused, naming the field and both kinds. */
+    assert.throws(() => verifierSorties([s], "/x/old.csv", "a".repeat(64), { total: "amount" }, ["total", "date"]),
+      /"mine" was graded with "date" compared as date; this file's header declares exact/);
+    /* The same file, the same kinds: passes; a field the chain has no outcomes for is not checked. */
+    assert.doesNotThrow(() => verifierSorties([s], "/x/old.csv", "a".repeat(64), { total: "amount", date: "date", other: "id" }, ["total", "date", "other"]));
+    /* A hand-written file says nothing about either, and nothing can be checked. */
+    const plain = join(d, "plain.json");
+    writeFileSync(plain, JSON.stringify({ nom: "hand", issues: { total: { d1: "clean" } } }));
+    assert.doesNotThrow(() => verifierSorties([chargerSorties(plain)], "/x/new.csv", "b".repeat(64), { total: "amount" }, ["total"]));
+    const badKinds = join(d, "bad.json");
+    writeFileSync(badKinds, JSON.stringify({ nom: "x", issues: {}, notePar: { kinds: { total: 3 } } }));
+    assert.throws(() => chargerSorties(badKinds), /notePar\.kinds must map each field to the name of a kind/);
+  } finally { rmSync(d, { recursive: true, force: true }); }
+});
+
+test("review item 24: an outcomes file with a byte-order mark is read, a UTF-16 one is refused by name", async () => {
+  const { chargerSorties } = await import("./your-cases.ts");
+  const d = mkdtempSync(join(tmpdir(), "sorties-bom-"));
+  try {
+    const bom = join(d, "bom.json");
+    writeFileSync(bom, Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), Buffer.from(JSON.stringify({ nom: "mine", issues: { total: { d1: "clean" } } }))]));
+    assert.equal(chargerSorties(bom).nom, "mine");
+    const le = join(d, "le.json");
+    writeFileSync(le, Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from('{"nom":"mine","issues":{}}', "utf16le")]));
+    assert.throws(() => chargerSorties(le), /le\.json is encoded as UTF-16/);
+  } finally { rmSync(d, { recursive: true, force: true }); }
+});
+
+test("review item 33: a header read without kinds keeps \"customer:id\" as a column name, as a version 1 record needs", async () => {
+  const { lireCsv } = await import("./your-cases.ts");
+  const csv = "id,text,customer:id\n1,hello,ABC-1\n";
+  const v2 = lireCsv(csv);
+  assert.deepEqual(v2.champs, ["customer"]);
+  assert.deepEqual({ ...v2.kinds }, { customer: "id" });
+  const v1 = lireCsv(csv, { kinds: false });
+  assert.deepEqual(v1.champs, ["customer:id"], "the column name is the whole cell, colon included");
+  assert.deepEqual({ ...v1.kinds }, {});
+  assert.equal(v1.cas[0]!.truth["customer:id"], "ABC-1");
+});
+
+test("review item 10: two chains graded on disjoint cases do not crash the recommendation; the line says nothing was paired", async () => {
+  const { recommander, casCommuns } = await import("./your-cases.ts");
+  const { rate } = await import("./interval.ts");
+  assert.equal(casCommuns("11-", "-11"), 1);
+  assert.equal(casCommuns("11--", "--11"), 0);
+  const releve = {
+    total: {
+      "vendor-a": { bons: 30, sur: 30, ms: Number.NaN, reussites: "1".repeat(30) + "-".repeat(30) },
+      "vendor-b": { bons: 28, sur: 30, ms: Number.NaN, reussites: "-".repeat(30) + "1".repeat(28) + "00" },
+    },
+  } as never;
+  const rangs = [
+    { palier: "vendor-a", r: rate(30, 30), ms: Number.NaN },
+    { palier: "vendor-b", r: rate(28, 30), ms: Number.NaN },
+  ];
+  let lignes: string[] = [];
+  assert.doesNotThrow(() => { lignes = recommander("total", rangs, releve, 0.02); });
+  assert.ok(lignes.some((l) => /no case was graded on both vendor-a and vendor-b/.test(l)), lignes.join("\n"));
+  assert.ok(lignes.some((l) => /^No recommendation for total\./.test(l)));
+});

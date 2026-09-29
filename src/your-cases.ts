@@ -39,7 +39,7 @@ import { loadExtractors, loadClassifiers, loadGeneratifs, extract, correct, clas
 import { poidsAbsents, motifDEcart, CODE_ECART_TEMOIN, exigerPoidsSurPlace } from "./poids.ts";
 import { TIERS, ENCODEURS, GENERATIFS } from "./paliers.ts";
 import { rate, writeRate, cellulesDeTaux, CONFIANCE, ENOUGH, type Rate } from "./interval.ts";
-import { apparier, juger, phrase } from "./comparaison-appariee.ts";
+import { apparier, juger, phrase, type Bits } from "./comparaison-appariee.ts";
 import { createHash } from "node:crypto";
 import { basename } from "node:path";
 import { empreinteDuReleve } from "./measure.ts";
@@ -48,7 +48,8 @@ import { scoreDeDoute, doutesVides, compterDoute, signauxApplicables, type Doute
 import { evaluerRegles, direLesRefus, type ReglesEvaluees } from "./regles-bornees.ts";
 import { table } from "./figures.ts";
 import { splitHeader, graded, outcome as outcomeTyped, GRADER, type FieldKind } from "./grader.ts";
-import { audit as calculerAudit, auditLines, priceOf, readListPrices, type Audit, type SourcePrice, type ListPrices } from "./audit.ts";
+import { audit as calculerAudit, auditLines, priceOf, priceWords, readListPrices, PRICE_KEYS, type Audit, type SourcePrice, type ListPrices } from "./audit.ts";
+import { readJsonFile } from "./json-file.ts";
 import { ASSUMPTIONS, symboleDe, UNITS } from "./assumptions.ts";
 
 import type { TierName } from "./paliers.ts";
@@ -435,7 +436,7 @@ export function bornerTexte(texte: string): { texte: string; ecarte: number } {
   return { texte: texte.slice(0, PLAFOND_TEXTE), ecarte: texte.length - PLAFOND_TEXTE };
 }
 
-export function lireCsv(texte: string): Lecture {
+export function lireCsv(texte: string, options: { kinds?: boolean } = {}): Lecture {
   const lignes: string[][] = [];
   /* Le VRAI numéro de ligne du fichier, par ligne parsée. Un texte cité sur trois lignes
      décale tous les index : « line 7 » désignait la ligne 9 du fichier, et le client cherchait
@@ -545,7 +546,12 @@ export function lireCsv(texte: string): Lecture {
    * text/id detection and the question derivation all see the clean name. `grader.ts` says
    * which suffixes are kinds; any other suffix stays part of the name.
    */
-  const decoupes = entete.map((x) => splitHeader(x.trim().replace(/^\uFEFF/, "")));
+  /* `kinds: false` reads the header as a version 1 record did, `customer:id` being a name and
+     nothing else, so a baseline sealed before kinds existed still finds its columns (item 33). */
+  const decoupes = entete.map((x) => {
+    const brut = x.trim().replace(/^\uFEFF/, "");
+    return options.kinds === false ? { name: brut, kind: undefined } : splitHeader(brut);
+  });
   const vus = new Map<string, number>();
   for (const d of decoupes) {
     vus.set(d.name, (vus.get(d.name) ?? 0) + 1);
@@ -714,10 +720,13 @@ export type SortiesFournies = {
   nom: string;
   /** `issues[champ][id du cas]` — le verdict, jamais la valeur. */
   issues: Record<string, Record<string, IssueClient>>;
-  /** Qui a noté, et avec quoi. Sans ça l'exactitude n'est plus mesurée mais crue. */
-  notePar?: { outil?: string; version?: string; correcteur?: string };
+  /** Qui a noté, et avec quoi. Sans ça l'exactitude n'est plus mesurée mais crue. `kinds` is
+      the comparison each field was graded under, as `grade` writes it (item 21). */
+  notePar?: { outil?: string; version?: string; correcteur?: string; kinds?: Record<string, string> };
   /** Déclarés par lui, jamais mesurés ici. */
   declares?: DeclaresClient;
+  /** The file the outcomes answer, as `grade` writes it: its name and its sha256 (item 21). */
+  source?: { cases?: string; sha256?: string };
 };
 
 /**
@@ -730,10 +739,10 @@ export type SortiesFournies = {
  */
 export type DeclaresClient = {
   coutParMilleDocuments?: number; msParDocument?: number;
-  pricePerThousandPages?: number; billing?: "page" | "document"; vendor?: string;
+  pricePerThousandPages?: number; pricePerThousandDocuments?: number; billing?: "page" | "document"; vendor?: string;
 };
 
-export const DECLARES_NUMERIQUES = ["coutParMilleDocuments", "msParDocument", "pricePerThousandPages"] as const;
+export const DECLARES_NUMERIQUES = ["coutParMilleDocuments", "msParDocument", "pricePerThousandPages", "pricePerThousandDocuments"] as const;
 
 /**
  * La provenance d'un chiffre déclaré par le client, dans le vocabulaire existant.
@@ -880,8 +889,11 @@ export function nomDeChaine(brut: unknown, chemin: string): string {
 }
 
 export function chargerSorties(chemin: string): SortiesFournies {
-  const brut = JSON.parse(readFileSync(chemin, "utf8")) as Partial<SortiesFournies>
-    & { valeurs?: unknown };
+  /* Through the shared reader: a byte-order mark reads, UTF-16 is refused by name (item 24). */
+  const brut = readJsonFile(chemin) as Partial<SortiesFournies> & { valeurs?: unknown };
+  if (!brut || typeof brut !== "object" || Array.isArray(brut)) {
+    throw new Error(`${chemin}: expected an object { "nom": …, "issues": { … } }. Nothing was measured.`);
+  }
 
   /*
    * L'ancienne forme est refusée avec sa raison, pas ignorée.
@@ -927,6 +939,10 @@ export function chargerSorties(chemin: string): SortiesFournies {
           throw new Error(`${chemin}: declares.${cle} is ${JSON.stringify(v)}, not a finite number.\n`
             + `  JSON numbers carry no quotes: write ${cle}: 45, not "${String(v)}". Nothing was measured.`);
         }
+        /* A negative price entered the audit as a negative cost and inflated the saving (item 20). */
+        if (v < 0) {
+          throw new Error(`${chemin}: declares.${cle} is ${v}, below zero: a price or a duration is zero or more. Nothing was measured.`);
+        }
       } else if (cle === "billing") {
         if (v !== "page" && v !== "document") {
           throw new Error(`${chemin}: declares.billing is ${JSON.stringify(v)}; it is "page" or "document". Nothing was measured.`);
@@ -960,8 +976,66 @@ export function chargerSorties(chemin: string): SortiesFournies {
       }
     }
   }
+  /* What `grade` wrote about the grading itself travels with the outcomes: the kinds each
+     field was compared under, and the file they answer. Both are checked against the file
+     being measured before anything runs (`verifierSorties`, item 21). */
+  let notePar = brut.notePar;
+  if (notePar !== undefined) {
+    if (!notePar || typeof notePar !== "object" || Array.isArray(notePar)) {
+      throw new Error(`${chemin}: \`notePar\` must be an object. Nothing was measured.`);
+    }
+    if (notePar.kinds !== undefined) {
+      if (!notePar.kinds || typeof notePar.kinds !== "object" || Array.isArray(notePar.kinds)
+        || Object.values(notePar.kinds).some((k) => typeof k !== "string")) {
+        throw new Error(`${chemin}: notePar.kinds must map each field to the name of a kind. Nothing was measured.`);
+      }
+      notePar = { ...notePar, kinds: { ...notePar.kinds } };
+    }
+  }
+  let source: SortiesFournies["source"];
+  if (brut.source !== undefined) {
+    if (!brut.source || typeof brut.source !== "object" || Array.isArray(brut.source)) {
+      throw new Error(`${chemin}: \`source\` must be an object. Nothing was measured.`);
+    }
+    const sha = (brut.source as { sha256?: unknown }).sha256, cases = (brut.source as { cases?: unknown }).cases;
+    if (sha !== undefined && typeof sha !== "string") throw new Error(`${chemin}: source.sha256 must be a string. Nothing was measured.`);
+    if (cases !== undefined && typeof cases !== "string") throw new Error(`${chemin}: source.cases must be a string. Nothing was measured.`);
+    source = { ...(cases !== undefined ? { cases } : {}), ...(sha !== undefined ? { sha256: sha } : {}) };
+  }
   return { nom: nomDeChaine(brut.nom, chemin), issues: brut.issues,
-    notePar: brut.notePar, declares: brut.declares };
+    notePar, declares: brut.declares, ...(source !== undefined ? { source } : {}) };
+}
+
+/**
+ * A `--sorties` file answers ONE file under ONE set of kinds, and says which (item 21).
+ *
+ * `grade` writes the sha256 of the CSV it graded against and the kind each field was compared
+ * under. Measured against another file, its outcomes answer other cases; measured under
+ * other kinds, its accuracy and the local tiers' are not the same measurement, and the gap
+ * belongs to the grader, not to the chain. A file that carries neither (written by hand) is
+ * taken as it is: nothing here can check it, and the report already says who graded it.
+ */
+export function verifierSorties(chaines: readonly SortiesFournies[], fichier: string, sha256: string,
+  kinds: Record<string, FieldKind>, champs: readonly string[]): void {
+  for (const s of chaines) {
+    if (s.source?.sha256 !== undefined && s.source.sha256 !== sha256) {
+      throw new Error(`the chain "${s.nom}" was graded against ${s.source.cases ?? "another file"} (sha256 ${s.source.sha256.slice(0, 12)}…), `
+        + `not against ${basename(fichier)} (sha256 ${sha256.slice(0, 12)}…).\n`
+        + `  Its outcomes answer another file's cases. Grade it against this file (npm run grade), or measure\n`
+        + `  the file it was graded against. Nothing was measured.`);
+    }
+    if (s.notePar?.kinds) {
+      for (const champ of champs) {
+        if (!(champ in s.issues)) continue;
+        const sien = s.notePar.kinds[champ] ?? "exact", notre = kinds[champ] ?? "exact";
+        if (sien !== notre) {
+          throw new Error(`the chain "${s.nom}" was graded with "${champ}" compared as ${sien}; this file's header declares ${notre}.\n`
+            + `  The two are not the same measurement: the gap would belong to the grader, not to the chain.\n`
+            + `  Grade again under this header (npm run grade), or change the header. Nothing was measured.`);
+        }
+      }
+    }
+  }
 }
 
 /**
@@ -1128,8 +1202,11 @@ export type ReleveClient = {
   tiers: string[];
   declared: Record<string, {
     costPerThousandDocuments?: number; msPerDocument?: number;
-    pricePerThousandPages?: number; billing?: "page" | "document"; vendor?: string;
+    pricePerThousandPages?: number; pricePerThousandDocuments?: number; billing?: "page" | "document"; vendor?: string;
   }>;
+  /** Version 2: per chain, who graded it, under which kinds, against which file (sha256). null
+      where the outcomes file did not say. */
+  graded?: Record<string, { by: string | null; kinds: Record<string, string> | null; casesSha256: string | null }>;
   extraction: Record<string, Record<string, CelluleClient>>;
   recommendation: Record<string, string[]>;
   /** Version 2: the kind each field was graded as; a field absent here was graded `exact`. */
@@ -1179,8 +1256,17 @@ export function releveClient(o: {
       costPerThousandDocuments: s.declares?.coutParMilleDocuments,
       msPerDocument: s.declares?.msParDocument,
       ...(s.declares?.pricePerThousandPages !== undefined ? { pricePerThousandPages: s.declares.pricePerThousandPages } : {}),
+      ...(s.declares?.pricePerThousandDocuments !== undefined ? { pricePerThousandDocuments: s.declares.pricePerThousandDocuments } : {}),
       ...(s.declares?.billing !== undefined ? { billing: s.declares.billing } : {}),
       ...(s.declares?.vendor !== undefined ? { vendor: s.declares.vendor } : {}),
+    };
+  }
+  const graded: NonNullable<ReleveClient["graded"]> = {};
+  for (const s of chaines) {
+    graded[s.nom] = {
+      by: s.notePar?.correcteur ?? null,
+      kinds: s.notePar?.kinds ? Object.fromEntries(Object.entries(s.notePar.kinds).filter(([c]) => c in s.issues)) : null,
+      casesSha256: s.source?.sha256 ?? null,
     };
   }
   return {
@@ -1191,7 +1277,7 @@ export function releveClient(o: {
       cases: o.cas, casesInFile: o.casDansLeFichier,
     },
     fields: [...o.champs], questions: o.questions, margin: o.marge ?? null,
-    tiers: [...tiers], declared, extraction,
+    tiers: [...tiers], declared, graded, extraction,
     recommendation: Object.fromEntries(o.verdicts.map((v) => [v.champ, v.lignes])),
     kinds: { ...(o.kinds ?? {}) },
     grader: { version: GRADER.version, conventions: { ...GRADER.conventions } },
@@ -1208,6 +1294,15 @@ export function releveClient(o: {
  * moins cher des non-inférieurs — ce qui demande une marge déclarée ; sans elle il n'y en a
  * aucun, et chaque phrase dit ce que l'échantillon sépare ou ne sépare pas.
  */
+/** How many cases carry a verdict ("1" or "0") on both sides. */
+export function casCommuns(a: Bits, b: Bits): number {
+  let n = 0;
+  for (let i = 0; i < Math.min(a.length, b.length); i++) {
+    if ((a[i] === "1" || a[i] === "0") && (b[i] === "1" || b[i] === "0")) n++;
+  }
+  return n;
+}
+
 export function recommander(
   champ: string,
   rangs: { palier: string; r: Rate; ms: number }[],
@@ -1231,6 +1326,12 @@ export function recommander(
     if (!bt || !bx) {
       tousPires = false;
       lignes.push(`${x.palier}: no case-by-case verdicts, so it cannot be compared with ${tete.palier} case for case.`);
+      continue;
+    }
+    /* Two chains graded on disjoint cases share nothing to pair: said, not thrown (item 10). */
+    if (casCommuns(bt, bx) === 0) {
+      tousPires = false;
+      lignes.push(`${x.palier}: no case was graded on both ${tete.palier} and ${x.palier}, so the two cannot be compared case for case.`);
       continue;
     }
     const a = apparier(bt, bx);
@@ -1326,9 +1427,11 @@ export function rapportPourLeClient(o: {
 
   const auditSection = o.audit === undefined ? [] : [``, ``, `## Extraction audit`, ``,
     `Per field, the cheapest source this sample cannot show to be worse than the best one; what it `
-    + `costs per thousand pages; and what that saves against the chain you run today. A vendor is `
-    + `paid per page, once, whatever the number of fields taken from it, and a routing that reads two `
-    + `vendors pays both. The dollars rest on declared or list prices, the rates are measured.`, ``,
+    + `costs per thousand pages; and what that saves against the chain you run today, within the margin `
+    + `declared with \`--margin\`. Without a margin nothing is recommended and no saving is stated: the `
+    + `options the sample cannot separate from the best are listed. A vendor is paid per page, once, `
+    + `whatever the number of fields taken from it, and a routing that reads two vendors pays both. The `
+    + `dollars rest on declared or list prices, the rates are measured.`, ``,
     "```", ...o.audit, "```", ``];
 
   const pied = [``, ``, `## What this does not establish`, ``,
@@ -1596,16 +1699,19 @@ vendor_name:free-text. Without a kind, a value is compared as written, separator
 --rules  a JSON of { "field": "regular expression" }, so your own free tier is measured too.
 --sorties  a JSON of the OUTCOMES your own chain was graded to, never the values it
          produced — grade on your side, send only issues: { "nom": "…", "issues": { "<field>":
-         { "<case id>": "clean" | "wrong" | "blank" } }, "notePar": { "outil": …, "version": … }, "declares": { "coutParMilleDocuments":
-         …, "msParDocument": … } }. Your chain runs on your machine; we never see its code, and
+         { "<case id>": "clean" | "wrong" | "blank" } }, "notePar": { "outil": …, "version": … }, "declares":
+         { "pricePerThousandPages": … or "pricePerThousandDocuments": …, "msParDocument": … } }.
+         Your chain runs on your machine; we never see its code, and
          nothing here executes anything you supply. We score its accuracy against your own
          answers — that is measured. Its cost and latency are the ones you give us: assumed,
          never measured here, and marked so everywhere they travel.
          Without it the routing is over models only, and will overstate what you need to pay.
          Give it several times, one file per vendor: \`npm run grade\` writes these files from
-         a vendor's exports. Each may declare its price per thousand pages; the audit below
-         then costs every routing per page (a vendor is paid once per page, whatever the
-         number of fields taken from it) and states the saving against your current chain.
+         a vendor's exports. Each may declare its price per thousand pages (or documents);
+         the audit then costs every routing per page (a vendor is paid once per page, whatever
+         the number of fields taken from it) and, WITHIN THE MARGIN YOU DECLARE with --margin,
+         states the saving against your current chain. Without a margin it lists, per field,
+         the options this sample cannot separate from the best, and recommends nothing.
 --current  which --sorties chain you run today (default: the first one given).
 --pages-per-document, --pages-per-year  your volume, declared; without the year the audit
          gives dollars per thousand pages only.
@@ -1656,7 +1762,8 @@ Nothing leaves your machine: the models are local and this path makes no network
   const echantillonBrut = arg("sample");
   const echantillon = lireEchantillon(echantillonBrut);
   const marge = lireMarge(arg("margin"));
-  let { champs, cas, ecartees, courtes, demesurees, kinds, lecture } = lireCsv(readFileSync(fichier, "utf8"));
+  const octets = readFileSync(fichier);
+  let { champs, cas, ecartees, courtes, demesurees, kinds, lecture } = lireCsv(octets.toString("utf8"));
 
   /*
    * UN CORPUS VIDE NE PRODUIT PAS UN DOCUMENT QUI RESSEMBLE À UN AUDIT.
@@ -1730,8 +1837,10 @@ Nothing leaves your machine: the models are local and this path makes no network
   /* Prices: declared in the file, else the list-price table when the file names a vendor
      key, else unpriced. The table is only opened when a chain asks for it. */
   let listePrix: ListPrices | null = null;
-  if (chaines.some((s) => s.declares?.vendor !== undefined && s.declares.pricePerThousandPages === undefined)) listePrix = readListPrices();
+  if (chaines.some((s) => s.declares?.vendor !== undefined && !PRICE_KEYS.some((k) => s.declares?.[k] !== undefined))) listePrix = readListPrices();
   const prix: SourcePrice[] = chaines.map((s) => priceOf(s.nom, s.declares, listePrix));
+  /* Each outcomes file answers this file under these kinds, or it is refused now (item 21). */
+  verifierSorties(chaines, fichier, createHash("sha256").update(octets).digest("hex"), kinds, champs);
   /* Les questions du client, s'il en fournit. Un fichier illisible se refuse en le disant :
      partir sur des questions déduites alors qu'il en a écrit serait pire que de s'arrêter. */
   const questionsFournies = (() => {
@@ -1983,12 +2092,11 @@ Nothing leaves your machine: the models are local and this path makes no network
     const corr = correspondance(cas, champs, sorties);
     console.log(`\nYour chain: "${sorties.nom}".`);
     const p = prix[k]!;
-    const symbole = symboleDe(UNITS.budget);
-    if (p.kind === "vendor" && p.provenance === "declared") {
-      console.log(`  price: ${symbole}${p.pricePerThousandPages} per thousand pages, billed per ${p.billing}: declared by you, never measured here.`);
-    } else if (p.kind === "vendor" && p.provenance === "list-price") {
-      console.log(`  price: ${symbole}${p.pricePerThousandPages} per thousand pages, billed per ${p.billing}: the LIST price of `
-        + `${p.listPrice?.key} read on ${p.listPrice?.readOn}${p.listPrice?.verified ? "" : ", not re-read since"}; declare yours to replace it.`);
+    if (p.provenance === "declared") {
+      console.log(`  price: ${priceWords(p)}: declared by you, never measured here.`);
+    } else if (p.provenance === "list-price") {
+      console.log(`  price: ${priceWords(p)}: the LIST price of `
+        + `${p.listPrice.key} read on ${p.listPrice.readOn}${p.listPrice.verified ? "" : ", not re-read since"}; declare yours to replace it.`);
     } else {
       console.log(`  price: not declared, so this chain enters no costed routing; its accuracy is still measured.`);
     }
@@ -2159,7 +2267,7 @@ Nothing leaves your machine: the models are local and this path makes no network
   const releveJson = fichier.replace(/\.csv$/i, "") + "-measured.json";
   const etat = etatAuDepart;
   const enregistrement = releveClient({
-    fichier, octets: readFileSync(fichier), cas: cas.length, casDansLeFichier, champs, questions,
+    fichier, octets, cas: cas.length, casDansLeFichier, champs, questions,
     releve, verdicts, marge, sorties: chaines, measuredAt: new Date().toISOString(),
     code: etat ? { commit: etat.commit, sale: etat.sale.length > 0 } : null,
     kinds, audit: resultatAudit,

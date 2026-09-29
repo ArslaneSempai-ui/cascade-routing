@@ -19,6 +19,7 @@
  */
 
 import { readFileSync, writeFileSync, existsSync, statSync } from "node:fs";
+import { readJsonFile } from "./json-file.ts";
 import { basename } from "node:path";
 import { createHash } from "node:crypto";
 import { isMain, refuserDrapeauxInconnus } from "./cli.ts";
@@ -32,9 +33,7 @@ import { readListPrices } from "./audit.ts";
 import { symboleDe, UNITS } from "./assumptions.ts";
 
 export const FLAGS = ["--cases", "--name", "--values", "--vendor", "--exports", "--mapping",
-  "--price-per-thousand-pages", "--billing", "--list-price", "--out"] as const;
-
-export type Billing = "page" | "document";
+  "--price-per-thousand-pages", "--price-per-thousand-documents", "--list-price", "--out"] as const;
 
 /** The file `measure:yours` reads under `--sorties`, in the shape it already accepts. */
 export type OutcomesFile = {
@@ -45,10 +44,15 @@ export type OutcomesFile = {
     outil: "cascade"; version: string; correcteur: string; gradedAt: string;
     kinds: Record<string, FieldKind>; conventions: typeof GRADER.conventions;
   };
-  declares: { pricePerThousandPages?: number; billing?: Billing; vendor?: string };
+  /** The price in its own unit: per thousand pages OR per thousand documents, never one under
+      the other's name (item 6). `vendor` is a key of the list-price table. */
+  declares: { pricePerThousandPages?: number; pricePerThousandDocuments?: number; vendor?: string };
   source: { cases: string; sha256: string; vendor?: VendorName; exports?: string; values?: string };
   /** Per field: how many cases were graded and how many had nothing to grade. */
   coverage: Record<string, { graded: number; absent: number; clean: number; wrong: number; blank: number }>;
+  /** What was said on the console and should travel with the verdicts: a selector that matched
+      nothing anywhere, an ambiguous type, a failed export. Absent when nothing was said. */
+  warnings?: string[];
 };
 
 /**
@@ -59,9 +63,7 @@ export type OutcomesFile = {
  * per field. A number or a boolean is taken as its text; null and undefined are blanks.
  */
 export function readValuesFile(path: string, fields: readonly string[]): Record<string, Record<string, string>> {
-  let raw: unknown;
-  try { raw = JSON.parse(readFileSync(path, "utf8")); }
-  catch (e) { throw new Error(`${path}: not readable as JSON: ${(e as Error).message}`); }
+  const raw = readJsonFile(path);
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
     throw new Error(`${path}: expected an object, { "<id>": { "<field>": "<value>" } } or { "<field>": { "<id>": "<value>" } }.`);
   }
@@ -120,22 +122,14 @@ export function gradeValues(cases: readonly Cas[], fields: readonly string[], ki
   return { issues, coverage };
 }
 
-export function readPrice(raw: string | undefined): number | undefined {
+export function readPrice(raw: string | undefined, flag = "--price-per-thousand-pages"): number | undefined {
   if (raw === undefined) return undefined;
   const n = Number(raw);
   if (raw.trim() === "" || !Number.isFinite(n) || n < 0) {
-    throw new Error(`--price-per-thousand-pages=${raw} is not a price (a number of dollars, zero or more, per thousand pages).\n`
+    throw new Error(`${flag}=${raw} is not a price (a number of dollars, zero or more).\n`
       + `  Left as it was, this flag would have been dropped and the chain would enter the audit unpriced.`);
   }
   return n;
-}
-
-export function readBilling(raw: string | undefined): Billing | undefined {
-  if (raw === undefined) return undefined;
-  if (raw !== "page" && raw !== "document") {
-    throw new Error(`--billing=${raw} is not a billing unit. Accepted: page, document.`);
-  }
-  return raw;
 }
 
 export function slug(name: string): string {
@@ -152,7 +146,7 @@ Grade one vendor's extracted values against your labelled CSV, and write only ou
 
   npm run grade -- --cases=labelled.csv --name=<chain> \\
       --vendor=textract|documentai|azure --exports=<folder or file> --mapping=mapping.json \\
-      [--price-per-thousand-pages=<dollars>] [--billing=page|document] [--out=<file>]
+      [--price-per-thousand-pages=<dollars> | --price-per-thousand-documents=<dollars>] [--out=<file>]
 
   npm run grade -- --cases=labelled.csv --name=<chain> --values=values.json [...]
 
@@ -165,7 +159,7 @@ Grade one vendor's extracted values against your labelled CSV, and write only ou
 --mapping   { "<field>": { "<vendor>": <selector> } }: which vendor key is which field.
 --values    instead of exports: { "<id>": { "<field>": "<value>" } } written by your chain.
 --price-per-thousand-pages  what this chain costs you per thousand pages, declared.
---billing   page (default) or document: what the vendor counts.
+--price-per-thousand-documents  the same for a vendor that bills per document; one of the two.
 --list-price  a key of vendor-prices.json, when you have not declared a price: the audit then
             uses that list price and says so, with the date it was read.
 --out       where to write; by default <cases>-<name>-outcomes.json beside the CSV.
@@ -182,8 +176,13 @@ field's kind. Never a value. Feed it to: npm run measure:yours -- --cases=... --
     throw new Error(`--name=${name} is one of our tier names: its row would overwrite the "${name}" tier's measurements in every table.\n`
       + `  Name it after your system ("textract-forms", "prod-v2") and run again.`);
   }
-  const price = readPrice(arg("price-per-thousand-pages"));
-  const billing = readBilling(arg("billing"));
+  const pricePerPages = readPrice(arg("price-per-thousand-pages"), "--price-per-thousand-pages");
+  const pricePerDocuments = readPrice(arg("price-per-thousand-documents"), "--price-per-thousand-documents");
+  if (pricePerPages !== undefined && pricePerDocuments !== undefined) {
+    throw new Error(`--price-per-thousand-pages and --price-per-thousand-documents were both given: one price, in one unit.`);
+  }
+  const price = pricePerPages ?? pricePerDocuments;
+  const unit = pricePerDocuments !== undefined ? "documents" : "pages";
   /* A list-price key stands in for a price the client has not declared; it is checked against
      the table now, so a mistyped key refuses here and not at the end of an hour's measurement. */
   const listPrice = arg("list-price");
@@ -223,7 +222,8 @@ field's kind. Never a value. Feed it to: npm run measure:yours -- --cases=... --
     }
     const ex = readExports(exports);
     if (ex.unreadable.length) {
-      notes.push(`${ex.unreadable.length} export(s) could not be read as JSON and count as absent: ${ex.unreadable.map((u) => u.name).join(", ")}`);
+      const shown = ex.unreadable.slice(0, 5).map((u) => `${u.name} (${u.why})`).join("; ");
+      notes.push(`${ex.unreadable.length} export(s) could not be read as JSON and count as absent: ${shown}${ex.unreadable.length > 5 ? "; and more" : ""}`);
     }
     const read = valuesFromExports(vendor, ex, m.mapping, champs, cas.map((c) => c.id));
     if (read.wrongShape.length) {
@@ -231,6 +231,29 @@ field's kind. Never a value. Feed it to: npm run measure:yours -- --cases=... --
     }
     if (read.unmapped.length) {
       notes.push(`${read.unmapped.length} field(s) have no ${vendor} selector in the mapping and are not graded: ${read.unmapped.join(", ")}`);
+    }
+    /* The vendor's own failure responses are the vendor's blanks: in the denominator, and
+       named (item 32). */
+    if (read.failed.length) {
+      const shown = read.failed.slice(0, 5).map((f) => `${f.id} (${f.why})`).join("; ");
+      notes.push(`${read.failed.length} export(s) are ${vendor}'s failure response and are graded blank on every mapped field: ${shown}${read.failed.length > 5 ? "; and more" : ""}`);
+    }
+    for (const [field, list] of Object.entries(read.ambiguous)) {
+      if (list.length === 0) continue;
+      notes.push(`${field}: ${list.length} export(s) carry the selected type in several groups with different values, and the first group's value was taken. `
+        + `Add "group" to the selector to say which. First: ${list[0]!.id}: ${list[0]!.why}`);
+    }
+    /* A selector that matched nothing anywhere grades every case blank, and the rate reads as
+       the vendor's failure (item 19). That can be true: a vendor run without the feature the
+       selector reads, or one that never found the field on these cases, returned nothing, and
+       the blank is what the client pays for. It can also be a mistyped name. The tool cannot
+       tell the two apart, so it says so LOUDLY, on the console and in the file, where the
+       warning travels with the rate it qualifies; it does not decide for the client. */
+    for (const [field, why] of Object.entries(read.selectorMatchedNothing)) {
+      const tail = field in read.selectorFamilyMismatch
+        ? `If your vendor was run without that feature, the blank is its answer and the rate below is right; if the mapping names the wrong family, fix it and grade again.`
+        : `If the vendor really returned nothing for "${field}" on these cases, the blank is its failure and the rate below is right; if the name is wrong, fix the mapping and grade again.`;
+      notes.push(`${why} ${tail}`);
     }
     values = read.values;
     source.vendor = vendor; source.exports = basename(exports);
@@ -240,7 +263,11 @@ field's kind. Never a value. Feed it to: npm run measure:yours -- --cases=... --
   const { issues, coverage } = gradeValues(cas, champs, kinds, values);
   const graded = Object.values(coverage).reduce((s, c) => s + c.graded, 0);
   if (graded === 0) {
-    throw new Error(`no case of ${basename(fichier)} has a value in what you supplied: the identifiers do not match.\n`
+    /* The notes first: when every export was unreadable or of another shape, the identifiers
+       are not the problem, and blaming them hid the note that named the files (item 24). */
+    throw new Error((notes.length ? `${notes.map((n) => `⚠ ${n}`).join("\n")}\n\n` : "")
+      + `no case of ${basename(fichier)} has a value in what you supplied`
+      + (notes.length ? `.` : `: the identifiers do not match.`) + `\n`
       + `  CSV ids look like: ${cas.slice(0, 3).map((c) => c.id).join(", ")}\n  Nothing was written.`);
   }
 
@@ -254,11 +281,12 @@ field's kind. Never a value. Feed it to: npm run measure:yours -- --cases=... --
       conventions: GRADER.conventions,
     },
     declares: {
-      ...(price !== undefined ? { pricePerThousandPages: price } : {}),
-      ...(billing !== undefined ? { billing } : {}),
+      ...(pricePerPages !== undefined ? { pricePerThousandPages: pricePerPages } : {}),
+      ...(pricePerDocuments !== undefined ? { pricePerThousandDocuments: pricePerDocuments } : {}),
       ...(listPrice !== undefined ? { vendor: listPrice } : {}),
     },
     source, coverage,
+    ...(notes.length ? { warnings: notes } : {}),
   };
   const chemin = arg("out") ?? fichier.replace(/\.csv$/i, "") + `-${slug(name)}-outcomes.json`;
   if (existsSync(chemin) && statSync(chemin).isDirectory()) throw new Error(`${chemin} is a directory.`);
@@ -273,7 +301,7 @@ field's kind. Never a value. Feed it to: npm run measure:yours -- --cases=... --
   for (const n of notes) console.log(`\n  ⚠ ${n}`);
   console.log(`\n  graded by grader v${GRADER.version} at ${out.notePar.version}; kinds and conventions are written in the file.`);
   const symbol = symboleDe(UNITS.budget);
-  console.log(`  price: ${price !== undefined ? `${symbol}${price} per thousand pages, billed per ${billing ?? "page"} (declared by you)`
+  console.log(`  price: ${price !== undefined ? `${symbol}${price} per 1,000 ${unit} (declared by you)`
     : listPrice !== undefined ? `the list price of ${listPrice}, read on the date vendor-prices.json carries; declare yours to replace it`
     : "not declared; the audit will say so"}.`);
   console.log(`\nWritten to ${chemin}: outcomes only, no value.\n`);

@@ -9,17 +9,17 @@
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync, mkdtempSync, writeFileSync, rmSync, existsSync } from "node:fs";
+import { readFileSync, mkdtempSync, mkdirSync, writeFileSync, rmSync, existsSync, readdirSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, basename, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import { textractValue, textractShape, isTextractSelector } from "./vendor-textract.ts";
 import { documentAiValue, documentAiShape, isDocumentAiSelector, anchoredText } from "./vendor-documentai.ts";
 import { azureValue, azureShape, isAzureSelector, typedValue } from "./vendor-azure.ts";
-import { loadMapping, readExports, valuesFromExports } from "./vendors.ts";
+import { loadMapping, readExports, valuesFromExports, ADAPTERS } from "./vendors.ts";
 import { lireCsv, chargerSorties } from "./your-cases.ts";
-import { gradeValues, readValuesFile, readPrice, readBilling, slug } from "./grade.ts";
+import { gradeValues, readValuesFile, readPrice, slug } from "./grade.ts";
 
 const FIXTURES = fileURLToPath(new URL("../fixtures/vendors/", import.meta.url));
 const load = (rel: string): unknown => JSON.parse(readFileSync(join(FIXTURES, rel), "utf8"));
@@ -272,8 +272,7 @@ test("a values file is read per case or per field, and refuses what is not a val
   assert.equal(readPrice(undefined), undefined);
   assert.throws(() => readPrice("free"), /not a price/);
   assert.throws(() => readPrice("-1"), /not a price/);
-  assert.equal(readBilling("document"), "document");
-  assert.throws(() => readBilling("call"), /not a billing unit/);
+  assert.throws(() => readPrice("-5", "--price-per-thousand-documents"), /not a price/, "the per-document price is refused the same way");
   assert.equal(slug("Textract FORMS (us-east-1)"), "textract-forms-us-east-1");
 });
 
@@ -339,11 +338,11 @@ test("grade writes an outcomes file with verdicts and no value, for each of the 
     /* The values path, and the refusals. */
     const values = join(d, "values.json");
     writeFileSync(values, JSON.stringify({ "INV-001": { total: "1234.5" }, "INV-002": { total: "1" } }));
-    const v = spawnSync(process.execPath, [GRADE, `--cases=${csv}`, "--name=my chain", `--values=${values}`, "--billing=document", `--out=${join(d, "o.json")}`], { encoding: "utf8" });
+    const v = spawnSync(process.execPath, [GRADE, `--cases=${csv}`, "--name=my chain", `--values=${values}`, "--price-per-thousand-documents=40", `--out=${join(d, "o.json")}`], { encoding: "utf8" });
     assert.equal(v.status, 0, v.stderr);
     const o = JSON.parse(readFileSync(join(d, "o.json"), "utf8"));
     assert.deepEqual(o.issues.total, { "INV-001": "clean", "INV-002": "wrong" });
-    assert.deepEqual(o.declares, { billing: "document" });
+    assert.deepEqual(o.declares, { pricePerThousandDocuments: 40 });
 
     const listed = spawnSync(process.execPath, [GRADE, `--cases=${csv}`, "--name=listed", `--values=${values}`, "--list-price=aws-textract-forms", `--out=${join(d, "l.json")}`], { encoding: "utf8" });
     assert.equal(listed.status, 0, listed.stderr);
@@ -367,5 +366,361 @@ test("grade writes an outcomes file with verdicts and no value, for each of the 
     const help = spawnSync(process.execPath, [GRADE], { encoding: "utf8" });
     assert.equal(help.status, 1);
     assert.match(help.stdout, /Never a value/);
+  } finally { rmSync(d, { recursive: true, force: true }); }
+});
+
+/* ─────────────── the review of 2026-09-29 ─────────────── */
+
+/** The `_synthetic` marker, wherever a fixture's layout puts it: top level, under a
+ *  ProcessResponse `document`, on the first page of a paginated array, or on one entry of
+ *  a keyed file. */
+function syntheticMarker(j: unknown): unknown {
+  if (Array.isArray(j)) return syntheticMarker(j[0]);
+  if (!j || typeof j !== "object") return undefined;
+  const o = j as Record<string, unknown>;
+  if (typeof o._synthetic === "string") return o._synthetic;
+  if (o.document) return syntheticMarker(o.document);
+  return Object.values(o).map((v) => (v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>)._synthetic : undefined)).find((m) => typeof m === "string");
+}
+
+test("every fixture under fixtures/vendors declares itself synthetic, whatever its layout", () => {
+  const files: string[] = [];
+  const walk = (dir: string) => {
+    for (const n of readdirSync(dir)) {
+      const p = join(dir, n);
+      if (statSync(p).isDirectory()) walk(p);
+      else if (n.endsWith(".json") && n !== "mapping.json") files.push(p);
+    }
+  };
+  walk(FIXTURES);
+  assert.ok(files.length >= 20, `only ${files.length} fixtures were found under ${FIXTURES}`);
+  for (const p of files) {
+    assert.equal(typeof syntheticMarker(JSON.parse(readFileSync(p, "utf8"))), "string", `${relative(FIXTURES, p)} carries no _synthetic marker`);
+  }
+});
+
+test("Document AI (item 16): snake_case proto field names read exactly like lowerCamelCase", () => {
+  const camel = load("documentai/INV-001.json");
+  const snake = load("documentai-snake-case/INV-001.json");
+  const raw = readFileSync(join(FIXTURES, "documentai-snake-case/INV-001.json"), "utf8");
+  assert.ok(raw.includes('"mention_text"') && raw.includes('"start_index"') && raw.includes('"form_fields"') && !raw.includes('"mentionText"'),
+    "the fixture is the snake_case spelling");
+  assert.equal(documentAiShape(snake), "document");
+  const selectors = [
+    { entity: "total_amount" }, { entity: "total_amount", normalized: true }, { entity: "invoice_date", normalized: true },
+    { entity: "line_item/amount" }, { entity: "supplier_name" }, { entity: "due_date" }, { entity: "payment_terms" },
+    { formField: "Invoice Number" }, { formField: "Invoice Date" }, { formField: "Total Amount" },
+    { formField: "SAMPLE VENDOR LLC (synthetic)" }, { formField: "Customer" },
+  ] as const;
+  for (const s of selectors) {
+    const expected = documentAiValue(camel, s);
+    assert.equal(documentAiValue(snake, s), expected, `${JSON.stringify(s)} reads ${JSON.stringify(expected)} from the camelCase copy`);
+  }
+  assert.equal(documentAiValue(snake, { entity: "total_amount" }), "$1,234.50", "and that reading is the value, not a blank");
+  /* The client's object is read, not rewritten: its keys stay as they were. */
+  assert.ok("mention_text" in (snake as { entities: Record<string, unknown>[] }).entities[1]!);
+});
+
+test("Document AI (item 30): a normalised money value without text renders as <units>.<nanos>", () => {
+  const d = load("documentai-normalized/NRM-001.json");
+  assert.equal(documentAiValue(d, { entity: "total_amount", normalized: true }), "12.50");
+  assert.equal(documentAiValue(d, { entity: "whole_amount", normalized: true }), "7.00", "no nanos: two zero decimals");
+  assert.equal(documentAiValue(d, { entity: "precise_amount", normalized: true }), "0.125", "nanos keep their significant digits past two");
+  assert.equal(documentAiValue(d, { entity: "credit_amount", normalized: true }), "-3.20", "a negative amount carries one sign");
+  assert.equal(documentAiValue(d, { entity: "with_text", normalized: true }), "12.50 EUR", "text wins when present");
+});
+
+test("Document AI (item 30): normalised dates and datetimes render as YYYY-MM-DD", () => {
+  const d = load("documentai-normalized/NRM-001.json");
+  assert.equal(documentAiValue(d, { entity: "invoice_date", normalized: true }), "2026-09-01");
+  assert.equal(documentAiValue(d, { entity: "stamped_at", normalized: true }), "2026-09-02", "the time of day is dropped: the field is graded as a day");
+});
+
+test("Document AI (item 30): normalised float, integer and boolean values render through String()", () => {
+  const d = load("documentai-normalized/NRM-001.json");
+  assert.equal(documentAiValue(d, { entity: "net_amount", normalized: true }), "12.5");
+  assert.equal(documentAiValue(d, { entity: "page_count", normalized: true }), "3");
+  assert.equal(documentAiValue(d, { entity: "paid", normalized: true }), "true");
+});
+
+test("Document AI (item 30): a normalizedValue with nothing in it falls back to the mention, then to the anchor", () => {
+  const d = load("documentai-normalized/NRM-001.json");
+  assert.equal(documentAiValue(d, { entity: "free_text", normalized: true }), "Free text only");
+  assert.equal(documentAiValue(d, { entity: "anchored_only", normalized: true }), "Anchored value");
+  assert.equal(documentAiValue(d, { entity: "free_text", normalized: true }), documentAiValue(d, { entity: "free_text" }), "exactly what the non-normalised path returns");
+  assert.equal(documentAiValue(d, { entity: "nothing", normalized: true }), undefined);
+});
+
+test("Textract (item 17): with one IdentityDocument per side, an empty field on the first side does not hide the other side's value", () => {
+  const r = load("textract-id-two-sides/ID-002.json");
+  assert.equal(textractShape(r), "analyze-id");
+  assert.equal(textractValue(r, { type: "FIRST_NAME" }), "JANE", "the back came first, with an empty FIRST_NAME");
+  assert.equal(textractValue(r, { type: "LAST_NAME" }), "SAMPLE");
+  assert.equal(textractValue(r, { type: "DATE_OF_BIRTH", normalized: true }), "1990-05-03");
+  assert.equal(textractValue(r, { type: "ADDRESS" }), "2 SAMPLE ROAD SPRINGFIELD IL 00000", "and the other way round: the back has it, the front has not");
+  assert.equal(textractValue(r, { type: "ID_TYPE" }), "DRIVER LICENSE BACK", "when both sides have a value, the first is kept");
+  assert.equal(textractValue(r, { type: "ENDORSEMENTS" }), "", "empty on every side that has it: blank");
+  assert.equal(textractValue(r, { type: "MRZ_CODE" }), undefined, "on no side: absent");
+});
+
+test("Textract (item 17): AnalyzeExpense type and label selectors prefer the first non-empty value across documents", () => {
+  const r = {
+    ExpenseDocuments: [
+      { ExpenseIndex: 1, SummaryFields: [{ Type: { Text: "TOTAL" }, LabelDetection: { Text: "Total" }, ValueDetection: { Text: "" } }] },
+      { ExpenseIndex: 2, SummaryFields: [{ Type: { Text: "TOTAL" }, LabelDetection: { Text: "Total" }, ValueDetection: { Text: "5.00" } }] },
+    ],
+  };
+  assert.equal(textractValue(r, { type: "TOTAL" }), "5.00");
+  assert.equal(textractValue(r, { label: "Total" }), "5.00");
+  assert.equal(textractValue(r, { label: "Tax" }), undefined);
+});
+
+test("Textract (item 18): QUERIES run on every page answer through whichever QUERY block has the answer", () => {
+  const r = load("textract-queries-all-pages/INV-004.json");
+  assert.equal(textractShape(r), "analyze-document");
+  assert.equal(textractValue(r, { query: "invoice_number" }), "INV-2026-0043", "page one's QUERY block has no answer, page two's has");
+  assert.equal(textractValue(r, { query: "What is the invoice number?" }), "INV-2026-0043", "by question text too");
+  assert.equal(textractValue(r, { query: "total" }), "1,980.00", "two answers on two pages: the highest confidence wins");
+  assert.equal(textractValue(r, { query: "po_number" }), "", "QUERY blocks match and none has an answer: blank");
+  assert.equal(textractValue(r, { query: "nothing" }), undefined, "no QUERY block matches: absent");
+});
+
+test("Textract (item 31): a type repeated across GroupProperties is picked by group, and reported as ambiguous without one", () => {
+  const r = load("textract-expense-groups/RCP-002.json");
+  assert.equal(textractValue(r, { type: "NAME", group: "VENDOR" }), "Sample Vendor LLC (synthetic)");
+  assert.equal(textractValue(r, { type: "NAME", group: "receiver_bill_to" }), "Sample Buyer Inc (synthetic)", "the group is matched case-insensitively");
+  assert.equal(textractValue(r, { type: "ADDRESS", group: "RECEIVER_BILL_TO" }), "9 Buyer Avenue, Springfield IL 00001");
+  assert.equal(textractValue(r, { type: "NAME", group: "RECEIVER_SHIP_TO" }), undefined, "no field in that group: absent");
+  assert.equal(textractValue(r, { type: "TOTAL", group: "VENDOR" }), undefined, "an ungrouped field belongs to no group");
+  assert.equal(textractValue(r, { type: "NAME" }), "Sample Vendor LLC (synthetic)", "without a group the first value is still returned");
+  assert.ok(isTextractSelector({ type: "NAME", group: "VENDOR" }));
+  assert.ok(!isTextractSelector({ label: "Name", group: "VENDOR" }), "group only goes with type");
+  assert.ok(!isTextractSelector({ key: "Name", group: "VENDOR" }));
+  assert.ok(!isTextractSelector({ type: "NAME", group: "" }));
+  assert.ok(!isTextractSelector({ type: "NAME", group: 3 }));
+  assert.match(ADAPTERS.textract.selectors, /"group"/, "the help string names the option");
+
+  const ambiguous = ADAPTERS.textract.ambiguous!;
+  const why = ambiguous(r, { type: "NAME" } as never);
+  assert.equal(typeof why, "string", "NAME appears in two groups with different values");
+  assert.match(why!, /NAME/);
+  assert.match(why!, /VENDOR/);
+  assert.match(why!, /RECEIVER_BILL_TO/);
+  assert.match(why!, /group/);
+  assert.ok(!why!.includes("Sample"), "the reason names the groups, never a value");
+  assert.ok(!why!.includes("\n"), "one line");
+  assert.equal(ambiguous(r, { type: "NAME", group: "VENDOR" } as never), null, "a group settles it");
+  assert.equal(ambiguous(r, { type: "TAX_PAYER_ID" } as never), null, "the same value in both groups is not ambiguous");
+  assert.equal(ambiguous(r, { type: "TOTAL" } as never), null);
+  assert.equal(ambiguous(r, { type: "DUE_DATE" } as never), null);
+  assert.equal(ambiguous(r, { label: "Total Due" } as never), null);
+  assert.equal(ambiguous(load("textract/RCP-001.json"), { type: "TOTAL" } as never), null);
+
+  const fields = ["vendor_name", "buyer_name", "total"];
+  const mapping = {
+    vendor_name: { textract: { type: "NAME" } },
+    buyer_name: { textract: { type: "NAME", group: "RECEIVER_BILL_TO" } },
+    total: { textract: { type: "TOTAL" } },
+  };
+  const v = valuesFromExports("textract", readExports(join(FIXTURES, "textract-expense-groups")), mapping, fields, ["RCP-002"]);
+  assert.equal(v.values["vendor_name"]!["RCP-002"], "Sample Vendor LLC (synthetic)");
+  assert.equal(v.values["buyer_name"]!["RCP-002"], "Sample Buyer Inc (synthetic)");
+  assert.equal(v.ambiguous["vendor_name"]!.length, 1);
+  assert.equal(v.ambiguous["vendor_name"]![0]!.id, "RCP-002");
+  assert.match(v.ambiguous["vendor_name"]![0]!.why, /NAME/);
+  assert.deepEqual(v.ambiguous["buyer_name"], []);
+  assert.deepEqual(v.ambiguous["total"], []);
+});
+
+test("vendors (item 19): a selector that matches nothing in any export is reported, not graded blank in silence", () => {
+  const ids = ["RCP-001"];
+  const expense = readExports(join(FIXTURES, "textract"));
+  /* {"key":"Total"} on AnalyzeExpense output: the family reads another shape. */
+  const key = valuesFromExports("textract", expense, { total: { textract: { key: "Total" } } }, ["total"], ids);
+  assert.equal(key.values["total"]!["RCP-001"], "", "the case is still graded blank: the grading does not move");
+  assert.deepEqual(key.notFound["total"], ["RCP-001"]);
+  assert.equal(typeof key.selectorMatchedNothing["total"], "string");
+  const why = key.selectorMatchedNothing["total"]!;
+  assert.match(why, /"total"/, "names the field");
+  assert.match(why, /\{"key":"Total"\}/, "names the selector");
+  assert.match(why, /1 export/, "says how many exports were read");
+  assert.match(why, /AnalyzeDocument/, "says what a key selector reads");
+  assert.match(why, /analyze-expense/, "and what was found instead");
+  assert.ok(!why.includes("\n"), "one line");
+  /* {"type":"TOTAL_AMOUNT"}: the right family, a wrong name. */
+  const typo = valuesFromExports("textract", expense, { total: { textract: { type: "TOTAL_AMOUNT" } } }, ["total"], ids);
+  assert.equal(typo.values["total"]!["RCP-001"], "");
+  assert.deepEqual(typo.notFound["total"], ["RCP-001"]);
+  assert.match(typo.selectorMatchedNothing["total"]!, /TOTAL_AMOUNT/);
+  assert.ok(!/AnalyzeDocument/.test(typo.selectorMatchedNothing["total"]!), "the family fits the shape: no lecture about shapes");
+  /* {"formField": ...} on Invoice Parser output, which has entities and no pages. */
+  const docai = readExports(join(FIXTURES, "documentai"));
+  const ff = valuesFromExports("documentai", docai, { invoice_date: { documentai: { formField: "Invoice Date" } } }, ["invoice_date"], ["INV-002"]);
+  assert.equal(ff.values["invoice_date"]!["INV-002"], "");
+  assert.deepEqual(ff.notFound["invoice_date"], ["INV-002"]);
+  assert.match(ff.selectorMatchedNothing["invoice_date"]!, /formFields/);
+  /* The same selector over both exports: found in one, so it is a per-case miss, not a dead selector. */
+  const both = valuesFromExports("documentai", docai, { invoice_date: { documentai: { formField: "Invoice Date" } } }, ["invoice_date"], ["INV-001", "INV-002", "INV-003"]);
+  assert.deepEqual(both.notFound["invoice_date"], ["INV-002"]);
+  assert.equal(both.selectorMatchedNothing["invoice_date"], undefined);
+  assert.equal(both.values["invoice_date"]!["INV-002"], "");
+  assert.deepEqual(both.absent["invoice_date"], ["INV-003"]);
+  /* A selector the vendor answered with an empty value is neither a miss nor dead. */
+  const empty = valuesFromExports("textract", expense, { rid: { textract: { type: "INVOICE_RECEIPT_ID" } } }, ["rid"], ids);
+  assert.equal(empty.values["rid"]!["RCP-001"], "");
+  assert.deepEqual(empty.notFound["rid"], []);
+  assert.equal(empty.selectorMatchedNothing["rid"], undefined);
+  /* No export read at all: nothing to say about the selector. */
+  const none = valuesFromExports("textract", expense, { total: { textract: { key: "Total" } } }, ["total"], ["NOPE"]);
+  assert.equal(none.selectorMatchedNothing["total"], undefined);
+  assert.deepEqual(none.notFound["total"], []);
+  /* fits and needs, per adapter. */
+  assert.equal(ADAPTERS.textract.fits!(load("textract/INV-001.json"), { query: "x" } as never), true);
+  assert.equal(ADAPTERS.textract.fits!(load("textract/ID-001.json"), { label: "x" } as never), false);
+  assert.equal(ADAPTERS.textract.fits!(load("textract/ID-001.json"), { type: "x" } as never), true);
+  assert.equal(ADAPTERS.textract.fits!(load("textract/RCP-001.json"), { key: "x" } as never), false);
+  assert.equal(ADAPTERS.azure.fits!(load("azure/INV-001.json"), { keyValue: "x" } as never), true);
+  assert.equal(ADAPTERS.azure.fits!((load("azure/keyed.json") as Record<string, unknown>)["INV-002"], { keyValue: "x" } as never), false);
+  assert.equal(ADAPTERS.documentai.fits!(load("documentai/INV-002.json"), { entity: "x" } as never), true);
+  assert.equal(ADAPTERS.documentai.fits!(load("documentai/INV-002.json"), { formField: "x" } as never), false);
+  assert.match(ADAPTERS.azure.needs!({ keyValue: "x" } as never), /keyValuePairs/);
+  assert.match(ADAPTERS.documentai.needs!({ entity: "x" } as never), /entities/);
+  assert.match(ADAPTERS.textract.needs!({ label: "x" } as never), /AnalyzeExpense/);
+});
+
+test("vendors (item 32): a vendor's failed response is graded blank and listed, not dropped from the denominator", () => {
+  for (const [vendor, file, pattern] of [
+    ["textract", "failed/textract-exception.json", /InvalidS3ObjectException/],
+    ["textract", "failed/textract-error-envelope.json", /UnsupportedDocumentException/],
+    ["textract", "failed/textract-job-failed.json", /FAILED/],
+    ["azure", "failed/azure-status-failed.json", /InvalidRequest/],
+    ["azure", "failed/azure-error.json", /InvalidImageSize/],
+    ["documentai", "failed/documentai-error.json", /INVALID_ARGUMENT/],
+  ] as const) {
+    const why = ADAPTERS[vendor].failed!(load(file));
+    assert.equal(typeof why, "string", `${file} is a failed response`);
+    assert.match(why!, pattern);
+    assert.ok(!why!.includes("\n"), "one line");
+  }
+  assert.equal(ADAPTERS.textract.failed!(load("textract/INV-001.json")), null);
+  assert.equal(ADAPTERS.textract.failed!(load("textract/INV-002.json")), null, "a paginated result is not a failure");
+  assert.equal(ADAPTERS.textract.failed!({ JobStatus: "PARTIAL_SUCCESS", Blocks: [] }), null, "PARTIAL_SUCCESS still carries the pages that were read");
+  assert.equal(ADAPTERS.textract.failed!({ JobStatus: "SUCCEEDED", Blocks: [] }), null);
+  assert.equal(ADAPTERS.azure.failed!(load("azure/INV-001.json")), null);
+  assert.equal(typeof ADAPTERS.azure.failed!({ status: "failed" }), "string", "a failed operation without an error body is still a failure");
+  assert.equal(ADAPTERS.documentai.failed!(load("documentai/INV-002.json")), null);
+  assert.equal(ADAPTERS.documentai.failed!(load("documentai/INV-001.json")), null);
+
+  /* Twenty successes and five failures: values for all twenty-five, blank for the five. */
+  const d = mkdtempSync(join(tmpdir(), "failed-"));
+  try {
+    const ok = readFileSync(join(FIXTURES, "textract/RCP-001.json"));
+    const ids: string[] = [];
+    for (let i = 1; i <= 20; i++) { const id = `OK-${String(i).padStart(2, "0")}`; ids.push(id); writeFileSync(join(d, `${id}.json`), ok); }
+    const failures = ["textract-exception.json", "textract-error-envelope.json", "textract-job-failed.json", "textract-exception.json", "textract-job-failed.json"];
+    failures.forEach((f, i) => { const id = `KO-${i + 1}`; ids.push(id); writeFileSync(join(d, `${id}.json`), readFileSync(join(FIXTURES, "failed", f))); });
+    const v = valuesFromExports("textract", readExports(d), { total: { textract: { type: "TOTAL" } } }, ["total"], ids);
+    assert.equal(Object.keys(v.values["total"]!).length, 25, "every case has a value to grade");
+    for (const id of ids) assert.equal(v.values["total"]![id], id.startsWith("OK") ? "12,50" : "", id);
+    assert.deepEqual(v.absent["total"], [], "a failed job is not an absent case");
+    assert.deepEqual(v.wrongShape, [], "nor a wrong shape");
+    assert.deepEqual(v.failed.map((f) => f.id).sort(), ["KO-1", "KO-2", "KO-3", "KO-4", "KO-5"]);
+    for (const f of v.failed) assert.equal(typeof f.why, "string");
+    assert.deepEqual(v.notFound["total"], [], "a failure is not a selector miss");
+    assert.equal(v.selectorMatchedNothing["total"], undefined);
+  } finally { rmSync(d, { recursive: true, force: true }); }
+});
+
+test("vendors (item 24): exports and the mapping are read as a client's machine writes them, byte-order mark and all", () => {
+  const d = mkdtempSync(join(tmpdir(), "bom-"));
+  try {
+    const bom = Buffer.from([0xef, 0xbb, 0xbf]);
+    const inv = readFileSync(join(FIXTURES, "textract/INV-001.json"));
+    writeFileSync(join(d, "INV-001.json"), Buffer.concat([bom, inv]));
+    writeFileSync(join(d, "INV-002.json"), Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from(inv.toString("utf8"), "utf16le")]));
+    const ex = readExports(d);
+    assert.deepEqual([...ex.byId.keys()], ["INV-001"], "the export with a UTF-8 BOM reads");
+    assert.equal(textractValue(ex.byId.get("INV-001"), { key: "Total Amount" }), "$1,234.50");
+    assert.equal(ex.unreadable.length, 1);
+    assert.equal(ex.unreadable[0]!.name, "INV-002.json");
+    assert.match(ex.unreadable[0]!.why, /UTF-16/, "the UTF-16 export is named with its encoding");
+    /* The keyed layout too. */
+    writeFileSync(join(d, "keyed.json"), Buffer.concat([bom, readFileSync(join(FIXTURES, "azure/keyed.json"))]));
+    assert.deepEqual([...readExports(join(d, "keyed.json")).byId.keys()].sort(), ["INV-001", "INV-002"]);
+    writeFileSync(join(d, "keyed16.json"), Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from("{}", "utf16le")]));
+    assert.throws(() => readExports(join(d, "keyed16.json")), /UTF-16/);
+    /* And the mapping. */
+    writeFileSync(join(d, "mapping.json"), Buffer.concat([bom, readFileSync(join(FIXTURES, "mapping.json"))]));
+    const m = loadMapping(join(d, "mapping.json"), ["total", "invoice_date"]);
+    assert.equal(Object.keys(m.mapping).length, 5);
+    writeFileSync(join(d, "mapping16.json"), Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from("{}", "utf16le")]));
+    assert.throws(() => loadMapping(join(d, "mapping16.json"), ["total"]), /UTF-16/);
+  } finally { rmSync(d, { recursive: true, force: true }); }
+});
+
+test("Azure (item 29): a typed address is one line in a fixed order, streetAddress standing in for house number and road", () => {
+  const r = load("azure-address/ADR-001.json");
+  assert.equal(azureShape(r), "analyze-result");
+  assert.equal(azureValue(r, { field: "VendorAddress", value: true }), "1 Sample Street Suite 4 Springfield IL 00000 USA", "the street is written once; suburb and level are ignored");
+  assert.equal(azureValue(r, { field: "CustomerAddress", value: true }), "PO Box 12 Springfield IL 00000");
+  assert.equal(azureValue(r, { field: "RemittanceAddress", value: true }), "Springfield Sample Quarter IL Sample County");
+  assert.equal(typedValue({ type: "address", valueAddress: { road: "Sample Street", houseNumber: "1", postalCode: "00000", city: "Springfield" } }),
+    "1 Sample Street Springfield 00000", "without streetAddress: house number then road, whatever the key order");
+  assert.equal(azureValue(load("azure/INV-001.json"), { field: "VendorAddress", value: true }), "1 Sample Street Springfield IL 00000", "the existing fixture reads as before");
+});
+
+test("grade (items 19, 24, 32): a dead selector refuses with the notes first, a failed export is a blank, and unreadable exports are named before the identifiers are blamed", () => {
+  const d = mkdtempSync(join(tmpdir(), "grade-notes-"));
+  try {
+    const csv = join(d, "cases.csv");
+    writeFileSync(csv, "id,text,total:amount\nINV-001,x,1234.50\nINV-002,x,980\nINV-003,x,1\n");
+    /* Item 32: one good AnalyzeDocument export, one failure response under a case id. */
+    const exports = join(d, "exports");
+    mkdirSync(exports);
+    writeFileSync(join(exports, "INV-001.json"), readFileSync(join(FIXTURES, "textract/INV-001.json")));
+    writeFileSync(join(exports, "INV-002.json"), readFileSync(join(FIXTURES, "failed/textract-exception.json")));
+    const mapping = join(d, "mapping.json");
+    writeFileSync(mapping, JSON.stringify({ total: { textract: { key: "Total Amount" } } }));
+    const ok = spawnSync(process.execPath, [GRADE, `--cases=${csv}`, "--name=t", "--vendor=textract", `--exports=${exports}`, `--mapping=${mapping}`, `--out=${join(d, "o.json")}`], { encoding: "utf8" });
+    assert.equal(ok.status, 0, ok.stderr);
+    const o = JSON.parse(readFileSync(join(d, "o.json"), "utf8"));
+    assert.equal(o.issues.total["INV-001"], "clean");
+    assert.equal(o.issues.total["INV-002"], "blank", "the vendor's failure is the vendor's blank, in the denominator");
+    assert.equal(o.issues.total["INV-003"], undefined, "no export at all: absent");
+    assert.deepEqual(o.coverage.total, { graded: 2, absent: 1, clean: 1, wrong: 0, blank: 1 });
+    assert.match(ok.stdout, /1 export\(s\) are textract's failure response and are graded blank on every mapped field: INV-002 \(.*InvalidS3ObjectException/);
+
+    /* Item 19: a selector whose family cannot fit the exports (a typed field on AnalyzeDocument
+       output) is said loudly, on the console and in the file, with what it would have needed. */
+    writeFileSync(mapping, JSON.stringify({ total: { textract: { type: "TOTAL_AMOUNT" } } }));
+    const dead = spawnSync(process.execPath, [GRADE, `--cases=${csv}`, "--name=t", "--vendor=textract", `--exports=${exports}`, `--mapping=${mapping}`, `--out=${join(d, "dead.json")}`], { encoding: "utf8" });
+    assert.equal(dead.status, 0, dead.stderr);
+    assert.match(dead.stdout, /⚠ the textract selector \{"type":"TOTAL_AMOUNT"\} for "total" matched nothing in any of the 1 export\(s\) read; it reads .*none of them carries that/);
+    assert.match(dead.stdout, /run without that feature/);
+    const dj = JSON.parse(readFileSync(join(d, "dead.json"), "utf8"));
+    assert.equal(dj.issues.total["INV-001"], "blank");
+    assert.ok(dj.warnings.some((x: string) => /none of them carries that/.test(x)));
+    /* A selector of the right family that matched nothing: the vendor may have returned nothing.
+       Written, with the warning on the console and in the file. */
+    writeFileSync(mapping, JSON.stringify({ total: { textract: { key: "Grand Total" } } }));
+    const warned = spawnSync(process.execPath, [GRADE, `--cases=${csv}`, "--name=t", "--vendor=textract", `--exports=${exports}`, `--mapping=${mapping}`, `--out=${join(d, "warned.json")}`], { encoding: "utf8" });
+    assert.equal(warned.status, 0, warned.stderr);
+    assert.match(warned.stdout, /⚠ the textract selector \{"key":"Grand Total"\} for "total" matched nothing in any of the 1 export\(s\) read; the shape fits/);
+    const w = JSON.parse(readFileSync(join(d, "warned.json"), "utf8"));
+    assert.equal(w.issues.total["INV-001"], "blank");
+    assert.ok(Array.isArray(w.warnings) && w.warnings.some((x: string) => /matched nothing in any of the 1 export/.test(x)), "the warning travels with the verdicts");
+    assert.equal(o.warnings?.some((x: string) => /matched nothing/.test(x)) ?? false, false, "the first run had no dead selector");
+
+    /* Item 24: every export unreadable (UTF-16 from PowerShell): the note names the files, and
+       the refusal does not blame the identifiers. */
+    const utf16 = join(d, "utf16");
+    mkdirSync(utf16);
+    writeFileSync(join(utf16, "INV-001.json"), Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from(readFileSync(join(FIXTURES, "textract/INV-001.json"), "utf8"), "utf16le")]));
+    writeFileSync(mapping, JSON.stringify({ total: { textract: { key: "Total Amount" } } }));
+    const bom = spawnSync(process.execPath, [GRADE, `--cases=${csv}`, "--name=t", "--vendor=textract", `--exports=${utf16}`, `--mapping=${mapping}`, `--out=${join(d, "u.json")}`], { encoding: "utf8" });
+    assert.equal(bom.status, 1);
+    assert.match(bom.stderr, /⚠ 1 export\(s\) could not be read as JSON and count as absent: INV-001\.json \(/);
+    assert.match(bom.stderr, /UTF-16/);
+    assert.ok(!/identifiers do not match/.test(bom.stderr), bom.stderr);
   } finally { rmSync(d, { recursive: true, force: true }); }
 });

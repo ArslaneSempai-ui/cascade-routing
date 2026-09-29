@@ -1,0 +1,25 @@
+{
+  "_synthetic": "Hand-written against the 2024-11-30 AnalyzeResult schema: an address field whose valueAddress carries streetAddress next to houseNumber and road, as the API writes it, plus unit and countryRegion. No real address, no real company.",
+  "status": "succeeded",
+  "createdDateTime": "2026-09-29T10:00:00Z",
+  "lastUpdatedDateTime": "2026-09-29T10:00:04Z",
+  "analyzeResult": {
+    "apiVersion": "2024-11-30",
+    "modelId": "prebuilt-invoice",
+    "content": "Sample Vendor LLC (synthetic)\n1 Sample Street, Suite 4\nSpringfield, IL 00000\nUSA\n",
+    "documents": [
+      {
+        "docType": "invoice",
+        "confidence": 0.97,
+        "fields": {
+          "VendorAddress": { "type": "address", "content": "1 Sample Street, Suite 4\nSpringfield, IL 00000\nUSA", "confidence": 0.9,
+            "valueAddress": { "houseNumber": "1", "road": "Sample Street", "city": "Springfield", "state": "IL", "postalCode": "00000", "streetAddress": "1 Sample Street", "unit": "Suite 4", "countryRegion": "USA", "suburb": "Ignored Suburb", "level": "2" } },
+          "CustomerAddress": { "type": "address", "content": "PO Box 12, Springfield IL 00000", "confidence": 0.8,
+            "valueAddress": { "poBox": "PO Box 12", "city": "Springfield", "state": "IL", "postalCode": "00000" } },
+          "RemittanceAddress": { "type": "address", "content": "Sample Quarter, Springfield", "confidence": 0.7,
+            "valueAddress": { "city": "Springfield", "cityDistrict": "Sample Quarter", "stateDistrict": "Sample County", "state": "IL" } }
+        }
+      }
+    ]
+  }
+}

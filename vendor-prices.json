@@ -15,21 +15,21 @@
     "aws-textract-analyzeid": {
       "vendor": "Amazon Textract", "product": "AnalyzeID",
       "pricePerThousandPages": 25, "billing": "page",
-      "tier": "first 100,000 pages per month",
+      "tier": "first 100,000 pages per month", "tierPagesPerMonth": 100000,
       "url": "https://aws.amazon.com/textract/pricing/",
       "readBy": "founder", "readOn": "2026-09-29", "verified": false
     },
     "aws-textract-forms": {
       "vendor": "Amazon Textract", "product": "AnalyzeDocument, Forms",
       "pricePerThousandPages": 50, "billing": "page",
-      "tier": "first 1,000,000 pages per month",
+      "tier": "first 1,000,000 pages per month", "tierPagesPerMonth": 1000000,
       "url": "https://aws.amazon.com/textract/pricing/",
       "readBy": "founder", "readOn": "2026-09-29", "verified": false
     },
     "aws-textract-analyzeexpense": {
       "vendor": "Amazon Textract", "product": "AnalyzeExpense",
       "pricePerThousandPages": 10, "billing": "page",
-      "tier": "first 1,000,000 pages per month",
+      "tier": "first 1,000,000 pages per month", "tierPagesPerMonth": 1000000,
       "url": "https://aws.amazon.com/textract/pricing/",
       "readBy": "founder", "readOn": "2026-09-29", "verified": false,
       "toConfirm": "third-party summaries read on 2026-09-29 give 8 per 1,000 pages for this product; the official page decides"
@@ -37,14 +37,14 @@
     "azure-document-intelligence-prebuilt": {
       "vendor": "Azure AI Document Intelligence", "product": "prebuilt models (invoice, receipt, ID, W-2 and others)",
       "pricePerThousandPages": 10, "billing": "page",
-      "tier": "pay as you go, first 1,000,000 pages per month",
+      "tier": "pay as you go, first 1,000,000 pages per month", "tierPagesPerMonth": 1000000,
       "url": "https://azure.microsoft.com/en-us/pricing/details/ai-document-intelligence/",
       "readBy": "founder", "readOn": "2026-09-29", "verified": false
     },
     "google-document-ai-form-parser": {
       "vendor": "Google Document AI", "product": "Form Parser",
       "pricePerThousandPages": 30, "billing": "page",
-      "tier": "first 1,000,000 pages per month",
+      "tier": "first 1,000,000 pages per month", "tierPagesPerMonth": 1000000,
       "url": "https://cloud.google.com/document-ai/pricing",
       "readBy": "founder", "readOn": "2026-09-29", "verified": false
     }

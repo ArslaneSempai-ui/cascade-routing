@@ -1,0 +1,4 @@
+{
+  "_synthetic": "Hand-written against google.rpc.Status in its JSON form: what a Document AI process call returns when it fails. No real document.",
+  "error": { "code": 3, "message": "Document size exceeds the limit.", "status": "INVALID_ARGUMENT" }
+}
