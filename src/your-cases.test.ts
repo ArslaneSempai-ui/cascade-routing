@@ -156,8 +156,10 @@ test("les identifiants sans correspondance sont comptés et nommés dans les deu
   assert.deepEqual(c.inconnus["name"], ["d9"], "un des siens que nous n'avons pas est nommé.");
   assert.deepEqual(c.champsSansAucuneValeur, ["birth"],
     "un champ pour lequel il n'a rien fourni doit être dit, pas traité comme zéro sur zéro.");
-  assert.equal(c.total, 2 + 3,
-    "le compte couvre les deux sens et tous les champs, `birth` compris.");
+  /* No case carries an expected `birth`: nobody grades it, so his file is not missing them (F1). */
+  assert.deepEqual(c.manquants["birth"], [], "a case without an expected value is not missing from his file");
+  assert.equal(c.total, 2,
+    "le compte couvre les deux sens et tous les champs ; `birth`, sans valeur attendue, n'y compte rien.");
 });
 
 test("le taux du client porte sur les cas appariés, jamais sur les nôtres", async () => {
@@ -1390,4 +1392,30 @@ test("review item 10: two chains graded on disjoint cases do not crash the recom
   assert.doesNotThrow(() => { lignes = recommander("total", rangs, releve, 0.02); });
   assert.ok(lignes.some((l) => /no case was graded on both vendor-a and vendor-b/.test(l)), lignes.join("\n"));
   assert.ok(lignes.some((l) => /^No recommendation for total\./.test(l)));
+});
+
+test("F1: a case with no expected value is graded by nobody in measure:yours, and is not missing from a chain's file", async () => {
+  const { mesurerVosCas, correspondance, presenceDeLaVerite, direLaPresence, sansVerite } = await import("./your-cases.ts");
+  const { evaluerRegles } = await import("./regles-bornees.ts");
+  const cas = [
+    { id: "d1", text: "total 10", truth: { total: "10" } },
+    { id: "d2", text: "total 20", truth: { total: "" } },
+    { id: "d3", text: "total 30", truth: { total: "30" } },
+  ];
+  /* The chain's file grades d2 clean: without an expected value that verdict counts for nothing. */
+  const chaine = { nom: "la sienne", issues: { total: { d1: "clean", d2: "clean", d3: "wrong" } } } as const;
+  const regles = await evaluerRegles({ total: /\d+/ }, cas.map((c) => c.text));
+  const releve = await mesurerVosCas(cas, ["total"], [], regles, false, chaine as never);
+  const sienne = releve["total"]!["la sienne" as never] as { bons: number; sur: number; reussites: string };
+  assert.equal(sienne.sur, 2, "d2 has no expected value: out of the chain's n");
+  assert.equal(sienne.bons, 1);
+  assert.equal(sienne.reussites, "1-0", "d2 is not measured, on either side of every pairing");
+  const rules = releve["total"]!["rules" as never] as { bons: number; sur: number; reussites: string };
+  assert.equal(rules.sur, 2, "the same case set for the local tier");
+  assert.equal(rules.reussites, "1-1");
+  assert.deepEqual(correspondance(cas, ["total"], chaine as never).manquants["total"], [], "d2 is not missing from his file: nobody grades it");
+  assert.deepEqual(sansVerite(cas, ["total"]), { total: 1 });
+  const dit = direLaPresence(presenceDeLaVerite(cas, ["total"])) ?? "";
+  assert.match(dit, /1 field\(s\) with cases that have NO expected value:\n\s+total: 1 of 3 case\(s\)/);
+  assert.match(dit, /unknown, not "expected blank"/);
 });

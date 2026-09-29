@@ -156,7 +156,7 @@ export function parseAmount(raw: string): string | null {
  * The grouped reading: a point or comma followed by exactly three digits groups thousands,
  * a FINAL point or comma followed by exactly two digits is the decimal part, and any other
  * shape is unreadable. Indonesian receipts print sixty thousand rupiah as "60.000", and so do
- * German and Swiss ones for francs and euros; the `amount` kind reads a lone point as decimal
+ * German ones for euros; the `amount` kind reads a lone point as decimal
  * and turned that into sixty. Measured on Google Document AI's output for the 100 receipts
  * of CORD v2 by the founder on 2026-09-29: 60 of 95 totals right under `amount`, 90 of 95
  * under this rule. The grader would have blamed the vendor for our own reading. Declared per
@@ -343,7 +343,7 @@ export const GRADER = {
   version: 1,
   conventions: {
     amount: "one comma followed by exactly three digits groups thousands; any other lone comma is decimal; a lone point is decimal; with both, the last one is decimal; currency symbols and codes are ignored",
-    "amount-grouped": "a point or comma followed by exactly three digits groups thousands and a final point or comma followed by exactly two digits is the decimal part, as Indonesian, German and Swiss receipts print amounts (60.000 is sixty thousand); any other shape is unreadable; Rp, currency symbols and codes are ignored",
+    "amount-grouped": "a point or comma followed by exactly three digits groups thousands and a final point or comma followed by exactly two digits is the decimal part, as Indonesian and German receipts print amounts (60.000 is sixty thousand); any other shape is unreadable; Rp, currency symbols and codes are ignored",
     date: "all-numeric dates are read month first unless the kind is date-dmy; a part above twelve is the day; two-digit years pivot at fifty",
     currency: "symbols and common names resolve to ISO 4217 codes; any other three letters are taken as a code",
     id: "only letters and digits count, case does not",

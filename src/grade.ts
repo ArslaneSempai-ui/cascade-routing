@@ -23,7 +23,7 @@ import { readJsonFile } from "./json-file.ts";
 import { basename } from "node:path";
 import { createHash } from "node:crypto";
 import { isMain, refuserDrapeauxInconnus } from "./cli.ts";
-import { lireCsv, nomDeChaine, type Cas } from "./your-cases.ts";
+import { lireCsv, nomDeChaine, aUneVerite, type Cas } from "./your-cases.ts";
 import { outcome, GRADER, type FieldKind, type Outcome } from "./grader.ts";
 import { loadMapping, readExports, valuesFromExports, isVendorName, VENDORS, type VendorName } from "./vendors.ts";
 import { rate, writeRate } from "./interval.ts";
@@ -48,8 +48,9 @@ export type OutcomesFile = {
       the other's name (item 6). `vendor` is a key of the list-price table. */
   declares: { pricePerThousandPages?: number; pricePerThousandDocuments?: number; vendor?: string };
   source: { cases: string; sha256: string; vendor?: VendorName; exports?: string; values?: string };
-  /** Per field: how many cases were graded and how many had nothing to grade. */
-  coverage: Record<string, { graded: number; absent: number; clean: number; wrong: number; blank: number }>;
+  /** Per field: how many cases were graded, how many had no export or value (absent), and how
+      many had no expected value in the CSV (noTruth: unknown, graded by nobody). */
+  coverage: Record<string, { graded: number; absent: number; noTruth: number; clean: number; wrong: number; blank: number }>;
   /** What was said on the console and should travel with the verdicts: a selector that matched
       nothing anywhere, an ambiguous type, a failed export. Absent when nothing was said. */
   warnings?: string[];
@@ -63,6 +64,17 @@ export type OutcomesFile = {
  * per field. A number or a boolean is taken as its text; null and undefined are blanks.
  */
 export function readValuesFile(path: string, fields: readonly string[]): Record<string, Record<string, string>> {
+  return readValues(path, fields).values;
+}
+
+/**
+ * The values, and what was filled in: a case that is in the file and says nothing for a
+ * field is a BLANK, the chain ran on that document and returned nothing; only a case id
+ * missing from the whole file is absent. The first version counted the first as absent and
+ * dropped it from n, and a chain's silences raised its rate (CORD, 2026-09-29: three silent
+ * totals out of the denominator). The vendor-export path has always counted them as blanks.
+ */
+export function readValues(path: string, fields: readonly string[]): { values: Record<string, Record<string, string>>; cases: number; silences: number } {
   const raw = readJsonFile(path);
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
     throw new Error(`${path}: expected an object, { "<id>": { "<field>": "<value>" } } or { "<field>": { "<id>": "<value>" } }.`);
@@ -93,7 +105,17 @@ export function readValuesFile(path: string, fields: readonly string[]): Record<
     throw new Error(`${path}: none of its keys names a field of the CSV (${fields.join(", ")}).\n`
       + `  Nothing would be graded.`);
   }
-  return out;
+  /* Every case the file names, under any field; a field the file carries is then blank for
+     the cases it does not name. */
+  const present = new Set<string>();
+  for (const byId of Object.values(out)) for (const id of Object.keys(byId)) present.add(id);
+  let silences = 0;
+  for (const field of Object.keys(out)) {
+    for (const id of present) {
+      if (!(id in out[field]!)) { out[field]![id] = ""; silences++; }
+    }
+  }
+  return { values: out, cases: present.size, silences };
 }
 
 export type Graded = {
@@ -110,8 +132,11 @@ export function gradeValues(cases: readonly Cas[], fields: readonly string[], ki
     const v = values[field];
     if (!v) continue;
     issues[field] = {};
-    const c = { graded: 0, absent: 0, clean: 0, wrong: 0, blank: 0 };
+    const c = { graded: 0, absent: 0, noTruth: 0, clean: 0, wrong: 0, blank: 0 };
     for (const cas of cases) {
+      /* No expected value: unknown, graded by nobody, counted apart. Before the absent count:
+         a case nobody can grade is not an absent export either. */
+      if (!aUneVerite(cas, field)) { c.noTruth++; continue; }
       if (!(cas.id in v)) { c.absent++; continue; }
       const o = outcome(v[cas.id]!, cas.truth[field] ?? "", kinds[field] ?? "exact");
       issues[field]![cas.id] = o;
@@ -150,7 +175,9 @@ Grade one vendor's extracted values against your labelled CSV, and write only ou
 
   npm run grade -- --cases=labelled.csv --name=<chain> --values=values.json [...]
 
---cases     the labelled CSV measure:yours reads: id, text, then one column per field. A
+--cases     the labelled CSV measure:yours reads: id, text, then one column per field. An
+            empty expected cell means UNKNOWN: the case is not graded on that field, and is
+            counted apart ("no truth"); measure:yours applies the same rule to every tier. A
             header may declare the field's kind: total:amount, invoice_date:date, tax_id:id,
             currency:currency, vendor_name:free-text, or total:amount-grouped where a point or
             comma before three digits groups thousands, as Indonesian receipts print them
@@ -159,7 +186,9 @@ Grade one vendor's extracted values against your labelled CSV, and write only ou
 --vendor    which vendor wrote the exports; the adapter reads its JSON offline, never calls it.
 --exports   a folder of <case id>.json files, or one JSON object keyed by case id.
 --mapping   { "<field>": { "<vendor>": <selector> } }: which vendor key is which field.
---values    instead of exports: { "<id>": { "<field>": "<value>" } } written by your chain.
+--values    instead of exports: { "<id>": { "<field>": "<value>" } } written by your chain. A
+            case in the file that says nothing for a field is a BLANK; only a case absent
+            from the whole file is absent.
 --price-per-thousand-pages  what this chain costs you per thousand pages, declared.
 --price-per-thousand-documents  the same for a vendor that bills per document; one of the two.
 --list-price  a key of vendor-prices.json, when you have not declared a price: the audit then
@@ -208,8 +237,13 @@ field's kind. Never a value. Feed it to: npm run measure:yours -- --cases=... --
     }
     const chemin = arg("values")!;
     if (!existsSync(chemin)) throw new Error(`no such file: ${chemin}`);
-    values = readValuesFile(chemin, champs);
+    const lu = readValues(chemin, champs);
+    values = lu.values;
     source.values = basename(chemin);
+    if (lu.silences > 0) {
+      notes.push(`${lu.silences} value(s) counted BLANK: the case is in the file (${lu.cases} case(s) are) and says nothing for the field, `
+        + `so the chain ran on it and returned nothing. Only a case absent from the whole file is absent.`);
+    }
   } else {
     const vendor = arg("vendor"), exports = arg("exports"), mapping = arg("mapping");
     if (!vendor || !exports || !mapping) {
@@ -298,7 +332,7 @@ field's kind. Never a value. Feed it to: npm run measure:yours -- --cases=... --
   for (const [field, c] of Object.entries(coverage)) {
     const r = rate(c.clean, c.graded);
     console.log(`  ${field.padEnd(20)} ${(kinds[field] ?? "exact").padEnd(10)} ${writeRate(r).padEnd(30)} `
-      + `clean ${c.clean}, wrong ${c.wrong}, blank ${c.blank}${c.absent ? `, absent ${c.absent}` : ""}`);
+      + `clean ${c.clean}, wrong ${c.wrong}, blank ${c.blank}${c.absent ? `, absent ${c.absent}` : ""}${c.noTruth ? `, no truth ${c.noTruth} (not graded)` : ""}`);
   }
   for (const n of notes) console.log(`\n  ⚠ ${n}`);
   console.log(`\n  graded by grader v${GRADER.version} at ${out.notePar.version}; kinds and conventions are written in the file.`);

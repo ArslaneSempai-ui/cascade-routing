@@ -167,10 +167,11 @@ Three commands, in this order:
 A field's header declares its kind (`total:amount`, `closing_date:date`, `tax_id:id`,
 `currency:currency`, `vendor_name:free-text`) and the comparison follows: a thousands
 separator, a date written two ways or a symbol against a code is formatting, not an error.
-`total:amount-grouped` is the reading of receipts printed the Indonesian, German or Swiss
-way: a point or comma before exactly three digits groups thousands and a final one before
-exactly two digits is the decimal part, so "60.000" is sixty thousand where `amount` reads
-sixty; anything else is unreadable.
+`total:amount-grouped` is the reading of receipts printed the Indonesian or German way: a
+point or comma before exactly three digits groups thousands and a final one before exactly
+two digits is the decimal part, so "60.000" is sixty thousand where `amount` reads sixty;
+anything else is unreadable. An empty expected cell means unknown: the case is not graded
+on that field, by any tier or chain, and is not in its n.
 A typed comparison can only add matches to the default one, and a property test holds that.
 
 A vendor bills per page, once, whatever the number of fields taken from it, so the audit
@@ -202,7 +203,7 @@ is declared.
 <!-- /figures:documents -->
 
 <!-- figures:tests -->
-**769 tests** across 87 files, counted from the sources rather than typed here.
+**772 tests** across 87 files, counted from the sources rather than typed here.
 <!-- /figures:tests -->
 
 Everything runs locally, and that is enforced rather than promised. The one call that could

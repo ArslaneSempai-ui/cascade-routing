@@ -19,7 +19,7 @@ import { documentAiValue, documentAiShape, isDocumentAiSelector, anchoredText } 
 import { azureValue, azureShape, isAzureSelector, typedValue } from "./vendor-azure.ts";
 import { loadMapping, readExports, valuesFromExports, ADAPTERS } from "./vendors.ts";
 import { lireCsv, chargerSorties } from "./your-cases.ts";
-import { gradeValues, readValuesFile, readPrice, slug } from "./grade.ts";
+import { gradeValues, readValuesFile, readValues, readPrice, slug } from "./grade.ts";
 
 const FIXTURES = fileURLToPath(new URL("../fixtures/vendors/", import.meta.url));
 const load = (rel: string): unknown => JSON.parse(readFileSync(join(FIXTURES, rel), "utf8"));
@@ -248,7 +248,7 @@ test("grading applies the kind, and an absent case is neither clean nor wrong", 
   const g = gradeValues(cas, champs, kinds, values);
   assert.deepEqual(g.issues["total"], { "INV-001": "clean", "INV-002": "clean", "INV-003": "blank" });
   assert.deepEqual(g.issues["invoice_number"], { "INV-001": "clean" });
-  assert.deepEqual(g.coverage["invoice_number"], { graded: 1, absent: 2, clean: 1, wrong: 0, blank: 0 });
+  assert.deepEqual(g.coverage["invoice_number"], { graded: 1, absent: 2, noTruth: 0, clean: 1, wrong: 0, blank: 0 });
   assert.equal(g.issues["vendor_name"], undefined, "a field with no values has no entry");
   /* Under the default kind the same amount would have been wrong: that is the whole point. */
   const strict = gradeValues(cas, champs, {}, values);
@@ -261,8 +261,9 @@ test("a values file is read per case or per field, and refuses what is not a val
     const write = (o: unknown) => { const p = join(d, "v.json"); writeFileSync(p, JSON.stringify(o)); return p; };
     const fields = ["total", "date"];
     const plain = (x: unknown) => JSON.parse(JSON.stringify(x));
+    /* Case "2" is in the file and says nothing for `date`: a blank, not an absence (F2). */
     assert.deepEqual(plain(readValuesFile(write({ "1": { total: "5", date: null }, "2": { total: 7 } }), fields)),
-      { total: { "1": "5", "2": "7" }, date: { "1": "" } });
+      { total: { "1": "5", "2": "7" }, date: { "1": "", "2": "" } });
     assert.deepEqual(plain(readValuesFile(write({ total: { "1": "5" } }), fields)), { total: { "1": "5" } });
     assert.throws(() => readValuesFile(write({ "1": { total: ["a"] } }), fields), /not a value/);
     assert.throws(() => readValuesFile(write({ "1": { other: "x" } }), fields), /none of its keys names a field/);
@@ -687,7 +688,7 @@ test("grade (items 19, 24, 32): a dead selector refuses with the notes first, a 
     assert.equal(o.issues.total["INV-001"], "clean");
     assert.equal(o.issues.total["INV-002"], "blank", "the vendor's failure is the vendor's blank, in the denominator");
     assert.equal(o.issues.total["INV-003"], undefined, "no export at all: absent");
-    assert.deepEqual(o.coverage.total, { graded: 2, absent: 1, clean: 1, wrong: 0, blank: 1 });
+    assert.deepEqual(o.coverage.total, { graded: 2, absent: 1, noTruth: 0, clean: 1, wrong: 0, blank: 1 });
     assert.match(ok.stdout, /1 export\(s\) are textract's failure response and are graded blank on every mapped field: INV-002 \(.*InvalidS3ObjectException/);
 
     /* Item 19: a selector whose family cannot fit the exports (a typed field on AnalyzeDocument
@@ -722,5 +723,54 @@ test("grade (items 19, 24, 32): a dead selector refuses with the notes first, a 
     assert.match(bom.stderr, /⚠ 1 export\(s\) could not be read as JSON and count as absent: INV-001\.json \(/);
     assert.match(bom.stderr, /UTF-16/);
     assert.ok(!/identifiers do not match/.test(bom.stderr), bom.stderr);
+  } finally { rmSync(d, { recursive: true, force: true }); }
+});
+
+test("F1: an empty expected cell is unknown, graded by nobody and counted apart, in grade", () => {
+  const { champs, cas, kinds } = lireCsv("id,text,total:amount,tax:amount\nA,x,10.00,1.00\nB,x,20.00,\nC,x,30.00,   \n");
+  /* The chain answered every case; on B and C there is nothing to grade the tax against. */
+  const values = { total: { A: "10", B: "20", C: "30" }, tax: { A: "1", B: "2", C: "" } };
+  const g = gradeValues(cas, champs, kinds, values);
+  assert.deepEqual(g.issues["tax"], { A: "clean" }, "B and C carry no verdict: a value against an empty truth is neither wrong nor blank");
+  assert.deepEqual(g.coverage["tax"], { graded: 1, absent: 0, noTruth: 2, clean: 1, wrong: 0, blank: 0 });
+  assert.deepEqual(g.coverage["total"], { graded: 3, absent: 0, noTruth: 0, clean: 3, wrong: 0, blank: 0 });
+  /* No truth comes before absent: a case nobody can grade is not an absent export either. */
+  const partial = gradeValues(cas, champs, kinds, { tax: { A: "1" } });
+  assert.deepEqual(partial.coverage["tax"], { graded: 1, absent: 0, noTruth: 2, clean: 1, wrong: 0, blank: 0 });
+});
+
+test("F2: a case in the values file that says nothing for a field is a blank; only a case absent from the whole file is absent", () => {
+  const d = mkdtempSync(join(tmpdir(), "values-silence-"));
+  try {
+    const fields = ["total", "date"];
+    const write = (name: string, o: unknown) => { const p = join(d, name); writeFileSync(p, JSON.stringify(o)); return p; };
+    /* Per case: "2" is present without a date. */
+    const perCase = readValues(write("case.json", { "1": { total: "5", date: "2026-01-01" }, "2": { total: "7" } }), fields);
+    assert.equal(perCase.values["date"]!["2"], "", "present and silent: blank");
+    assert.equal(perCase.silences, 1);
+    assert.equal(perCase.cases, 2);
+    /* Per field: "2" appears under total only. */
+    const perField = readValues(write("field.json", { total: { "1": "5", "2": "7" }, date: { "1": "2026-01-01" } }), fields);
+    assert.equal(perField.values["date"]!["2"], "");
+    assert.equal(perField.silences, 1);
+    /* A field the file never carries is not graded at all; a case the file never names is absent. */
+    const only = readValues(write("only.json", { total: { "1": "5" } }), fields);
+    assert.equal(only.values["date"], undefined);
+    assert.equal(only.silences, 0);
+    const { champs, cas, kinds } = lireCsv("id,text,total:amount,date:date\n1,x,5,2026-01-01\n2,x,7,2026-01-02\n3,x,9,2026-01-03\n");
+    const g = gradeValues(cas, champs, kinds, perCase.values);
+    assert.deepEqual(g.coverage["date"], { graded: 2, absent: 1, noTruth: 0, clean: 1, wrong: 0, blank: 1 }, "2 is blank, 3 is absent");
+    assert.equal(g.issues["date"]!["2"], "blank");
+
+    /* The command says how many were counted which way. */
+    const csv = join(d, "cases.csv");
+    writeFileSync(csv, "id,text,total:amount,date:date\n1,x,5,2026-01-01\n2,x,7,\n3,x,9,2026-01-03\n");
+    const r = spawnSync(process.execPath, [GRADE, `--cases=${csv}`, "--name=mine", `--values=${join(d, "case.json")}`, `--out=${join(d, "o.json")}`], { encoding: "utf8" });
+    assert.equal(r.status, 0, r.stderr);
+    assert.match(r.stdout, /1 value\(s\) counted BLANK: the case is in the file \(2 case\(s\) are\) and says nothing for the field/);
+    assert.match(r.stdout, /date\s+date\s+.*absent 1, no truth 1 \(not graded\)/, r.stdout);
+    const o = JSON.parse(readFileSync(join(d, "o.json"), "utf8"));
+    assert.equal(o.issues.date["2"], undefined, "case 2 has no expected date: no verdict, whatever the chain said");
+    assert.deepEqual(o.coverage.date, { graded: 1, absent: 1, noTruth: 1, clean: 1, wrong: 0, blank: 0 });
   } finally { rmSync(d, { recursive: true, force: true }); }
 });

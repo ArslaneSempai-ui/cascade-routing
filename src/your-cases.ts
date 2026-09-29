@@ -243,13 +243,32 @@ export type PresenceChamp = {
  * cette comparaison littérale ne voit pas. Un compte qui sous-estime se nomme, sinon il
  * accuse un corpus sain.
  */
+/**
+ * AN EMPTY EXPECTED CELL IS UNKNOWN, NOT "EXPECTED BLANK". Measured on the 100 CORD receipts
+ * (2026-09-29): 35 have no subtotal label and 60 no tax label. Graded against an empty truth,
+ * a returned value scored wrong and silence scored blank, so a vendor's subtotal read 58 %
+ * over 100 cases where it was about 89 % over the 65 labelled ones, and every chain on a
+ * sparsely labelled field was dragged down the same way. A case without an expected value is
+ * not graded on that field, by any source, and is counted apart; `grade` applies the same
+ * rule, so the two sides of a comparison stand on the same cases. A document that truly has
+ * no such line has no marker yet: it stays ungraded, and the count says so.
+ */
+export function aUneVerite(c: Cas, champ: string): boolean {
+  return (c.truth[champ] ?? "").trim().length > 0;
+}
+
+/** Per field, how many cases have no expected value. */
+export function sansVerite(cas: readonly Cas[], champs: readonly string[]): Record<string, number> {
+  return Object.fromEntries(champs.map((champ) => [champ, cas.filter((c) => !aUneVerite(c, champ)).length]));
+}
+
 export function presenceDeLaVerite(cas: Cas[], champs: string[]): PresenceChamp[] {
   const enMots = (x: string) => normaliserReponse(x).split(/[^\p{L}\p{N}]+/u).filter(Boolean);
   return champs.map((champ) => {
     let litteral = 0, reordonne = 0, vides = 0;
     for (const c of cas) {
+      if (!aUneVerite(c, champ)) { vides++; continue; }
       const attendu = normaliserReponse(c.truth[champ] ?? "");
-      if (attendu.length === 0) { vides++; continue; }
       const texte = normaliserReponse(c.text);
       if (texte.includes(attendu)) { litteral++; continue; }
       const presents = new Set(enMots(texte));
@@ -274,9 +293,17 @@ export function direLaPresence(p: PresenceChamp[]): string | undefined {
     && (x.litteral + x.reordonne) * 2 < renseignes(x));
   const desordonnes = p.filter((x) => renseignes(x) > 0
     && x.reordonne * 2 >= renseignes(x));
-  if (maigres.length === 0 && desordonnes.length === 0) return undefined;
+  const sansValeur = p.filter((x) => x.vides > 0);
+  if (maigres.length === 0 && desordonnes.length === 0 && sansValeur.length === 0) return undefined;
 
   const blocs: string[] = [];
+  if (sansValeur.length) {
+    blocs.push(`⚠ ${sansValeur.length} field(s) with cases that have NO expected value:\n`
+      + sansValeur.map((x) => `    ${x.champ}: ${x.vides} of ${x.total} case(s)`).join("\n")
+      + `\n  An empty expected cell is unknown, not "expected blank": those cases are not graded on\n`
+      + `  that field, by any tier or chain, and are not in its n. A document that truly has no\n`
+      + `  such line has no marker yet; it stays ungraded.`);
+  }
   if (maigres.length) {
     blocs.push(`⚠ ${maigres.length} field(s) whose expected value is mostly NOT in the text `
       + `you supplied:\n`
@@ -1051,7 +1078,8 @@ export function correspondance(cas: Cas[], champs: string[], s: SortiesFournies)
   const inconnus: Record<string, string[]> = {};
   for (const champ of champs) {
     const siens = s.issues[champ] ?? {};
-    manquants[champ] = cas.filter((c) => !(c.id in siens)).map((c) => c.id);
+    /* A case without an expected value is graded by nobody: his file has no reason to carry it. */
+    manquants[champ] = cas.filter((c) => aUneVerite(c, champ) && !(c.id in siens)).map((c) => c.id);
     inconnus[champ] = Object.keys(siens).filter((id) => !nos.has(id));
   }
   const total = champs.reduce((a, c) => a + manquants[c]!.length + inconnus[c]!.length, 0);
@@ -1363,6 +1391,8 @@ export function rapportPourLeClient(o: {
   kinds?: Record<string, FieldKind>;
   /** The audit, the SAME lines as the console (`auditLines`), when chains were given. */
   audit?: string[];
+  /** Per field, the cases with no expected value: not graded on it, by any source. */
+  sansVerite?: Record<string, number>;
 }): string {
   const deduites = o.champs.filter((c) => o.questions[c]!.provenance === "deduite");
   const entete = [
@@ -1390,6 +1420,13 @@ export function rapportPourLeClient(o: {
       + `derived question and 100 % under the client's own — the question is worth a hundred `
       + `points. Supply yours with \`--questions=file.json\` and measure again before `
       + `concluding anything about a tier.`);
+  }
+  const nonNotes = Object.entries(o.sansVerite ?? {}).filter(([, n]) => n > 0);
+  if (nonNotes.length) {
+    entete.push(``,
+      `> **${nonNotes.map(([c, n]) => `${n} case(s) have no expected value for \`${c}\``).join("; ")}.** `
+      + `An empty expected cell is unknown, not "expected blank": those cases are not graded on that `
+      + `field, by any tier or chain, and are not in its n below.`);
   }
   /* Un blanc avant et après chaque tableau : un lecteur markdown strict colle sinon le titre
      au tableau, et la section entière se rend en un seul paragraphe. */
@@ -1493,6 +1530,8 @@ export async function mesurerVosCas(
       let bons = 0, apparies = 0, vides = 0, faux = 0;
       const bits: string[] = [];
       for (const c of cas) {
+        /* No expected value: not graded, whatever his file says of it (`aUneVerite`). */
+        if (!aUneVerite(c, champ)) { bits.push("-"); continue; }
         if (!(c.id in siennes)) { bits.push("-"); continue; }   // absent de son fichier : compté ailleurs, pas ici
         apparies++;
         const juste = siennes[c.id] === "clean";
@@ -1516,7 +1555,10 @@ export async function mesurerVosCas(
       let bons = 0, vides = 0, faux = 0;
       const bits: string[] = [];
       const doutes = doutesVides();
+      let notes = 0;
       for (let i = 0; i < cas.length; i++) {
+        if (!aUneVerite(cas[i]!, champ)) { bits.push("-"); continue; }
+        notes++;
         const valeur = valeursRegle[i] ?? "";
         const sort = outcomeTyped(valeur, cas[i]!.truth[champ]!, kind);
         const juste = sort === "clean";
@@ -1529,7 +1571,7 @@ export async function mesurerVosCas(
         tracer?.(cas[i]!.id, "rules", champ, sort, score);
       }
       releve[champ]!["rules" as TierName] = {
-        bons, sur: cas.length, ms: regles!.ms[champ] ?? 0, reussites: bits.join(""), vides, faux, doutes,
+        bons, sur: notes, ms: regles!.ms[champ] ?? 0, reussites: bits.join(""), vides, faux, doutes,
       };
     }
 
@@ -1551,12 +1593,16 @@ export async function mesurerVosCas(
        * ailleurs de publier un chiffre qu'il n'a pas mesuré.
        */
       const pas = cas.length >= 1000 ? Math.ceil(cas.length / 20) : 0;
-      let faits = 0;
+      let faits = 0, notes = 0;
       for (const c of cas) {
         if (pas > 0 && faits > 0 && faits % pas === 0) {
           process.stderr.write(`  ${champ} · ${palier} · ${faits}/${cas.length}\n`);
         }
         faits++;
+        /* No expected value: nothing to grade against, so no call is made and the case is
+           out of this field's n, as it is for the rules and for every chain. */
+        if (!aUneVerite(c, champ)) { bits.push("-"); continue; }
+        notes++;
         const t0 = performance.now();
         /* `extract` attend un ClientFile et un Field ; les cas du lecteur ont les mêmes deux
            propriétés utiles, et le champ n'est qu'une clé. Le typage local est plus étroit
@@ -1597,7 +1643,7 @@ export async function mesurerVosCas(
       }
       durees.sort((a, b) => a - b);
       releve[champ]![palier] = {
-        bons, sur: cas.length, ms: durees[Math.floor(durees.length / 2)] ?? 0,
+        bons, sur: notes, ms: durees[Math.floor(durees.length / 2)] ?? 0,
         reussites: bits.join(""), vides, faux, doutes,
         ...(desordre > 0 ? { desordre } : {}),
       };
@@ -1692,6 +1738,8 @@ The CSV wants an id, the input text, then one column per field to extract:
   id,text,name,birth
   1,"Anna Petrova — dob 3 May 1990",Anna Petrova,3 May 1990
 
+An empty expected cell means UNKNOWN: the case is not graded on that field, by any tier or
+chain, and is not in its n. There is no marker for "this document has no such line" yet.
 A header may declare a field's kind, and the comparison follows it: total:amount,
 closing_date:date (month first; date-dmy for day first), currency:currency, tax_id:id,
 vendor_name:free-text, total:amount-grouped where a point or comma before three digits groups
@@ -2245,6 +2293,7 @@ Nothing leaves your machine: the models are local and this path makes no network
     cas: cas.length, champs, date: new Date().toISOString().slice(0, 10),
     questions, avecRegles: reglesMesurees, verdicts, marge, kinds,
     audit: chaines.length > 0 ? lignesAudit : undefined,
+    sansVerite: sansVerite(cas, champs),
     lignes: champs.flatMap((champ) => Object.entries(releve[champ]!).map(([palier, r]) => {
       const q = rate(r.bons, r.sur);
       /* Le fichier passe par le MÊME formateur que la console : c'est lui qui porte le
