@@ -183,7 +183,7 @@ this page moves because of it.
 <!-- /figures:documents -->
 
 <!-- figures:tests -->
-**718 tests** across 83 files, counted from the sources rather than typed here.
+**720 tests** across 84 files, counted from the sources rather than typed here.
 <!-- /figures:tests -->
 
 Everything runs locally, and that is enforced rather than promised. The one call that could

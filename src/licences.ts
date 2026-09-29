@@ -135,8 +135,53 @@ function dossiers(racine: string): string[] {
   return out;
 }
 
+/**
+ * What the lockfile declares for a platform family, taken from ONE reference variant.
+ *
+ * First run of the Windows matrix, 2026-09-29: npm installs no `@img/sharp-libvips-*` on
+ * win32 (the win32 sharp binary bundles libvips), so the family was "recorded here, absent
+ * from the tree", and the installed `@img/sharp-win32-x64` declares `Apache-2.0 AND
+ * LGPL-3.0-or-later` where every other variant declares `Apache-2.0`. A row read from the
+ * installed variant can therefore never be the same row on a Windows machine, family name or
+ * not, and the document has to be the same document everywhere or the check is a lottery.
+ *
+ * So a platform family's version and declared licence are read from the lockfile, from the
+ * variant npm installs on linux-x64, the public integration runner and the machine the
+ * published document has always described. A family the lockfile declares for other machines
+ * only is added from that same entry, with no licence file (there is none on disk here) and a
+ * class read from the field. What a variant declares beyond the reference (win32's LGPL) is
+ * the licence of a family the document already lists.
+ */
+type Reference = { version: string; license: string | null; os: string[] };
+
+function referencesDuVerrou(racine: string): Map<string, Reference> {
+  const out = new Map<string, Reference>();
+  const verrou = join(racine, "..", "package-lock.json");
+  if (!existsSync(verrou)) return out;
+  let l: { packages?: Record<string, { version?: string; license?: string; optional?: boolean; os?: string[]; cpu?: string[] }> };
+  try { l = JSON.parse(readFileSync(verrou, "utf8")); } catch { return out; }
+  const candidats = new Map<string, { entree: Reference; reference: boolean }>();
+  for (const [chemin, e] of Object.entries(l.packages ?? {})) {
+    if (!e.optional || !Array.isArray(e.os) || e.os.length === 0) continue;
+    const complet = chemin.slice(chemin.lastIndexOf("node_modules/") + "node_modules/".length);
+    let nom = complet;
+    for (const t of e.os) {
+      const i = complet.lastIndexOf(`-${t}`);
+      if (i > 0 && i < nom.length) nom = complet.slice(0, i);
+    }
+    if (nom === complet) continue;   /* the name does not carry the platform: not a family */
+    const reference = e.os.includes("linux") && (e.cpu ?? ["x64"]).includes("x64");
+    const entree: Reference = { version: e.version ?? "?", license: typeof e.license === "string" && e.license.length > 0 ? e.license : null, os: e.os };
+    const deja = candidats.get(nom);
+    if (!deja || (reference && !deja.reference)) candidats.set(nom, { entree, reference });
+  }
+  for (const [nom, c] of candidats) out.set(nom, c.entree);
+  return out;
+}
+
 export function inventaire(racine = "node_modules"): Paquet[] {
   const vus = new Map<string, Paquet>();
+  const references = referencesDuVerrou(racine);
   for (const dir of dossiers(racine)) {
     const m = JSON.parse(readFileSync(join(dir, "package.json"), "utf8"));
     let d: unknown = m.license ?? m.licenses;
@@ -175,11 +220,24 @@ export function inventaire(racine = "node_modules"): Paquet[] {
       const i = complet.lastIndexOf(`-${t}`);
       if (i > 0 && i < nom.length) nom = complet.slice(0, i);
     }
-    const p: Paquet = { nom, version: m.version ?? "?", declaree, classe: classer(declaree, texte), fichier,
+    /* A platform family takes its version and declared licence from the lockfile's reference
+       variant (see `referencesDuVerrou`); the licence file and its text are this machine's. */
+    const ref = nom !== complet ? references.get(nom) : undefined;
+    const version: string = ref?.version ?? m.version ?? "?";
+    const declareeDeLaFamille = ref ? ref.license : declaree;
+    const p: Paquet = { nom, version, declaree: declareeDeLaFamille, classe: classer(declareeDeLaFamille, texte), fichier,
       /* Marqué SEULEMENT si le nom portait la plateforme : `onnxruntime-node` déclare trois
          systèmes et s'appelle pareil partout — il n'a rien de dépendant de la machine ici. */
       plateforme: nom !== complet ? "le nom portait la plateforme" : null };
     vus.set(`${p.nom}@${p.version}`, p);   // l'arbre répète les paquets hissés : une clé par version
+  }
+  /* Families the lockfile declares for other machines only: listed from the reference
+     variant, so that a Windows tree and a Linux tree describe the same set of packages. */
+  for (const [nom, ref] of references) {
+    const cle = `${nom}@${ref.version}`;
+    if (vus.has(cle)) continue;
+    vus.set(cle, { nom, version: ref.version, declaree: ref.license, classe: classer(ref.license, ""), fichier: null,
+      plateforme: `declared for ${ref.os.join(", ")} only; not installed on this machine` });
   }
   return [...vus.values()].sort((a, b) => a.nom.localeCompare(b.nom));
 }

@@ -1283,11 +1283,20 @@ test("le pas qui refuse un cas ignoré cherche ce que le rapporteur écrit vraim
    * éprouver les deux sens de l'écart ; sur la machine d'intégration, un seul lancement
    * tourne à la fois et les chemins fixes y restent corrects. Audit du 27 août 2026.
    */
-  const suiteTxt = join(mkdtempSync(join(tmpdir(), "ci-sortie-")), "suite.txt");
+  /* Forward slashes and quotes: on a Windows runner the bench path carries backslashes, which
+     an unquoted `sh` word would eat one by one. */
+  const suiteTxt = join(mkdtempSync(join(tmpdir(), "ci-sortie-")), "suite.txt").replaceAll("\\", "/");
   const script = corps.join("\n")
-    .replace(/^\s*npm test .*$/m, `cat "$1" > ${suiteTxt}`)
-    .replaceAll("/tmp/suite.txt", suiteTxt)
-    .replaceAll(".github/cas-ignores-attendus.txt", '"$2"');
+    .replace(/^\s*npm test .*$/m, () => `cat "$1" > "${suiteTxt}"`)
+    .replaceAll("/tmp/suite.txt", `"${suiteTxt}"`)
+    /*
+     * EVERY SYSTEM'S LIST, NOT ONLY LINUX'S. Since the matrix has three systems the step picks
+     * its expected-skips file from RUNNER_OS, and the runner exports that variable to this very
+     * process. First run of the matrix, 2026-09-29: on the macOS runner the rewritten step kept
+     * the REAL macOS list, and a clean fixture was refused against three expected skips. So
+     * whichever branch the case statement takes, the list is the fixture's.
+     */
+    .replace(/\.github\/cas-ignores-attendus(?:-[a-z]+)?\.txt/g, () => '"$2"');
   assert.match(script, /cat "\$1"/, "la ligne qui lance la suite n'a pas été trouvée dans le pas.");
 
   const tmp = mkdtempSync(join(tmpdir(), "ci-skip-"));
