@@ -1,0 +1,15 @@
+# Line endings are LF on every system, whatever git's local setting says.
+#
+# Measured on 2026-09-29, first run of the Windows matrix: Git for Windows checks text files
+# out with CRLF by default, and `node src/readme.ts --check` then read a README whose
+# nineteen multi-line figure blocks no longer matched what the generator produces (the
+# single-line blocks matched, which is the signature). The gallery cache key moved for the
+# same reason: it hashes the sources it depends on, and the sources had grown a carriage
+# return per line. Nothing in the repository had changed; the checkout had.
+#
+# `text=auto` lets git tell text from binary; `eol=lf` fixes the working-tree ending. The
+# index already held every text file as LF (git ls-files --eol: 285 lf, 4 binary), so this
+# file changes no committed byte; it stops a checkout from changing them.
+* text=auto eol=lf
+*.png binary
+*.gif binary
