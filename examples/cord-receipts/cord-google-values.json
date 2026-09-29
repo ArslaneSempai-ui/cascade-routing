@@ -1,0 +1,502 @@
+{
+ "CORD-TEST-000": {
+  "total": "60.000",
+  "subtotal": "60.000",
+  "tax": "5.455"
+ },
+ "CORD-TEST-001": {
+  "total": "91000",
+  "subtotal": "",
+  "tax": ""
+ },
+ "CORD-TEST-002": {
+  "total": "28.000",
+  "subtotal": "28.000",
+  "tax": ""
+ },
+ "CORD-TEST-003": {
+  "total": "11,000",
+  "subtotal": "11.000",
+  "tax": ""
+ },
+ "CORD-TEST-004": {
+  "total": "174,600",
+  "subtotal": "194,000",
+  "tax": ""
+ },
+ "CORD-TEST-005": {
+  "total": "31.000",
+  "subtotal": "28.182",
+  "tax": "2.818"
+ },
+ "CORD-TEST-006": {
+  "total": "46,000",
+  "subtotal": "",
+  "tax": ""
+ },
+ "CORD-TEST-007": {
+  "total": "111,000",
+  "subtotal": "100,909",
+  "tax": "10,091"
+ },
+ "CORD-TEST-008": {
+  "total": "50,000",
+  "subtotal": "45,455",
+  "tax": "4.545"
+ },
+ "CORD-TEST-009": {
+  "total": "",
+  "subtotal": "36000",
+  "tax": ""
+ },
+ "CORD-TEST-010": {
+  "total": "17,000",
+  "subtotal": "17,000",
+  "tax": ""
+ },
+ "CORD-TEST-011": {
+  "total": "230,000",
+  "subtotal": "",
+  "tax": ""
+ },
+ "CORD-TEST-012": {
+  "total": "120,000",
+  "subtotal": "",
+  "tax": ""
+ },
+ "CORD-TEST-013": {
+  "total": "51,300►",
+  "subtotal": "",
+  "tax": "4.664"
+ },
+ "CORD-TEST-014": {
+  "total": "281,435",
+  "subtotal": "238,000",
+  "tax": ""
+ },
+ "CORD-TEST-015": {
+  "total": "63.000",
+  "subtotal": "",
+  "tax": ""
+ },
+ "CORD-TEST-016": {
+  "total": "70,000",
+  "subtotal": "63,636",
+  "tax": "6,364"
+ },
+ "CORD-TEST-017": {
+  "total": "91,000",
+  "subtotal": "91,000",
+  "tax": ""
+ },
+ "CORD-TEST-018": {
+  "total": "156000",
+  "subtotal": "",
+  "tax": ""
+ },
+ "CORD-TEST-019": {
+  "total": "176000",
+  "subtotal": "160000",
+  "tax": "16000"
+ },
+ "CORD-TEST-020": {
+  "total": "377.059",
+  "subtotal": "325,600",
+  "tax": "34,351"
+ },
+ "CORD-TEST-021": {
+  "total": "RP38.000",
+  "subtotal": "",
+  "tax": ""
+ },
+ "CORD-TEST-022": {
+  "total": "40,000",
+  "subtotal": "",
+  "tax": ""
+ },
+ "CORD-TEST-023": {
+  "total": "63,000",
+  "subtotal": "",
+  "tax": ""
+ },
+ "CORD-TEST-024": {
+  "total": "118.000",
+  "subtotal": "",
+  "tax": ""
+ },
+ "CORD-TEST-025": {
+  "total": "43,000",
+  "subtotal": "",
+  "tax": ""
+ },
+ "CORD-TEST-026": {
+  "total": "138.000",
+  "subtotal": "138.000",
+  "tax": ""
+ },
+ "CORD-TEST-027": {
+  "total": "61,600",
+  "subtotal": "56,000",
+  "tax": "5,600"
+ },
+ "CORD-TEST-028": {
+  "total": "426,195",
+  "subtotal": "369,000",
+  "tax": "38,745"
+ },
+ "CORD-TEST-029": {
+  "total": "145,900",
+  "subtotal": "132,636",
+  "tax": "13,264"
+ },
+ "CORD-TEST-030": {
+  "total": "31,500",
+  "subtotal": "28,636",
+  "tax": "2,864"
+ },
+ "CORD-TEST-031": {
+  "total": "113,886",
+  "subtotal": "85,500",
+  "tax": ""
+ },
+ "CORD-TEST-032": {
+  "total": "24.000",
+  "subtotal": "24.000",
+  "tax": ""
+ },
+ "CORD-TEST-033": {
+  "total": "148,127",
+  "subtotal": "117,500",
+  "tax": "19,557"
+ },
+ "CORD-TEST-034": {
+  "total": "93.500",
+  "subtotal": "85.000",
+  "tax": "8.500"
+ },
+ "CORD-TEST-035": {
+  "total": "54,000",
+  "subtotal": "",
+  "tax": ""
+ },
+ "CORD-TEST-036": {
+  "total": "40,000",
+  "subtotal": "40,000",
+  "tax": ""
+ },
+ "CORD-TEST-037": {
+  "total": "20.000",
+  "subtotal": "",
+  "tax": ""
+ },
+ "CORD-TEST-038": {
+  "total": "664,329",
+  "subtotal": "",
+  "tax": ""
+ },
+ "CORD-TEST-039": {
+  "total": "3.112,800",
+  "subtotal": "",
+  "tax": ""
+ },
+ "CORD-TEST-040": {
+  "total": "68,000",
+  "subtotal": "",
+  "tax": ""
+ },
+ "CORD-TEST-041": {
+  "total": "365000.00",
+  "subtotal": "316017.00",
+  "tax": ""
+ },
+ "CORD-TEST-042": {
+  "total": "16,500",
+  "subtotal": "15,000",
+  "tax": "1.500"
+ },
+ "CORD-TEST-043": {
+  "total": "Rp165000.00",
+  "subtotal": "Rp165000.00",
+  "tax": "00.00"
+ },
+ "CORD-TEST-044": {
+  "total": "30.000",
+  "subtotal": "",
+  "tax": ""
+ },
+ "CORD-TEST-045": {
+  "total": "88.000",
+  "subtotal": "",
+  "tax": ""
+ },
+ "CORD-TEST-046": {
+  "total": "40,000",
+  "subtotal": "",
+  "tax": ""
+ },
+ "CORD-TEST-047": {
+  "total": "63,000.00",
+  "subtotal": "",
+  "tax": "0.00"
+ },
+ "CORD-TEST-048": {
+  "total": "25,000",
+  "subtotal": "22,728",
+  "tax": ""
+ },
+ "CORD-TEST-049": {
+  "total": "23,000",
+  "subtotal": "23,000",
+  "tax": ""
+ },
+ "CORD-TEST-050": {
+  "total": "19.500",
+  "subtotal": "17,727",
+  "tax": "1,773"
+ },
+ "CORD-TEST-051": {
+  "total": "334,000",
+  "subtotal": "303,646",
+  "tax": "30,365"
+ },
+ "CORD-TEST-052": {
+  "total": "40.000",
+  "subtotal": "40.000",
+  "tax": ""
+ },
+ "CORD-TEST-053": {
+  "total": "123.585",
+  "subtotal": "107.000",
+  "tax": ""
+ },
+ "CORD-TEST-054": {
+  "total": "10,000",
+  "subtotal": "10,000",
+  "tax": ""
+ },
+ "CORD-TEST-055": {
+  "total": "54,000",
+  "subtotal": "",
+  "tax": ""
+ },
+ "CORD-TEST-056": {
+  "total": "10,000",
+  "subtotal": ".8, 181",
+  "tax": "818"
+ },
+ "CORD-TEST-057": {
+  "total": "42,000",
+  "subtotal": "",
+  "tax": ""
+ },
+ "CORD-TEST-058": {
+  "total": "60,500",
+  "subtotal": "55,000",
+  "tax": ""
+ },
+ "CORD-TEST-059": {
+  "total": "680.500",
+  "subtotal": "618,490",
+  "tax": "61,849"
+ },
+ "CORD-TEST-060": {
+  "total": "26.250",
+  "subtotal": "26.250",
+  "tax": ""
+ },
+ "CORD-TEST-061": {
+  "total": "24,500",
+  "subtotal": "24,500",
+  "tax": ""
+ },
+ "CORD-TEST-062": {
+  "total": "48.000",
+  "subtotal": "",
+  "tax": ""
+ },
+ "CORD-TEST-063": {
+  "total": "57.000",
+  "subtotal": "57.000",
+  "tax": ""
+ },
+ "CORD-TEST-064": {
+  "total": "16.000",
+  "subtotal": "",
+  "tax": ""
+ },
+ "CORD-TEST-065": {
+  "total": "13.000",
+  "subtotal": "13.000",
+  "tax": ""
+ },
+ "CORD-TEST-066": {
+  "total": "40,000",
+  "subtotal": "36,364",
+  "tax": ""
+ },
+ "CORD-TEST-067": {
+  "total": "9.500,00",
+  "subtotal": "",
+  "tax": ""
+ },
+ "CORD-TEST-068": {
+  "total": "20,000",
+  "subtotal": "",
+  "tax": ""
+ },
+ "CORD-TEST-069": {
+  "total": "74,000",
+  "subtotal": "",
+  "tax": ""
+ },
+ "CORD-TEST-070": {
+  "total": "1,565,938",
+  "subtotal": "1,343,000",
+  "tax": "142,358"
+ },
+ "CORD-TEST-071": {
+  "total": "200200",
+  "subtotal": "198000",
+  "tax": ""
+ },
+ "CORD-TEST-072": {
+  "total": "17,500",
+  "subtotal": "15,909-",
+  "tax": ""
+ },
+ "CORD-TEST-073": {
+  "total": "22.000",
+  "subtotal": "",
+  "tax": ""
+ },
+ "CORD-TEST-074": {
+  "total": "330264",
+  "subtotal": "278,000",
+  "tax": "30,024"
+ },
+ "CORD-TEST-075": {
+  "total": "282,000",
+  "subtotal": "256,363",
+  "tax": "25,637"
+ },
+ "CORD-TEST-076": {
+  "total": "110000",
+  "subtotal": "",
+  "tax": ""
+ },
+ "CORD-TEST-077": {
+  "total": "17,000",
+  "subtotal": "17,000",
+  "tax": ""
+ },
+ "CORD-TEST-078": {
+  "total": "30.000",
+  "subtotal": "",
+  "tax": ""
+ },
+ "CORD-TEST-079": {
+  "total": "22.000",
+  "subtotal": "",
+  "tax": ""
+ },
+ "CORD-TEST-080": {
+  "total": "25.000",
+  "subtotal": "25.000",
+  "tax": ""
+ },
+ "CORD-TEST-081": {
+  "total": "50.000",
+  "subtotal": "",
+  "tax": ""
+ },
+ "CORD-TEST-082": {
+  "total": "385,000",
+  "subtotal": "385,000",
+  "tax": ""
+ },
+ "CORD-TEST-083": {
+  "total": "23.000",
+  "subtotal": "20.909",
+  "tax": "2.091"
+ },
+ "CORD-TEST-084": {
+  "total": "39.600",
+  "subtotal": "36.000",
+  "tax": "3.600"
+ },
+ "CORD-TEST-085": {
+  "total": "197.450",
+  "subtotal": "179.500",
+  "tax": "17.950"
+ },
+ "CORD-TEST-086": {
+  "total": "22,000",
+  "subtotal": "22,000",
+  "tax": ""
+ },
+ "CORD-TEST-087": {
+  "total": "40,150",
+  "subtotal": "36,500",
+  "tax": "3,650"
+ },
+ "CORD-TEST-088": {
+  "total": "47,000",
+  "subtotal": "47,000",
+  "tax": ""
+ },
+ "CORD-TEST-089": {
+  "total": "40,000",
+  "subtotal": "40,000",
+  "tax": ""
+ },
+ "CORD-TEST-090": {
+  "total": "29,500",
+  "subtotal": "26,818",
+  "tax": ""
+ },
+ "CORD-TEST-091": {
+  "total": "21,000",
+  "subtotal": "",
+  "tax": ""
+ },
+ "CORD-TEST-092": {
+  "total": "250.000",
+  "subtotal": "",
+  "tax": ""
+ },
+ "CORD-TEST-093": {
+  "total": "17,999",
+  "subtotal": "16,363",
+  "tax": ""
+ },
+ "CORD-TEST-094": {
+  "total": "140,063",
+  "subtotal": "119,000",
+  "tax": ""
+ },
+ "CORD-TEST-095": {
+  "total": "62,000",
+  "subtotal": "",
+  "tax": "5,618"
+ },
+ "CORD-TEST-096": {
+  "total": "41,000",
+  "subtotal": "",
+  "tax": ""
+ },
+ "CORD-TEST-097": {
+  "total": "55.000",
+  "subtotal": "",
+  "tax": ""
+ },
+ "CORD-TEST-098": {
+  "total": "250,690",
+  "subtotal": "",
+  "tax": "22,790"
+ },
+ "CORD-TEST-099": {
+  "total": "75,000",
+  "subtotal": "68,180",
+  "tax": ""
+ }
+}

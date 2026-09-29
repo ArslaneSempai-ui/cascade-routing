@@ -1,0 +1,5 @@
+{
+  "total": { "documentai": { "entity": "total_amount" } },
+  "subtotal": { "documentai": { "entity": "net_amount" } },
+  "tax": { "documentai": { "entity": "total_tax_amount" } }
+}

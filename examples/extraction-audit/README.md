@@ -20,6 +20,9 @@ A dataset whose terms could not be read is not "clean", and a clean one that cou
 fetched cannot be vendored. So the example is generated, and says so. On a machine that
 reaches the hub, CORD is the candidate to replace it, with its citation.
 
+That run now exists: [`examples/cord-receipts`](../cord-receipts/) is the same audit on the 100 real receipts of
+CORD's test split, with Google Document AI and Gemini outputs, under CC BY 4.0.
+
 ## What is here
 
 | File | What it is |
