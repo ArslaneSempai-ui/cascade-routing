@@ -75,3 +75,17 @@ history, not the working tree. It is slow: it runs outside `npm test`, with
 The licence inventory lives in `LICENCES.md`. The non-transmission guarantee (that nothing
 leaves the machine during a measurement) is a separate relevé, produced by `npm run egress`,
 because it is observed while running and cannot be read from a source file.
+
+## Advisories without an upstream fix
+
+Read on 2026-09-29. `adm-zip` carries an advisory with no fixed version: extraction follows a
+symbolic link already present in the destination directory. It enters this tree through
+`onnxruntime-node` alone (a dependency of the model library), whose install script extracts
+Microsoft's NuGet package into a temporary directory it creates itself, from an archive fetched
+over HTTPS from api.nuget.org; that script never runs under `npm ci --ignore-scripts`, the
+installation this repository documents and its integration uses. Nothing else here extracts an
+archive: the weights import (`npm run poids -- --import`) copies files after checking a
+manifest of sha256, and the model library fetches model files one by one. The two other alerts
+of that day, sharp (libvips) and adm-zip's allocation from the declared uncompressed size, are
+closed by the versions pinned in `package.json` under `overrides`; a test reads the installed
+versions.
