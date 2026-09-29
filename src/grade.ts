@@ -152,7 +152,9 @@ Grade one vendor's extracted values against your labelled CSV, and write only ou
 
 --cases     the labelled CSV measure:yours reads: id, text, then one column per field. A
             header may declare the field's kind: total:amount, invoice_date:date, tax_id:id,
-            currency:currency, vendor_name:free-text. Without a kind, the default comparison.
+            currency:currency, vendor_name:free-text, or total:amount-grouped where a point or
+            comma before three digits groups thousands, as Indonesian receipts print them
+            (60.000 is sixty thousand). Without a kind, the default comparison.
 --name      what this chain is called in every table (not one of our tier names).
 --vendor    which vendor wrote the exports; the adapter reads its JSON offline, never calls it.
 --exports   a folder of <case id>.json files, or one JSON object keyed by case id.

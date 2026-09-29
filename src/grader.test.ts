@@ -12,7 +12,7 @@ import assert from "node:assert/strict";
 import { correct } from "./tiers.ts";
 import {
   graded, outcome, canonical, parseAmount, parseDate, parseCurrency, parseId, parseFreeText,
-  splitHeader, FIELD_KINDS, isFieldKind, GRADER,
+  splitHeader, FIELD_KINDS, isFieldKind, GRADER, parseAmountGrouped,
 } from "./grader.ts";
 import { forAll, integer, oneOf, boolean, stringOf, tuple, map, arrayOf, rng } from "./property.ts";
 
@@ -84,6 +84,50 @@ test("review 2026-09-29: free text keeps the marks of non-Latin scripts", () => 
   assert.equal(parseFreeText("कि"), "कि", "a Devanagari vowel sign stays");
   assert.ok(graded("Café Régence", "Cafe Regence", "free-text"), "Latin diacritics are still formatting");
   assert.ok(graded("Façade Élève", "facade eleve", "free-text"));
+});
+
+test("amount-grouped reads a point or comma before three digits as thousands, as CORD's receipts print them; amount is unchanged", () => {
+  /* The founder's fourteen cases from CORD v2's own labels, 2026-09-29, each with its result. */
+  const cases: Record<string, string> = {
+    "60.000": "60000", "28,000": "28000", "Rp 38.000": "38000", "Rp.118.000": "118000", "Rp. 91,000": "91000",
+    "1,565,938": "1565938", "365000.00": "365000", "Rp 165000.00": "165000", "63,000.00": "63000", "9.500,00": "9500",
+    "5.455": "5455", "91000": "91000", "818": "818",
+  };
+  for (const [raw, expected] of Object.entries(cases)) assert.equal(parseAmountGrouped(raw), expected, raw);
+  for (const unreadable of ["-", "12.3", "1,2345", "1234.567", "abc", "", "(-60.000)"]) {
+    assert.equal(parseAmountGrouped(unreadable), null, `${JSON.stringify(unreadable)} has no grouped reading`);
+  }
+  assert.equal(parseAmountGrouped("-Rp 1.500"), "-1500", "one negative marker, the rupiah mark stripped");
+  assert.equal(parseAmountGrouped("60.000-"), "-60000", "a trailing minus is one marker, as under amount");
+  assert.equal(parseAmountGrouped("(2.000)"), "-2000");
+  assert.equal(parseAmountGrouped("0,50"), "0.5", "a final comma before two digits is the decimal part");
+
+  /* THE WITNESS PAIR, under both kinds: red if either drifts. */
+  assert.ok(!graded("60000", "60.000", "amount"), "under amount, 60.000 is sixty: the pair is WRONG");
+  assert.ok(graded("60000", "60.000", "amount-grouped"), "under amount-grouped, 60.000 is sixty thousand: the pair is RIGHT");
+  assert.equal(outcome("60000", "60.000", "amount"), "wrong");
+  assert.equal(outcome("60000", "60.000", "amount-grouped"), "clean");
+  assert.equal(outcome("", "60.000", "amount-grouped"), "blank");
+  assert.equal(outcome("abc", "60.000", "amount-grouped"), "wrong", "an unreadable value grades as amount grades one: wrong");
+  assert.equal(parseAmount("60.000"), "60", "the amount kind reads a lone point as decimal, as before");
+  assert.equal(parseAmount("Rp 38.000"), null, "the amount kind does not know the rupiah mark, as before");
+
+  assert.deepEqual(splitHeader("total:amount-grouped"), { name: "total", kind: "amount-grouped" });
+  assert.ok(FIELD_KINDS.includes("amount-grouped"));
+  assert.match(GRADER.conventions["amount-grouped"], /three digits groups thousands/);
+  assert.match(GRADER.conventions["amount-grouped"], /60\.000 is sixty thousand/);
+});
+
+test("law: under amount-grouped every grouping of an integer, with or without two decimals, reads back as that integer", () => {
+  const grouped = (n: number, sep: string): string => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, sep);
+  forAll(tuple(integer(0, 999_999_999), oneOf([".", ","]), oneOf(["", ".00", ",00", ".50", ",25"])), ([n, sep, tail]) => {
+    /* "1.500.50" carries the same separator for the groups and the decimals: still one reading. */
+    const decimal = tail.length ? tail.slice(1) : "";
+    const written = grouped(n, sep) + tail;
+    const expected = String(n) + (decimal === "50" ? ".5" : decimal === "25" ? ".25" : "");
+    assert.equal(parseAmountGrouped(written), expected, `${written}`);
+    assert.ok(graded(written, String(n) + (decimal && decimal !== "00" ? "." + decimal : ""), "amount-grouped"), written);
+  }, { runs: 1500 });
 });
 
 test("the default grader still counts these as mismatches, which is why the kind exists", () => {

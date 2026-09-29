@@ -39,9 +39,9 @@
 
 import { correct, normaliserReponse } from "./tiers.ts";
 
-export type FieldKind = "exact" | "amount" | "date" | "date-dmy" | "currency" | "id" | "free-text";
+export type FieldKind = "exact" | "amount" | "amount-grouped" | "date" | "date-dmy" | "currency" | "id" | "free-text";
 
-export const FIELD_KINDS: readonly FieldKind[] = ["exact", "amount", "date", "date-dmy", "currency", "id", "free-text"];
+export const FIELD_KINDS: readonly FieldKind[] = ["exact", "amount", "amount-grouped", "date", "date-dmy", "currency", "id", "free-text"];
 
 export function isFieldKind(x: unknown): x is FieldKind {
   return typeof x === "string" && (FIELD_KINDS as readonly string[]).includes(x);
@@ -147,6 +147,42 @@ export function parseAmount(raw: string): string | null {
   integer = integer.replace(/^0+(?=\d)/, "");
   if (integer.length === 0) integer = "0";
   fraction = fraction.replace(/0+$/, "");
+  const zero = /^0*$/.test(integer) && fraction.length === 0;
+  const sign = negative && !zero ? "-" : "";
+  return sign + integer + (fraction.length ? "." + fraction : "");
+}
+
+/**
+ * The grouped reading: a point or comma followed by exactly three digits groups thousands,
+ * a FINAL point or comma followed by exactly two digits is the decimal part, and any other
+ * shape is unreadable. Indonesian receipts print sixty thousand rupiah as "60.000", and so do
+ * German and Swiss ones for francs and euros; the `amount` kind reads a lone point as decimal
+ * and turned that into sixty. Measured on Google Document AI's output for the 100 receipts
+ * of CORD v2 by the founder on 2026-09-29: 60 of 95 totals right under `amount`, 90 of 95
+ * under this rule. The grader would have blamed the vendor for our own reading. Declared per
+ * field in the header (`total:amount-grouped`); `amount` is unchanged.
+ *
+ * "Rp" and "Rp." are the rupiah's marks and are stripped like a currency code; the rest of
+ * what may surround a number is what `amount` allows.
+ */
+export function parseAmountGrouped(raw: string): string | null {
+  const stripRupiah = (x: string): string => x.replace(/^Rp\.?(?![A-Za-z])\s*/i, "").replace(/\s*(?<![A-Za-z])Rp\.?$/i, "").trim();
+  const strip = (x: string): string => stripCurrency(stripRupiah(stripCurrency(x)));
+  let s = strip(raw.replace(/[\u00a0\u202f]/g, " "));
+  if (s.length === 0) return null;
+  let markers = 0;
+  if (/^\(.*\)$/.test(s)) { markers++; s = strip(s.slice(1, -1)); }
+  if (/-\s*$/.test(s)) { markers++; s = s.replace(/-\s*$/, "").trim(); }
+  if (s.startsWith("-")) { markers++; s = s.slice(1).trim(); }
+  else if (s.startsWith("+")) s = s.slice(1).trim();
+  if (markers > 1) return null;
+  const negative = markers === 1;
+  s = strip(s);
+  const m = /^(\d{1,3}(?:[.,]\d{3})+|\d+)(?:[.,](\d{2}))?$/.exec(s);
+  if (!m) return null;
+  let integer = m[1]!.replace(/[.,]/g, "").replace(/^0+(?=\d)/, "");
+  if (integer.length === 0) integer = "0";
+  const fraction = (m[2] ?? "").replace(/0+$/, "");
   const zero = /^0*$/.test(integer) && fraction.length === 0;
   const sign = negative && !zero ? "-" : "";
   return sign + integer + (fraction.length ? "." + fraction : "");
@@ -268,6 +304,7 @@ export function canonical(raw: string, kind: FieldKind): string | null {
   switch (kind) {
     case "exact": { const n = normaliserReponse(raw); return n.length ? n : null; }
     case "amount": return parseAmount(raw);
+    case "amount-grouped": return parseAmountGrouped(raw);
     case "date": return parseDate(raw, "mdy");
     case "date-dmy": return parseDate(raw, "dmy");
     case "currency": return parseCurrency(raw);
@@ -306,6 +343,7 @@ export const GRADER = {
   version: 1,
   conventions: {
     amount: "one comma followed by exactly three digits groups thousands; any other lone comma is decimal; a lone point is decimal; with both, the last one is decimal; currency symbols and codes are ignored",
+    "amount-grouped": "a point or comma followed by exactly three digits groups thousands and a final point or comma followed by exactly two digits is the decimal part, as Indonesian, German and Swiss receipts print amounts (60.000 is sixty thousand); any other shape is unreadable; Rp, currency symbols and codes are ignored",
     date: "all-numeric dates are read month first unless the kind is date-dmy; a part above twelve is the day; two-digit years pivot at fifty",
     currency: "symbols and common names resolve to ISO 4217 codes; any other three letters are taken as a code",
     id: "only letters and digits count, case does not",

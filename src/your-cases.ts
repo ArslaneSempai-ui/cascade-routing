@@ -1694,7 +1694,9 @@ The CSV wants an id, the input text, then one column per field to extract:
 
 A header may declare a field's kind, and the comparison follows it: total:amount,
 closing_date:date (month first; date-dmy for day first), currency:currency, tax_id:id,
-vendor_name:free-text. Without a kind, a value is compared as written, separators aside.
+vendor_name:free-text, total:amount-grouped where a point or comma before three digits groups
+thousands, as Indonesian receipts print them (60.000 is sixty thousand). Without a kind, a
+value is compared as written, separators aside.
 
 --rules  a JSON of { "field": "regular expression" }, so your own free tier is measured too.
 --sorties  a JSON of the OUTCOMES your own chain was graded to, never the values it
