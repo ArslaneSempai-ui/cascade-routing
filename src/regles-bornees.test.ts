@@ -146,7 +146,7 @@ test("le programme SE TERMINE après un refus, et pas seulement le refus s'affic
   const dossier = mkdtempSync(join(tmpdir(), "borne-"));
   const script = join(dossier, "essai.mjs");
   writeFileSync(script, `
-    import { evaluerRegles } from ${JSON.stringify(fileURLToPath(new URL("./regles-bornees.ts", import.meta.url)))};
+    import { evaluerRegles } from ${JSON.stringify(new URL("./regles-bornees.ts", import.meta.url).href)};
     const r = await evaluerRegles({ champ: /(a+)+$/ }, ["a".repeat(40) + "!"], 250);
     console.log("refus:" + (r.refusees.champ ?? "aucun"));
   `);

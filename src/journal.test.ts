@@ -1587,7 +1587,8 @@ test("les crochets qui refusent sont versionnés, et installés", () => {
     if (!existsSync(p)) { manquants.push(`${nom} (absent)`); continue; }
     if (!motif.test(readFileSync(p, "utf8"))) manquants.push(`${nom} (ne porte plus son refus)`);
     /* Un crochet non exécutable est ignoré par git EN SILENCE — le pire des trois états. */
-    if ((statSync(p).mode & 0o111) === 0) manquants.push(`${nom} (non exécutable : git l'ignore sans rien dire)`);
+    /* NTFS carries no mode bits, and git for Windows runs a hook through sh whatever they read. */
+    if (process.platform !== "win32" && (statSync(p).mode & 0o111) === 0) manquants.push(`${nom} (non exécutable : git l'ignore sans rien dire)`);
   }
   assert.deepEqual(manquants, [],
     `crochet(s) inutilisable(s) : ${manquants.join(", ")}.\n`

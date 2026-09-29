@@ -125,8 +125,9 @@ request; the suite holds it.
 ## Requirements
 
 Node 24 or newer. The suite runs in continuous integration on Linux and macOS runners, and
-on Windows minus one shared test file, the screenshot driver's, named with its reason in
-`.github/fichiers-exclus-windows.txt` and printed at the top of the suite's output there;
+on Windows minus two shared test files, the screenshot driver's and the em-dash scan's, named
+with their reasons in `.github/fichiers-exclus-windows.txt` and printed at the top of the
+suite's output there;
 what a system cannot run is named, case by case, in the expected-skips file of that system
 under `.github/`, never skipped in silence. Windows is claimed only as far as that leg of the
 matrix is green. Several scripts chain shell commands, which hold under Git Bash and not

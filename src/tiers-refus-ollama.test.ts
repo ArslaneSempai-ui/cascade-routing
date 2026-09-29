@@ -18,9 +18,9 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createServer, type Server } from "node:http";
 import { spawn } from "node:child_process";
-import { fileURLToPath } from "node:url";
 
-const tiers = fileURLToPath(new URL("./tiers.ts", import.meta.url));
+/* A file URL, not a path: on Windows an absolute path is no import specifier. */
+const tiers = new URL("./tiers.ts", import.meta.url).href;
 
 /** Un faux Ollama qui répond ce qu'on lui dit, sur un port que l'OS choisit. */
 async function faussaire(repondre: (chemin: string) => { code: number; corps: unknown }): Promise<{ url: string; fermer: () => void }> {

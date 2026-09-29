@@ -50,7 +50,8 @@ import {
  * première ligne et le nom du modèle sur la seconde. Ne garder que la première ligne — ce que
  * faisait le premier jet — rendait invérifiable « le diagnostic nomme-t-il le coupable ».
  */
-const CHEMIN_TIERS = JSON.stringify(fileURLToPath(new URL("./tiers.ts", import.meta.url)));
+/* A file URL, not a path: on Windows an absolute path is no import specifier ("Received protocol 'd:'", first Windows run of the matrix). */
+const CHEMIN_TIERS = JSON.stringify(new URL("./tiers.ts", import.meta.url).href);
 
 function enfant(port: number, expression: string, delaiMs = 45_000): Promise<string> {
   return new Promise<string>((res) => {

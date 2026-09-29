@@ -9,9 +9,22 @@
 #   on Linux, and say so.
 # - `identite` and the Cascade family repositories are development neighbours that live on no
 #   public runner: the three layer-comparison cases skip here too.
+# - `lsof`, `ps` and `pgrep` do not exist on Windows: `egress` refuses to observe there by
+#   design, so its nine process cases and the positive control of `refus-de-mesurer` stand
+#   aside by name (the pure case on the ps-to-lsof race runs); the two `charger` cases that
+#   watch a child through ps and pgrep stand aside for the same reason.
+# - a fake `git` put at the head of PATH is a POSIX shell script: Windows resolves executables
+#   through PATHEXT and would run the real git, so the three `menace` cases that need it stand
+#   aside.
+# - the roots of a POSIX filesystem are read from `/`; a Windows drive has no such list, and
+#   the redaction of Windows paths in server errors is not claimed.
+# - the machine state is read from vm_stat or /proc/meminfo; no Windows source is read yet, so
+#   the case that confronts the pure reading with the real machine stands aside, and the
+#   memory guard of `measure` stays silent there.
 #
-# Anything else that a Windows runner cannot run belongs here WITH its reason, added when the
-# suite names it, never in advance and never in silence.
+# Named by the first two Windows runs of the matrix (2026-09-29, runs 36608247909 and
+# 36619464517). Anything else that a Windows runner cannot run belongs here WITH its reason,
+# added when the suite names it, never in advance and never in silence.
 le lecteur d'image distingue ses pannes, et une page sans texte n'en est pas une
 les couches partagées sont bien celles d'identite
 3 compilations simultanées laissent UN binaire entier, et rien d'autre
@@ -20,3 +33,20 @@ un palier qui lit vraiment traverse la sélection, et la passe va jusqu'au bout
 une compilation qui échoue ne se fait pas passer pour un swiftc absent
 la couche de famille est identique dans les dépôts présents
 les couches partagées sont bien celles d'identite (dépôt exclu : recopie à la main)
+`lsof` qui disparaît EN COURS DE PASSE : la commande refuse de conclure au lieu de publier « rien vu »
+`lsof` qui répond pendant toute la passe : la commande CONCLUT, elle ne refuse pas
+`lsof` qui répond n'importe quoi : la commande refuse aussi, et dit quel code elle a reçu
+une passe trop courte refuse SUR LA SORTIE D'ERREUR, pas en silence
+la surveillance couvre la descendance, pas seulement le processus lancé
+une connexion tenue par le FILS est lue, et elle ne l'était pas avant
+tuer egress emporte la commande surveillée — pas d'orphelin qui continue sans témoin
+une commande surveillée TUÉE par un signal se dit, et la passe n'établit rien
+le verdict ÉCRIT par le CLI est celui de verdictEgress — sur une passe qui a vu du trafic
+egress refuse de conclure quand il ne peut RIEN observer
+un fils de charge s'arrête tout seul quand son père est tué sans préavis
+un fils de charge s'arrête à l'échéance, même si son père l'oublie
+le balayage refuse de publier un compte de commits que git n'a pas rendu
+le balayage refuse de publier quand `git log` sort en erreur
+le balayage refuse une sortie trop courte pour être l'historique
+sansChemins caviarde aussi les racines hors des sept d'origine
+la mémoire disponible se lit avec la taille de page annoncée, inactif compris

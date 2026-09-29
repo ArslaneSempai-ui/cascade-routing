@@ -2310,7 +2310,7 @@ test("tout relevé de la racine dit quand il a été mesuré, et nomme son commi
  * être, et le compte doit dépasser les trois de départ.
  */
 test("la clé du cache suit la fermeture des imports, pas une liste figée", () => {
-  const atteints = modulesAtteints("./failures.ts").map((c) => c.split("/").pop());
+  const atteints = modulesAtteints("./failures.ts").map((c) => c.split(/[\\/]/).pop());
   assert.ok(atteints.includes("paliers.ts"),
     `paliers.ts n'est pas atteint : ${atteints.join(", ")}. Il décide du chemin d'extraction, `
     + "et la clé doit en dépendre.");
@@ -4009,8 +4009,9 @@ test("aucun module Node ne traverse le paquet compilé pour le navigateur", () =
     /* On compile POUR DE VRAI avec la configuration web du dépôt, plutôt que de relire les
        imports à la main : c'est le graphe que tsc résout qui atterrit dans la page, et un
        motif écrit ici affirmerait un graphe au lieu de le mesurer. */
+    /* On Windows `npx` is a .cmd shim, which node spawns only through a shell. */
     execFileSync("npx", ["tsc", "-p", "tsconfig.web.json", "--outDir", sortie], {
-      cwd: racine, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"],
+      cwd: racine, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], shell: process.platform === "win32",
     });
     const emis = readdirSync(sortie).filter((n) => n.endsWith(".js"));
     assert.ok(emis.length >= 4,
@@ -4475,7 +4476,7 @@ test("la question d'un champ porte sa provenance, et une déduction n'est pas un
     "une question vide passe pour un choix du client.");
 });
 
-test("la mémoire disponible se lit avec la taille de page annoncée, inactif compris", () => {
+test("la mémoire disponible se lit avec la taille de page annoncée, inactif compris", (t) => {
   /*
    * DEUX DÉFAUTS DANS TROIS LIGNES, ET LES DEUX FAISAIENT MENTIR LA MÊME GARDE.
    *
@@ -4528,6 +4529,9 @@ test("la mémoire disponible se lit avec la taille de page annoncée, inactif co
   /* ET LA VRAIE MACHINE EST D'ACCORD AVEC LES FONCTIONS PURES — sinon l'une des deux lit
      autre chose, et c'est celle qui décide en production qui aurait tort. Ce relevé passe
      par la branche de LA plateforme qui exécute : vm_stat ici, /proc/meminfo sur un runner. */
+  /* No Windows source is read yet: the machine state comes from vm_stat or /proc/meminfo, and
+     the memory guard stays silent there (its caller catches). Said by name, not narrowed. */
+  if (process.platform === "win32") return t.skip("the machine state is read from vm_stat or /proc/meminfo; no Windows source is read yet, and the memory guard stays silent there");
   const reelle = etatMachineInterne();
   assert.ok(reelle.memoireLibreMo > 0,
     "la lecture réelle rend zéro : la source mémoire de cette plateforme n'a pas été lue, et\n"
@@ -4945,7 +4949,7 @@ test("un /api/tags en panne fait refuser, il ne se lit pas « aucun modèle »",
      */
     const sortie = await new Promise<string>((res) => {
       const enfant = spawn(process.execPath, ["-e",
-        `import(${JSON.stringify(fileURLToPath(new URL("./tiers.ts", import.meta.url)))})`
+        `import(${JSON.stringify(new URL("./tiers.ts", import.meta.url).href)})`
         + `.then((t) => t.loadGeneratifs()).then(() => console.log("CONTINUE"),`
         + ` (e) => console.log("REFUS " + String(e.message).split("\\n")[0]))`],
         { env: { ...process.env, OLLAMA_HOST: `http://127.0.0.1:${port}` } });

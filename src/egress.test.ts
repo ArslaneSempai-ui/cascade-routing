@@ -1,4 +1,9 @@
 import { test } from "node:test";
+/* egress observes with lsof, ps and pgrep, which Windows does not have: the command refuses there
+   by design, and the nine cases that need a process to watch stand aside by name. The pure case
+   on the ps-to-lsof race runs everywhere. First Windows run of the matrix, 2026-09-29. */
+const SUR_WINDOWS = process.platform === "win32";
+const RAISON_WINDOWS = "egress observes with lsof, ps and pgrep, which Windows does not have: the command refuses there by design";
 import assert from "node:assert/strict";
 import { spawnSync, execFileSync, spawn } from "node:child_process";
 import { arbreJetable, retirerArbreJetable } from "./arbre-jetable.ts";
@@ -126,7 +131,8 @@ async function passe(b: Bac, every = 20): Promise<{ code: number; err: string }>
   return { code, err };
 }
 
-test("`lsof` qui disparaît EN COURS DE PASSE : la commande refuse de conclure au lieu de publier « rien vu »", async () => {
+test("`lsof` qui disparaît EN COURS DE PASSE : la commande refuse de conclure au lieu de publier « rien vu »", async (t) => {
+  if (SUR_WINDOWS) return t.skip(RAISON_WINDOWS);
   /*
    * UN `lsof` PRÉSENT AU DÉMARRAGE, ET SEULEMENT AU DÉMARRAGE.
    *
@@ -186,7 +192,8 @@ test("`lsof` qui disparaît EN COURS DE PASSE : la commande refuse de conclure a
   }
 });
 
-test("`lsof` qui répond pendant toute la passe : la commande CONCLUT, elle ne refuse pas", async () => {
+test("`lsof` qui répond pendant toute la passe : la commande CONCLUT, elle ne refuse pas", async (t) => {
+  if (SUR_WINDOWS) return t.skip(RAISON_WINDOWS);
   /*
    * LE TÉMOIN NÉGATIF, sans quoi le vert d'à côté ne dit pas que la garde est du bon côté.
    *
@@ -209,7 +216,8 @@ test("`lsof` qui répond pendant toute la passe : la commande CONCLUT, elle ne r
   }
 });
 
-test("`lsof` qui répond n'importe quoi : la commande refuse aussi, et dit quel code elle a reçu", async () => {
+test("`lsof` qui répond n'importe quoi : la commande refuse aussi, et dit quel code elle a reçu", async (t) => {
+  if (SUR_WINDOWS) return t.skip(RAISON_WINDOWS);
   /*
    * LE REFUS VOISIN, ET IL N'EST PAS LE MÊME.
    *
@@ -264,7 +272,8 @@ test("`lsof` qui répond n'importe quoi : la commande refuse aussi, et dit quel 
  * regardent QUELS PROCESSUS sont surveillés, et vérifient de bout en bout sur la boucle
  * locale — dont l'outil se moque pour son verdict, mais qui prouve que le fils est bien lu.
  */
-test("une passe trop courte refuse SUR LA SORTIE D'ERREUR, pas en silence", async () => {
+test("une passe trop courte refuse SUR LA SORTIE D'ERREUR, pas en silence", async (t) => {
+  if (SUR_WINDOWS) return t.skip(RAISON_WINDOWS);
   /*
    * LE REFUS QUI SORTAIT EN 1 SANS UN MOT SUR `stderr`.
    *
@@ -302,7 +311,8 @@ test("une passe trop courte refuse SUR LA SORTIE D'ERREUR, pas en silence", asyn
   }
 });
 
-test("la surveillance couvre la descendance, pas seulement le processus lancé", async () => {
+test("la surveillance couvre la descendance, pas seulement le processus lancé", async (t) => {
+  if (SUR_WINDOWS) return t.skip(RAISON_WINDOWS);
   const dossier = mkdtempSync(join(tmpdir(), "egress-descendance-"));
   writeFileSync(join(dossier, "fils.mjs"), "setTimeout(() => {}, 8000);\n");
   writeFileSync(join(dossier, "pere.mjs"),
@@ -337,7 +347,8 @@ test("la surveillance couvre la descendance, pas seulement le processus lancé",
   }
 });
 
-test("une connexion tenue par le FILS est lue, et elle ne l'était pas avant", async () => {
+test("une connexion tenue par le FILS est lue, et elle ne l'était pas avant", async (t) => {
+  if (SUR_WINDOWS) return t.skip(RAISON_WINDOWS);
   const { createServer } = await import("node:net");
   const serveur = createServer((s) => { s.on("data", () => {}); });
   await new Promise<void>((r) => serveur.listen(0, "127.0.0.1", r));
@@ -411,7 +422,8 @@ const CMD_EGRESS = realpathSync(join(BAC_EGRESS, "src", "egress.ts"));
 test.after(() => retirerArbreJetable(BAC_EGRESS));
 
 test("tuer egress emporte la commande surveillée — pas d'orphelin qui continue sans témoin",
-  { timeout: 20_000 }, async () => {
+  { timeout: 20_000 }, async (t) => {
+  if (SUR_WINDOWS) return t.skip(RAISON_WINDOWS);
   /*
    * Sans ça, `pkill egress` (ou le timeout d'un harnais) laissait la commande surveillée
    * tourner SEULE : plus personne n'observait ce qu'elle ouvre, et la surveillance avait
@@ -452,7 +464,8 @@ test("tuer egress emporte la commande surveillée — pas d'orphelin qui continu
 });
 
 test("une commande surveillée TUÉE par un signal se dit, et la passe n'établit rien",
-  { timeout: 20_000 }, async () => {
+  { timeout: 20_000 }, async (t) => {
+  if (SUR_WINDOWS) return t.skip(RAISON_WINDOWS);
   const egress = spawn("node", [CMD_EGRESS,
     "--every=100", "--", "-e", "setTimeout(() => {}, 30_000)"],
     { stdio: ["ignore", "pipe", "pipe"] });
@@ -520,7 +533,8 @@ test("une commande surveillée TUÉE par un signal se dit, et la passe n'établi
 });
 
 test("le verdict ÉCRIT par le CLI est celui de verdictEgress — sur une passe qui a vu du trafic",
-  { timeout: 30_000 }, async () => {
+  { timeout: 30_000 }, async (t) => {
+  if (SUR_WINDOWS) return t.skip(RAISON_WINDOWS);
   /*
    * Les deux exemplaires du verdict avaient déjà divergé une fois. Ce cas lance une VRAIE
    * passe dont la commande se connecte à elle-même en boucle locale : le verdict juste est

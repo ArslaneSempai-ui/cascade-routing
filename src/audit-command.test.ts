@@ -33,7 +33,7 @@ test("measure:yours with two priced chains writes the audit into the console, th
     assert.equal(r.status, 0, `the command failed:\n${(r.stdout + r.stderr).slice(-2000)}`);
     const out = r.stdout;
     assert.match(out, /Your chain: "vendor-a"\./);
-    assert.match(out, /price: \$50 per thousand pages, billed per page: declared by you/);
+    assert.match(out, /price: \$50 per 1,000 pages: declared by you/);
     assert.match(out, /Your chain: "vendor-b"\./);
     assert.match(out, /AUDIT: per field, the cheapest source this sample cannot show to be worse than the best/);
     assert.match(out, /\(margin: 5-point, your declaration\)/);

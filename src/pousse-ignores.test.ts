@@ -58,7 +58,10 @@ test("une branche qui porte un dossier ignoré ne part pas, et une branche propr
     git("init", "-q");
 
     const vu = git("rev-parse", "--absolute-git-dir").stdout.trim();
-    assert.ok(vu.startsWith(bac),
+    /* The same directory written two ways on Windows: git answers with forward slashes and
+       the long name, tmpdir() with backslashes and the 8.3 short name. Both are resolved. */
+    const memeArbre = realpathSync.native(vu).replaceAll("\\", "/").startsWith(realpathSync.native(bac).replaceAll("\\", "/"));
+    assert.ok(memeArbre,
       `le bac n'est pas isolé : \`git\` répond « ${vu} », hors de ${bac}.\n`
       + "  Tout ce qui suit s'écrirait dans le dépôt qu'on éprouve — un commit dans le vrai\n"
       + "  arbre, et l'index de qui commitait en ce moment. Ne pas continuer.");

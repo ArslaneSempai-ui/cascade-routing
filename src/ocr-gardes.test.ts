@@ -117,7 +117,7 @@ test(`${SIMULTANEES} compilations simultanées laissent UN binaire entier, et ri
 
     const un = () => new Promise<number>((r) => {
       const p = spawn(process.execPath, ["--input-type=module", "-e",
-        `const m = await import(${JSON.stringify(fileURLToPath(new URL("./ocr.ts", import.meta.url)))});\n`
+        `const m = await import(${JSON.stringify(new URL("./ocr.ts", import.meta.url).href)});\n`
         + `const v = m.ceQuiManque(${JSON.stringify(bin)}, ${JSON.stringify(src)});\n`
         + `process.exit(v === null ? 0 : 1);`], { stdio: "ignore" });
       p.on("exit", (c) => r(c ?? -1));
