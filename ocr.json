@@ -16,6 +16,33 @@
     "haut": 0.995910304204355,
     "n": 2977
   },
+  "fideliteDesLignes": {
+    "intactes": {
+      "taux": 0.5404255319148936,
+      "bas": 0.4765676222138581,
+      "haut": 0.60298300883199,
+      "n": 235
+    },
+    "enOrdre": {
+      "taux": 0.5404255319148936,
+      "bas": 0.4765676222138581,
+      "haut": 0.60298300883199,
+      "n": 235
+    },
+    "plafond": {
+      "largeurEnCaracteres": 73,
+      "lignesPlusLargesQueLaPage": 97,
+      "sur": 235
+    },
+    "intactesParmiCellesQuiTiennent": {
+      "taux": 0.9202898550724637,
+      "bas": 0.8629031494223316,
+      "haut": 0.9549105244222951,
+      "n": 138
+    }
+  },
+  "lignesGroupeesPar": "recouvrement",
+  "documentsSansBas": 0,
   "paliers": [
     {
       "palier": "rules",
@@ -60,22 +87,22 @@
         "n": 600
       },
       "surImage": {
-        "taux": 0.795,
-        "bas": 0.7608686431564348,
-        "haut": 0.8253778161799211,
+        "taux": 0.8,
+        "bas": 0.7661296927308742,
+        "haut": 0.8300531472721996,
         "n": 600
       },
-      "ecartEnPoints": 1.0000000000000009,
+      "ecartEnPoints": 0.5000000000000004,
       "separable": false
     }
   ],
-  "mesureLe": "2026-08-24T00:49:18.420Z",
+  "mesureLe": "2026-09-29T21:47:56.975Z",
   "code": {
-    "commit": "cfdaa84",
+    "commit": "9cd4fdd",
     "sale": false
   },
   "journalDeLaPasse": {
-    "fichier": "2026-08-24T00-42-42-312Z-ocr.jsonl",
+    "fichier": "2026-09-29T21-45-56-196Z-ocr.jsonl",
     "tentatives": 3600
   }
 }

@@ -4686,6 +4686,10 @@ test("un relevé publié porte les paramètres sous lesquels le code le prendrai
        aussi : il dit ce que la surveillance a couvert, pas comment elle était réglée. */
     "egress.json:processusRegardes",
     "egress.json:releves", "egress.json:codeSortie",
+    /* Le banc de lecture : `documentsSansBas` compte les documents dont un bloc est arrivé sans
+       ses coins bas, lus alors par l'espacement au lieu du recouvrement. Un compte de SA passe,
+       comme `documents` : il dit comment les lignes ont été groupées, pas un réglage. */
+    "ocr.json:documentsSansBas",
     /*
      * `stryker.conf.json` N'EST PAS UN RELEVÉ, C'EST LA CONFIGURATION D'UN OUTIL.
      *

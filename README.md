@@ -272,11 +272,13 @@ on another they never saw. Measured that way, they collapse.
 
 Transcription fidelity: **99.4 % [99–100], n=2977** of words recovered.
 
+Line fidelity: **54.0 % [48–60], n=235** of printed lines recovered whole on one line, **54.0 % [48–60], n=235** in their printed order. 97 of 235 expected lines are wider than the rendered page (73 characters) and wrap, so whole lines cannot exceed 138 of 235; among the lines that fit, **92.0 % [86–95], n=138** come back whole.
+
 | Tier | From text | From the image | Gap | Beyond noise |
 |---|---|---|---|---|
 | `rules` | 56.7 % [53–61], n=600 | 56.7 % [53–61], n=600 | 0.0 pts | no |
 | `small` | 70.8 % [67–74], n=600 | 60.3 % [56–64], n=600 | -10.5 pts | yes |
-| `large` | 80.5 % [77–83], n=600 | 79.5 % [76–83], n=600 | -1.0 pts | no |
+| `large` | 80.5 % [77–83], n=600 | 80.0 % [77–83], n=600 | -0.5 pts | no |
 
 **1 of 3 tiers loses more than noise.** `small` gives up 10.5 points when the same document arrives as an image instead of as text.
 
