@@ -1,0 +1,25 @@
+{
+  "invoice_number": {
+    "textract": { "query": "invoice_number" },
+    "documentai": { "entity": "invoice_id" },
+    "azure": { "field": "InvoiceId" }
+  },
+  "invoice_date": {
+    "textract": { "key": "Invoice Date" },
+    "documentai": { "formField": "Invoice Date" },
+    "azure": { "keyValue": "Invoice Date" }
+  },
+  "total": {
+    "textract": { "key": "Total Amount" },
+    "documentai": { "entity": "total_amount" },
+    "azure": { "field": "InvoiceTotal" }
+  },
+  "vendor_name": {
+    "documentai": { "entity": "supplier_name" },
+    "azure": { "field": "VendorName" }
+  },
+  "first_line_amount": {
+    "documentai": { "entity": "line_item/amount" },
+    "azure": { "field": "Items.0.Amount" }
+  }
+}

@@ -37,6 +37,7 @@ import { memoireDisponibleMo, memoireDisponibleMoLinux, etatMachine as etatMachi
 
 
 import { ASSUMPTIONS, UNITS, BOUNDS, pricePerThousandExtractions, accuracy } from "./assumptions.ts";
+import { LIST_PRICES_VERSION } from "./audit.ts";
 import { wilson, rate, writeRate, distinguishable, precision, ENOUGH as ENOUGH_CAS } from "./interval.ts";
 import { PLAUSIBLE, bands, ETIQUETTE, advise } from "./sensitivity.ts";
 import { litLeTexte, mesurer, CHROME } from "./mesurer-ocr.ts";
@@ -4698,6 +4699,12 @@ test("un relevé publié porte les paramètres sous lesquels le code le prendrai
      autres, mais sous leur propre nom. */
   for (const k of ["volume", "budget", "latencyBudgetMs", "pricePerThousandSmall",
     "pricePerThousandLarge"] as const) AUJOURDHUI[k] = ASSUMPTIONS[k];
+  /* The list-price table's `version` is the revision of its FORMAT, like sbom.json's: not a
+     measurement setting. `readListPrices` refuses any other revision, which is the guard that
+     keeps file and code in step; here it is declared as what it is, a format mark. */
+  COMPTES.add("vendor-prices.json:version");
+  assert.equal(LIST_PRICES_VERSION, JSON.parse(readFileSync(join(racine, "vendor-prices.json"), "utf8")).version,
+    "vendor-prices.json is not at the revision readListPrices understands.");
 
   const ecarts: string[] = [];
   const nonClasses: string[] = [];

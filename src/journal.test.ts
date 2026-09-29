@@ -1467,6 +1467,16 @@ test("aucune source ne tape une devise à la main", () => {
      * citation.
      */
     ["regulations.ts", "seuils cités d'un texte de loi, en dollars par la loi et non par nos hypothèses"],
+    /*
+     * THE CURRENCY KIND OF THE TYPED GRADER IS A TABLE OF CURRENCIES.
+     *
+     * `grader.ts` resolves what a document says ("$", "euros", "GBP") to an ISO 4217 code so
+     * that two spellings of the same currency grade equal. Those symbols and codes are the
+     * DATA of that comparison, never a rendered amount: nothing in the file prints a price.
+     * Exempting it is the same reason as the units table: it is a source of currencies, not
+     * a consumer that should have read one.
+     */
+    ["grader.ts", "the typed grader's table of currency symbols, names and codes: the data of the currency kind, nothing rendered"],
   ]);
 
   const fautes: string[] = [];

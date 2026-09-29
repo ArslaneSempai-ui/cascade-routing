@@ -1,0 +1,10 @@
+{
+  "document": {
+    "_synthetic": "A ProcessResponse wrapper around a Document, hand-written against the schema. No real document.",
+    "text": "Invoice Number: INV 2026 0043\nTotal Amount: 980\n",
+    "entities": [
+      { "type": "invoice_id", "mentionText": "INV 2026 0043", "confidence": 0.8 },
+      { "type": "total_amount", "mentionText": "980", "confidence": 0.7 }
+    ]
+  }
+}

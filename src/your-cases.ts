@@ -47,6 +47,9 @@ import { etatDuDepot } from "./arbre-propre.ts";
 import { scoreDeDoute, doutesVides, compterDoute, signauxApplicables, type Doutes } from "./doute.ts";
 import { evaluerRegles, direLesRefus, type ReglesEvaluees } from "./regles-bornees.ts";
 import { table } from "./figures.ts";
+import { splitHeader, graded, outcome as outcomeTyped, GRADER, type FieldKind } from "./grader.ts";
+import { audit as calculerAudit, auditLines, priceOf, readListPrices, type Audit, type SourcePrice, type ListPrices } from "./audit.ts";
+import { ASSUMPTIONS, symboleDe, UNITS } from "./assumptions.ts";
 
 import type { TierName } from "./paliers.ts";
 
@@ -95,6 +98,8 @@ export type Lecture = {
    * sinon un fichier de dix mille lignes se lire comme trois.
    */
   demesurees: { ligne: number; octets: number; ouvertureLigne: number }[];
+  /** The kind each field declared in its header (`total:amount`); absent means the default. */
+  kinds: Record<string, FieldKind>;
   lecture: { colTexte: number; colId: number; noms: string[] };
 };
 
@@ -534,10 +539,16 @@ export function lireCsv(texte: string): Lecture {
    * Un doublon d'en-tête n'a aucune lecture raisonnable : on ne peut pas savoir laquelle des
    * deux colonnes le client voulait, et deviner serait pire que refuser.
    */
+  /*
+   * A header cell may declare the KIND of its field: `total:amount`, `closing_date:date`.
+   * The kind is split off before anything else reads the name, so the duplicate check, the
+   * text/id detection and the question derivation all see the clean name. `grader.ts` says
+   * which suffixes are kinds; any other suffix stays part of the name.
+   */
+  const decoupes = entete.map((x) => splitHeader(x.trim().replace(/^\uFEFF/, "")));
   const vus = new Map<string, number>();
-  for (const nom of entete) {
-    const propre = nom.trim().replace(/^\uFEFF/, "");
-    vus.set(propre, (vus.get(propre) ?? 0) + 1);
+  for (const d of decoupes) {
+    vus.set(d.name, (vus.get(d.name) ?? 0) + 1);
   }
   const doublons = [...vus.entries()].filter(([, n]) => n > 1).map(([nom]) => nom);
   if (doublons.length > 0) {
@@ -571,7 +582,7 @@ export function lireCsv(texte: string): Lecture {
    * possible et c'est la forme des jeux publics. Trois colonnes ou plus sans `text` sont
    * REFUSÉES : il y a deux lectures et deviner est exactement le défaut.
    */
-  const noms = entete.map((x) => x.trim().replace(/^\uFEFF/, ""));
+  const noms = decoupes.map((d) => d.name);
   const iTexte = noms.findIndex((n) => n.toLowerCase() === "text");
   const iId = noms.findIndex((n) => n.toLowerCase() === "id");
 
@@ -593,6 +604,9 @@ export function lireCsv(texte: string): Lecture {
   }
 
   const champs = colChamps.map((i) => noms[i]!);
+  /* Only the fields carry a kind; a kind on `text` or `id` would mean nothing and is dropped. */
+  const kinds: Record<string, FieldKind> = Object.create(null);
+  for (const i of colChamps) { const k = decoupes[i]!.kind; if (k) kinds[noms[i]!] = k; }
 
   /*
    * UNE LIGNE MALFORMÉE EST NOMMÉE ET ÉCARTÉE, PAS INCLUSE.
@@ -668,7 +682,7 @@ export function lireCsv(texte: string): Lecture {
       + `  export, or give each row its own id, and run again. Nothing was measured.`);
   }
 
-  return { champs, cas, ecartees, courtes, demesurees, lecture: { colTexte, colId, noms } };
+  return { champs, cas, ecartees, courtes, demesurees, kinds, lecture: { colTexte, colId, noms } };
 }
 
 /** Des règles fournies par le lecteur, en expressions régulières nommées par champ. */
@@ -703,8 +717,23 @@ export type SortiesFournies = {
   /** Qui a noté, et avec quoi. Sans ça l'exactitude n'est plus mesurée mais crue. */
   notePar?: { outil?: string; version?: string; correcteur?: string };
   /** Déclarés par lui, jamais mesurés ici. */
-  declares?: { coutParMilleDocuments?: number; msParDocument?: number };
+  declares?: DeclaresClient;
 };
+
+/**
+ * What a client may declare about a chain, and nothing else.
+ *
+ * The two French keys are the original ones and stay. The three English ones came with the
+ * extraction audit: a vendor bills per page (or per document), once, whatever the number of
+ * fields taken from it, so the price is per thousand PAGES and the unit is named. `vendor`
+ * is a key of the default price table, for a chain whose price the client did not declare.
+ */
+export type DeclaresClient = {
+  coutParMilleDocuments?: number; msParDocument?: number;
+  pricePerThousandPages?: number; billing?: "page" | "document"; vendor?: string;
+};
+
+export const DECLARES_NUMERIQUES = ["coutParMilleDocuments", "msParDocument", "pricePerThousandPages"] as const;
 
 /**
  * La provenance d'un chiffre déclaré par le client, dans le vocabulaire existant.
@@ -760,7 +789,24 @@ export function ecrireMs(ms: number, declaree: boolean): string {
 export const DRAPEAUX_CONNUS: readonly string[] = [
   "cases", "rules", "sorties", "questions", "task", "sample", "margin",
   "llm", "journal", "trace", "show-questions", "yes-run-it",
+  /* The audit's declared inputs: none is measured, each is printed with its provenance. */
+  "pages-per-document", "pages-per-year", "current", "machine-hourly-cost",
 ];
+
+/**
+ * A declared quantity that must be a positive number, read like `--sample`: an unreadable
+ * value refuses instead of falling back to a default the client never declared.
+ */
+export function lirePositif(brut: string | undefined, drapeau: string): number | undefined {
+  if (brut === undefined) return undefined;
+  const n = Number(brut);
+  if (brut.trim() === "" || !Number.isFinite(n) || n <= 0) {
+    throw new Error(`${drapeau}=${brut} is not a positive number.\n`
+      + `  Left as it was, this flag would have been dropped without a word and the audit costed\n`
+      + `  at a default you did not declare.`);
+  }
+  return n;
+}
 
 /**
  * LA MARGE DE NON-INFÉRIORITÉ, EN POINTS, ET SEULEMENT SI LE CLIENT L'A ÉCRITE.
@@ -871,10 +917,29 @@ export function chargerSorties(chemin: string): SortiesFournies {
    * duration » : deux lecteurs du même champ, deux verdicts. Audit du 27 août 2026.
    */
   if (brut.declares !== undefined) {
+    if (brut.declares === null || typeof brut.declares !== "object" || Array.isArray(brut.declares)) {
+      throw new Error(`${chemin}: \`declares\` must be an object. Nothing was measured.`);
+    }
     for (const [cle, v] of Object.entries(brut.declares)) {
-      if (v !== undefined && (typeof v !== "number" || !Number.isFinite(v))) {
-        throw new Error(`${chemin}: declares.${cle} is ${JSON.stringify(v)}, not a finite number.\n`
-          + `  JSON numbers carry no quotes: write ${cle}: 45, not "${String(v)}". Nothing was measured.`);
+      if (v === undefined) continue;
+      if ((DECLARES_NUMERIQUES as readonly string[]).includes(cle)) {
+        if (typeof v !== "number" || !Number.isFinite(v)) {
+          throw new Error(`${chemin}: declares.${cle} is ${JSON.stringify(v)}, not a finite number.\n`
+            + `  JSON numbers carry no quotes: write ${cle}: 45, not "${String(v)}". Nothing was measured.`);
+        }
+      } else if (cle === "billing") {
+        if (v !== "page" && v !== "document") {
+          throw new Error(`${chemin}: declares.billing is ${JSON.stringify(v)}; it is "page" or "document". Nothing was measured.`);
+        }
+      } else if (cle === "vendor") {
+        if (typeof v !== "string" || v.trim().length === 0) {
+          throw new Error(`${chemin}: declares.vendor must be a key of the default price table, as a string. Nothing was measured.`);
+        }
+      } else {
+        /* A key nobody reads is a declaration nobody hears: a mistyped price would enter the
+           audit as "not declared" and the chain would be costed at a list price instead. */
+        throw new Error(`${chemin}: declares.${cle} is not something this tool reads.\n`
+          + `  Accepted: ${[...DECLARES_NUMERIQUES, "billing", "vendor"].join(", ")}. Nothing was measured.`);
       }
     }
   }
@@ -1047,7 +1112,13 @@ export type CelluleClient = {
  * des taux, des bits, et le nom nu du fichier — un chemin porterait le nom d'utilisateur.
  */
 export type ReleveClient = {
-  kind: "cascade-client-record"; version: 1;
+  kind: "cascade-client-record";
+  /**
+   * 1: the original record. 2: the extraction audit, since 2026-09-29: `kinds`, `grader`,
+   * `audit`, and price keys under `declared`. Everything a version 1 reader looks for is
+   * still there under the same names, so `diff`, `sceller` and `recertify` read both.
+   */
+  version: 1 | 2;
   measuredAt: string;
   code: { commit: string; sale: boolean } | null;
   source: { file: string; sha256: string; cases: number; casesInFile: number };
@@ -1055,9 +1126,20 @@ export type ReleveClient = {
   questions: Record<string, { texte: string; provenance: string }>;
   margin: number | null;
   tiers: string[];
-  declared: Record<string, { costPerThousandDocuments?: number; msPerDocument?: number }>;
+  declared: Record<string, {
+    costPerThousandDocuments?: number; msPerDocument?: number;
+    pricePerThousandPages?: number; billing?: "page" | "document"; vendor?: string;
+  }>;
   extraction: Record<string, Record<string, CelluleClient>>;
   recommendation: Record<string, string[]>;
+  /** Version 2: the kind each field was graded as; a field absent here was graded `exact`. */
+  kinds?: Record<string, FieldKind>;
+  /** Version 2: which grader gave the verdicts, and the conventions its kinds rest on. */
+  grader?: { version: number; conventions: Record<string, string> };
+  /** Version 2: per vendor and field, accuracy with its bounds and n, cost per thousand pages
+      at the declared volume, the recommended routing, the annual saving against the current
+      chain, and every pair the sample cannot separate. */
+  audit?: Audit | null;
   empreinte?: string;
 };
 
@@ -1066,11 +1148,16 @@ export function releveClient(o: {
   questions: Record<string, { texte: string; provenance: string }>;
   releve: Record<string, Record<TierName, EntreeDuReleve>>;
   verdicts: { champ: string; lignes: string[] }[];
-  marge?: number; sorties?: SortiesFournies; measuredAt: string;
+  marge?: number; sorties?: SortiesFournies | SortiesFournies[]; measuredAt: string;
   code: { commit: string; sale: boolean } | null;
+  /** The kind each field was graded as; absent, every field was graded `exact`. */
+  kinds?: Record<string, FieldKind>;
+  /** The extraction audit, when one was computed. */
+  audit?: Audit | null;
 }): ReleveClient {
   const extraction: Record<string, Record<string, CelluleClient>> = {};
   const tiers = new Set<string>();
+  const chaines = o.sorties === undefined ? [] : Array.isArray(o.sorties) ? o.sorties : [o.sorties];
   for (const champ of o.champs) {
     for (const [palier, e] of Object.entries(o.releve[champ] ?? {})) {
       tiers.add(palier);
@@ -1084,13 +1171,20 @@ export function releveClient(o: {
       };
     }
   }
-  const declared: ReleveClient["declared"] = o.sorties
-    ? { [o.sorties.nom]: {
-        costPerThousandDocuments: o.sorties.declares?.coutParMilleDocuments,
-        msPerDocument: o.sorties.declares?.msParDocument } }
-    : {};
+  const declared: ReleveClient["declared"] = {};
+  for (const s of chaines) {
+    /* The two original keys are always written, as before; the price keys only when declared,
+       so a record without prices reads exactly as a version 1 reader expects. */
+    declared[s.nom] = {
+      costPerThousandDocuments: s.declares?.coutParMilleDocuments,
+      msPerDocument: s.declares?.msParDocument,
+      ...(s.declares?.pricePerThousandPages !== undefined ? { pricePerThousandPages: s.declares.pricePerThousandPages } : {}),
+      ...(s.declares?.billing !== undefined ? { billing: s.declares.billing } : {}),
+      ...(s.declares?.vendor !== undefined ? { vendor: s.declares.vendor } : {}),
+    };
+  }
   return {
-    kind: "cascade-client-record", version: 1, measuredAt: o.measuredAt, code: o.code,
+    kind: "cascade-client-record", version: 2, measuredAt: o.measuredAt, code: o.code,
     source: {
       file: basename(o.fichier),
       sha256: createHash("sha256").update(o.octets).digest("hex"),
@@ -1099,6 +1193,9 @@ export function releveClient(o: {
     fields: [...o.champs], questions: o.questions, margin: o.marge ?? null,
     tiers: [...tiers], declared, extraction,
     recommendation: Object.fromEntries(o.verdicts.map((v) => [v.champ, v.lignes])),
+    kinds: { ...(o.kinds ?? {}) },
+    grader: { version: GRADER.version, conventions: { ...GRADER.conventions } },
+    audit: o.audit ?? null,
   };
 }
 
@@ -1161,6 +1258,10 @@ export function rapportPourLeClient(o: {
   verdicts: { champ: string; lignes: string[] }[];
   /** La marge déclarée, en proportion ; absente, aucun palier n'est recommandé. */
   marge?: number;
+  /** The kind each field was graded as; only the declared ones are listed. */
+  kinds?: Record<string, FieldKind>;
+  /** The audit, the SAME lines as the console (`auditLines`), when chains were given. */
+  audit?: string[];
 }): string {
   const deduites = o.champs.filter((c) => o.questions[c]!.provenance === "deduite");
   const entete = [
@@ -1213,8 +1314,26 @@ export function rapportPourLeClient(o: {
     ...o.verdicts.map((v) => `- **${cellule(v.champ)}**\n${v.lignes.map((l) => `  - ${l}`).join("\n")}`),
   ];
 
+  const declares = o.champs.filter((c) => o.kinds?.[c] && o.kinds[c] !== "exact");
+  const kinds = declares.length === 0 ? [] : [``, ``, `## How each field was compared`, ``,
+    `A field's header may declare its kind (\`total:amount\`); the comparison then follows the kind, `
+    + `and it can only add matches to the default comparison, never remove one. Fields not listed `
+    + `here were compared as written, separators and case set aside.`, ``,
+    table(["Field", "Kind", "Convention"], declares.map((c) => {
+      const k = o.kinds![c]!;
+      return [cellule(c), cellule(k), GRADER.conventions[k === "date-dmy" ? "date" : k]];
+    })), ``];
+
+  const auditSection = o.audit === undefined ? [] : [``, ``, `## Extraction audit`, ``,
+    `Per field, the cheapest source this sample cannot show to be worse than the best one; what it `
+    + `costs per thousand pages; and what that saves against the chain you run today. A vendor is `
+    + `paid per page, once, whatever the number of fields taken from it, and a routing that reads two `
+    + `vendors pays both. The dollars rest on declared or list prices, the rates are measured.`, ``,
+    "```", ...o.audit, "```", ``];
+
   const pied = [``, ``, `## What this does not establish`, ``,
     `- That these rates hold on documents other than the ${o.cas} you supplied.`,
+    ...(o.audit !== undefined ? [`- That the prices are what you pay: declared by you or read from a public page on a date, never measured here.`] : []),
     `- ${o.avecRegles ? "That your regexes generalise beyond these cases."
       : "What a free tier would carry: no rule of yours was measured — see `--rules`."}`,
     `- That the tiers here are the ones you should run: they are the ones this repository has.`,
@@ -1224,7 +1343,9 @@ export function rapportPourLeClient(o: {
   ];
   return entete.join("\n")
     + table(["Field", "Tier", "Accuracy", "Interval", "n", "Median ms"], o.lignes)
+    + kinds.join("\n")
     + recommandation.join("\n")
+    + auditSection.join("\n")
     + pied.join("\n") + "\n";
 }
 
@@ -1233,7 +1354,7 @@ export type Traceur = (caseId: string, palier: string, champ: string, issue: "cl
 
 export async function mesurerVosCas(
   cas: Cas[], champs: string[], paliers: TierName[], regles?: ReglesEvaluees,
-  journaliser = false, sorties?: SortiesFournies,
+  journaliser = false, sorties?: SortiesFournies | SortiesFournies[],
   /* Les questions posées aux modèles, une par champ. Absentes, elles se déduisent du nom de
      colonne — et ce choix s'affiche, parce qu'un taux obtenu sous une question déduite n'est
      pas comparable à celui du README. */
@@ -1241,8 +1362,13 @@ export async function mesurerVosCas(
   /* Le rejeu d'incident : une décision par cas, par palier et par champ — issue et score,
      jamais la valeur. Absent, rien n'est tracé. */
   tracer?: Traceur,
+  /* The kind each field is graded as (`grader.ts`). A field without one keeps the default
+     comparison, so a file that declares no kind measures exactly as it did before. */
+  kinds?: Record<string, FieldKind>,
 ): Promise<Record<string, Record<TierName, EntreeDuReleve>>> {
   const releve: Record<string, Record<TierName, EntreeDuReleve>> = {};
+  /* One chain or several: each is graded on the cases its file names, under its own name. */
+  const chaines = sorties === undefined ? [] : Array.isArray(sorties) ? sorties : [sorties];
   const journal = journaliser ? ouvrirJournal("vos-cas", {
     quoi: "Vos cas, palier par palier — journal demandé explicitement avec --journal.",
     split: "vos-cas", cases: cas.length,
@@ -1250,6 +1376,7 @@ export async function mesurerVosCas(
   }) : undefined;
   for (const champ of champs) {
     releve[champ] = {} as Record<TierName, { bons: number; sur: number; ms: number }>;
+    const kind: FieldKind = kinds?.[champ] ?? "exact";
 
     /*
      * Le palier du client : ses valeurs, notre correcteur.
@@ -1258,8 +1385,8 @@ export async function mesurerVosCas(
      * de sa déclaration, ou vaut `null` s'il n'en a pas donné : mettre zéro le ferait passer
      * pour instantané, ce qui est faux dans la seule direction qui l'avantage.
      */
-    if (sorties) {
-      const siennes = sorties.issues[champ] ?? {};
+    for (const chaine of chaines) {
+      const siennes = chaine.issues[champ] ?? {};
       let bons = 0, apparies = 0, vides = 0, faux = 0;
       const bits: string[] = [];
       for (const c of cas) {
@@ -1271,9 +1398,9 @@ export async function mesurerVosCas(
         else faux++;
         bits.push(juste ? "1" : "0");
       }
-      releve[champ]![sorties.nom as TierName] = {
+      releve[champ]![chaine.nom as TierName] = {
         bons, sur: apparies,
-        ms: sorties.declares?.msParDocument ?? Number.NaN,
+        ms: chaine.declares?.msParDocument ?? Number.NaN,
         reussites: bits.join(""), vides, faux,
       };
     }
@@ -1288,7 +1415,7 @@ export async function mesurerVosCas(
       const doutes = doutesVides();
       for (let i = 0; i < cas.length; i++) {
         const valeur = valeursRegle[i] ?? "";
-        const sort = issue(valeur, cas[i]!.truth[champ]!);
+        const sort = outcomeTyped(valeur, cas[i]!.truth[champ]!, kind);
         const juste = sort === "clean";
         if (juste) bons++;
         else if (sort === "blank") vides++;
@@ -1342,18 +1469,21 @@ export async function mesurerVosCas(
         durees.push(ms);
         journal?.ligne({
           tier: palier, field: champ, caseId: c.id, phrasing: "reference", split: "vos-cas",
-          outcome: issue(got, c.truth[champ]!), ms: Number(ms.toFixed(3)),
+          outcome: outcomeTyped(got, c.truth[champ]!, kind), ms: Number(ms.toFixed(3)),
           value: got, expected: c.truth[champ]!,
         });
         /* La forme est notée EN MÊME TEMPS que la justesse, sur le même appel : deux
-           parcours séparés diraient un jour deux choses différentes du même corpus. */
-        const juste = noter(palier, champ, got, c.truth[champ]!, borne.texte) === "juste";
+           parcours séparés diraient un jour deux choses différentes du même corpus. The
+           shape counter judges with the default comparison; correctness is the typed
+           grader's, which agrees with it on every field without a declared kind. */
+        noter(palier, champ, got, c.truth[champ]!, borne.texte);
+        const juste = graded(got, c.truth[champ]!, kind);
         if (juste) bons++;
         /* Noté faux, mais avec exactement les mêmes mots : c'est un désaccord de convention.
            On compte, on ne garde rien — le compte reste chez le client comme le reste. */
         else if (memesMots(got, c.truth[champ]!)) desordre++;
         /* Vide ou faux : la partition que l'exposition lit. La même règle que le journal. */
-        const sort = issue(got, c.truth[champ]!);
+        const sort = outcomeTyped(got, c.truth[champ]!, kind);
         if (!juste) { if (sort === "blank") vides++; else faux++; }
         bits.push(juste ? "1" : "0");
         /* Le score de doute, compté au moment de la notation — la courbe du point de
@@ -1452,12 +1582,16 @@ async function principal(): Promise<void> {
     console.log(`
 Measure your own cases, not mine.
 
-  npm run measure:yours -- --cases=your-file.csv [--rules=rules.json] [--sorties=yours.json] [--llm]
+  npm run measure:yours -- --cases=your-file.csv [--rules=rules.json] [--sorties=a.json --sorties=b.json] [--llm]
 
 The CSV wants an id, the input text, then one column per field to extract:
 
   id,text,name,birth
   1,"Anna Petrova — dob 3 May 1990",Anna Petrova,3 May 1990
+
+A header may declare a field's kind, and the comparison follows it: total:amount,
+closing_date:date (month first; date-dmy for day first), currency:currency, tax_id:id,
+vendor_name:free-text. Without a kind, a value is compared as written, separators aside.
 
 --rules  a JSON of { "field": "regular expression" }, so your own free tier is measured too.
 --sorties  a JSON of the OUTCOMES your own chain was graded to, never the values it
@@ -1468,6 +1602,14 @@ The CSV wants an id, the input text, then one column per field to extract:
          answers — that is measured. Its cost and latency are the ones you give us: assumed,
          never measured here, and marked so everywhere they travel.
          Without it the routing is over models only, and will overstate what you need to pay.
+         Give it several times, one file per vendor: \`npm run grade\` writes these files from
+         a vendor's exports. Each may declare its price per thousand pages; the audit below
+         then costs every routing per page (a vendor is paid once per page, whatever the
+         number of fields taken from it) and states the saving against your current chain.
+--current  which --sorties chain you run today (default: the first one given).
+--pages-per-document, --pages-per-year  your volume, declared; without the year the audit
+         gives dollars per thousand pages only.
+--machine-hourly-cost  what an hour of this machine costs you, for the local tiers' time.
 --questions  a JSON of { "your column": "What is …?" }. Without it, the question is derived
          from the column name — a choice made for you, printed before anything loads. On a
          sample of client cases the same field scored 0 % under a derived question and 100 %
@@ -1514,7 +1656,7 @@ Nothing leaves your machine: the models are local and this path makes no network
   const echantillonBrut = arg("sample");
   const echantillon = lireEchantillon(echantillonBrut);
   const marge = lireMarge(arg("margin"));
-  let { champs, cas, ecartees, courtes, demesurees, lecture } = lireCsv(readFileSync(fichier, "utf8"));
+  let { champs, cas, ecartees, courtes, demesurees, kinds, lecture } = lireCsv(readFileSync(fichier, "utf8"));
 
   /*
    * UN CORPUS VIDE NE PRODUIT PAS UN DOCUMENT QUI RESSEMBLE À UN AUDIT.
@@ -1557,7 +1699,39 @@ Nothing leaves your machine: the models are local and this path makes no network
     cas = melange.slice(0, echantillon);
   }
   const reglesBrutes = arg("rules") ? chargerRegles(arg("rules")!, champs) : undefined;
-  const sorties = arg("sorties") ? chargerSorties(arg("sorties")!) : undefined;
+  /*
+   * Several chains, one file each: `--sorties=a.json --sorties=b.json`. That is the audit's
+   * whole point, the client's vendors side by side. Names must differ: rows are indexed by
+   * name, and a second "textract" would overwrite the first exactly as a tier name would.
+   */
+  const cheminsSorties = process.argv.slice(2)
+    .filter((a) => a.startsWith("--sorties="))
+    .map((a) => a.slice("--sorties=".length));
+  const chaines = cheminsSorties.map((c) => chargerSorties(c));
+  const nomsChaines = new Set<string>();
+  for (const [i, s] of chaines.entries()) {
+    if (nomsChaines.has(s.nom)) {
+      throw new Error(`two --sorties files carry the same name "${s.nom}" (the second is ${cheminsSorties[i]}).\n`
+        + `  Rows are indexed by name: the second would overwrite the first without a word.\n`
+        + `  Name each chain after its system and run again. Nothing was measured.`);
+    }
+    nomsChaines.add(s.nom);
+  }
+  /* The audit's declared inputs, read before anything loads so a bad one refuses early. */
+  const pagesParDocument = lirePositif(arg("pages-per-document"), "--pages-per-document") ?? 1;
+  const pagesParAn = lirePositif(arg("pages-per-year"), "--pages-per-year") ?? null;
+  const coutHoraireDeclare = lirePositif(arg("machine-hourly-cost"), "--machine-hourly-cost");
+  const coutHoraire = coutHoraireDeclare ?? ASSUMPTIONS.machineHourlyCost;
+  const chaineCourante = arg("current");
+  if (chaineCourante !== undefined && !nomsChaines.has(chaineCourante)) {
+    throw new Error(`--current=${chaineCourante} names no --sorties chain.\n`
+      + `  Chains given: ${[...nomsChaines].join(", ") || "none"}. Nothing was measured.`);
+  }
+  /* Prices: declared in the file, else the list-price table when the file names a vendor
+     key, else unpriced. The table is only opened when a chain asks for it. */
+  let listePrix: ListPrices | null = null;
+  if (chaines.some((s) => s.declares?.vendor !== undefined && s.declares.pricePerThousandPages === undefined)) listePrix = readListPrices();
+  const prix: SourcePrice[] = chaines.map((s) => priceOf(s.nom, s.declares, listePrix));
   /* Les questions du client, s'il en fournit. Un fichier illisible se refuse en le disant :
      partir sur des questions déduites alors qu'il en a écrit serait pire que de s'arrêter. */
   const questionsFournies = (() => {
@@ -1784,7 +1958,7 @@ Nothing leaves your machine: the models are local and this path makes no network
         : x.r.high < majoritaire.taux ? "WORSE than always guessing the commonest label"
         : "indistinguishable from the majority baseline";
       console.log(`  ${x.palier.padEnd(10)} ${writeRate(x.r).padEnd(28)} `
-        + `${ecrireMs(x.ms, x.palier === sorties?.nom).padEnd(20)} ${bat}`);
+        + `${ecrireMs(x.ms, nomsChaines.has(x.palier)).padEnd(20)} ${bat}`);
     }
     console.log("");
     /*
@@ -1805,9 +1979,19 @@ Nothing leaves your machine: the models are local and this path makes no network
    * et ce qui reste s'est choisi tout seul. Annoncé ici, avant le tableau, pour qu'on ne le
    * lise pas comme une note.
    */
-  if (sorties) {
+  for (const [k, sorties] of chaines.entries()) {
     const corr = correspondance(cas, champs, sorties);
     console.log(`\nYour chain: "${sorties.nom}".`);
+    const p = prix[k]!;
+    const symbole = symboleDe(UNITS.budget);
+    if (p.kind === "vendor" && p.provenance === "declared") {
+      console.log(`  price: ${symbole}${p.pricePerThousandPages} per thousand pages, billed per ${p.billing}: declared by you, never measured here.`);
+    } else if (p.kind === "vendor" && p.provenance === "list-price") {
+      console.log(`  price: ${symbole}${p.pricePerThousandPages} per thousand pages, billed per ${p.billing}: the LIST price of `
+        + `${p.listPrice?.key} read on ${p.listPrice?.readOn}${p.listPrice?.verified ? "" : ", not re-read since"}; declare yours to replace it.`);
+    } else {
+      console.log(`  price: not declared, so this chain enters no costed routing; its accuracy is still measured.`);
+    }
     /*
      * Qui a noté, et avec quoi — sans quoi l'exactitude n'est plus mesurée mais crue.
      *
@@ -1856,8 +2040,8 @@ Nothing leaves your machine: the models are local and this path makes no network
     ? (id, palier, champ, sort, score) => { (((trace[id] ??= {})[palier] ??= {})[champ] = { outcome: sort, score }); }
     : undefined;
   const releve = await mesurerVosCas(cas, champs, paliers, regles,
-    process.argv.includes("--journal"), sorties,
-    Object.fromEntries(Object.entries(questions).map(([k, v]) => [k, v.texte])), traceur);
+    process.argv.includes("--journal"), chaines,
+    Object.fromEntries(Object.entries(questions).map(([k, v]) => [k, v.texte])), traceur, kinds);
 
   console.log("\nACCURACY PER FIELD, with the interval at "
     + `${(CONFIANCE.niveau * 100).toFixed(0)} %\n`);
@@ -1869,7 +2053,7 @@ Nothing leaves your machine: the models are local and this path makes no network
     console.log(`  ${champ}`);
     for (const x of rangs) {
       console.log(`    ${x.palier.padEnd(10)} ${writeRate(x.r).padEnd(28)} `
-        + `${ecrireMs(x.ms, x.palier === sorties?.nom)}`);
+        + `${ecrireMs(x.ms, nomsChaines.has(x.palier))}`);
     }
     /*
      * La phrase qui compte — et le refus de la prononcer sans échantillon.
@@ -1902,6 +2086,26 @@ Nothing leaves your machine: the models are local and this path makes no network
   const desordres = direLesDesordres(releve);
   if (desordres) console.log(`\n${desordres}\n`);
 
+  /*
+   * THE AUDIT: per field, the cheapest source the sample cannot show to be worse, costed per
+   * page. Computed always (it is cheap and it goes into the record), printed when at least
+   * one chain was given: without a vendor there is nothing to save against.
+   */
+  const resultatAudit = calculerAudit({
+    fields: champs, kinds, releve: releve as Record<string, Record<string, { bons: number; sur: number; ms: number; reussites?: string }>>,
+    chains: prix, current: chaineCourante ?? (chaines.length ? chaines[0]!.nom : null),
+    pagesPerDocument: pagesParDocument, pagesPerYear: pagesParAn, machineHourlyCost: coutHoraire, margin: marge,
+  });
+  const lignesAudit = auditLines(resultatAudit);
+  if (chaines.length > 0) {
+    console.log("");
+    for (const l of lignesAudit) console.log(l);
+    console.log(`  machine time for local tiers at ${symboleDe(UNITS.budget)}${coutHoraire} an hour`
+      + (coutHoraireDeclare === undefined ? " (assumed; declare yours with --machine-hourly-cost)" : " (declared by you)")
+      + `; ${pagesParDocument} page(s) per document` + (arg("pages-per-document") === undefined ? " (assumed; --pages-per-document)" : " (declared)")
+      + (chaineCourante === undefined ? `; current chain taken as the first --sorties given, "${chaines[0]!.nom}" (--current to name another)` : "") + `.\n`);
+  }
+
   /* « Un fichier a-t-il été donné ? » et « une règle a-t-elle été mesurée ? » ne sont pas la
      même question, et c'est la seconde que le rapport prétend répondre. */
   const reglesMesurees = Object.values(releve).some((r) => "rules" in r);
@@ -1929,7 +2133,8 @@ Nothing leaves your machine: the models are local and this path makes no network
 
   writeFileSync(sortie, rapportPourLeClient({
     cas: cas.length, champs, date: new Date().toISOString().slice(0, 10),
-    questions, avecRegles: reglesMesurees, verdicts, marge,
+    questions, avecRegles: reglesMesurees, verdicts, marge, kinds,
+    audit: chaines.length > 0 ? lignesAudit : undefined,
     lignes: champs.flatMap((champ) => Object.entries(releve[champ]!).map(([palier, r]) => {
       const q = rate(r.bons, r.sur);
       /* Le fichier passe par le MÊME formateur que la console : c'est lui qui porte le
@@ -1941,7 +2146,7 @@ Nothing leaves your machine: the models are local and this path makes no network
          deux et décalait toute la ligne sous les mauvais en-têtes. Le même échappement que
          pour les noms de colonne, un colonne plus loin. */
       return [cellule(champ), cellule(palier), c.taux, c.intervalle, q.n,
-        ecrireMs(r.ms, palier === sorties?.nom)];
+        ecrireMs(r.ms, nomsChaines.has(palier))];
     })),
   }));
   console.log(`Written to ${sortie}`);
@@ -1955,8 +2160,9 @@ Nothing leaves your machine: the models are local and this path makes no network
   const etat = etatAuDepart;
   const enregistrement = releveClient({
     fichier, octets: readFileSync(fichier), cas: cas.length, casDansLeFichier, champs, questions,
-    releve, verdicts, marge, sorties, measuredAt: new Date().toISOString(),
+    releve, verdicts, marge, sorties: chaines, measuredAt: new Date().toISOString(),
     code: etat ? { commit: etat.commit, sale: etat.sale.length > 0 } : null,
+    kinds, audit: resultatAudit,
   });
   enregistrement.empreinte = empreinteDuReleve(enregistrement);
   writeFileSync(releveJson, JSON.stringify(enregistrement, null, 2));

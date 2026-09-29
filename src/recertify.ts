@@ -518,7 +518,11 @@ Nothing leaves your machine.
     (((decisions[id] ??= {})[palier] ??= {})[champ] = { outcome: issue });
   };
 
-  const releve = await mesurerVosCas(cas, champs, paliersModeles, regles, false, sorties, questions, traceur);
+  /* The KINDS are the baseline's, like the questions: a field re-graded under another
+     comparison is not the same measurement, and the gap would belong to the grader. A
+     version 1 baseline declared none, so every field keeps the default comparison. */
+  const kinds = baseline.kinds ?? {};
+  const releve = await mesurerVosCas(cas, champs, paliersModeles, regles, false, sorties, questions, traceur, kinds);
 
   /* Le relevé chaînable — la MÊME forme que measure:yours, par la même fonction, pour que
      `diff`, `sceller` et la prochaine recertification le lisent sans un mot de plus. */
@@ -528,6 +532,7 @@ Nothing leaves your machine.
     releve, verdicts: [], marge: baseline.margin ?? undefined, sorties,
     measuredAt: new Date().toISOString(),
     code: etatAuDepart ? { commit: etatAuDepart.commit, sale: etatAuDepart.sale.length > 0 } : null,
+    kinds,
   });
 
   /* ── les verdicts, cellule par cellule ── */

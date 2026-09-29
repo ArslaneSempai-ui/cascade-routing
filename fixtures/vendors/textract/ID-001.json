@@ -1,0 +1,19 @@
+{
+  "_synthetic": "Hand-written against the AnalyzeID response schema. The person and the number do not exist.",
+  "DocumentMetadata": { "Pages": 1 },
+  "AnalyzeIDModelVersion": "1.0",
+  "IdentityDocuments": [
+    {
+      "DocumentIndex": 1,
+      "IdentityDocumentFields": [
+        { "Type": { "Text": "FIRST_NAME" }, "ValueDetection": { "Text": "JANE", "Confidence": 99.0 } },
+        { "Type": { "Text": "LAST_NAME" }, "ValueDetection": { "Text": "SAMPLE", "Confidence": 99.0 } },
+        { "Type": { "Text": "DATE_OF_BIRTH" }, "ValueDetection": { "Text": "05/03/1990", "NormalizedValue": { "Value": "1990-05-03T00:00:00", "ValueType": "Date" }, "Confidence": 98.0 } },
+        { "Type": { "Text": "DOCUMENT_NUMBER" }, "ValueDetection": { "Text": "S000 0000 0000", "Confidence": 97.0 } },
+        { "Type": { "Text": "EXPIRATION_DATE" }, "ValueDetection": { "Text": "05/03/2030", "NormalizedValue": { "Value": "2030-05-03T00:00:00", "ValueType": "Date" }, "Confidence": 98.0 } },
+        { "Type": { "Text": "ID_TYPE" }, "ValueDetection": { "Text": "DRIVER LICENSE FRONT", "Confidence": 99.0 } },
+        { "Type": { "Text": "ADDRESS" }, "ValueDetection": { "Text": "", "Confidence": 5.0 } }
+      ]
+    }
+  ]
+}

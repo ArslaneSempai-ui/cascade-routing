@@ -1,0 +1,185 @@
+/**
+ * The vendors whose exports this tool can read, and the mapping that names their fields.
+ *
+ * Three adapters, one shape each, all offline: `vendor-textract.ts`, `vendor-documentai.ts`,
+ * `vendor-azure.ts`. This module is what the `grade` command talks to: it validates a
+ * mapping file, reads a folder of exports, and returns one value per field and per case. It
+ * never returns anything the client did not already have on disk, and nothing it returns
+ * leaves the machine: the values feed the grader, and only outcomes are written.
+ *
+ * ─── The mapping file ───
+ *
+ *     {
+ *       "total":        { "textract": { "type": "TOTAL" },
+ *                         "documentai": { "entity": "total_amount" },
+ *                         "azure": { "field": "InvoiceTotal" } },
+ *       "invoice_date": { "textract": { "query": "invoice date" },
+ *                         "documentai": { "formField": "Invoice Date" },
+ *                         "azure": { "keyValue": "Date" } }
+ *     }
+ *
+ * One entry per field of the labelled CSV, one selector per vendor the client exports from.
+ * A vendor without a selector for a field is simply not graded on it, and the command says
+ * so. A field the CSV does not have is named and skipped, like a rule for a missing column.
+ *
+ * ─── The exports ───
+ *
+ * A folder holding one JSON per case, named `<case id>.json`; or a single JSON object keyed
+ * by case id. A case with no export is ABSENT from the outcomes (it was never sent to the
+ * vendor, or the export was lost) and is counted apart. A case whose export lacks the mapped
+ * key is graded BLANK: the vendor read the document and returned nothing for that field.
+ * The two are different failures and they are kept different.
+ */
+
+import { readFileSync, readdirSync, statSync } from "node:fs";
+import { join, basename } from "node:path";
+import { textractValue, textractShape, isTextractSelector, type TextractSelector } from "./vendor-textract.ts";
+import { documentAiValue, documentAiShape, isDocumentAiSelector, type DocumentAiSelector } from "./vendor-documentai.ts";
+import { azureValue, azureShape, isAzureSelector, type AzureSelector } from "./vendor-azure.ts";
+
+export type VendorName = "textract" | "documentai" | "azure";
+export const VENDORS: readonly VendorName[] = ["textract", "documentai", "azure"];
+
+export type Selector = TextractSelector | DocumentAiSelector | AzureSelector;
+export type Mapping = Record<string, Partial<Record<VendorName, Selector>>>;
+
+export const ADAPTERS: Record<VendorName, {
+  label: string;
+  shape: (exported: unknown) => string | null;
+  isSelector: (x: unknown) => boolean;
+  value: (exported: unknown, selector: never) => string | undefined;
+  selectors: string;
+}> = {
+  textract: {
+    label: "Amazon Textract",
+    shape: textractShape, isSelector: isTextractSelector,
+    value: textractValue as (e: unknown, s: never) => string | undefined,
+    selectors: `{ "key": "<printed label>" } | { "query": "<alias or question>" } | { "type": "TOTAL" } | { "label": "<printed label>" }`,
+  },
+  documentai: {
+    label: "Google Document AI",
+    shape: documentAiShape, isSelector: isDocumentAiSelector,
+    value: documentAiValue as (e: unknown, s: never) => string | undefined,
+    selectors: `{ "entity": "<entity type>" } | { "formField": "<printed name>" }`,
+  },
+  azure: {
+    label: "Azure AI Document Intelligence",
+    shape: azureShape, isSelector: isAzureSelector,
+    value: azureValue as (e: unknown, s: never) => string | undefined,
+    selectors: `{ "field": "<model field, dotted for nesting>" } | { "keyValue": "<printed key>" }`,
+  },
+};
+
+export function isVendorName(x: unknown): x is VendorName {
+  return typeof x === "string" && (VENDORS as readonly string[]).includes(x);
+}
+
+/**
+ * Read and validate a mapping file. Every selector is checked against its vendor's shape
+ * before a single export is opened: a selector that names no vendor key would grade every
+ * case blank and the rate would read as the vendor's failure.
+ */
+export function loadMapping(path: string, fields: readonly string[]): { mapping: Mapping; unknownFields: string[] } {
+  let raw: unknown;
+  try { raw = JSON.parse(readFileSync(path, "utf8")); }
+  catch (e) { throw new Error(`${path}: not readable as JSON: ${(e as Error).message}`); }
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    throw new Error(`${path}: expected an object { "<field>": { "<vendor>": <selector> } }.`);
+  }
+  const mapping: Mapping = Object.create(null);
+  const unknownFields: string[] = [];
+  const known = new Set(fields);
+  for (const [field, byVendor] of Object.entries(raw as Record<string, unknown>)) {
+    if (!byVendor || typeof byVendor !== "object" || Array.isArray(byVendor)) {
+      throw new Error(`${path}: the entry for "${field}" must be an object { "<vendor>": <selector> }.`);
+    }
+    const entry: Partial<Record<VendorName, Selector>> = {};
+    for (const [vendor, selector] of Object.entries(byVendor as Record<string, unknown>)) {
+      if (!isVendorName(vendor)) {
+        throw new Error(`${path}: "${field}" names a vendor "${vendor}" this tool cannot read.\n`
+          + `  Known: ${VENDORS.join(", ")}.`);
+      }
+      if (!ADAPTERS[vendor].isSelector(selector)) {
+        throw new Error(`${path}: the ${vendor} selector for "${field}" is not one this adapter reads.\n`
+          + `  Accepted: ${ADAPTERS[vendor].selectors}\n  Got: ${JSON.stringify(selector)}`);
+      }
+      entry[vendor] = selector as Selector;
+    }
+    if (Object.keys(entry).length === 0) {
+      throw new Error(`${path}: "${field}" has no selector for any vendor.`);
+    }
+    mapping[field] = entry;
+    if (!known.has(field)) unknownFields.push(field);
+  }
+  if (Object.keys(mapping).length === 0) throw new Error(`${path} is empty: no field is mapped.`);
+  if (unknownFields.length === Object.keys(mapping).length) {
+    throw new Error(`${path}: none of its ${unknownFields.length} field(s) is a column of the CSV.\n`
+      + `  Mapped: ${unknownFields.join(", ")}\n  Columns: ${fields.join(", ")}\n`
+      + `  Nothing would be graded.`);
+  }
+  return { mapping, unknownFields };
+}
+
+export type Exports = { byId: Map<string, unknown>; source: string; unreadable: { name: string; why: string }[] };
+
+/** One JSON per case in a folder, or one object keyed by case id. */
+export function readExports(path: string): Exports {
+  const byId = new Map<string, unknown>();
+  const unreadable: { name: string; why: string }[] = [];
+  if (statSync(path).isDirectory()) {
+    for (const name of readdirSync(path).sort()) {
+      if (!name.toLowerCase().endsWith(".json")) continue;
+      const id = basename(name, name.slice(name.length - 5));
+      try { byId.set(id, JSON.parse(readFileSync(join(path, name), "utf8"))); }
+      catch (e) { unreadable.push({ name, why: (e as Error).message }); }
+    }
+    return { byId, source: `folder ${basename(path)}`, unreadable };
+  }
+  let raw: unknown;
+  try { raw = JSON.parse(readFileSync(path, "utf8")); }
+  catch (e) { throw new Error(`${path}: not readable as JSON: ${(e as Error).message}`); }
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    throw new Error(`${path}: expected an object keyed by case id, { "<id>": <vendor response> }, or a folder of <id>.json files.`);
+  }
+  for (const [id, response] of Object.entries(raw as Record<string, unknown>)) byId.set(id, response);
+  return { byId, source: `file ${basename(path)}`, unreadable };
+}
+
+export type VendorValues = {
+  /** `values[field][id]`: the value as the vendor wrote it; "" when it returned nothing. */
+  values: Record<string, Record<string, string>>;
+  /** Cases with no export at all, per field: absent, counted apart from blanks. */
+  absent: Record<string, string[]>;
+  /** Fields of the CSV this vendor has no selector for. */
+  unmapped: string[];
+  /** Exports whose shape is not the one this adapter reads, named. */
+  wrongShape: string[];
+};
+
+/**
+ * Every mapped field of every case, read from the exports. Pure over its inputs: the tests
+ * feed it fixtures, the command feeds it the client's folder.
+ */
+export function valuesFromExports(vendor: VendorName, exports: Exports, mapping: Mapping, fields: readonly string[], caseIds: readonly string[]): VendorValues {
+  const adapter = ADAPTERS[vendor];
+  const values: Record<string, Record<string, string>> = {};
+  const absent: Record<string, string[]> = {};
+  const unmapped = fields.filter((f) => !mapping[f]?.[vendor]);
+  const wrongShape: string[] = [];
+  const shapes = new Map<string, boolean>();
+  for (const [id, exported] of exports.byId) shapes.set(id, adapter.shape(exported) !== null);
+  for (const [id, ok] of shapes) if (!ok) wrongShape.push(id);
+
+  for (const field of fields) {
+    const selector = mapping[field]?.[vendor];
+    if (!selector) continue;
+    values[field] = {};
+    absent[field] = [];
+    for (const id of caseIds) {
+      if (!exports.byId.has(id) || !shapes.get(id)) { absent[field]!.push(id); continue; }
+      const v = adapter.value(exports.byId.get(id), selector as never);
+      values[field]![id] = v ?? "";
+    }
+  }
+  return { values, absent, unmapped, wrongShape };
+}

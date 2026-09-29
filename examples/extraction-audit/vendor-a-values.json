@@ -1,0 +1,362 @@
+{
+  "R-0001": {
+    "total": "GBP 90.87",
+    "receipt_date": "27 Jun 2026",
+    "receipt_id": "PL81582",
+    "currency": "GBP"
+  },
+  "R-0002": {
+    "total": "36,73",
+    "receipt_date": "2026-12-23",
+    "receipt_id": "DE-586563",
+    "currency": "EUR"
+  },
+  "R-0003": {
+    "total": "43.22",
+    "receipt_date": "26 Nov 2026",
+    "receipt_id": "EX-319891",
+    "currency": "$"
+  },
+  "R-0004": {
+    "total": "73.17",
+    "receipt_date": "8 Dec 2026",
+    "receipt_id": "PL43433",
+    "currency": "$"
+  },
+  "R-0005": {
+    "total": "23,20",
+    "receipt_date": "2026-01-16",
+    "receipt_id": "SA783066",
+    "currency": "gbp"
+  },
+  "R-0006": {
+    "total": "35.83",
+    "receipt_date": "2026-01-11",
+    "receipt_id": "FI 137 871",
+    "currency": "USD"
+  },
+  "R-0007": {
+    "total": "34,03",
+    "receipt_date": "4/19/2026",
+    "receipt_id": "EX348614",
+    "currency": "eur"
+  },
+  "R-0008": {
+    "total": "58,22",
+    "receipt_date": "18 Oct 2026",
+    "receipt_id": "SA 298 81",
+    "currency": "$"
+  },
+  "R-0009": {
+    "total": "GBP 85.04",
+    "receipt_date": "18 Oct 2026",
+    "receipt_id": "TE 314 737",
+    "currency": "GBP"
+  },
+  "R-0010": {
+    "total": "13.45",
+    "receipt_date": "2026-09-08",
+    "receipt_id": "FI900102",
+    "currency": "eur"
+  },
+  "R-0011": {
+    "total": "146,51",
+    "receipt_date": "2026-08-24",
+    "receipt_id": "FI 845 342",
+    "currency": "USD"
+  },
+  "R-0012": {
+    "total": "69.38",
+    "receipt_date": "2026-04-18",
+    "receipt_id": "EX 206 16",
+    "currency": "$"
+  },
+  "R-0013": {
+    "total": "49,92",
+    "receipt_date": "2/24/2026",
+    "receipt_id": "FI397621",
+    "currency": "GBP"
+  },
+  "R-0014": {
+    "total": "51,54",
+    "receipt_date": "1/15/2026",
+    "receipt_id": "DE-501711",
+    "currency": "EUR"
+  },
+  "R-0015": {
+    "total": "66.38",
+    "receipt_date": "2026-12-15",
+    "receipt_id": "PL887815",
+    "currency": "gbp"
+  },
+  "R-0016": {
+    "total": "67.96",
+    "receipt_date": "3/21/2026",
+    "receipt_id": "DE729926",
+    "currency": "$"
+  },
+  "R-0017": {
+    "total": "57.77",
+    "receipt_date": "2026-11-13",
+    "receipt_id": "EX-80330",
+    "currency": "USD"
+  },
+  "R-0018": {
+    "total": "$100.97",
+    "receipt_date": "10/20/2026",
+    "receipt_id": "DE166830",
+    "currency": "usd"
+  },
+  "R-0019": {
+    "total": "17.14",
+    "receipt_date": "2026-02-23",
+    "receipt_id": "EX868328",
+    "currency": "gbp"
+  },
+  "R-0020": {
+    "total": "39.09",
+    "receipt_date": "4/26/2026",
+    "receipt_id": "EX 113 783",
+    "currency": "$"
+  },
+  "R-0021": {
+    "total": "101,56",
+    "receipt_date": "3/16/2026",
+    "receipt_id": "EX 810 771",
+    "currency": ""
+  },
+  "R-0022": {
+    "total": "41,27",
+    "receipt_date": "",
+    "receipt_id": "TE967617",
+    "currency": "EUR"
+  },
+  "R-0023": {
+    "total": "$86.19",
+    "receipt_date": "9 Jun 2026",
+    "receipt_id": "TE 709 86",
+    "currency": "USD"
+  },
+  "R-0024": {
+    "total": "$84.91",
+    "receipt_date": "5/20/2026",
+    "receipt_id": "FI 216 880",
+    "currency": "usd"
+  },
+  "R-0025": {
+    "total": "100.79",
+    "receipt_date": "20 Jun 2026",
+    "receipt_id": "SA 802 489",
+    "currency": ""
+  },
+  "R-0026": {
+    "total": "65.23",
+    "receipt_date": "2026-10-10",
+    "receipt_id": "SA66006",
+    "currency": "$"
+  },
+  "R-0027": {
+    "total": "98.23",
+    "receipt_date": "12 Jun 2026",
+    "receipt_id": "EX-124840",
+    "currency": "usd"
+  },
+  "R-0028": {
+    "total": "79,32",
+    "receipt_date": "6 Jun 2026",
+    "receipt_id": "TE-71746",
+    "currency": "EUR"
+  },
+  "R-0029": {
+    "total": "$82.76",
+    "receipt_date": "2026-05-15",
+    "receipt_id": "EX833363",
+    "currency": "$"
+  },
+  "R-0030": {
+    "total": "4.28",
+    "receipt_date": "",
+    "receipt_id": "SA-427872",
+    "currency": "USD"
+  },
+  "R-0031": {
+    "total": "79,51",
+    "receipt_date": "2026-12-20",
+    "receipt_id": "TE-169312",
+    "currency": "GBP"
+  },
+  "R-0032": {
+    "total": "$21.32",
+    "receipt_date": "9/1/2026",
+    "receipt_id": "FI-335876",
+    "currency": "$"
+  },
+  "R-0033": {
+    "total": "$152.10",
+    "receipt_date": "3/26/2026",
+    "receipt_id": "FI532383",
+    "currency": ""
+  },
+  "R-0034": {
+    "total": "$14.73",
+    "receipt_date": "12 Jul 2026",
+    "receipt_id": "DE194067",
+    "currency": "$"
+  },
+  "R-0035": {
+    "total": "80.51",
+    "receipt_date": "10/7/2026",
+    "receipt_id": "PL 656 05",
+    "currency": "$"
+  },
+  "R-0036": {
+    "total": "11,88",
+    "receipt_date": "22 Apr 2026",
+    "receipt_id": "SA 518 288",
+    "currency": "eur"
+  },
+  "R-0037": {
+    "total": "$46.73",
+    "receipt_date": "9/7/2026",
+    "receipt_id": "PL891583",
+    "currency": "USD"
+  },
+  "R-0038": {
+    "total": "38.48",
+    "receipt_date": "2026-11-06",
+    "receipt_id": "EX343900",
+    "currency": "EUR"
+  },
+  "R-0039": {
+    "total": "GBP 50.21",
+    "receipt_date": "8 Sep 2026",
+    "receipt_id": "FI379279",
+    "currency": "gbp"
+  },
+  "R-0040": {
+    "total": "57,52",
+    "receipt_date": "2026-09-03",
+    "receipt_id": "SA 595 828",
+    "currency": "USD"
+  },
+  "R-0041": {
+    "total": "61,73",
+    "receipt_date": "22 Aug 2026",
+    "receipt_id": "EX-135674",
+    "currency": "EUR"
+  },
+  "R-0042": {
+    "total": "75,10",
+    "receipt_date": "5 Oct 2026",
+    "receipt_id": "SA-201579",
+    "currency": "USD"
+  },
+  "R-0043": {
+    "total": "68.98",
+    "receipt_date": "2026-12-28",
+    "receipt_id": "DE-99657",
+    "currency": "GBP"
+  },
+  "R-0044": {
+    "total": "EUR 50.11",
+    "receipt_date": "17 Mar 2026",
+    "receipt_id": "TE-815358",
+    "currency": "eur"
+  },
+  "R-0045": {
+    "total": "54.41",
+    "receipt_date": "2026-10-18",
+    "receipt_id": "TE 227 281",
+    "currency": "$"
+  },
+  "R-0046": {
+    "total": "86,97",
+    "receipt_date": "22 Sep 2026",
+    "receipt_id": "SA 184 255",
+    "currency": "$"
+  },
+  "R-0047": {
+    "total": "EUR 97.26",
+    "receipt_date": "2026-05-01",
+    "receipt_id": "EX900711",
+    "currency": "EUR"
+  },
+  "R-0048": {
+    "total": "82.80",
+    "receipt_date": "5/6/2026",
+    "receipt_id": "PL867827",
+    "currency": "EUR"
+  },
+  "R-0049": {
+    "total": "71,79",
+    "receipt_date": "2026-06-22",
+    "receipt_id": "EX-374819",
+    "currency": "USD"
+  },
+  "R-0050": {
+    "total": "$5.25",
+    "receipt_date": "2026-12-13",
+    "receipt_id": "FI 705 34",
+    "currency": "$"
+  },
+  "R-0051": {
+    "total": "20.08",
+    "receipt_date": "10 Aug 2026",
+    "receipt_id": "EX 590 141",
+    "currency": "GBP"
+  },
+  "R-0052": {
+    "total": "8,63",
+    "receipt_date": "",
+    "receipt_id": "SA 983 749",
+    "currency": "USD"
+  },
+  "R-0053": {
+    "total": "9.78",
+    "receipt_date": "2/22/2026",
+    "receipt_id": "PL-628628",
+    "currency": "USD"
+  },
+  "R-0054": {
+    "total": "67.10",
+    "receipt_date": "2026-08-19",
+    "receipt_id": "EX-463467",
+    "currency": "GBP"
+  },
+  "R-0055": {
+    "total": "151.57",
+    "receipt_date": "2026-10-05",
+    "receipt_id": "FI-668879",
+    "currency": "usd"
+  },
+  "R-0056": {
+    "total": "60.18",
+    "receipt_date": "9/16/2026",
+    "receipt_id": "EX161020",
+    "currency": "usd"
+  },
+  "R-0057": {
+    "total": "GBP 83.19",
+    "receipt_date": "28 Aug 2026",
+    "receipt_id": "SA 195 844",
+    "currency": "gbp"
+  },
+  "R-0058": {
+    "total": "66,82",
+    "receipt_date": "15 Jan 2026",
+    "receipt_id": "FI104957",
+    "currency": "USD"
+  },
+  "R-0059": {
+    "total": "11.67",
+    "receipt_date": "2026-01-05",
+    "receipt_id": "FI-742355",
+    "currency": "$"
+  },
+  "R-0060": {
+    "total": "30.77",
+    "receipt_date": "2 Jul 2026",
+    "receipt_id": "EX-626589",
+    "currency": "GBP"
+  }
+}

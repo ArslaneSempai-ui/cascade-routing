@@ -54,6 +54,7 @@ what that pass actually cost is stated below, read from the relevé rather than 
 | `npm run sonde` | the generative probe, regenerated from the frozen profile; it was hand-typed and eleven of its figures had gone stale |
 | `npm run start` | the screen, on localhost:4670 |
 | `npm run measure:yours` | your own cases, from a CSV; nothing leaves your machine. Writes a report beside the file, and a sealed record `<file>-measured.json` (counts and per-case verdicts, never a value) that `diff` compares and `sceller` re-verifies |
+| `npm run grade` | grade one vendor's extracted values against your labelled CSV and write the `--sorties` file `measure:yours` reads: clean, wrong or blank per case and field, the grader's version and each field's declared kind (`total:amount`, `closing_date:date`), never a value. Reads a folder of Textract, Document AI or Azure Document Intelligence exports offline through a small mapping file, or a plain JSON of values your chain wrote; carries the price per thousand pages you declare |
 | `npm run measure:humans` | the human tier, on cases your reviewers already worked: the one figure every page here calls assumed. Accuracy, agreement and seconds per case, aggregated (no per-person output), written beside your CSV as a report and a sealed record of verdicts, never a value; `optimise -- --humans=<record>` then uses the measurement and says so |
 | `npm run recertify` | does the spring measurement still hold? Re-measures a new CSV under the sealed baseline record's own protocol (same fields, same questions, same tiers) and says per field: holds, or MOVED (exit code 1), naming the cases that used to pass and no longer do. Measures input drift against its own noise floor when the spring CSV is still beside the record. Writes `<file>-recertified.md` and a sealed `<file>-recertified.json`, which serves as the next baseline |
 | `npm run benchmark` | the same measurement on a public labelled dataset; the one command that downloads: the dataset comes down, nothing of yours goes up |
@@ -126,6 +127,41 @@ request; the suite holds it.
 Node 24 or newer, on **macOS or Linux**. Windows has not been tested and is not claimed;
 several scripts chain shell commands, which hold under Git Bash and not under `cmd.exe`.
 
+## The extraction cost audit
+
+The same harness, pointed at a buyer who already pays a document extraction vendor. The
+question the audit answers is narrower than routing and easier to act on: for each field,
+which extractor, the vendor's or a local tier, is the cheapest one that this sample cannot
+show to be worse; what it costs per thousand pages at the declared volume; and what that
+saves a year against the chain in use. Everything runs on the client's machine, offline.
+Only an aggregate record leaves, never a value.
+
+Three commands, in this order:
+
+1. `npm run grade` reads the vendor's own exports (Amazon Textract, Google Document AI,
+   Azure AI Document Intelligence, through a small mapping file and an adapter that opens no
+   connection) or a plain JSON of values the client's chain wrote, grades them against the
+   labelled CSV, and writes an outcomes file: clean, wrong or blank per case and field, the
+   grader's version, and the kind each field was declared as. The values stay where they were.
+2. `npm run measure:yours` takes several such files at once, one per vendor, each with the
+   price per thousand pages the client declares (or a list price from `vendor-prices.json`,
+   dated and marked as such), measures the local tiers on the same cases, and writes the
+   audit into the sealed record.
+3. The record, `cascade-client-record` version two, carries per vendor and per field the
+   accuracy with its Wilson bounds and its `n`, the cost per thousand pages, the recommended
+   routing, the annual saving against the current chain, and a flag on every pick the sample
+   cannot separate. The visual report is built from that JSON; it is not in this repository.
+
+A field's header declares its kind (`total:amount`, `closing_date:date`, `tax_id:id`,
+`currency:currency`, `vendor_name:free-text`) and the comparison follows: a thousands
+separator, a date written two ways or a symbol against a code is formatting, not an error.
+A typed comparison can only add matches to the default one, and a property test holds that.
+
+A vendor bills per page, once, whatever the number of fields taken from it, so the audit
+costs a routing per page and a routing that reads two vendors pays both. That is why its
+cost model lives beside the published optimiser rather than inside it, and why no figure on
+this page moves because of it.
+
 ## What else is in here
 
 <!-- figures:documents -->
@@ -141,10 +177,11 @@ several scripts chain shell commands, which hold under Git Bash and not under `c
 | [`retractations.json`](retractations.json) | every conclusion published here that turned out to be wrong |
 | [`rules-example.json`](rules-example.json) | an example `--rules` file for `measure:yours`: one regular expression per column of your CSV, the whole match is the value; copy it, keep the columns you have |
 | [`sbom.json`](sbom.json) | the dependency inventory, CycloneDX, for a procurement team |
+| [`vendor-prices.json`](vendor-prices.json) | the list prices per thousand pages the extraction audit falls back on when a chain declares none: read on a date, from the vendors' public pages, marked verified or not; a declared price always wins over them |
 <!-- /figures:documents -->
 
 <!-- figures:tests -->
-**663 tests** across 78 files, counted from the sources rather than typed here.
+**718 tests** across 83 files, counted from the sources rather than typed here.
 <!-- /figures:tests -->
 
 Everything runs locally, and that is enforced rather than promised. The one call that could

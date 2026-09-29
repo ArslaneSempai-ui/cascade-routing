@@ -1,0 +1,15 @@
+{
+  "INV-001": {
+    "_synthetic": "One object keyed by case id: the second export layout. Hand-written against the AnalyzeResult schema, unwrapped. No real document.",
+    "apiVersion": "2024-11-30",
+    "modelId": "prebuilt-invoice",
+    "content": "Total Amount: $1,234.50",
+    "documents": [ { "docType": "invoice", "fields": { "InvoiceTotal": { "type": "currency", "valueCurrency": { "amount": 1234.5, "currencyCode": "USD" }, "content": "$1,234.50" } } } ]
+  },
+  "INV-002": {
+    "apiVersion": "2024-11-30",
+    "modelId": "prebuilt-invoice",
+    "content": "Total Amount: 980",
+    "documents": [ { "docType": "invoice", "fields": { "InvoiceTotal": { "type": "currency", "valueCurrency": { "amount": 980, "currencyCode": "USD" }, "content": "980" }, "InvoiceId": { "type": "string", "valueString": "INV-2026-0043", "content": "INV-2026-0043" } } } ]
+  }
+}
