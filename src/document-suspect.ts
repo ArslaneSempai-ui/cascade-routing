@@ -125,7 +125,7 @@ export function direLesDocumentsSuspects(examines: number): string | null {
   for (const v of vus.slice(0, 6)) lignes.push(`    ${v.id}: ${v.tournures.join(", ")}`);
   if (vus.length > 6) lignes.push(`    … and ${vus.length - 6} more`);
   lignes.push(`  This is a flag, not a refusal, and the difference is measured: one of five`);
-  lignes.push(`  ordinary sentences written to test it trips a pattern — "please disregard the`);
+  lignes.push(`  ordinary sentences written to test it trips a pattern: "please disregard the`);
   lignes.push(`  previous invoice, it was cancelled" is normal in a bank file. Nothing was`);
   lignes.push(`  skipped or altered because of this.`);
   lignes.push(`  What it means: a document that instructs its reader can steer a generative tier.`);
