@@ -646,7 +646,7 @@ export async function measure(
       const commodite = tier === "human";
       extraction[tier][champ] = {
         ...(commodite
-          ? { commodite: "ground truth returned so the loop can run over every tier — not a measurement; the human accuracy used anywhere is the assumption, never this" }
+          ? { commodite: "ground truth returned so the loop can run over every tier: not a measurement; the human accuracy used anywhere is the assumption, never this" }
           : { reussites: bits.join("") }),
         sorties,
         accuracy: right / dossiers.length,
@@ -941,5 +941,5 @@ if (isMain(import.meta)) {
   for (const e of (p.tiers ?? [])) {
     console.log(`${e.padEnd(12)}${pc(p.classification[e].accuracy)}   ${p.classification[e].latency.toFixed(2).padStart(7)} ms`);
   }
-  console.log(`\nProfiles frozen in data/profiles.json — ${p.measuredAt}\n`);
+  console.log(`\nProfiles frozen in data/profiles.json, ${p.measuredAt}\n`);
 }

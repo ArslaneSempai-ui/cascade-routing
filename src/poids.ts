@@ -132,7 +132,7 @@ export function verifierExport(m: Manifeste, dossier: string): Grief[] {
     if (!existsSync(abs)) { griefs.push({ chemin: e.chemin, cause: "listed in the manifest, absent from the directory" }); continue; }
     const taille = statSync(abs).size;
     if (taille !== e.octets) {
-      griefs.push({ chemin: e.chemin, cause: `is ${enMo(taille)}, manifest says ${enMo(e.octets)} — an interrupted copy` });
+      griefs.push({ chemin: e.chemin, cause: `is ${enMo(taille)}, manifest says ${enMo(e.octets)}: an interrupted copy` });
       continue;
     }
     const vu = empreinte(abs);
@@ -266,7 +266,7 @@ export function importer(dossier: string, racine?: string): { ecrits: number; oc
   const griefs = verifierExport(m, dossier);
   if (griefs.length > 0) {
     throw new Error(
-      `${griefs.length} problem(s) with the export in ${dossier} — nothing was written.\n\n`
+      `${griefs.length} problem(s) with the export in ${dossier}. Nothing was written.\n\n`
       + griefs.map((g) => `  ${g.chemin}\n    ${g.cause}`).join("\n") + `\n\n`
       + `  Nothing was copied into the cache: a half-written cache crashes the process\n`
       + `  natively, without naming the file. Re-export or re-copy, then run this again.\n`);
@@ -329,8 +329,8 @@ export const CODE_ECART_TEMOIN = 75;
  */
 export function motifDEcart(manquants: readonly CleModele[]): string {
   const total = manquants.reduce((s, c) => s + POIDS_MODELES[c]!.octets, 0);
-  return `STANDING ASIDE — not measured, not passed: this command runs the real extractors and `
-    + `${manquants.length} model weight(s) are not on this machine — `
+  return `STANDING ASIDE, not measured, not passed. This command runs the real extractors, and `
+    + `${manquants.length} model weight(s) are not on this machine: `
     + manquants.map((c) => `${POIDS_MODELES[c]!.depot} (${enMo(POIDS_MODELES[c]!.octets)})`).join(", ")
     + `, ${enMo(total)} in total. A test downloads nothing. Fetch them once with `
     + "`npm run poids -- --prime` (or import them across an air gap, see the README), then "
@@ -496,7 +496,7 @@ if (isMain(import.meta)) {
       const purges = purgerTronques(modeles);
       for (const t of purges) {
         console.log(`  removed ${join(racineDesPoids(), POIDS_MODELES[t.cle].depot)}`);
-        console.log(`    its model.onnx was ${enMo(t.taille)} of ${enMo(t.attendu)} — an interrupted download never heals on its own.`);
+        console.log(`    its model.onnx was ${enMo(t.taille)} of ${enMo(t.attendu)}: an interrupted download never heals on its own.`);
       }
       await loadExtractors();
       await loadClassifiers();

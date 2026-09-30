@@ -95,7 +95,7 @@ test("un import qui trouve un grief n'écrit rien du tout", () => {
      écrit qui abat le processus nativement, sans nommer le fichier. */
   const ordre = lireManifeste(dossier).entrees.map((e) => e.chemin);
   writeFileSync(join(dossier, ordre.at(-1)!), "autre chose");
-  assert.throws(() => importer(dossier, cible), /nothing was written/);
+  assert.throws(() => importer(dossier, cible), /Nothing was written/);
   assert.equal(readdirSync(cible).length, 0, "le cache visé est resté intact");
   nettoyer(source, dossier, cible);
 });
