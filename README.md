@@ -115,12 +115,14 @@ Under that flag the library is told not to reach the network at all. If a model 
 says so, names it, gives its size, and stops, instead of stalling on a download that cannot
 finish. `npm run poids` with no argument reports what is on this machine.
 
-The encoder tiers run fully air-gapped. The model library asks for one tokenizer file at
-revision `main` whatever revision is pinned, and reads it from the cache before the network;
-the loader places a copy of the pinned file under that cache key, so no call remains, with
-the network open or refused. Measured on 3 September 2026: with the copies in place,
-`CASCADE_OFFLINE=1 npm run measure:yours` measures every cell without a single outbound
-request; the suite holds it.
+The encoder tiers run fully air-gapped. The model library asks for two files at revision
+`main` whatever revision is pinned, the tokenizer configuration and the model configuration,
+and reads them from the cache before the network; the import places a copy of each pinned
+file under that cache key, the loader does the same before it refuses the network, and the
+copy is atomic, so no call remains, with the network open or refused, and two measures started
+at once on a freshly imported cache cannot trip each other. Measured on 3 September 2026: with
+the copies in place, `CASCADE_OFFLINE=1 npm run measure:yours` measures every cell without a
+single outbound request; the suite holds it.
 
 ## Requirements
 
@@ -203,7 +205,7 @@ is declared.
 <!-- /figures:documents -->
 
 <!-- figures:tests -->
-**790 tests** across 88 files, counted from the sources rather than typed here.
+**795 tests** across 88 files, counted from the sources rather than typed here.
 <!-- /figures:tests -->
 
 Everything runs locally, and that is enforced rather than promised. The one call that could
