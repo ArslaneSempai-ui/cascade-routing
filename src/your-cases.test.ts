@@ -351,7 +351,7 @@ test("trois colonnes sans « text » sont refusées, deux colonnes sans « text 
      texte — et deviner était le défaut : le document du client devenait une étiquette. */
   const trois = "texte,nom,naissance";
   assert.equal(trois.split(",").length, 3, "les colonnes du titre, comptées plutôt qu'annoncées.");
-  assert.throws(() => lireCsv(`${trois}\na,b,c\n`), /none of them is "text"/);
+  assert.throws(() => lireCsv(`${trois}\na,b,c\n`), /None of them is "text"/);
   /* Deux colonnes n'en offrent qu'une : c'est la forme des jeux publics, elle est gardée. */
   const deux = "sentence,label";
   assert.equal(deux.split(",").length, 2, "et celles de la seconde moitié du titre.");

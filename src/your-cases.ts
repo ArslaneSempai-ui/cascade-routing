@@ -163,7 +163,7 @@ export function lireEchantillon(brut: string | undefined): number | undefined {
   if (brut.trim() === "" || !Number.isFinite(n) || !Number.isInteger(n) || n < 1) {
     throw new Error(`--sample=${brut} is not a whole number of cases (1 or more).\n`
       + `  Left as it was, this flag would have been ignored without a word and the whole\n`
-      + `  corpus measured — a figure answering a different question than the one you asked.`);
+      + `  corpus measured: a figure answering a different question than the one you asked.`);
   }
   return n;
 }
@@ -381,7 +381,7 @@ export function direLaPresence(p: PresenceChamp[]): string | undefined {
       + `words in a different order:\n`
       + desordonnes.map((x) => `    ${x.champ}: ${x.reordonne} of ${renseignes(x)} case(s), `
         + `against ${x.litteral} found as written`).join("\n")
-      + `\n  The value is there, written another way — "SURNAME, Given" against the natural\n`
+      + `\n  The value is there, written another way: "SURNAME, Given" against the natural\n`
       + `  order. That is your convention, and we cannot tell which one is right; but the\n`
       + `  rate below will count these as failed extractions unless you supply the expected\n`
       + `  value in the order your chain produces.`);
@@ -412,11 +412,11 @@ export function direLesDesordres(
     }
   }
   if (lignes.length === 0) return undefined;
-  return `⚠ Same words, different order — a convention disagreement, not a failed `
+  return `⚠ Same words, different order. A convention disagreement, not a failed `
     + `extraction:\n` + lignes.join("\n")
     + `\n  The words found were yours; only the order differs, as in "SURNAME, Given" against\n`
-    + `  the natural order. We cannot tell which order is right — it is your convention —\n`
-    + `  but these cases are not the tier failing to read the document.\n`
+    + `  the natural order. We cannot tell which order is right: it is your convention.\n`
+    + `  These cases are not the tier failing to read the document.\n`
     + `  Supply the expected value in the order your chain produces, or accept both.`;
 }
 
@@ -616,7 +616,7 @@ export function lireCsv(texte: string, options: { kinds?: boolean } = {}): Lectu
       `Your file has ${entete?.length ?? 0} column(s). It needs at least two: the input text, and\n`
       + `  one expected answer per field you want measured.\n\n`
       + `  The first row is read as the header. If your file has no header, the first record\n`
-      + `  was consumed as one — add a header row naming the columns.`);
+      + `  was consumed as one. Add a header row naming the columns.`);
   }
   /*
    * DEUX COLONNES DU MÊME NOM DÉCALENT TOUT, EN SILENCE.
@@ -649,7 +649,7 @@ export function lireCsv(texte: string, options: { kinds?: boolean } = {}): Lectu
     throw new Error(
       `Your header names the same column twice: ${doublons.map((d) => `"${d}"`).join(", ")}.\n\n`
       + `  There is no reasonable reading of that. The columns would shift, and this tool\n`
-      + `  would measure a different field from the one you meant — silently, and still\n`
+      + `  would measure a different field from the one you meant, silently, and still\n`
       + `  report a rate.\n\n`
       + `  Rename one of them, or remove it.`);
   }
@@ -689,7 +689,7 @@ export function lireCsv(texte: string, options: { kinds?: boolean } = {}): Lectu
     colTexte = 0; colId = -1; colChamps = [1];
   } else {
     throw new Error(
-      `Your header names ${noms.map((n) => `"${n}"`).join(", ")} — none of them is "text".\n\n`
+      `Your header names ${noms.map((n) => `"${n}"`).join(", ")}. None of them is "text".\n\n`
       + `  With ${noms.length} columns there are two readings: the first column could be an\n`
       + `  identifier, or it could be the input text. This tool used to guess by counting\n`
       + `  columns, which meant reading your document column as a label without saying so.\n\n`
@@ -971,7 +971,7 @@ export function nomDeChaine(brut: unknown, chemin: string): string {
   const MAX = 40;
   if (propre.length > MAX) {
     throw new Error(`${chemin}: \`nom\` is ${propre.length} characters. `
-      + `${MAX} at most — it is a column in the table you are handed.`);
+      + `${MAX} at most: it is a column in the table you are handed.`);
   }
   return propre;
 }
@@ -1008,7 +1008,7 @@ export function chargerSorties(chemin: string): SortiesFournies {
     throw new Error(`${chemin}: "nom" is "${brut.nom}", which is one of our tier names.\n`
       + `  The results table indexes rows by name: your pipeline's row would be OVERWRITTEN by\n`
       + `  the "${brut.nom}" tier's measurements, and disappear without a word. Name it after\n`
-      + `  your system — "my-chain", "prod-v2" — and run again. Nothing was measured.`);
+      + `  your system, "my-chain" or "prod-v2", and run again. Nothing was measured.`);
   }
   /*
    * LES CHIFFRES DÉCLARÉS SONT VALIDÉS À L'ENTRÉE, PAS DÉCOUVERTS À L'AFFICHAGE. Un
@@ -1173,14 +1173,14 @@ export function chargerRegles(chemin: string, champs: readonly string[]): Record
   try {
     brut = JSON.parse(readFileSync(chemin, "utf8"));
   } catch (e) {
-    throw new Error(`${chemin}: not readable as JSON — ${(e as Error).message}\n`
+    throw new Error(`${chemin}: not readable as JSON: ${(e as Error).message}\n`
       + `  Expected { "your column": "a regular expression" }.`);
   }
   if (brut === null || typeof brut !== "object" || Array.isArray(brut)) {
     const quoi = brut === null ? "null" : Array.isArray(brut) ? "an array" : typeof brut;
     throw new Error(`${chemin}: expected an object { "your column": "a regular expression" }, `
       + `got ${quoi}.\n`
-      + `  An array would be read as rules for columns named "0", "1", … — none of which\n`
+      + `  An array would be read as rules for columns named "0", "1", and so on, none of which\n`
       + `  exist, so nothing would be measured and the report would not say so.`);
   }
 
@@ -1192,7 +1192,7 @@ export function chargerRegles(chemin: string, champs: readonly string[]): Record
   for (const [champ, motif] of Object.entries(brut as Record<string, unknown>)) {
     if (typeof motif !== "string") {
       throw new Error(`${chemin}: the rule for "${champ}" is ${typeof motif}, not a string.\n`
-        + `  A number would become the pattern /${String(motif)}/ — a rule you did not write.`);
+        + `  A number would become the pattern /${String(motif)}/, a rule you did not write.`);
     }
     try {
       regles[champ] = new RegExp(motif);
@@ -1484,7 +1484,7 @@ export function recommander(
   if (suite !== undefined) {
     lignes.push(suite);
   } else if (retenu !== undefined) {
-    lignes.push(`Recommendation for ${champ}: ${retenu} — the cheapest tier non-inferior to ${tete.palier} within your margin.`);
+    lignes.push(`Recommendation for ${champ}: ${retenu}, the cheapest tier non-inferior to ${tete.palier} within your margin.`);
   } else if (tousPires) {
     lignes.push(`${tete.palier} wins outright on this sample.`);
   } else {
@@ -1522,7 +1522,7 @@ export function rapportPourLeClient(o: {
       const q = o.questions[c]!;
       return [cellule(c), cellule(q.texte),
         { fournie: "**yours**",
-          mesuree: "measured — our own field, published rates were measured under it",
+          mesuree: "measured: our own field, published rates were measured under it",
           deduite: "**derived from your column name**" }[q.provenance]];
     })),
   ];
@@ -1532,7 +1532,7 @@ export function rapportPourLeClient(o: {
       + `choice made on your behalf, not a measurement. **The rates below are not comparable `
       + `to the ones in cascade's README**, which were measured under the questions marked `
       + `"measured" above. On a sample of client cases, the same field scored 0 % under a `
-      + `derived question and 100 % under the client's own — the question is worth a hundred `
+      + `derived question and 100 % under the client's own: the question is worth a hundred `
       + `points. Supply yours with \`--questions=file.json\` and measure again before `
       + `concluding anything about a tier.`);
   }
@@ -1557,12 +1557,12 @@ export function rapportPourLeClient(o: {
   const recommandation = [``, ``, `## Recommendation per field`, ``,
     `Two tiers on the same cases are compared case for case (McNemar, exact). A cheaper tier `
     + `is recommended only when its worst case at 95 % stays inside the margin declared with `
-    + "`--margin` — non-inferiority. \"Not significantly different\" is not \"equivalent\".",
+    + "`--margin`: non-inferiority. \"Not significantly different\" is not \"equivalent\".",
     ``,
     o.marge === undefined
       ? `**No margin was declared, so no cheaper tier is recommended.** The lines below say what `
         + `these cases can and cannot separate.`
-      : `Margin declared: **${(100 * o.marge).toString()} point(s)** — your declaration, not a measurement.`,
+      : `Margin declared: **${(100 * o.marge).toString()} point(s)**. Your declaration, not a measurement.`,
     ``,
     ...o.verdicts.map((v) => `- **${cellule(v.champ)}**\n${v.lignes.map((l) => `  - ${l}`).join("\n")}`),
   ];
@@ -1590,7 +1590,7 @@ export function rapportPourLeClient(o: {
     `- That these rates hold on documents other than the ${o.cas} you supplied.`,
     ...(o.audit !== undefined ? [`- That the prices are what you pay: declared by you or read from a public page on a date, never measured here.`] : []),
     `- ${o.avecRegles ? "That your regexes generalise beyond these cases."
-      : "What a free tier would carry: no rule of yours was measured — see `--rules`."}`,
+      : "What a free tier would carry: no rule of yours was measured: see `--rules`."}`,
     `- That the tiers here are the ones you should run: they are the ones this repository has.`,
     `- ${o.marge === undefined
       ? "Which tier suffices: without a declared margin, only separation was tested, never sufficiency."
@@ -1625,7 +1625,7 @@ export async function mesurerVosCas(
   /* One chain or several: each is graded on the cases its file names, under its own name. */
   const chaines = sorties === undefined ? [] : Array.isArray(sorties) ? sorties : [sorties];
   const journal = journaliser ? ouvrirJournal("vos-cas", {
-    quoi: "Vos cas, palier par palier — journal demandé explicitement avec --journal.",
+    quoi: "Vos cas, palier par palier : journal demandé explicitement avec --journal.",
     split: "vos-cas", cases: cas.length,
     chargeAvant: Number(loadavg()[0]!.toFixed(2)),
   }) : undefined;
@@ -1851,7 +1851,7 @@ Measure your own cases, not mine.
 The CSV wants an id, the input text, then one column per field to extract:
 
   id,text,name,birth
-  1,"Anna Petrova — dob 3 May 1990",Anna Petrova,3 May 1990
+  1,"Anna Petrova, dob 3 May 1990",Anna Petrova,3 May 1990
 
 An empty expected cell means UNKNOWN: the case is not graded on that field, by any tier or
 chain, and is not in its n. There is no marker for "this document has no such line" yet.
@@ -1863,12 +1863,12 @@ value is compared as written, separators aside.
 
 --rules  a JSON of { "field": "regular expression" }, so your own free tier is measured too.
 --sorties  a JSON of the OUTCOMES your own chain was graded to, never the values it
-         produced — grade on your side, send only issues: { "nom": "…", "issues": { "<field>":
+         produced. Grade on your side, send only issues: { "nom": "…", "issues": { "<field>":
          { "<case id>": "clean" | "wrong" | "blank" } }, "notePar": { "outil": …, "version": … }, "declares":
          { "pricePerThousandPages": … or "pricePerThousandDocuments": …, "msParDocument": … } }.
          Your chain runs on your machine; we never see its code, and
          nothing here executes anything you supply. We score its accuracy against your own
-         answers — that is measured. Its cost and latency are the ones you give us: assumed,
+         answers: that is measured. Its cost and latency are the ones you give us: assumed,
          never measured here, and marked so everywhere they travel.
          Without it the routing is over models only, and will overstate what you need to pay.
          Give it several times, one file per vendor: \`npm run grade\` writes these files from
@@ -1882,16 +1882,16 @@ value is compared as written, separators aside.
          gives dollars per thousand pages only.
 --machine-hourly-cost  what an hour of this machine costs you, for the local tiers' time.
 --questions  a JSON of { "your column": "What is …?" }. Without it, the question is derived
-         from the column name — a choice made for you, printed before anything loads. On a
+         from the column name, a choice made for you, printed before anything loads. On a
          sample of client cases the same field scored 0 % under a derived question and 100 %
          under the client's own: supply these before concluding anything about a tier.
 --llm    add the local generative tiers (needs Ollama and the models pulled).
 --margin  the loss, in percentage points, you would accept to take a cheaper tier (e.g.
          --margin=2). Two tiers on the same cases are compared case for case (McNemar,
          exact); a cheaper tier is recommended only when its worst case at 95 % stays
-         inside this margin — non-inferiority, not "no significant difference". Without
+         inside this margin: non-inferiority, not "no significant difference". Without
          it the command says what these cases can separate, and recommends nothing.
---trace  also write <file>-trace.json, sealed: one line per case, tier and field — the case id,
+--trace  also write <file>-trace.json, sealed. One line per case, tier and field: the case id,
          the outcome (clean, wrong, blank) and the doubt score. What the system saw and
          decided, replayable months later; never a value, never the text.
 --show-questions  print the derived question for every field, however many there are.
@@ -1944,7 +1944,7 @@ Nothing leaves your machine: the models are local and this path makes no network
     throw new Error(`${fichier} has a header line and no cases under it.\n`
       + `  Columns read: ${apercu(champs, MONTRES)}\n`
       + (ecartees.length > 0
-        ? `  ${ecartees.length} row(s) were set aside as malformed — that may be where they went.\n`
+        ? `  ${ecartees.length} row(s) were set aside as malformed: that may be where they went.\n`
         : ``)
       + `  Nothing was measured, so nothing was written: a report over zero cases reads like\n`
       + `  one that measured something.`);
@@ -2023,7 +2023,7 @@ Nothing leaves your machine: the models are local and this path makes no network
       }
       return propre;
     } catch (e) {
-      console.error(`--questions: cannot read ${chemin} — ${(e as Error).message}`);
+      console.error(`--questions: cannot read ${chemin} (${(e as Error).message})`);
       process.exit(1);
     }
   })();
@@ -2103,7 +2103,7 @@ Nothing leaves your machine: the models are local and this path makes no network
      * données valides — mais un silence ici coûterait au client une mesure entière.
      */
     const d = demesurees[0]!;
-    console.log(`  ${demesurees.length} cell(s) are over 1 MB — the largest is ${(d.octets / 1e6).toFixed(1)} MB, `
+    console.log(`  ${demesurees.length} cell(s) are over 1 MB. The largest is ${(d.octets / 1e6).toFixed(1)} MB, `
       + `ending at line ${d.ligne}.`);
     console.log(`  A field value is not a megabyte. The usual cause is a quote opened at line `
       + `${d.ouvertureLigne} and closed much later, which swallows every line in between into one `
@@ -2111,7 +2111,7 @@ Nothing leaves your machine: the models are local and this path makes no network
   }
   if (courtes.length > 0) {
     console.log(`  ${courtes.length} row(s) have fewer cells than the ${lecture.noms.length} `
-      + `columns named in the header — line ${courtes.slice(0, 5).map((c) => c.ligne).join(", ")}`
+      + `columns named in the header: line ${courtes.slice(0, 5).map((c) => c.ligne).join(", ")}`
       + `${courtes.length > 5 ? `, and ${courtes.length - 5} more` : ""}.`);
     console.log(`  Their missing answers are read as empty, which counts as a miss against `
       + `every tier. Your rates carry that.`);
@@ -2120,7 +2120,7 @@ Nothing leaves your machine: the models are local and this path makes no network
     const apercu = ecartees.slice(0, 5)
       .map((e) => `line ${e.ligne} has ${e.champs}`).join(", ");
     console.log(`  ${ecartees.length} row(s) set aside: the header names `
-      + `${lecture.noms.length} columns and these do not match — ${apercu}`
+      + `${lecture.noms.length} columns and these do not match: ${apercu}`
       + `${ecartees.length > 5 ? `, and ${ecartees.length - 5} more` : ""}.`);
     console.log(`  They are NOT counted in the rates below, in either direction.`);
   }
@@ -2135,7 +2135,7 @@ Nothing leaves your machine: the models are local and this path makes no network
   if (cas.length === 0) {
     console.error(
       `\nNo records were read from your file.\n\n`
-      + `  A rate over zero records is not a wide interval — it does not exist. Nothing will\n`
+      + `  A rate over zero records is not a wide interval. It does not exist. Nothing will\n`
       + `  be measured, so nothing is run.\n\n`
       + `  The most common cause is a file holding only a header row. The second is a header\n`
       + `  that names your columns differently from the rows below it.`);
@@ -2184,7 +2184,7 @@ Nothing leaves your machine: the models are local and this path makes no network
       + `Pass --show-questions to see them all.`);
   }
   if (deduites.length) {
-    console.log(`\n⚠ ${deduites.length} question(s) derived from your column names — a choice we`);
+    console.log(`\n⚠ ${deduites.length} question(s) derived from your column names: a choice we`);
     console.log(`  made for you, not a measurement. Rates obtained under a derived question are`);
     console.log(`  NOT comparable to the ones in this repository's README, which were measured`);
     console.log(`  under the questions above marked "measured".`);
@@ -2284,12 +2284,12 @@ Nothing leaves your machine: the models are local and this path makes no network
     }
     console.log(`  no extracted value is received: outcomes only, per case.`);
     console.log(`  cost and latency: ${sorties.declares ? "declared by you" : "not declared"}`
-      + ` — ${PROVENANCE_DES_DECLARES.provenance}, never measured here.`);
+      + ` (${PROVENANCE_DES_DECLARES.provenance}, never measured here).`);
     if (corr.champsSansAucuneValeur.length) {
       console.log(`  ⚠ no result supplied for: ${corr.champsSansAucuneValeur.join(", ")}`);
     }
     if (corr.total > 0) {
-      console.log(`  ⚠ ${corr.total} identifier(s) with no match — the rate below therefore `
+      console.log(`  ⚠ ${corr.total} identifier(s) with no match: the rate below therefore `
         + `covers the matched cases only:`);
       for (const champ of champs) {
         const m = corr.manquants[champ]!.length, i = corr.inconnus[champ]!.length;
@@ -2404,7 +2404,7 @@ Nothing leaves your machine: the models are local and this path makes no network
   const bornes = bornesPosees();
   if (bornes.cas > 0) {
     console.log(`\n  ${bornes.cas} case(s) had their text cut to the first ${PLAFOND_TEXTE} characters`
-      + ` — ${bornes.caracteres.toLocaleString("en-GB")} character(s) set aside in total.`);
+      + `: ${bornes.caracteres.toLocaleString("en-GB")} character(s) set aside in total.`);
     console.log(`  The extractors read at most ${FENETRE_JETONS} tokens, so they never saw that text:`);
     console.log(`  cutting it changes no rate above, and stops one long cell from costing gigabytes.`);
     console.log(`  If your documents are genuinely longer than that, the fields you need must appear`);
@@ -2447,7 +2447,7 @@ Nothing leaves your machine: the models are local and this path makes no network
   });
   enregistrement.empreinte = empreinteDuReleve(enregistrement);
   writeFileSync(releveJson, JSON.stringify(enregistrement, null, 2));
-  console.log(`Sealed record written to ${releveJson} — seal ${enregistrement.empreinte}.`);
+  console.log(`Sealed record written to ${releveJson}, seal ${enregistrement.empreinte}.`);
   if (tracer) {
     const traceJson = fichier.replace(/\.csv$/i, "") + "-trace.json";
     const t: Record<string, unknown> = {
@@ -2457,7 +2457,7 @@ Nothing leaves your machine: the models are local and this path makes no network
     };
     t.empreinte = empreinteDuReleve(t);
     writeFileSync(traceJson, JSON.stringify(t, null, 2));
-    console.log(`Trace written to ${traceJson} — seal ${t.empreinte}: one decision per case, tier and field; no value.`);
+    console.log(`Trace written to ${traceJson}, seal ${t.empreinte}: one decision per case, tier and field; no value.`);
   }
   console.log(`  Counts, rates and per-case verdicts, never a value. \`npm run diff -- <before> <after>\``);
   console.log(`  compares two of them case by case; \`npm run sceller -- <file>\` recomputes the seal.\n`);
@@ -2465,7 +2465,7 @@ Nothing leaves your machine: the models are local and this path makes no network
     console.log(reglesBrutes
       ? "Your --rules file was read, but no rule was measured on any field. The report says so."
       : "No --rules given, so no free tier was measured. On my own corpus free regexes");
-    console.log("carried three fields of five — a routing without them overstates what you pay.\n");
+    console.log("carried three fields of five: a routing without them overstates what you pay.\n");
   }
   if (avecLlm) {
     console.log("Generative tiers measured: "
