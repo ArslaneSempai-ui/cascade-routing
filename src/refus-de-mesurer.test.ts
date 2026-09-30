@@ -70,7 +70,8 @@ test("measure refuse de mesurer sur un arbre modifié, et dit comment passer out
   } finally { retirerArbreJetable(WT); }
 });
 
-test("egress refuse de conclure quand il ne peut RIEN observer", { timeout: 600_000 }, () => {
+test("egress refuse de conclure quand il ne peut RIEN observer", { timeout: 600_000 }, (t) => {
+  if (process.platform === "win32") return t.skip("egress observes network traffic with lsof, which Windows does not have; the command refuses there by design, so its positive control cannot run");
   /*
    * LE ZÉRO QUI NE VEUT RIEN DIRE. Sans `lsof`, ce contrôle ne voit aucune connexion — et
    * « aucune connexion observée » est précisément ce qu'il publierait. Un scan cassé et un

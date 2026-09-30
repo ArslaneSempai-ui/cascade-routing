@@ -1,0 +1,53 @@
+{
+  "kind": "cascade-vendor-list-prices",
+  "version": 1,
+  "readOn": "2026-09-29",
+  "assembledAt": { "commit": "ee18170", "why": "the state of this repository when the table was written; not a measurement, a date on a reading" },
+  "currency": "USD",
+  "unit": "per 1,000 pages, US regions, first pricing tier",
+  "whatThisIs": [
+    "LIST PRICES, READ ON A DATE. Nothing here is measured, and every figure moves: vendors change tiers, regions differ, negotiated contracts differ more.",
+    "The audit uses one of these only when a chain declares no price of its own. Declare yours with: npm run grade -- --price-per-thousand-pages=<dollars>. A declared price is marked declared in the record; a price taken from here is marked list-price, with this file's date.",
+    "These figures were read by the founder on the vendors' public pricing pages on 2026-09-29. The environment that assembled this file could not re-read those pages (its network policy denies aws.amazon.com, azure.microsoft.com and cloud.google.com), so each entry says verified: false until someone re-reads it and flips it, with the date.",
+    "A vendor bills per page (or per document), once, whatever the number of fields you take from it. That is why the unit is pages and not fields, and why a routing that reads two vendors pays both."
+  ],
+  "vendors": {
+    "aws-textract-analyzeid": {
+      "vendor": "Amazon Textract", "product": "AnalyzeID",
+      "pricePerThousandPages": 25, "billing": "page",
+      "tier": "first 100,000 pages per month", "tierPagesPerMonth": 100000,
+      "url": "https://aws.amazon.com/textract/pricing/",
+      "readBy": "founder", "readOn": "2026-09-29", "verified": false
+    },
+    "aws-textract-forms": {
+      "vendor": "Amazon Textract", "product": "AnalyzeDocument, Forms",
+      "pricePerThousandPages": 50, "billing": "page",
+      "tier": "first 1,000,000 pages per month", "tierPagesPerMonth": 1000000,
+      "url": "https://aws.amazon.com/textract/pricing/",
+      "readBy": "founder", "readOn": "2026-09-29", "verified": false
+    },
+    "aws-textract-analyzeexpense": {
+      "vendor": "Amazon Textract", "product": "AnalyzeExpense",
+      "pricePerThousandPages": 10, "billing": "page",
+      "tier": "first 1,000,000 pages per month", "tierPagesPerMonth": 1000000,
+      "url": "https://aws.amazon.com/textract/pricing/",
+      "readBy": "founder", "readOn": "2026-09-29", "verified": false,
+      "toConfirm": "third-party summaries read on 2026-09-29 give 8 per 1,000 pages for this product; the official page decides"
+    },
+    "azure-document-intelligence-prebuilt": {
+      "vendor": "Azure AI Document Intelligence", "product": "prebuilt models (invoice, receipt, ID, W-2 and others)",
+      "pricePerThousandPages": 10, "billing": "page",
+      "tier": "pay as you go, first 1,000,000 pages per month", "tierPagesPerMonth": 1000000,
+      "url": "https://azure.microsoft.com/en-us/pricing/details/ai-document-intelligence/",
+      "readBy": "founder", "readOn": "2026-09-29", "verified": false
+    },
+    "google-document-ai-form-parser": {
+      "vendor": "Google Document AI", "product": "Form Parser",
+      "pricePerThousandPages": 30, "billing": "page",
+      "tier": "first 1,000,000 pages per month", "tierPagesPerMonth": 1000000,
+      "url": "https://cloud.google.com/document-ai/pricing",
+      "readBy": "founder", "readOn": "2026-09-29", "verified": false
+    }
+  },
+  "notListed": "Products not in this table (Textract Queries, Tables, Layout; Azure Read, Layout, custom; Document AI OCR, Invoice and Expense parsers, custom extractors) were not read on that date and are therefore not priced here. Declare their price rather than guess it."
+}

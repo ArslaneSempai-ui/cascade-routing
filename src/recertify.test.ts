@@ -243,3 +243,45 @@ test("un drapeau inconnu se refuse en le nommant — la commande, pas seulement 
   assert.match(r.stderr, /--evry/);
   assert.match(r.stderr, /This command accepts: .*--validity/);
 });
+
+test("review items 15 and 33: recertify reads every --sorties, refuses two of a name, and finds a version 1 field whose name carries a colon", () => {
+  /* A version 1 record sealed before header kinds existed, whose one field is "customer:id",
+     and whose only tier is the client's own chain: nothing to load, so the run gets past the
+     protocol match without weights. */
+  const d = mkdtempSync(join(tmpdir(), "recert-v1-"));
+  const csv = join(d, "new.csv");
+  writeFileSync(csv, "id,text,customer:id\n1,hello,ABC-1\n2,hello again,ABC-2\n");
+  const bits = "1".repeat(40);
+  const v1 = {
+    kind: "cascade-client-record", version: 1, measuredAt: "2026-06-01T00:00:00.000Z",
+    code: { commit: "427016b", sale: false },
+    source: { file: "old.csv", sha256: "a".repeat(64), cases: 40, casesInFile: 40 },
+    fields: ["customer:id"], questions: { "customer:id": { texte: "What is the customer id?", provenance: "deduite" } },
+    margin: null, tiers: ["mine"], declared: { mine: {} },
+    extraction: { mine: { "customer:id": { accuracy: 1, items: 40, low: 0.91, high: 1, latency: null, reussites: bits, blank: 0, wrong: 0 } } },
+    recommendation: { "customer:id": ["mine wins outright on this sample: nothing cheaper to compare it with."] },
+  } as Record<string, unknown>;
+  v1.empreinte = empreinteDuReleve(v1);
+  const baseline = join(d, "old-measured.json");
+  writeFileSync(baseline, JSON.stringify(v1));
+  const sorties = (nom: string) => {
+    const f = join(d, `${nom}.json`);
+    writeFileSync(f, JSON.stringify({ nom, issues: { "customer:id": { "1": "clean", "2": "clean" } } }));
+    return f;
+  };
+  const run = (...extra: string[]) => spawnSync(process.execPath, [
+    fileURLToPath(new URL("./recertify.ts", import.meta.url)), `--cases=${csv}`, `--baseline=${baseline}`, ...extra,
+  ], { encoding: "utf8", env: { ...process.env, CASCADE_OFFLINE: "1" }, timeout: 120_000 });
+
+  /* Item 15: every --sorties is read, and two of a name refuse before anything is measured. */
+  const twin = run(`--sorties=${sorties("mine")}`, `--sorties=${sorties("mine")}`);
+  assert.equal(twin.status, 2, twin.stdout + twin.stderr);
+  assert.match(twin.stderr, /two --sorties files carry the same name "mine"/);
+
+  /* Item 33: the version 1 field "customer:id" is found as a column, not split into "customer" of kind id. */
+  const r = run(`--sorties=${sorties("mine")}`, `--sorties=${sorties("other")}`);
+  assert.ok(!/None of the baseline's field\(s\)/.test(r.stderr), `the version 1 field was not matched:\n${r.stderr}`);
+  assert.match(r.stdout, /1 field\(s\) of the baseline protocol: customer:id/);
+  assert.match(r.stdout, /1 --sorties chain\(s\) not in the baseline: other\. Measured today, not recertified/);
+  assert.ok(!/no matching --sorties was given/.test(r.stdout), "the chain the baseline carries was given and must not be set aside");
+});

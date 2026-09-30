@@ -28,7 +28,8 @@ const vivant = (pid) => spawnSync("ps", ["-o", "pid=", "-p", String(pid)], { enc
 const enfantsDe = (pid) => spawnSync("pgrep", ["-P", String(pid)], { encoding: "utf8" })
   .stdout.split("\n").map((x) => x.trim()).filter(Boolean).map(Number);
 
-test("un fils de charge s'arrête tout seul quand son père est tué sans préavis", { timeout: 60_000 }, async () => {
+test("un fils de charge s'arrête tout seul quand son père est tué sans préavis", { timeout: 60_000 }, async (t) => {
+  if (process.platform === "win32") return t.skip("this case watches the child with ps and pgrep, which Windows does not have");
   /* Une seule boucle : un cœur, quelques secondes. Le cas ne doit pas coûter ce qu'il évite. */
   const pere = spawn(process.execPath, [charger, "1", "45"], { stdio: "ignore" });
   let fils = [];
@@ -65,7 +66,8 @@ test("un fils de charge s'arrête tout seul quand son père est tué sans préav
   }
 });
 
-test("un fils de charge s'arrête à l'échéance, même si son père l'oublie", { timeout: 60_000 }, async () => {
+test("un fils de charge s'arrête à l'échéance, même si son père l'oublie", { timeout: 60_000 }, async (t) => {
+  if (process.platform === "win32") return t.skip("this case watches the child with ps and pgrep, which Windows does not have");
   /*
    * TÉMOIN DE L'AUTRE SORTIE. Le père pose déjà un `setTimeout` qui tue ses fils ; si ce cas
    * ne regardait que lui, il passerait au vert sans rien dire de l'autonomie du fils. On tue

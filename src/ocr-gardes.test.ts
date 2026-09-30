@@ -22,8 +22,8 @@ import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { mkdtempSync, copyFileSync, writeFileSync, statSync, rmSync, existsSync, readdirSync } from "node:fs";
-import { ceQuiManque, lire } from "./ocr.ts";
+import { mkdtempSync, copyFileSync, writeFileSync, statSync, rmSync, existsSync, readdirSync, utimesSync } from "node:fs";
+import { ceQuiManque, lire, binaireAJour } from "./ocr.ts";
 
 test("le lecteur d'images refuse en nommant ce qui manque, ou nomme ses pannes", () => {
   const manque = ceQuiManque();
@@ -117,7 +117,7 @@ test(`${SIMULTANEES} compilations simultanées laissent UN binaire entier, et ri
 
     const un = () => new Promise<number>((r) => {
       const p = spawn(process.execPath, ["--input-type=module", "-e",
-        `const m = await import(${JSON.stringify(fileURLToPath(new URL("./ocr.ts", import.meta.url)))});\n`
+        `const m = await import(${JSON.stringify(new URL("./ocr.ts", import.meta.url).href)});\n`
         + `const v = m.ceQuiManque(${JSON.stringify(bin)}, ${JSON.stringify(src)});\n`
         + `process.exit(v === null ? 0 : 1);`], { stdio: "ignore" });
       p.on("exit", (c) => r(c ?? -1));
@@ -158,5 +158,29 @@ test(`${SIMULTANEES} compilations simultanées laissent UN binaire entier, et ri
         sa cible avant d'écrire, donc l'un vide le fichier que l'autre vient de finir.`);
     assert.deepEqual(readdirSync(bac).filter((f) => f.startsWith("lire.")).sort(), ["lire.swift"],
       "un fichier provisoire est resté : la prochaine compilation partirait d'un état inconnu.");
+  } finally { rmSync(bac, { recursive: true, force: true }); }
+});
+
+test("F6: a binary older than its source is compiled again, on every system", () => {
+  /* The reader's output changed with its source (the bottom corners, 2026-09-29); a binary
+     from before would read every page without them and the lines would fall back to the
+     top-edge rule without a word. The decision is pure and runs everywhere; the compilation
+     it triggers is the macOS cases above. */
+  const bac = mkdtempSync(join(tmpdir(), "ocr-age-"));
+  try {
+    const src = join(bac, "lire.swift"), bin = join(bac, "lire");
+    writeFileSync(src, "// source\n");
+    assert.equal(binaireAJour(bin, src), false, "no binary");
+    writeFileSync(bin, "");
+    assert.equal(binaireAJour(bin, src), false, "an empty binary");
+    writeFileSync(bin, "binary");
+    const maintenant = Date.now() / 1000;
+    utimesSync(src, maintenant - 120, maintenant - 120);
+    utimesSync(bin, maintenant - 60, maintenant - 60);
+    assert.equal(binaireAJour(bin, src), true, "a binary newer than its source is used as it is");
+    utimesSync(bin, maintenant - 180, maintenant - 180);
+    assert.equal(binaireAJour(bin, src), false, "a binary older than its source is stale: the source changed under it");
+    rmSync(src);
+    assert.equal(binaireAJour(bin, src), true, "without a source there is nothing to compare with: the binary is what there is");
   } finally { rmSync(bac, { recursive: true, force: true }); }
 });

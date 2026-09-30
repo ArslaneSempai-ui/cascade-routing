@@ -1,0 +1,7 @@
+{
+  "_synthetic": "Hand-written against the GetDocumentAnalysis response schema: an asynchronous job that ended FAILED. No real document.",
+  "DocumentMetadata": { "Pages": 0 },
+  "JobStatus": "FAILED",
+  "StatusMessage": "The document could not be processed.",
+  "AnalyzeDocumentModelVersion": "1.0"
+}

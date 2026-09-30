@@ -47,7 +47,7 @@ import { basename, dirname, join } from "node:path";
 import { createHash } from "node:crypto";
 import { isMain, refuserDrapeauxInconnus } from "./cli.ts";
 import {
-  lireCsv, mesurerVosCas, releveClient, chargerRegles, chargerSorties, apercu, MONTRES,
+  lireCsv, mesurerVosCas, releveClient, chargerRegles, chargerSorties, verifierSorties, apercu, MONTRES,
   PLAFOND_APPELS, sEcarterSiPoidsAbsents, type ReleveClient, type Traceur, type SortiesFournies,
 } from "./your-cases.ts";
 import { loadExtractors, loadGeneratifs, MODELES_EXTRACTION } from "./tiers.ts";
@@ -408,7 +408,8 @@ document length against its own noise floor when the baseline CSV sits next to t
 
 --validity=90d  the validity period you declare, not a measurement; default ${RYTHME_PAR_DEFAUT_JOURS}d.
 --rules=f     the same rules JSON the baseline was measured with, if it has a rules tier.
---sorties=f   the same declared-outcomes JSON, if the baseline has your own chain as a tier.
+--sorties=f   the outcomes JSON of a chain the baseline carries as a tier, graded against the NEW
+              file (npm run grade); once per chain: --sorties=a.json --sorties=b.json.
 --llm         re-measure the generative tiers too (needs Ollama, like measure:yours).
 --yes-run-it  run past the model-call ceiling.
 
@@ -444,7 +445,9 @@ Nothing leaves your machine.
 
   if (!existsSync(fichier)) { console.error(`no such file: ${fichier}`); process.exit(2); }
   const octets = readFileSync(fichier);
-  const { champs: colonnes, cas } = lireCsv(octets.toString("utf8"));
+  /* A version 1 baseline was sealed before header kinds existed: its field "customer:id" is a
+     name, and the header is read as it was then (item 33). Version 2 splits kinds off. */
+  const { champs: colonnes, cas } = lireCsv(octets.toString("utf8"), { kinds: (baseline.version ?? 1) >= 2 });
   if (cas.length === 0) { console.error(`\n${fichier} holds no readable case. Nothing was measured.\n`); process.exit(2); }
 
   /* Les champs sont CEUX DU PROTOCOLE. Un champ de la référence absent du nouveau fichier
@@ -462,9 +465,23 @@ Nothing leaves your machine.
   /* Les paliers du protocole, moins ceux dont le matériel manque — écartés en le disant,
      jamais en silence : une garde portée par une partie des paliers n'est pas une garde. */
   const cheminRegles = arg("rules");
-  const cheminSorties = arg("sorties");
   const avecLlm = argv.includes("--llm");
-  const sorties: SortiesFournies | undefined = cheminSorties ? chargerSorties(cheminSorties) : undefined;
+  /* Every --sorties, like measure:yours: a multi-vendor baseline set every chain but the first
+     aside with the false reason "no matching --sorties was given" (item 15). */
+  const cheminsSorties = argv.filter((a) => a.startsWith("--sorties=")).map((a) => a.slice("--sorties=".length));
+  const sorties: SortiesFournies[] = cheminsSorties.map((c) => chargerSorties(c));
+  const nomsSorties = new Set<string>();
+  for (const [i, s] of sorties.entries()) {
+    if (nomsSorties.has(s.nom)) {
+      throw new Error(`two --sorties files carry the same name "${s.nom}" (the second is ${cheminsSorties[i]}).\n`
+        + `  Rows are indexed by name: the second would overwrite the first without a word. Nothing was measured.`);
+    }
+    nomsSorties.add(s.nom);
+  }
+  const horsProtocole = sorties.filter((s) => !baseline.tiers.includes(s.nom)).map((s) => s.nom);
+  if (horsProtocole.length) {
+    console.log(`  ${horsProtocole.length} --sorties chain(s) not in the baseline: ${apercu(horsProtocole, MONTRES)}. Measured today, not recertified: they have no reference.`);
+  }
   const ecartesAvantMesure: { cellule: string; pourquoi: string }[] = [];
   const paliersModeles: TierName[] = [];
   for (const t of baseline.tiers) {
@@ -479,7 +496,7 @@ Nothing leaves your machine.
       continue;
     }
     if (t === "human") continue; /* jamais mesuré ici, comme dans measure:yours */
-    if (!sorties || sorties.nom !== t) {
+    if (!nomsSorties.has(t)) {
       ecartesAvantMesure.push({ cellule: `${t}/*`, pourquoi: `the baseline carries your own chain "${t}" and no matching --sorties was given` });
     }
   }
@@ -518,7 +535,13 @@ Nothing leaves your machine.
     (((decisions[id] ??= {})[palier] ??= {})[champ] = { outcome: issue });
   };
 
-  const releve = await mesurerVosCas(cas, champs, paliersModeles, regles, false, sorties, questions, traceur);
+  /* The KINDS are the baseline's, like the questions: a field re-graded under another
+     comparison is not the same measurement, and the gap would belong to the grader. A
+     version 1 baseline declared none, so every field keeps the default comparison. */
+  const kinds = baseline.kinds ?? {};
+  /* Each outcomes file answers today's file under the baseline's kinds, or is refused (item 21). */
+  verifierSorties(sorties, fichier, createHash("sha256").update(octets).digest("hex"), kinds, champs);
+  const releve = await mesurerVosCas(cas, champs, paliersModeles, regles, false, sorties, questions, traceur, kinds);
 
   /* Le relevé chaînable — la MÊME forme que measure:yours, par la même fonction, pour que
      `diff`, `sceller` et la prochaine recertification le lisent sans un mot de plus. */
@@ -528,6 +551,7 @@ Nothing leaves your machine.
     releve, verdicts: [], marge: baseline.margin ?? undefined, sorties,
     measuredAt: new Date().toISOString(),
     code: etatAuDepart ? { commit: etatAuDepart.commit, sale: etatAuDepart.sale.length > 0 } : null,
+    kinds,
   });
 
   /* ── les verdicts, cellule par cellule ── */

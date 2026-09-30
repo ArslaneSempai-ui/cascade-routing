@@ -92,7 +92,7 @@ async function evaluerUne(
        refuser sous charge. Un garde-fou de dernier recours reste posé au cas où le fil ne
        démarrerait jamais : sans lui, un fil mort-né attendrait indéfiniment. */
     minuteur = setTimeout(() => arreter({
-      refus: `worker did not start within ${msMax * 4} ms — the thread never reported ready`,
+      refus: `worker did not start within ${msMax * 4} ms: the thread never reported ready`,
     }), msMax * 4);
     w.on("message", (m: { i?: number; valeur?: string; ms?: number; fini?: boolean; pret?: boolean }) => {
       if (m.pret) { clearTimeout(minuteur); armer(); return; }
@@ -114,7 +114,7 @@ async function evaluerUne(
      * pour vérifier que le cas qui la couvre vire au rouge. Une garde étalée sur trois
      * lignes ne se mute pas proprement, donc elle ne se prouve pas.
      */
-    w.on("error", (e) => arreter({ refus: `could not be evaluated — ${e instanceof Error ? e.message : String(e)}` }));
+    w.on("error", (e) => arreter({ refus: `could not be evaluated: ${e instanceof Error ? e.message : String(e)}` }));
   });
 }
 

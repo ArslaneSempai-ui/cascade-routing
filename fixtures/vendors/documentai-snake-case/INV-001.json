@@ -1,0 +1,171 @@
+{
+  "_synthetic": "The camelCase fixture documentai/INV-001.json with every key written in snake_case, as proto-plus to_dict() and MessageToDict(preserving_proto_field_name=True) write it. Generated from that file; no real document, no real company.",
+  "mime_type": "application/pdf",
+  "text": "SAMPLE VENDOR LLC (synthetic)\nInvoice Number: INV-2026-0042\nInvoice Date: September 1, 2026\nTotal Amount: $1,234.50\nLine 1 Widget 100.00\n",
+  "pages": [
+    {
+      "page_number": 1,
+      "form_fields": [
+        {
+          "field_name": {
+            "text_anchor": {
+              "text_segments": [
+                {
+                  "start_index": "30",
+                  "end_index": "46"
+                }
+              ],
+              "content": "Invoice Number: "
+            }
+          },
+          "field_value": {
+            "text_anchor": {
+              "text_segments": [
+                {
+                  "start_index": "46",
+                  "end_index": "59"
+                }
+              ],
+              "content": "INV-2026-0042"
+            }
+          },
+          "value_type": "unfilled_checkbox"
+        },
+        {
+          "field_name": {
+            "text_anchor": {
+              "text_segments": [
+                {
+                  "start_index": "60",
+                  "end_index": "74"
+                }
+              ]
+            }
+          },
+          "field_value": {
+            "text_anchor": {
+              "text_segments": [
+                {
+                  "start_index": "74",
+                  "end_index": "91"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "field_name": {
+            "text_anchor": {
+              "text_segments": [
+                {
+                  "start_index": "92",
+                  "end_index": "106"
+                }
+              ]
+            }
+          },
+          "field_value": {
+            "text_anchor": {
+              "text_segments": [
+                {
+                  "start_index": "106",
+                  "end_index": "115"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "field_name": {
+            "text_anchor": {
+              "text_segments": [
+                {
+                  "end_index": "29"
+                }
+              ]
+            }
+          },
+          "field_value": {
+            "text_anchor": {
+              "text_segments": []
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "entities": [
+    {
+      "type": "supplier_name",
+      "mention_text": "SAMPLE VENDOR LLC (synthetic)",
+      "confidence": 0.98,
+      "text_anchor": {
+        "text_segments": [
+          {
+            "end_index": "29"
+          }
+        ]
+      }
+    },
+    {
+      "type": "invoice_id",
+      "mention_text": "INV-2026-0042",
+      "confidence": 0.97
+    },
+    {
+      "type": "invoice_date",
+      "mention_text": "September 1, 2026",
+      "confidence": 0.96,
+      "normalized_value": {
+        "text": "2026-09-01",
+        "date_value": {
+          "year": 2026,
+          "month": 9,
+          "day": 1
+        }
+      }
+    },
+    {
+      "type": "total_amount",
+      "mention_text": "$1,234.50",
+      "confidence": 0.95,
+      "normalized_value": {
+        "text": "1234.50 USD",
+        "money_value": {
+          "currency_code": "USD",
+          "units": "1234",
+          "nanos": 500000000
+        }
+      }
+    },
+    {
+      "type": "line_item",
+      "mention_text": "Line 1 Widget 100.00",
+      "confidence": 0.9,
+      "properties": [
+        {
+          "type": "line_item/description",
+          "mention_text": "Widget",
+          "confidence": 0.9
+        },
+        {
+          "type": "line_item/amount",
+          "mention_text": "100.00",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "type": "due_date",
+      "confidence": 0.3,
+      "text_anchor": {
+        "text_segments": [
+          {
+            "start_index": "60",
+            "end_index": "60"
+          }
+        ]
+      }
+    }
+  ]
+}

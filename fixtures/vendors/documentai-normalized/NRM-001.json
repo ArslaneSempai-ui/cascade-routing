@@ -1,0 +1,19 @@
+{
+  "_synthetic": "Hand-written against google.cloud.documentai.v1.Document: entities whose normalizedValue carries a typed value and no text, as the Invoice and Expense parsers write floats, integers, booleans and some amounts. No real document, no real company.",
+  "mimeType": "application/pdf",
+  "text": "Total 12.50\nNet 12.5\nPages 3\nPaid yes\nDate 2026-09-01\nStamped 2026-09-02 14:05\nFree text only\nAnchored value\n",
+  "entities": [
+    { "type": "total_amount", "mentionText": "12.50", "confidence": 0.95, "normalizedValue": { "moneyValue": { "currencyCode": "EUR", "units": "12", "nanos": 500000000 } } },
+    { "type": "whole_amount", "mentionText": "7", "confidence": 0.95, "normalizedValue": { "moneyValue": { "currencyCode": "EUR", "units": "7" } } },
+    { "type": "precise_amount", "mentionText": "0.125", "confidence": 0.95, "normalizedValue": { "moneyValue": { "currencyCode": "EUR", "units": "0", "nanos": 125000000 } } },
+    { "type": "credit_amount", "mentionText": "-3.20", "confidence": 0.95, "normalizedValue": { "moneyValue": { "currencyCode": "EUR", "units": "-3", "nanos": -200000000 } } },
+    { "type": "net_amount", "mentionText": "12.5", "confidence": 0.9, "normalizedValue": { "floatValue": 12.5 } },
+    { "type": "page_count", "mentionText": "3", "confidence": 0.9, "normalizedValue": { "integerValue": 3 } },
+    { "type": "paid", "mentionText": "yes", "confidence": 0.9, "normalizedValue": { "booleanValue": true } },
+    { "type": "invoice_date", "mentionText": "2026-09-01", "confidence": 0.9, "normalizedValue": { "dateValue": { "year": 2026, "month": 9, "day": 1 } } },
+    { "type": "stamped_at", "mentionText": "2026-09-02 14:05", "confidence": 0.9, "normalizedValue": { "datetimeValue": { "year": 2026, "month": 9, "day": 2, "hours": 14, "minutes": 5, "seconds": 0, "utcOffset": "0s" } } },
+    { "type": "with_text", "mentionText": "12.50", "confidence": 0.9, "normalizedValue": { "text": "12.50 EUR", "moneyValue": { "currencyCode": "EUR", "units": "12", "nanos": 500000000 } } },
+    { "type": "free_text", "mentionText": "Free text only", "confidence": 0.9, "normalizedValue": {} },
+    { "type": "anchored_only", "confidence": 0.9, "normalizedValue": {}, "textAnchor": { "textSegments": [ { "startIndex": "94", "endIndex": "108" } ] } }
+  ]
+}

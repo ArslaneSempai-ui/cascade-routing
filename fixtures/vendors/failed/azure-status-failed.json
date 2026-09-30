@@ -1,0 +1,7 @@
+{
+  "_synthetic": "Hand-written against the 2024-11-30 operation result: a failed analyze operation, with its error and no analyzeResult. No real document.",
+  "status": "failed",
+  "createdDateTime": "2026-09-29T10:00:00Z",
+  "lastUpdatedDateTime": "2026-09-29T10:00:02Z",
+  "error": { "code": "InvalidRequest", "message": "Invalid request.", "innererror": { "code": "InvalidContent", "message": "The file is corrupted or format is unsupported." } }
+}

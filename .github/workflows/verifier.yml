@@ -49,11 +49,21 @@ jobs:
     # 24 est la version d'appui long ; 26 est celle de développement. Les deux, à chaque
     # passe. Le jour où une troisième arrive, on l'ajoute ici plutôt que de l'apprendre d'un
     # acheteur.
+    #
+    # ─── THREE SYSTEMS, BECAUSE THE BUYER'S MACHINE IS NOT THIS ONE ───
+    #
+    # The audit runs on the client's machine, and a mortgage lender's analyst runs Windows. A
+    # suite green on macOS and Linux said nothing about that machine; the README said so in
+    # words ("Windows has not been tested and is not claimed"). The matrix mirrors
+    # cascade-screening's: ubuntu, macOS, Windows, so the claim is measured rather than
+    # disclaimed. What a system cannot run is named in its own expected-skips file, never
+    # skipped in silence.
     strategy:
       fail-fast: false          # une version qui casse ne cache pas l'autre
       matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
         node: ['24', '26']
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     steps:
       # ─── LES ACTIONS SONT ÉPINGLÉES PAR EMPREINTE, PAS PAR ÉTIQUETTE ───
       #
@@ -119,12 +129,13 @@ jobs:
 
       # Les poids d'encodeur — 740 Mo, mesurés — vivent sous node_modules, ce que la
       # bibliothèque décide et pas nous. La clé porte le verrou de dépendances : une
-      # bibliothèque qui change de version peut changer de disposition.
+      # bibliothèque qui change de version peut changer de disposition. And the system: a
+      # cache written by one runner's layout is not read by another's.
       - name: cache des poids de modèle
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9   # v6
         with:
           path: node_modules/@huggingface/transformers/.cache
-          key: poids-${{ matrix.node }}-${{ hashFiles('package-lock.json') }}
+          key: poids-${{ runner.os }}-${{ matrix.node }}-${{ hashFiles('package-lock.json') }}
 
       # ─── LES POIDS S'AMORCENT HORS DÉLAI DE CAS ───
       #
@@ -152,8 +163,25 @@ jobs:
       # ignoré disparu aussi (la liste ment, on la resserre). Il vit dans un script parce
       # qu'un pas de workflow ne s'éprouve qu'en poussant — lui a été éprouvé sur fixture,
       # dans les six directions, avant d'arriver ici.
+      #
+      # ONE EXPECTED-SKIPS FILE PER SYSTEM. What macOS runs (the Swift image reader) Linux
+      # skips, and what Windows skips is its own list. The gate stays exact on each: the
+      # file is chosen from the runner's system, and a system whose file is missing is red,
+      # never quietly tolerant. `shell: bash` is explicit because the default shell on a
+      # Windows runner is PowerShell, which has no `set -o pipefail`.
+      # A HANG IS A NAMED FAILURE, NOT A SIX-HOUR JOB. `npm test` caps every case at twenty minutes
+      # (src/suite.ts), and this step caps the whole suite: the first Windows run of the matrix
+      # (2026-09-29) went silent after one shared file and ran until someone cancelled it.
       - name: suite, et aucun cas ignoré hors de la liste nominative
+        shell: bash
+        timeout-minutes: 60
         run: |
           set -o pipefail
+          case "$RUNNER_OS" in
+            macOS)   attendus=.github/cas-ignores-attendus-macos.txt ;;
+            Windows) attendus=.github/cas-ignores-attendus-windows.txt ;;
+            *)       attendus=.github/cas-ignores-attendus.txt ;;
+          esac
+          test -f "$attendus"
           npm test 2>&1 | tee /tmp/suite.txt
-          sh .github/verifier-ignores.sh /tmp/suite.txt .github/cas-ignores-attendus.txt
+          sh .github/verifier-ignores.sh /tmp/suite.txt "$attendus"

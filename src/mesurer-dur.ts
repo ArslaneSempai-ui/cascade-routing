@@ -234,7 +234,7 @@ if (isMain(import.meta)) {
 
   const j = journal.fermer();
   writeFileSync(SORTIE, JSON.stringify({
-    quoi: "Exactitude sur les cas durs — documents cassés, écritures non latines, cas ambigus.",
+    quoi: "Exactitude sur les cas durs : documents cassés, écritures non latines, cas ambigus.",
     scoringRule: REGLE_DE_NOTATION,
     scoringRuleDeclaredIn: "NOTATION-CAS-DURS.md, committed before this pass",
     decoupage: "hard-corpus", cas: tous.length, champs: tentatives,

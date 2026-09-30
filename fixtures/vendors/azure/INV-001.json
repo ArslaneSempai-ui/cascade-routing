@@ -1,0 +1,40 @@
+{
+  "_synthetic": "Hand-written against the 2024-11-30 AnalyzeResult schema, wrapped in its operation result. No real document, no real company.",
+  "status": "succeeded",
+  "createdDateTime": "2026-09-29T10:00:00Z",
+  "lastUpdatedDateTime": "2026-09-29T10:00:04Z",
+  "analyzeResult": {
+    "apiVersion": "2024-11-30",
+    "modelId": "prebuilt-invoice",
+    "stringIndexType": "textElements",
+    "contentFormat": "text",
+    "content": "SAMPLE VENDOR LLC (synthetic)\nInvoice Number: INV-2026-0042\nInvoice Date: 09/01/2026\nTotal Amount: $1,234.50\n",
+    "pages": [ { "pageNumber": 1, "angle": 0, "width": 8.5, "height": 11, "unit": "inch" } ],
+    "keyValuePairs": [
+      { "key": { "content": "Invoice Number:" }, "value": { "content": "INV-2026-0042" }, "confidence": 0.95 },
+      { "key": { "content": "Invoice Date:" }, "value": { "content": "09/01/2026" }, "confidence": 0.94 },
+      { "key": { "content": "Total Amount:" }, "value": { "content": "$1,234.50" }, "confidence": 0.93 },
+      { "key": { "content": "Purchase Order:" }, "confidence": 0.5 }
+    ],
+    "documents": [
+      {
+        "docType": "invoice",
+        "confidence": 0.97,
+        "fields": {
+          "VendorName": { "type": "string", "valueString": "SAMPLE VENDOR LLC (synthetic)", "content": "SAMPLE VENDOR LLC (synthetic)", "confidence": 0.98 },
+          "InvoiceId": { "type": "string", "valueString": "INV-2026-0042", "content": "INV-2026-0042", "confidence": 0.97 },
+          "InvoiceDate": { "type": "date", "valueDate": "2026-09-01", "content": "09/01/2026", "confidence": 0.96 },
+          "InvoiceTotal": { "type": "currency", "valueCurrency": { "amount": 1234.5, "currencySymbol": "$", "currencyCode": "USD" }, "content": "$1,234.50", "confidence": 0.95 },
+          "VendorAddress": { "type": "address", "valueAddress": { "houseNumber": "1", "road": "Sample Street", "city": "Springfield", "state": "IL", "postalCode": "00000" }, "content": "1 Sample Street, Springfield IL 00000", "confidence": 0.9 },
+          "Items": { "type": "array", "valueArray": [
+            { "type": "object", "valueObject": {
+              "Description": { "type": "string", "valueString": "Widget", "content": "Widget" },
+              "Amount": { "type": "currency", "valueCurrency": { "amount": 100, "currencyCode": "USD" }, "content": "$100.00" }
+            }, "content": "Widget $100.00" }
+          ] },
+          "DueDate": { "type": "date", "confidence": 0.2 }
+        }
+      }
+    ]
+  }
+}

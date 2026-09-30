@@ -71,7 +71,8 @@ test("tout message d'erreur renvoyé passe par le caviardage", () => {
     "le motif attrape un message qui ne vient pas d'une exception : il exigerait un caviardage inutile.");
 });
 
-test("sansChemins caviarde aussi les racines hors des sept d'origine", () => {
+test("sansChemins caviarde aussi les racines hors des sept d'origine", (t) => {
+  if (process.platform === "win32") return t.skip("the roots are read from / on a POSIX filesystem; a Windows drive has no such list, and the redaction of Windows paths is not claimed");
   /* /Volumes (disque externe macOS), /usr/local, /srv, /mnt : un dépôt lancé de là envoyait
      son chemin complet — nom d'utilisateur compris — dans la réponse HTTP. La liste reste une
      liste, et ce cas épingle au moins les racines usuelles des trois systèmes. */

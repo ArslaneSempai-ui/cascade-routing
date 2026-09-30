@@ -156,8 +156,10 @@ test("les identifiants sans correspondance sont comptés et nommés dans les deu
   assert.deepEqual(c.inconnus["name"], ["d9"], "un des siens que nous n'avons pas est nommé.");
   assert.deepEqual(c.champsSansAucuneValeur, ["birth"],
     "un champ pour lequel il n'a rien fourni doit être dit, pas traité comme zéro sur zéro.");
-  assert.equal(c.total, 2 + 3,
-    "le compte couvre les deux sens et tous les champs, `birth` compris.");
+  /* No case carries an expected `birth`: nobody grades it, so his file is not missing them (F1). */
+  assert.deepEqual(c.manquants["birth"], [], "a case without an expected value is not missing from his file");
+  assert.equal(c.total, 2,
+    "le compte couvre les deux sens et tous les champs ; `birth`, sans valeur attendue, n'y compte rien.");
 });
 
 test("le taux du client porte sur les cas appariés, jamais sur les nôtres", async () => {
@@ -349,7 +351,7 @@ test("trois colonnes sans « text » sont refusées, deux colonnes sans « text 
      texte — et deviner était le défaut : le document du client devenait une étiquette. */
   const trois = "texte,nom,naissance";
   assert.equal(trois.split(",").length, 3, "les colonnes du titre, comptées plutôt qu'annoncées.");
-  assert.throws(() => lireCsv(`${trois}\na,b,c\n`), /none of them is "text"/);
+  assert.throws(() => lireCsv(`${trois}\na,b,c\n`), /None of them is "text"/);
   /* Deux colonnes n'en offrent qu'une : c'est la forme des jeux publics, elle est gardée. */
   const deux = "sentence,label";
   assert.equal(deux.split(",").length, 2, "et celles de la seconde moitié du titre.");
@@ -987,7 +989,7 @@ test("les deux annonces sont branchées, l'une avant la mesure et l'autre après
    */
   const src = readFileSync(fileURLToPath(new URL("./your-cases.ts", import.meta.url)), "utf8");
 
-  const annonce = src.indexOf("direLaPresence(presenceDeLaVerite(cas, champs))");
+  const annonce = src.indexOf("direLaPresence(presenceDeLaVerite(cas, champs, kinds))");
   const mesure = src.indexOf("await mesurerVosCas(");
   assert.ok(annonce > 0 && annonce < mesure,
     "ce qui se sait sans modèle se dit avant d'en charger un : sinon le client attend la\n"
@@ -1294,4 +1296,225 @@ test("releveClient : la forme du banc, des comptes et des bits, jamais une valeu
   assert.equal(empreinteDuReleve(r), r.empreinte, "le scellé doit se recalculer à l'identique sur le relevé scellé.");
   const altere = { ...r, extraction: { ...r.extraction, large: { name: { ...r.extraction.large!.name!, accuracy: 1 } } } };
   assert.notEqual(empreinteDuReleve(altere), r.empreinte, "un taux modifié à la main doit casser le scellé.");
+});
+
+/*
+ * ─── Review of 2026-09-29: what an outcomes file may say, and what is checked before measuring ───
+ */
+
+test("review item 20: a negative declared price or duration is refused by the loader, naming file and key", async () => {
+  const { chargerSorties } = await import("./your-cases.ts");
+  const d = mkdtempSync(join(tmpdir(), "sorties-neg-"));
+  try {
+    for (const [cle, v] of [["pricePerThousandPages", -5], ["coutParMilleDocuments", -1], ["msParDocument", -3], ["pricePerThousandDocuments", -0.5]] as const) {
+      const f = join(d, `${cle}.json`);
+      writeFileSync(f, JSON.stringify({ nom: "mine", issues: { name: { d1: "clean" } }, declares: { [cle]: v } }));
+      assert.throws(() => chargerSorties(f), new RegExp(`${cle}\\.json: declares\\.${cle} is ${v}, below zero`), cle);
+    }
+    const ok = join(d, "ok.json");
+    writeFileSync(ok, JSON.stringify({ nom: "mine", issues: { name: { d1: "clean" } }, declares: { pricePerThousandDocuments: 40 } }));
+    assert.equal(chargerSorties(ok).declares?.pricePerThousandDocuments, 40, "the per-document key is read");
+  } finally { rmSync(d, { recursive: true, force: true }); }
+});
+
+test("review item 21: the loader keeps the kinds and the source file the outcomes answer, and the check refuses another file or other kinds", async () => {
+  const { chargerSorties, verifierSorties } = await import("./your-cases.ts");
+  const d = mkdtempSync(join(tmpdir(), "sorties-src-"));
+  try {
+    const f = join(d, "a.json");
+    writeFileSync(f, JSON.stringify({
+      nom: "mine", issues: { total: { d1: "clean" }, date: { d1: "wrong" } },
+      notePar: { outil: "cascade", version: "abc", correcteur: "grader v1", kinds: { total: "amount", date: "date" } },
+      source: { cases: "old.csv", sha256: "a".repeat(64) },
+    }));
+    const s = chargerSorties(f);
+    assert.deepEqual(s.notePar?.kinds, { total: "amount", date: "date" }, "the kinds travel with the outcomes");
+    assert.deepEqual(s.source, { cases: "old.csv", sha256: "a".repeat(64) });
+    /* Another file: refused by name and hash. */
+    assert.throws(() => verifierSorties([s], "/x/new.csv", "b".repeat(64), { total: "amount", date: "date" }, ["total", "date"]),
+      /"mine" was graded against old\.csv \(sha256 aaaaaaaaaaaa…\), not against new\.csv \(sha256 bbbbbbbbbbbb…\)/);
+    /* The same file, other kinds: refused, naming the field and both kinds. */
+    assert.throws(() => verifierSorties([s], "/x/old.csv", "a".repeat(64), { total: "amount" }, ["total", "date"]),
+      /"mine" was graded with "date" compared as date; this file's header declares exact/);
+    /* The same file, the same kinds: passes; a field the chain has no outcomes for is not checked. */
+    assert.doesNotThrow(() => verifierSorties([s], "/x/old.csv", "a".repeat(64), { total: "amount", date: "date", other: "id" }, ["total", "date", "other"]));
+    /* A hand-written file says nothing about either, and nothing can be checked. */
+    const plain = join(d, "plain.json");
+    writeFileSync(plain, JSON.stringify({ nom: "hand", issues: { total: { d1: "clean" } } }));
+    assert.doesNotThrow(() => verifierSorties([chargerSorties(plain)], "/x/new.csv", "b".repeat(64), { total: "amount" }, ["total"]));
+    const badKinds = join(d, "bad.json");
+    writeFileSync(badKinds, JSON.stringify({ nom: "x", issues: {}, notePar: { kinds: { total: 3 } } }));
+    assert.throws(() => chargerSorties(badKinds), /notePar\.kinds must map each field to the name of a kind/);
+  } finally { rmSync(d, { recursive: true, force: true }); }
+});
+
+test("review item 24: an outcomes file with a byte-order mark is read, a UTF-16 one is refused by name", async () => {
+  const { chargerSorties } = await import("./your-cases.ts");
+  const d = mkdtempSync(join(tmpdir(), "sorties-bom-"));
+  try {
+    const bom = join(d, "bom.json");
+    writeFileSync(bom, Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), Buffer.from(JSON.stringify({ nom: "mine", issues: { total: { d1: "clean" } } }))]));
+    assert.equal(chargerSorties(bom).nom, "mine");
+    const le = join(d, "le.json");
+    writeFileSync(le, Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from('{"nom":"mine","issues":{}}', "utf16le")]));
+    assert.throws(() => chargerSorties(le), /le\.json is encoded as UTF-16/);
+  } finally { rmSync(d, { recursive: true, force: true }); }
+});
+
+test("review item 33: a header read without kinds keeps \"customer:id\" as a column name, as a version 1 record needs", async () => {
+  const { lireCsv } = await import("./your-cases.ts");
+  const csv = "id,text,customer:id\n1,hello,ABC-1\n";
+  const v2 = lireCsv(csv);
+  assert.deepEqual(v2.champs, ["customer"]);
+  assert.deepEqual({ ...v2.kinds }, { customer: "id" });
+  const v1 = lireCsv(csv, { kinds: false });
+  assert.deepEqual(v1.champs, ["customer:id"], "the column name is the whole cell, colon included");
+  assert.deepEqual({ ...v1.kinds }, {});
+  assert.equal(v1.cas[0]!.truth["customer:id"], "ABC-1");
+});
+
+test("review item 10: two chains graded on disjoint cases do not crash the recommendation; the line says nothing was paired", async () => {
+  const { recommander, casCommuns } = await import("./your-cases.ts");
+  const { rate } = await import("./interval.ts");
+  assert.equal(casCommuns("11-", "-11"), 1);
+  assert.equal(casCommuns("11--", "--11"), 0);
+  const releve = {
+    total: {
+      "vendor-a": { bons: 30, sur: 30, ms: Number.NaN, reussites: "1".repeat(30) + "-".repeat(30) },
+      "vendor-b": { bons: 28, sur: 30, ms: Number.NaN, reussites: "-".repeat(30) + "1".repeat(28) + "00" },
+    },
+  } as never;
+  const rangs = [
+    { palier: "vendor-a", r: rate(30, 30), ms: Number.NaN },
+    { palier: "vendor-b", r: rate(28, 30), ms: Number.NaN },
+  ];
+  let lignes: string[] = [];
+  assert.doesNotThrow(() => { lignes = recommander("total", rangs, releve, 0.02); });
+  assert.ok(lignes.some((l) => /no case was graded on both vendor-a and vendor-b/.test(l)), lignes.join("\n"));
+  assert.ok(lignes.some((l) => /^No recommendation for total\./.test(l)));
+});
+
+test("F1: a case with no expected value is graded by nobody in measure:yours, and is not missing from a chain's file", async () => {
+  const { mesurerVosCas, correspondance, presenceDeLaVerite, direLaPresence, sansVerite } = await import("./your-cases.ts");
+  const { evaluerRegles } = await import("./regles-bornees.ts");
+  const cas = [
+    { id: "d1", text: "total 10", truth: { total: "10" } },
+    { id: "d2", text: "total 20", truth: { total: "" } },
+    { id: "d3", text: "total 30", truth: { total: "30" } },
+  ];
+  /* The chain's file grades d2 clean: without an expected value that verdict counts for nothing. */
+  const chaine = { nom: "la sienne", issues: { total: { d1: "clean", d2: "clean", d3: "wrong" } } } as const;
+  const regles = await evaluerRegles({ total: /\d+/ }, cas.map((c) => c.text));
+  const releve = await mesurerVosCas(cas, ["total"], [], regles, false, chaine as never);
+  const sienne = releve["total"]!["la sienne" as never] as { bons: number; sur: number; reussites: string };
+  assert.equal(sienne.sur, 2, "d2 has no expected value: out of the chain's n");
+  assert.equal(sienne.bons, 1);
+  assert.equal(sienne.reussites, "1-0", "d2 is not measured, on either side of every pairing");
+  const rules = releve["total"]!["rules" as never] as { bons: number; sur: number; reussites: string };
+  assert.equal(rules.sur, 2, "the same case set for the local tier");
+  assert.equal(rules.reussites, "1-1");
+  assert.deepEqual(correspondance(cas, ["total"], chaine as never).manquants["total"], [], "d2 is not missing from his file: nobody grades it");
+  assert.deepEqual(sansVerite(cas, ["total"]), { total: 1 });
+  const dit = direLaPresence(presenceDeLaVerite(cas, ["total"])) ?? "";
+  assert.match(dit, /1 field\(s\) with cases that have NO expected value:\n\s+total: 1 of 3 case\(s\)/);
+  assert.match(dit, /unknown, not "expected blank"/);
+});
+
+test("F7: the presence check looks for the expected value as its kind reads it, and stays literal without a kind", async () => {
+  const { presenceDeLaVerite, direLaPresence, trouveSousLeGenre } = await import("./your-cases.ts");
+  /* CORD: the truth is canonical, the receipt prints the amount grouped. Red before: "60000"
+     is not in "TOTAL 60.000" and the field read as mostly absent. */
+  const cas = [
+    { id: "r1", text: "SUB TOTAL 55.000\nTAX 5.000\nTOTAL 60.000\nCASH 100.000", truth: { total: "60000", tax: "5000" } },
+    { id: "r2", text: "TOTAL Rp. 91,000\nCASH Rp. 100,000", truth: { total: "91000", tax: "" } },
+    { id: "r3", text: "total: 12.500,00 (two items)", truth: { total: "12500", tax: "0" } },
+  ];
+  const groupe = Object.fromEntries(presenceDeLaVerite(cas, ["total", "tax"], { total: "amount-grouped", tax: "amount-grouped" }).map((x) => [x.champ, x]));
+  assert.equal(groupe["total"]!.litteral, 0, "never written as the truth spells it");
+  assert.equal(groupe["total"]!.parLeGenre, 3, "found as amount-grouped reads it: 60.000, Rp. 91,000, 12.500,00");
+  assert.equal(groupe["total"]!.genre, "amount-grouped");
+  assert.equal(groupe["tax"]!.parLeGenre, 1, "5.000 is there; a truth of 0 is not printed on r3");
+  const exact = Object.fromEntries(presenceDeLaVerite(cas, ["total"]).map((x) => [x.champ, x]));
+  assert.equal(exact["total"]!.litteral + (exact["total"]!.parLeGenre ?? 0), 0, "without a kind the check stays literal, as today");
+  assert.equal(exact["total"]!.genre, "exact");
+
+  /* The other kinds with a canonical form. */
+  assert.equal(trouveSousLeGenre("Name: Ada, born 3 May 1990 in London.", "1990-05-03", "date"), true);
+  assert.equal(trouveSousLeGenre("Issued May 3, 1990.", "1990-05-03", "date"), true);
+  assert.equal(trouveSousLeGenre("Issued 03/05/1990.", "1990-05-03", "date-dmy"), true);
+  assert.equal(trouveSousLeGenre("Issued 03/05/1990.", "1990-05-03", "date"), false, "under month-first, 03/05 is March the fifth");
+  assert.equal(trouveSousLeGenre("Amount due: $12.50", "USD", "currency"), true, "the symbol alone names the currency");
+  assert.equal(trouveSousLeGenre("Paid in mexican pesos.", "MXN", "currency"), true);
+  assert.equal(trouveSousLeGenre("Paid in euros.", "USD", "currency"), false);
+  assert.equal(trouveSousLeGenre("doc no FR 1856 M, Portugal", "FR-1856-M", "id"), true);
+  assert.equal(trouveSousLeGenre("doc no FR 1857 M", "FR-1856-M", "id"), false);
+  assert.equal(trouveSousLeGenre("Total 1,234.56 USD", "1234.56", "amount"), true);
+  assert.equal(trouveSousLeGenre("Total (12.50)", "-12.5", "amount"), true, "the parentheses travel with the token");
+  assert.equal(trouveSousLeGenre("TOTAL 60.000", "60000", "exact"), false, "no canonical form: literal only");
+  assert.equal(trouveSousLeGenre("TOTAL 60.000", "60000", "free-text"), false);
+  assert.equal(trouveSousLeGenre("TOTAL 60.000", "not a number", "amount-grouped"), false, "a truth its kind cannot read is not found by it");
+
+  /* The message: the kind is named, and the lower-bound caveat belongs to the literal kinds. */
+  const type = direLaPresence([{ champ: "total", litteral: 0, reordonne: 0, vides: 0, total: 95, genre: "amount-grouped", parLeGenre: 7 }])!;
+  assert.match(type, /total: found in 7 of the 95 case\(s\) that have an expected value \(looked for as amount-grouped reads it\)/);
+  assert.doesNotMatch(type, /LOWER bound/, "the value was looked for every way the kind reads it: the count is not a lower bound");
+  const litteral = direLaPresence([{ champ: "adresse", litteral: 0, reordonne: 0, vides: 0, total: 300 }])!;
+  assert.match(litteral, /LOWER bound/);
+  assert.match(litteral, /declare\n\s+the kind in the header/);
+  assert.equal(direLaPresence([{ champ: "total", litteral: 0, reordonne: 0, vides: 0, total: 95, genre: "amount-grouped", parLeGenre: 84 }]), undefined,
+    "found as the kind reads it in 84 of 95: nothing to say");
+});
+
+test("F8: the per-field lines name what they test, and never say \"No recommendation\" for a field the audit routes", async () => {
+  const { recommander, rapportPourLeClient, releveClient } = await import("./your-cases.ts");
+  const { audit, auditLines } = await import("./audit.ts");
+  const { rate } = await import("./interval.ts");
+  /* The founder's run: gemini the best on total, google the current chain, seven disagreements
+     five of which go to gemini, both declared per thousand documents, a two-point margin. */
+  const gemini = "1".repeat(91) + "0".repeat(4), google = "1".repeat(86) + "0".repeat(5) + "1".repeat(2) + "0".repeat(2);
+  const cellule = (bits: string) => ({ bons: bits.split("").filter((b) => b === "1").length, sur: bits.length, ms: Number.NaN, reussites: bits });
+  const releve = { total: { gemini: cellule(gemini), google: cellule(google) } } as never;
+  const prix = [
+    { kind: "vendor", name: "gemini", pricePerThousand: 4.29, billing: "document", provenance: "declared" },
+    { kind: "vendor", name: "google", pricePerThousand: 100, billing: "document", provenance: "declared" },
+  ] as never;
+  const a = audit({ fields: ["total"], kinds: { total: "amount-grouped" }, releve, chains: prix, current: "google",
+    pagesPerDocument: 1, pagesPerYear: 1_000_000, machineHourlyCost: 1.2, margin: 0.02 });
+  assert.equal(a.routing["total"], "gemini");
+  const rangs = [{ palier: "gemini", r: rate(91, 95), ms: Number.NaN }, { palier: "google", r: rate(88, 95), ms: Number.NaN }];
+
+  /* Red before: "google may be up to 5.9 points worse ...: no recommendation." then "No
+     recommendation for total.", two screens above "Recommended routing: total ← gemini". */
+  const lignes = recommander("total", rangs, releve, 0.02, { actuelle: "google", audit: { chosen: a.routing["total"]!, head: a.fields["total"]!.head } });
+  assert.ok(lignes.some((l) => /^Keeping google, your current chain, is not supported by this sample: it may be up to [\d.]+ points worse than gemini, above your 2-point margin \(7 disagreements, p = 0\.453\)\. The observed gap, 3\.2 points, is itself above the margin: no sample size would show non-inferiority\.$/.test(l)), lignes.join("\n"));
+  assert.ok(lignes.some((l) => /^gemini stays the source for total: nothing cheaper is supported within your margin on this sample, and the audit below routes total to it\.$/.test(l)), lignes.join("\n"));
+  assert.ok(!lignes.some((l) => /No recommendation/.test(l)), lignes.join("\n"));
+  assert.ok(!lignes.some((l) => /: no recommendation\./.test(l)), "the shared phrase's verdict-sounding tail is not printed for a candidate");
+
+  /* The same lines travel into the report and the record, word for word. */
+  const md = rapportPourLeClient({ cas: 95, champs: ["total"], date: "2026-09-29", questions: { total: { texte: "What is the total?", provenance: "fournie" } },
+    lignes: [], avecRegles: false, verdicts: [{ champ: "total", lignes }], marge: 0.02, kinds: { total: "amount-grouped" }, audit: auditLines(a) });
+  assert.ok(!md.includes("No recommendation for total"), md);
+  assert.match(md, /Keeping google, your current chain, is not supported/);
+  assert.match(md, /Recommended routing: total ← gemini/);
+  const record = releveClient({ fichier: "receipts.csv", octets: Buffer.from("id,text,total:amount-grouped\n"), cas: 95, casDansLeFichier: 95, champs: ["total"],
+    questions: { total: { texte: "What is the total?", provenance: "fournie" } }, releve, verdicts: [{ champ: "total", lignes }], marge: 0.02,
+    measuredAt: "2026-09-29T00:00:00.000Z", code: null, kinds: { total: "amount-grouped" }, audit: a });
+  assert.ok(!JSON.stringify(record.recommendation).includes("No recommendation"));
+  assert.deepEqual(record.recommendation["total"], lignes);
+
+  /* The invariant, whatever the sample: a field the audit routes never closes on "No
+     recommendation"; a candidate that is not the current chain is named as a replacement. */
+  const autre = recommander("total", rangs, releve, 0.02, { actuelle: "someone-else", audit: { chosen: "gemini", head: "gemini" } });
+  assert.ok(autre.some((l) => /^Taking google instead of gemini is not supported by this sample/.test(l)), autre.join("\n"));
+  assert.ok(!autre.some((l) => /No recommendation/.test(l)));
+  /* The audit routing to a cheaper source the per-field comparison did not retain: the closing
+     line follows the audit. */
+  const versGoogle = recommander("total", rangs, releve, 0.02, { actuelle: "google", audit: { chosen: "google", head: "gemini" } });
+  assert.ok(versGoogle.some((l) => /^Recommendation for total: google, the cheapest costed source this sample cannot show to be worse than gemini within your margin \(the audit below\)\.$/.test(l)), versGoogle.join("\n"));
+  /* Without an audit (no chain given) and without a margin, the old lines stand. */
+  const sansAudit = recommander("total", rangs, releve, 0.02);
+  assert.ok(sansAudit.some((l) => /^No recommendation for total\.$/.test(l)), sansAudit.join("\n"));
+  const sansMarge = recommander("total", rangs, releve, undefined, { actuelle: "google", audit: { chosen: null, head: "gemini" } });
+  assert.ok(sansMarge.some((l) => /there is no recommendation without it/.test(l)) && sansMarge.some((l) => /^No recommendation for total\.$/.test(l)), sansMarge.join("\n"));
 });

@@ -74,7 +74,9 @@ export function arbreJetable(prefixe: string, racineTemporaire: string = tmpdir(
    * sans que rien de réel soit touché.
    */
   const chemin = mkdtempSync(join(racineTemporaire, `${prefixe}-`));
-  if (chemin.includes("/Documents/")) {
+  /* Either separator: on Windows the path reads `...\Documents\...`, and the first Windows
+     run of the matrix (2026-09-29) showed the guard blind to it. */
+  if (/[\\/]Documents[\\/]/.test(chemin)) {
     throw new Error(`test sandbox inside the real tree: ${chemin}`);
   }
   /*

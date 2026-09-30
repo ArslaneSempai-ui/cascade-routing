@@ -88,11 +88,11 @@ export function exigerArbrePropre(
        consolidation avait emporté la moitié du message qui compte. */
     console.error(`\n  The working tree carries uncommitted changes, and ${quoi} would be`);
     console.error(`  marked not reproducible: the record names a commit that does not contain`);
-    console.error(`  the code that ran, so nobody — including you — could produce it again.\n`);
+    console.error(`  the code that ran, so nobody, you included, could produce it again.\n`);
     for (const f of etat.sale.slice(0, 8)) console.error(`    ${f}`);
     if (etat.sale.length > 8) console.error(`    … and ${etat.sale.length - 8} more`);
     console.error(`\n  git commit -am "…"              then run again`);
-    console.error(`  or --allow-dirty="why"          if this is deliberate — the reason goes`);
+    console.error(`  or --allow-dirty="why"          if this is deliberate: the reason goes`);
     console.error(`                                  into the record, so a reader knows it was\n`);
     process.exit(1);
   }

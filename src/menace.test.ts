@@ -290,6 +290,12 @@ test("le détecteur reconnaît les formats COURANTS, pas seulement ceux d'hier",
  * PATH laisse `stdout` à `undefined`, et la ligne qui lit `compte.stdout.trim()` casse en
  * TypeError AVANT la première garde — un refus qui ne dit pas ce qu'il refuse.
  */
+/* The same directory written two ways: git answers with forward slashes and the long name
+   (C:/Users/runneradmin/...), tmpdir() gives backslashes and the 8.3 short name
+   (C:\\Users\\RUNNER~1\\...). Both are resolved before they are compared. */
+const memeArbre = (vu: string, bac: string): boolean =>
+  realpathSync.native(vu).replaceAll("\\", "/").startsWith(realpathSync.native(bac).replaceAll("\\", "/"));
+
 function lancerAvecGitDePaille(mode: "revlist" | "status" | "court") {
   /* `realpathSync` N'EST PAS DÉCORATIF. Sur macOS `tmpdir()` rend `/var/folders/…`, un lien
      vers `/private/var/folders/…`, et `import.meta.url` porte le chemin RÉSOLU. Sans cette
@@ -333,7 +339,8 @@ function lancerAvecGitDePaille(mode: "revlist" | "status" | "court") {
   }
 }
 
-test("le balayage refuse de publier un compte de commits que git n'a pas rendu", () => {
+test("le balayage refuse de publier un compte de commits que git n'a pas rendu", (t) => {
+  if (process.platform === "win32") return t.skip("the fake git is a POSIX shell script put at the head of PATH; Windows resolves executables through PATHEXT and would run the real git");
   const r = lancerAvecGitDePaille("revlist");   // rev-list rend une sortie VIDE, en code 0
   assert.equal(r.releveEcrit, false,
     "un relevé a été écrit alors que l'historique n'a pas été compté : son zéro ne vaut rien.");
@@ -349,7 +356,8 @@ test("le balayage refuse de publier un compte de commits que git n'a pas rendu",
     "« commits swept » a été imprimé sur un historique jamais lu.");
 });
 
-test("le balayage refuse de publier quand `git log` sort en erreur", () => {
+test("le balayage refuse de publier quand `git log` sort en erreur", (t) => {
+  if (process.platform === "win32") return t.skip("the fake git is a POSIX shell script put at the head of PATH; Windows resolves executables through PATHEXT and would run the real git");
   const r = lancerAvecGitDePaille("status");   // rev-list → 12, log → code 3
   assert.equal(r.releveEcrit, false,
     "un relevé a été écrit alors que `git log` a échoué.");
@@ -360,7 +368,8 @@ test("le balayage refuse de publier quand `git log` sort en erreur", () => {
   assert.doesNotMatch(r.stdout, /swept/);
 });
 
-test("le balayage refuse une sortie trop courte pour être l'historique", () => {
+test("le balayage refuse une sortie trop courte pour être l'historique", (t) => {
+  if (process.platform === "win32") return t.skip("the fake git is a POSIX shell script put at the head of PATH; Windows resolves executables through PATHEXT and would run the real git");
   const r = lancerAvecGitDePaille("court");   // rev-list → 12, log → « court » en code 0
   assert.equal(r.releveEcrit, false,
     "un relevé a été écrit sur six octets d'historique : il aurait annoncé « aucun secret ».");
@@ -552,7 +561,7 @@ test("un clone superficiel ne peut pas conclure, et ne doit pas accuser une ré�
     /* Le bac est-il bien un dépôt à lui ? Sinon tout ce qui suit s'écrit dans celui qu'on
        éprouve — `GIT_DIR` gagne sur `cwd`, et un crochet en exporte un. */
     const vu = git(source, "rev-parse", "--absolute-git-dir").stdout.trim();
-    assert.ok(vu.startsWith(source), `le bac n'est pas isolé : git répond « ${vu} ».`);
+    assert.ok(memeArbre(vu, source), `le bac n'est pas isolé : git répond « ${vu} ».`);
 
     const shas: string[] = [];
     for (const n of [1, 2, 3]) {
@@ -629,7 +638,7 @@ test("un secret introduit dans la résolution d'une fusion est balayé", () => {
     /* Le bac est-il bien un dépôt à lui ? Sinon tout ce qui suit s'écrit dans celui qu'on
        éprouve — `GIT_DIR` gagne sur `cwd`. */
     const vu = git("rev-parse", "--absolute-git-dir").stdout.trim();
-    assert.ok(vu.startsWith(depot), `le bac n'est pas isolé : git répond « ${vu} ».`);
+    assert.ok(memeArbre(vu, depot), `le bac n'est pas isolé : git répond « ${vu} ».`);
 
     const cleOrdinaire = ["AKIA", "ZXCVBNMLKJHGFDSA"].join("");
     const cleDeFusion = ["AKIA", "QWERTYUIOPASDFGH"].join("");

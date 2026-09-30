@@ -42,6 +42,11 @@ let req = VNRecognizeTextRequest { r, _ in
             "texte": t.string,
             "tlx": Double(o.topLeft.x), "tly": Double(1 - o.topLeft.y),
             "trx": Double(o.topRight.x), "try": Double(1 - o.topRight.y),
+            //  F6 (2026-09-29): the two bottom corners as well, flipped the same way, so that
+            //  a block has a height and two blocks of one printed line are told by the
+            //  overlap of their vertical extents rather than by their top edges alone.
+            "blx": Double(o.bottomLeft.x), "bly": Double(1 - o.bottomLeft.y),
+            "brx": Double(o.bottomRight.x), "bry": Double(1 - o.bottomRight.y),
             "confiance": Double(t.confidence),
         ])
     }

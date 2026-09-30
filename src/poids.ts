@@ -36,12 +36,14 @@
  *      déjà pour diagnostiquer. Réparer un trou en creusant l'autre n'est pas une réparation.
  */
 import { createHash } from "node:crypto";
-import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, relative, sep } from "node:path";
+
+import { env as envHF } from "@huggingface/transformers";
 
 import { isMain } from "./cli.ts";
 import { exigerModelesEntiers, loadClassifiers, loadExtractors, modelesTronques, modelesAbsents,
-  poserTokenizerSousMain, POIDS_MODELES, racineDesPoids, type CleModele, type EtatModele } from "./tiers.ts";
+  POIDS_MODELES, racineDesPoids, type CleModele, type EtatModele } from "./tiers.ts";
 
 /** Le nom du manifeste dans le dossier d'export. Un dossier sans lui n'est pas un export. */
 export const NOM_MANIFESTE = "cascade-weights.json";
@@ -130,7 +132,7 @@ export function verifierExport(m: Manifeste, dossier: string): Grief[] {
     if (!existsSync(abs)) { griefs.push({ chemin: e.chemin, cause: "listed in the manifest, absent from the directory" }); continue; }
     const taille = statSync(abs).size;
     if (taille !== e.octets) {
-      griefs.push({ chemin: e.chemin, cause: `is ${enMo(taille)}, manifest says ${enMo(e.octets)} — an interrupted copy` });
+      griefs.push({ chemin: e.chemin, cause: `is ${enMo(taille)}, manifest says ${enMo(e.octets)}: an interrupted copy` });
       continue;
     }
     const vu = empreinte(abs);
@@ -181,6 +183,78 @@ export function exporter(
 }
 
 /**
+ * THE FILES THE LIBRARY ASKS FOR AT REVISION `main`, WHATEVER REVISION IS PINNED.
+ *
+ * Read in transformers.js 4.2.0 on 2026-09-29, after a first `npm test` on a freshly imported
+ * cache had failed once with "`local_files_only=true` or `env.allowRemoteModels=false` and
+ * file was not found locally at .../models/Xenova/distilbert-base-cased-distilled-squad/
+ * config.json", and never again. `pipeline(task, model, { revision })` first asks the model
+ * registry which files to expect: `get_pipeline_files(task, model, { device, dtype })`,
+ * WITHOUT the revision, then `get_files`, `get_model_files` and `get_config(model, { config })`,
+ * which loads `AutoConfig.from_pretrained(model, ...)` at `main`. The cache key looked up is
+ * `<repo>/config.json`, not `<repo>/<revision>/config.json`, and offline the miss is fatal.
+ * The registry then asks `get_file_metadata(model, 'tokenizer_config.json', {})`, at `main`
+ * as well: not fatal, but a miss means no tokenizer, the failure `exigerChaineEntiere` refuses
+ * by name and `poserTokenizerSousMain` has repaired since 3 September. An import carries the
+ * pinned folders only (`construireManifeste` lists `<repo>/<revision>/**`), so the first key
+ * was missing from every imported cache.
+ *
+ * Why it failed once, then never: the suite runs its files in parallel, and a sibling process
+ * loading the same models with the network open (the measure:yours witnesses without
+ * CASCADE_OFFLINE) downloaded `main/config.json` and stored it under that very key, during
+ * the same run; the offline process lost only because it looked first. The next runs found
+ * the file. `--prime` loads online, so the integration's cache always had it. Not a partial
+ * write: the library's `FileCache.put` writes to a temporary name and renames. A missing key
+ * that only an online neighbour could fill, and two offline measures started at once on an
+ * imported cache would have hit it every time.
+ *
+ * The repair: every file the library asks for at `main` is posed under that key, a copy of
+ * the pinned file, at import time and again before the network is refused
+ * (`exigerPoidsSurPlace`, the loader's last call before `allowRemoteModels = false`). Never a
+ * byte invented: only when the pinned file exists and the copy is missing. Atomic: the copy
+ * goes to a temporary name beside its destination and is renamed into place, so a process
+ * reading while another poses never sees a partial file, and two processes posing at once
+ * both end with the same complete file.
+ *
+ * The copies go where the library reads, `envHF.cacheDir`, which is the repository's default
+ * cache unless a caller moved the library's; the import passes the directory it wrote to.
+ * This lives here and not in `tiers.ts` on purpose: `tiers.ts` is in the failures gallery's
+ * hashed closure, and a change there moves the delivered gallery's key, which only
+ * `npm run figures` with the weights can follow.
+ */
+export const FICHIERS_SOUS_MAIN = ["tokenizer_config.json", "config.json"] as const;
+
+/** Temporary names are unique per process (pid) and per call (counter): no random draw,
+    which the suite forbids in modules, and none is needed. */
+let provisoires = 0;
+
+export function poserSousMain(cles: readonly CleModele[], racine?: string): string[] {
+  const base = racine ?? (envHF.cacheDir || racineDesPoids());
+  const poses: string[] = [];
+  for (const cle of cles) {
+    const m = POIDS_MODELES[cle];
+    for (const fichier of FICHIERS_SOUS_MAIN) {
+      const epingle = join(base, m.depot, m.revision, fichier);
+      const sousMain = join(base, m.depot, fichier);
+      if (!existsSync(epingle) || existsSync(sousMain)) continue;
+      const provisoire = `${sousMain}.tmp.${process.pid}.${++provisoires}`;
+      try {
+        copyFileSync(epingle, provisoire);
+        renameSync(provisoire, sousMain);
+      } catch (e) {
+        rmSync(provisoire, { force: true });
+        /* Another process may have renamed its own copy into place between our check and our
+           rename, and Windows refuses a rename over a file another process holds open: the
+           file is there, complete, which is all a caller needs. Anything else is a failure. */
+        if (!existsSync(sousMain)) throw e;
+      }
+      poses.push(`${m.depot}/${fichier}`);
+    }
+  }
+  return poses;
+}
+
+/**
  * Importer, et ne rien écrire tant que TOUT n'est pas vérifié.
  *
  * L'ordre est la seule chose qui compte ici. Copier au fur et à mesure et s'arrêter au
@@ -192,7 +266,7 @@ export function importer(dossier: string, racine?: string): { ecrits: number; oc
   const griefs = verifierExport(m, dossier);
   if (griefs.length > 0) {
     throw new Error(
-      `${griefs.length} problem(s) with the export in ${dossier} — nothing was written.\n\n`
+      `${griefs.length} problem(s) with the export in ${dossier}. Nothing was written.\n\n`
       + griefs.map((g) => `  ${g.chemin}\n    ${g.cause}`).join("\n") + `\n\n`
       + `  Nothing was copied into the cache: a half-written cache crashes the process\n`
       + `  natively, without naming the file. Re-export or re-copy, then run this again.\n`);
@@ -205,9 +279,10 @@ export function importer(dossier: string, racine?: string): { ecrits: number; oc
     copyFileSync(join(dossier, e.chemin), cible);
     octets += e.octets;
   }
-  /* ET LE TOKENISEUR SOUS LA CLÉ « main », sans quoi la machine isolée charge un modèle muet :
-     voir `poserTokenizerSousMain`. Posé ici, l'import suffit — aucune commande n'a à sortir. */
-  poserTokenizerSousMain([...new Set(m.entrees.map((e) => e.cle))], racine);
+  /* ET LES FICHIERS QUE LA BIBLIOTHÈQUE DEMANDE SOUS LA CLÉ « main », sans quoi la machine
+     isolée charge un modèle muet, ou ne le charge pas du tout : voir `poserSousMain`. Posés
+     ici, l'import suffit : aucune commande n'a à sortir. */
+  poserSousMain([...new Set(m.entrees.map((e) => e.cle))], base);
   return { ecrits: m.entrees.length, octets };
 }
 
@@ -254,17 +329,22 @@ export const CODE_ECART_TEMOIN = 75;
  */
 export function motifDEcart(manquants: readonly CleModele[]): string {
   const total = manquants.reduce((s, c) => s + POIDS_MODELES[c]!.octets, 0);
-  return `STANDING ASIDE — not measured, not passed: this command runs the real extractors and `
-    + `${manquants.length} model weight(s) are not on this machine — `
+  return `STANDING ASIDE, not measured, not passed. This command runs the real extractors, and `
+    + `${manquants.length} model weight(s) are not on this machine: `
     + manquants.map((c) => `${POIDS_MODELES[c]!.depot} (${enMo(POIDS_MODELES[c]!.octets)})`).join(", ")
     + `, ${enMo(total)} in total. A test downloads nothing. Fetch them once with `
     + "`npm run poids -- --prime` (or import them across an air gap, see the README), then "
     + `run the suite again: until then this site of call is unverified on this machine.`;
 }
 
+/**
+ * Weights on site means two things: the pinned files present, and the copies the library asks
+ * for at revision `main` in place. The second is made here because this is the loader's last
+ * call before the network is refused (2026-09-29, see `poserSousMain`).
+ */
 export function exigerPoidsSurPlace(cles: readonly CleModele[], racine?: string): void {
   const manquants = poidsAbsents(cles, racine);
-  if (manquants.length === 0) return;
+  if (manquants.length === 0) { poserSousMain(cles, racine); return; }
   const total = manquants.reduce((s, c) => s + POIDS_MODELES[c]!.octets, 0);
   throw new Error(
     `CASCADE_OFFLINE=1 is set and ${manquants.length} model(s) are not on this machine.\n\n`
@@ -416,7 +496,7 @@ if (isMain(import.meta)) {
       const purges = purgerTronques(modeles);
       for (const t of purges) {
         console.log(`  removed ${join(racineDesPoids(), POIDS_MODELES[t.cle].depot)}`);
-        console.log(`    its model.onnx was ${enMo(t.taille)} of ${enMo(t.attendu)} — an interrupted download never heals on its own.`);
+        console.log(`    its model.onnx was ${enMo(t.taille)} of ${enMo(t.attendu)}: an interrupted download never heals on its own.`);
       }
       await loadExtractors();
       await loadClassifiers();

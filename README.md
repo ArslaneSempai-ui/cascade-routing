@@ -54,6 +54,7 @@ what that pass actually cost is stated below, read from the relevé rather than 
 | `npm run sonde` | the generative probe, regenerated from the frozen profile; it was hand-typed and eleven of its figures had gone stale |
 | `npm run start` | the screen, on localhost:4670 |
 | `npm run measure:yours` | your own cases, from a CSV; nothing leaves your machine. Writes a report beside the file, and a sealed record `<file>-measured.json` (counts and per-case verdicts, never a value) that `diff` compares and `sceller` re-verifies |
+| `npm run grade` | grade one vendor's extracted values against your labelled CSV and write the `--sorties` file `measure:yours` reads: clean, wrong or blank per case and field, the grader's version and each field's declared kind (`total:amount`, `closing_date:date`), never a value. Reads a folder of Textract, Document AI or Azure Document Intelligence exports offline through a small mapping file, or a plain JSON of values your chain wrote; carries the price per thousand pages you declare |
 | `npm run measure:humans` | the human tier, on cases your reviewers already worked: the one figure every page here calls assumed. Accuracy, agreement and seconds per case, aggregated (no per-person output), written beside your CSV as a report and a sealed record of verdicts, never a value; `optimise -- --humans=<record>` then uses the measurement and says so |
 | `npm run recertify` | does the spring measurement still hold? Re-measures a new CSV under the sealed baseline record's own protocol (same fields, same questions, same tiers) and says per field: holds, or MOVED (exit code 1), naming the cases that used to pass and no longer do. Measures input drift against its own noise floor when the spring CSV is still beside the record. Writes `<file>-recertified.md` and a sealed `<file>-recertified.json`, which serves as the next baseline |
 | `npm run benchmark` | the same measurement on a public labelled dataset; the one command that downloads: the dataset comes down, nothing of yours goes up |
@@ -114,17 +115,76 @@ Under that flag the library is told not to reach the network at all. If a model 
 says so, names it, gives its size, and stops, instead of stalling on a download that cannot
 finish. `npm run poids` with no argument reports what is on this machine.
 
-The encoder tiers run fully air-gapped. The model library asks for one tokenizer file at
-revision `main` whatever revision is pinned, and reads it from the cache before the network;
-the loader places a copy of the pinned file under that cache key, so no call remains, with
-the network open or refused. Measured on 3 September 2026: with the copies in place,
-`CASCADE_OFFLINE=1 npm run measure:yours` measures every cell without a single outbound
-request; the suite holds it.
+The encoder tiers run fully air-gapped. The model library asks for two files at revision
+`main` whatever revision is pinned, the tokenizer configuration and the model configuration,
+and reads them from the cache before the network; the import places a copy of each pinned
+file under that cache key, the loader does the same before it refuses the network, and the
+copy is atomic, so no call remains, with the network open or refused, and two measures started
+at once on a freshly imported cache cannot trip each other. Measured on 3 September 2026: with
+the copies in place, `CASCADE_OFFLINE=1 npm run measure:yours` measures every cell without a
+single outbound request; the suite holds it.
 
 ## Requirements
 
-Node 24 or newer, on **macOS or Linux**. Windows has not been tested and is not claimed;
-several scripts chain shell commands, which hold under Git Bash and not under `cmd.exe`.
+Node 24 or newer. The suite runs in continuous integration on Linux and macOS runners, and
+on Windows minus two shared test files, the screenshot driver's and the em-dash scan's, named
+with their reasons in `.github/fichiers-exclus-windows.txt` and printed at the top of the
+suite's output there;
+what a system cannot run is named, case by case, in the expected-skips file of that system
+under `.github/`, never skipped in silence. Windows is claimed only as far as that leg of the
+matrix is green. Several scripts chain shell commands, which hold under Git Bash and not
+under `cmd.exe`.
+
+## The extraction cost audit
+
+The same harness, pointed at a buyer who already pays a document extraction vendor. The
+question the audit answers is narrower than routing and easier to act on: for each field,
+which extractor, the vendor's or a local tier, is the cheapest one that this sample cannot
+show to be worse; what it costs per thousand pages at the declared volume; and what that
+saves a year against the chain in use. Everything runs on the client's machine, offline.
+Only an aggregate record leaves, never a value.
+
+Three commands, in this order:
+
+1. `npm run grade` reads the vendor's own exports (Amazon Textract, Google Document AI,
+   Azure AI Document Intelligence, through a small mapping file and an adapter that opens no
+   connection) or a plain JSON of values the client's chain wrote, grades them against the
+   labelled CSV, and writes an outcomes file: clean, wrong or blank per case and field, the
+   grader's version, and the kind each field was declared as. The values stay where they were.
+2. `npm run measure:yours` takes several such files at once, one per vendor, each with the
+   price per thousand pages or documents the client declares (or a list price from
+   `vendor-prices.json`, dated and marked as such), measures the local tiers on the same
+   cases, and writes the audit into the sealed record. Nothing is recommended without a
+   margin declared with `--margin`: "not separable from the best" is not "not worse", and
+   only the client can say what loss they accept. Without one the audit lists, per field,
+   the options the sample cannot separate from the best, and states no saving.
+3. The record, `cascade-client-record` version two, carries per vendor and per field the
+   accuracy with its Wilson bounds and its `n` (no rate under twenty cases, anywhere), the
+   cost per thousand pages, the recommended routing within the margin, the annual saving
+   against the current chain, and a flag on every pick the sample cannot separate, on every
+   pick measurably worse than another admissible source, and on every pair that shares too
+   few cases to be compared. The visual report is built from that JSON; it is not in this
+   repository.
+
+A field's header declares its kind (`total:amount`, `closing_date:date`, `tax_id:id`,
+`currency:currency`, `vendor_name:free-text`) and the comparison follows: a thousands
+separator, a date written two ways or a symbol against a code is formatting, not an error.
+`total:amount-grouped` is the reading of receipts printed the Indonesian or German way: a
+point or comma before exactly three digits groups thousands and a final one before exactly
+two digits is the decimal part, so "60.000" is sixty thousand where `amount` reads sixty;
+anything else is unreadable. An empty expected cell means unknown: the case is not graded
+on that field, by any tier or chain, and is not in its n.
+A typed comparison can only add matches to the default one, and a property test holds that.
+
+A vendor bills per page, once, whatever the number of fields taken from it, so the audit
+costs a routing per page and a routing that reads two vendors pays both. That is why its
+cost model lives beside the published optimiser rather than inside it, and why no figure on
+this page moves because of it. Two sources graded on the same cases are compared case for
+case: McNemar's exact test says whether the sample separates them, and the paired-difference
+interval of `src/paired-difference.ts` (Newcombe's hybrid score) bounds how far behind the
+cheaper one may be, which is what the margin is checked against. A list price is a
+first-tier price: above the vendor's monthly tier no annual figure is stated until a price
+is declared.
 
 ## What else is in here
 
@@ -141,10 +201,11 @@ several scripts chain shell commands, which hold under Git Bash and not under `c
 | [`retractations.json`](retractations.json) | every conclusion published here that turned out to be wrong |
 | [`rules-example.json`](rules-example.json) | an example `--rules` file for `measure:yours`: one regular expression per column of your CSV, the whole match is the value; copy it, keep the columns you have |
 | [`sbom.json`](sbom.json) | the dependency inventory, CycloneDX, for a procurement team |
+| [`vendor-prices.json`](vendor-prices.json) | the list prices per thousand pages the extraction audit falls back on when a chain declares none: read on a date, from the vendors' public pages, marked verified or not; a declared price always wins over them |
 <!-- /figures:documents -->
 
 <!-- figures:tests -->
-**663 tests** across 78 files, counted from the sources rather than typed here.
+**801 tests** across 90 files, counted from the sources rather than typed here.
 <!-- /figures:tests -->
 
 Everything runs locally, and that is enforced rather than promised. The one call that could
@@ -213,11 +274,13 @@ on another they never saw. Measured that way, they collapse.
 
 Transcription fidelity: **99.4 % [99–100], n=2977** of words recovered.
 
+Line fidelity: **54.0 % [48–60], n=235** of printed lines recovered whole on one line, **54.0 % [48–60], n=235** in their printed order. 97 of 235 expected lines are wider than the rendered page (73 characters) and wrap, so whole lines cannot exceed 138 of 235; among the lines that fit, **92.0 % [86–95], n=138** come back whole.
+
 | Tier | From text | From the image | Gap | Beyond noise |
 |---|---|---|---|---|
 | `rules` | 56.7 % [53–61], n=600 | 56.7 % [53–61], n=600 | 0.0 pts | no |
 | `small` | 70.8 % [67–74], n=600 | 60.3 % [56–64], n=600 | -10.5 pts | yes |
-| `large` | 80.5 % [77–83], n=600 | 79.5 % [76–83], n=600 | -1.0 pts | no |
+| `large` | 80.5 % [77–83], n=600 | 80.0 % [77–83], n=600 | -0.5 pts | no |
 
 **1 of 3 tiers loses more than noise.** `small` gives up 10.5 points when the same document arrives as an image instead of as text.
 

@@ -1,0 +1,4 @@
+id,text,invoice_number:id,invoice_date:date,total:amount,vendor_name:free-text,first_line_amount:amount
+INV-001,"SAMPLE VENDOR LLC (synthetic) Invoice Number: INV-2026-0042 Invoice Date: September 1, 2026 Total Amount: $1,234.50 Line 1 Widget 100.00",INV20260042,2026-09-01,1234.50,Sample Vendor LLC (synthetic),100
+INV-002,"Invoice Number: INV 2026 0043 Total Amount: 980",INV-2026-0043,2026-09-02,980.00,Other Vendor (synthetic),50
+INV-003,"Invoice Number: INV-2026-0044 Total Amount: 15.00",INV-2026-0044,2026-09-03,15,Third Vendor (synthetic),15

@@ -328,7 +328,7 @@ if (isMain(import.meta)) {
     evaluerSignal(toutes, "ORACLE (témoin positif)",
       "lit la clé de réponses : doit séparer parfaitement, sinon le banc est en cause", (t) => t.outcome !== "clean"),
     evaluerSignal(toutes, "blanc (référence)",
-      "la sortie est vide — référence obligatoire : un blanc se voit sans aucun signal", tire.blanc),
+      "la sortie est vide, référence obligatoire : un blanc se voit sans aucun signal", tire.blanc),
     evaluerSignal(toutes, "désaccord", "diffère de la pluralité des autres paliers sur le même champ",
       tire.desaccord, 1),
     evaluerSignal(toutes, "forme", "échoue à la règle de forme déclarée pour son champ", tire.forme, 0),
@@ -431,14 +431,14 @@ if (isMain(import.meta)) {
   const exposantUneConfiance = GENERATIFS_PUBLICS.filter(() => demandeUneConfiance).length;
 
   const cible = toutes.filter((t) => t.faux).length;
-  console.log(`\nDenominator: ${DENOMINATEUR} — ${toutes.length} values.`);
-  console.log(`Target: everything that is not \`clean\` — ${cible} values, that is ${(100 * cible / toutes.length).toFixed(1)} %.`);
+  console.log(`\nDenominator: ${DENOMINATEUR}, ${toutes.length} values.`);
+  console.log(`Target: everything that is not \`clean\`, ${cible} values, that is ${(100 * cible / toutes.length).toFixed(1)} %.`);
   console.log(`That is also the precision a signal drawn at random reaches.\n`);
   /* À l'écran comme dans le fichier : le taux ne sort jamais sans sa borne et son n, et il
      ne sort pas du tout sous le seuil de rapportabilité. Un « 100,0 % » sur trois
      déclenchements se lit exactement comme un « 100,0 % » sur mille. */
-  const ecrire = (t: TauxPublie | null) => t === null ? "—".padStart(21)
-    : !t.rapportable ? `— (n=${t.n}, trop peu)`.padStart(21)
+  const ecrire = (t: TauxPublie | null) => t === null ? "none".padStart(21)
+    : !t.rapportable ? `(n=${t.n}, trop peu)`.padStart(21)
     : `${(t.taux * 100).toFixed(1)} % [${(t.bas * 100).toFixed(0)}–${(t.haut * 100).toFixed(0)}] n=${t.n}`.padStart(21);
   for (const v of verdicts) {
     console.log(`  ${v.nom.padEnd(24)} fires ${String(v.declenche).padStart(3)}`
@@ -448,12 +448,12 @@ if (isMain(import.meta)) {
       + `  appels +${v.coutEnAppels}`
       + `  ${v.bat ? "bat le hasard" : "ne bat pas"}`);
   }
-  console.log(`\n  bench valid (the oracle separates perfectly): ${bancValide ? "YES" : "NO — nothing above is worth anything"}`);
+  console.log(`\n  bench valid (the oracle separates perfectly): ${bancValide ? "YES" : "NO: nothing above is worth anything"}`);
   console.log(`  tiers exposing a confidence: ${exposantUneConfiance} of ${GENERATIFS_PUBLICS.length} examined\n`);
   console.log("  what escalation would return:");
   for (const e of escalade) {
     console.log(`    ${e.bas} → ${e.haut}   ${e.bas} misses ${e.basFaux}, of which ${e.haut} saves ${e.escaladeUtile}`
-      + ` (${(100 * (e.partUtileParmiLesEchecs ?? 0)).toFixed(0)} %) — ${e.escaladeInutile} escalations for nothing`);
+      + ` (${(100 * (e.partUtileParmiLesEchecs ?? 0)).toFixed(0)} %): ${e.escaladeInutile} escalations for nothing`);
     console.log(`      signal-guided: ${e.guideeParSignal.escalades} escalations, ${e.guideeParSignal.gagnes} gains`
       + `  |  chance at equal spend: ${e.temoinHasardMemeDepense.gagnesMoyen}  → ${e.batLeHasard ? "BEATS" : "does not beat"}`);
   }
@@ -468,7 +468,7 @@ if (isMain(import.meta)) {
     bancValide, oracle,
     signaux: verdicts,
     vueDesEchecsInvisibles: {
-      quoi: "population restreinte aux non-blancs, cible `wrong` — les échecs qu'on ne voit pas.",
+      quoi: "population restreinte aux non-blancs, cible `wrong` : les échecs qu'on ne voit pas.",
       valeurs: nonBlancs.length, signaux: invisibles,
     },
     parChampDuMeilleurSignal: parChamp,
@@ -478,7 +478,7 @@ if (isMain(import.meta)) {
       pourquoi: "L'appel de génération ne demande ni ne conserve les log-probabilités : aucun "
         + "palier n'expose de confiance dans l'état actuel. Zéro trouvé n'est pas zéro cherché, "
         + "et un signal absent du rapport ne se distingue pas d'un signal jamais regardé.",
-      coutPourLObtenir: "remesurer les paliers génératifs en conservant les log-probabilités — "
+      coutPourLObtenir: "remesurer les paliers génératifs en conservant les log-probabilités : "
         + "environ cinq minutes pour `gen-4b` seul, quarante pour les trois.",
     },
     laCleNEstPasNecessaireAuSignal: "Les trois signaux se calculent sur ce que le client possède : "
@@ -490,7 +490,7 @@ if (isMain(import.meta)) {
       + "sur trafic propre il est bien plus bas, et toute précision baisse avec lui.",
     seuilRegleSurCeCorpus: "Un seuil d'escalade réglé sur ces mêmes documents utiliserait les "
       + "données qui bornent son intervalle. Sur ces effectifs, le routage par document peut être "
-      + "non validable sur les données disponibles même s'il fonctionne — ce qui n'est pas une "
+      + "non validable sur les données disponibles même s'il fonctionne, ce qui n'est pas une "
       + "raison de le déclarer bon, ni mauvais.",
   }, null, 2) + "\n");
   console.log(`\nWritten to ${SORTIE.split("/").pop()}\n`);

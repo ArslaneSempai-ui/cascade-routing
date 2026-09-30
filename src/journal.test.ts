@@ -1283,11 +1283,20 @@ test("le pas qui refuse un cas ignoré cherche ce que le rapporteur écrit vraim
    * éprouver les deux sens de l'écart ; sur la machine d'intégration, un seul lancement
    * tourne à la fois et les chemins fixes y restent corrects. Audit du 27 août 2026.
    */
-  const suiteTxt = join(mkdtempSync(join(tmpdir(), "ci-sortie-")), "suite.txt");
+  /* Forward slashes and quotes: on a Windows runner the bench path carries backslashes, which
+     an unquoted `sh` word would eat one by one. */
+  const suiteTxt = join(mkdtempSync(join(tmpdir(), "ci-sortie-")), "suite.txt").replaceAll("\\", "/");
   const script = corps.join("\n")
-    .replace(/^\s*npm test .*$/m, `cat "$1" > ${suiteTxt}`)
-    .replaceAll("/tmp/suite.txt", suiteTxt)
-    .replaceAll(".github/cas-ignores-attendus.txt", '"$2"');
+    .replace(/^\s*npm test .*$/m, () => `cat "$1" > "${suiteTxt}"`)
+    .replaceAll("/tmp/suite.txt", `"${suiteTxt}"`)
+    /*
+     * EVERY SYSTEM'S LIST, NOT ONLY LINUX'S. Since the matrix has three systems the step picks
+     * its expected-skips file from RUNNER_OS, and the runner exports that variable to this very
+     * process. First run of the matrix, 2026-09-29: on the macOS runner the rewritten step kept
+     * the REAL macOS list, and a clean fixture was refused against three expected skips. So
+     * whichever branch the case statement takes, the list is the fixture's.
+     */
+    .replace(/\.github\/cas-ignores-attendus(?:-[a-z]+)?\.txt/g, () => '"$2"');
   assert.match(script, /cat "\$1"/, "la ligne qui lance la suite n'a pas été trouvée dans le pas.");
 
   const tmp = mkdtempSync(join(tmpdir(), "ci-skip-"));
@@ -1467,6 +1476,16 @@ test("aucune source ne tape une devise à la main", () => {
      * citation.
      */
     ["regulations.ts", "seuils cités d'un texte de loi, en dollars par la loi et non par nos hypothèses"],
+    /*
+     * THE CURRENCY KIND OF THE TYPED GRADER IS A TABLE OF CURRENCIES.
+     *
+     * `grader.ts` resolves what a document says ("$", "euros", "GBP") to an ISO 4217 code so
+     * that two spellings of the same currency grade equal. Those symbols and codes are the
+     * DATA of that comparison, never a rendered amount: nothing in the file prints a price.
+     * Exempting it is the same reason as the units table: it is a source of currencies, not
+     * a consumer that should have read one.
+     */
+    ["grader.ts", "the typed grader's table of currency symbols, names and codes: the data of the currency kind, nothing rendered"],
   ]);
 
   const fautes: string[] = [];
@@ -1568,7 +1587,8 @@ test("les crochets qui refusent sont versionnés, et installés", () => {
     if (!existsSync(p)) { manquants.push(`${nom} (absent)`); continue; }
     if (!motif.test(readFileSync(p, "utf8"))) manquants.push(`${nom} (ne porte plus son refus)`);
     /* Un crochet non exécutable est ignoré par git EN SILENCE — le pire des trois états. */
-    if ((statSync(p).mode & 0o111) === 0) manquants.push(`${nom} (non exécutable : git l'ignore sans rien dire)`);
+    /* NTFS carries no mode bits, and git for Windows runs a hook through sh whatever they read. */
+    if (process.platform !== "win32" && (statSync(p).mode & 0o111) === 0) manquants.push(`${nom} (non exécutable : git l'ignore sans rien dire)`);
   }
   assert.deepEqual(manquants, [],
     `crochet(s) inutilisable(s) : ${manquants.join(", ")}.\n`
@@ -1678,7 +1698,15 @@ test("aucune dépendance n'exécute de code à l'installation, et toutes sont é
       + "l'installation de ce projet, et elle doit être dite à un acheteur, pas cachée. "
       + "`npm ci --ignore-scripts`, que le README donne maintenant comme installation par "
       + "défaut, la ferme : ce dépôt ne configure aucun fournisseur CUDA, donc le drapeau ne "
-      + "lui coûte rien qu'il demande",
+      + "lui coûte rien qu'il demande. Dependabot, 2026-09-29: adm-zip carries an advisory "
+      + "WITHOUT an upstream fix, extraction following a symlink in the destination. The only "
+      + "extraction in this tree is this script's, into a directory it creates under the "
+      + "system temp directory, named with the time (`mkdirSync`, then `extractEntryTo` into "
+      + "`extracted/`), from an archive fetched over HTTPS from api.nuget.org; a predictable "
+      + "name is the local precondition that advisory needs, and it never runs under "
+      + "`npm ci --ignore-scripts`; this "
+      + "repository's own code extracts no archive (`src/poids.ts` copies files after checking "
+      + "a manifest). No reachable surface, said here and in SECURITE.md",
   };
   const inconnus = surLeDisque.filter((k) => !(k in DECLARES));
   assert.deepEqual(inconnus, [],
@@ -1800,7 +1828,10 @@ test("adm-zip reste au-dessus du seuil de son avis, et l'override qui l'y tient 
     + "  l'override de package.json ET ce cas — mais vérifiez-le avant de conclure, parce qu'un\n"
     + "  zéro obtenu sur une liste vide ressemble exactement à un zéro obtenu sur une garde.");
 
-  const SEUIL = [0, 6, 0];   // GHSA-xcpc-8h2w-3j85 : corrigé à partir de 0.6.0
+  /* Dependabot, 2026-09-29: a second high advisory on adm-zip, an uncontrolled allocation from
+     the declared uncompressed size, fixed in 0.6.1; the threshold follows, and the override is
+     the exact fixed version, as cascade-screening pinned it, so npm cannot resolve below it. */
+  const SEUIL = [0, 6, 1];   // GHSA-xcpc-8h2w-3j85 : corrigé à partir de 0.6.0 ; l'allocation non bornée : 0.6.1
   const trop_vieilles = resolutions.filter(({ version }) => {
     /* La CONVERSION AVANT LA COMPARAISON : une version illisible ne doit pas atterrir du
        côté rassurant du seuil. Tout ce qui ne se lit pas est traité comme trop vieux. */
@@ -1814,11 +1845,12 @@ test("adm-zip reste au-dessus du seuil de son avis, et l'override qui l'y tient 
   });
 
   assert.deepEqual(trop_vieilles, [],
-    `adm-zip résolu sous 0.6.0 : ${trop_vieilles.map((r) => `${r.chemin}@${r.version}`).join(", ")}\n`
-    + "  GHSA-xcpc-8h2w-3j85 (high) — une archive fabriquée déclenche une allocation de 4 Go.\n"
+    `adm-zip résolu sous 0.6.1 : ${trop_vieilles.map((r) => `${r.chemin}@${r.version}`).join(", ")}\n`
+    + "  GHSA-xcpc-8h2w-3j85 (high) : une archive fabriquée déclenche une allocation de 4 Go ;\n"
+    + "  et sous 0.6.1, l'allocation non bornée depuis la taille déclarée (high, 2026-09-29).\n"
     + "  Ce décompacteur tourne dans le postinstall d'onnxruntime-node, actif sur le coureur\n"
     + "  Linux : il n'est pas hors de portée.\n"
-    + "  → rétablissez `\"adm-zip\": \"^0.6.0\"` dans `overrides` de package.json, puis\n"
+    + "  → rétablissez `\"adm-zip\": \"0.6.1\"` dans `overrides` de package.json, puis\n"
     + "    `npm install`. NE désactivez PAS l'audit et n'inscrivez PAS d'exception : une\n"
     + "    vulnérabilité rendue invisible est pire que celle qu'on a vue.");
 
@@ -1827,7 +1859,7 @@ test("adm-zip reste au-dessus du seuil de son avis, et l'override qui l'y tient 
   const paquet = JSON.parse(readFileSync(join(racine, "package.json"), "utf8")) as {
     overrides?: Record<string, string>;
   };
-  assert.equal(paquet.overrides?.["adm-zip"], "^0.6.0",
+  assert.equal(paquet.overrides?.["adm-zip"], "0.6.1",
     "le verrou est bon mais l'override a disparu de package.json : c'est le hasard de la\n"
     + "  résolution qui tient la correction, et il ne tiendra pas au prochain `npm install`.");
 });

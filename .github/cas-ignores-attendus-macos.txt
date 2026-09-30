@@ -1,0 +1,15 @@
+# The cases the suite EXPECTS to skip on the macOS runner of `verifier`, one per line, exact
+# name. Same gate as `.github/cas-ignores-attendus.txt` (which is the Linux list): a skipped
+# case not listed here fails the build (a control just went dark), and a listed case that now
+# runs fails it too (the list lies; tighten it, never widen it without a written reason).
+#
+# What differs from Linux, and why:
+#
+# - swiftc and the Vision framework EXIST on macOS, so the five image-reader cases that Linux
+#   skips are expected to RUN here. They are deliberately absent from this list.
+# - `identite` and the other repositories of the Cascade family are development neighbours;
+#   they live on no public runner, on any system. The three cases that compare shared and
+#   family layers skip here as on Linux, and say so.
+les couches partagées sont bien celles d'identite
+la couche de famille est identique dans les dépôts présents
+les couches partagées sont bien celles d'identite (dépôt exclu : recopie à la main)

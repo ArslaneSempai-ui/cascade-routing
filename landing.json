@@ -1424,7 +1424,7 @@
   },
   "readingStage": {
     "provenance": "measured",
-    "measuredAt": "2026-08-24T00:49:18.420Z",
+    "measuredAt": "2026-09-29T21:47:56.975Z",
     "documents": 120,
     "linesPerDocument": {
       "moyenne": 1.9583333333333333,
@@ -1473,10 +1473,10 @@
           "n": 600
         },
         "fromImage": {
-          "rate": 0.795,
+          "rate": 0.8,
           "n": 600
         },
-        "gapPointsFloor": 1.0000000000000009,
+        "gapPointsFloor": 0.5000000000000004,
         "beyondNoise": false,
         "floorBecause": "images rendues et non photographiées, documents courts"
       }

@@ -1,0 +1,32 @@
+{
+  "_synthetic": "Hand-written against google.cloud.documentai.v1.Document in its JSON form. No real document, no real company.",
+  "mimeType": "application/pdf",
+  "text": "SAMPLE VENDOR LLC (synthetic)\nInvoice Number: INV-2026-0042\nInvoice Date: September 1, 2026\nTotal Amount: $1,234.50\nLine 1 Widget 100.00\n",
+  "pages": [
+    {
+      "pageNumber": 1,
+      "formFields": [
+        { "fieldName": { "textAnchor": { "textSegments": [ { "startIndex": "30", "endIndex": "46" } ], "content": "Invoice Number: " } },
+          "fieldValue": { "textAnchor": { "textSegments": [ { "startIndex": "46", "endIndex": "59" } ], "content": "INV-2026-0042" } }, "valueType": "unfilled_checkbox" },
+        { "fieldName": { "textAnchor": { "textSegments": [ { "startIndex": "60", "endIndex": "74" } ] } },
+          "fieldValue": { "textAnchor": { "textSegments": [ { "startIndex": "74", "endIndex": "91" } ] } } },
+        { "fieldName": { "textAnchor": { "textSegments": [ { "startIndex": "92", "endIndex": "106" } ] } },
+          "fieldValue": { "textAnchor": { "textSegments": [ { "startIndex": "106", "endIndex": "115" } ] } } },
+        { "fieldName": { "textAnchor": { "textSegments": [ { "endIndex": "29" } ] } },
+          "fieldValue": { "textAnchor": { "textSegments": [] } } }
+      ]
+    }
+  ],
+  "entities": [
+    { "type": "supplier_name", "mentionText": "SAMPLE VENDOR LLC (synthetic)", "confidence": 0.98, "textAnchor": { "textSegments": [ { "endIndex": "29" } ] } },
+    { "type": "invoice_id", "mentionText": "INV-2026-0042", "confidence": 0.97 },
+    { "type": "invoice_date", "mentionText": "September 1, 2026", "confidence": 0.96, "normalizedValue": { "text": "2026-09-01", "dateValue": { "year": 2026, "month": 9, "day": 1 } } },
+    { "type": "total_amount", "mentionText": "$1,234.50", "confidence": 0.95, "normalizedValue": { "text": "1234.50 USD", "moneyValue": { "currencyCode": "USD", "units": "1234", "nanos": 500000000 } } },
+    { "type": "line_item", "mentionText": "Line 1 Widget 100.00", "confidence": 0.9,
+      "properties": [
+        { "type": "line_item/description", "mentionText": "Widget", "confidence": 0.9 },
+        { "type": "line_item/amount", "mentionText": "100.00", "confidence": 0.9 }
+      ] },
+    { "type": "due_date", "confidence": 0.3, "textAnchor": { "textSegments": [ { "startIndex": "60", "endIndex": "60" } ] } }
+  ]
+}

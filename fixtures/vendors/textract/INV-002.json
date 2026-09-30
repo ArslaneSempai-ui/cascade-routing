@@ -1,0 +1,26 @@
+[
+  {
+    "_synthetic": "Page one of a paginated GetDocumentAnalysis result, hand-written against the schema. No real document.",
+    "DocumentMetadata": { "Pages": 2 },
+    "NextToken": "synthetic-token",
+    "Blocks": [
+      { "BlockType": "PAGE", "Id": "page-1", "Page": 1 },
+      { "BlockType": "WORD", "Id": "w-1", "Text": "Total", "Page": 1 },
+      { "BlockType": "WORD", "Id": "w-2", "Text": "Amount", "Page": 1 },
+      { "BlockType": "KEY_VALUE_SET", "Id": "kv-key-total", "EntityTypes": ["KEY"], "Page": 1,
+        "Relationships": [ { "Type": "VALUE", "Ids": ["kv-val-total"] }, { "Type": "CHILD", "Ids": ["w-1", "w-2"] } ] }
+    ]
+  },
+  {
+    "DocumentMetadata": { "Pages": 2 },
+    "Blocks": [
+      { "BlockType": "PAGE", "Id": "page-2", "Page": 2 },
+      { "BlockType": "WORD", "Id": "w-3", "Text": "980.00", "Page": 2 },
+      { "BlockType": "KEY_VALUE_SET", "Id": "kv-val-total", "EntityTypes": ["VALUE"], "Page": 2,
+        "Relationships": [ { "Type": "CHILD", "Ids": ["w-3"] } ] },
+      { "BlockType": "QUERY", "Id": "q-1", "Page": 2, "Query": { "Text": "What is the invoice number?", "Alias": "invoice_number" },
+        "Relationships": [ { "Type": "ANSWER", "Ids": ["qr-1"] } ] },
+      { "BlockType": "QUERY_RESULT", "Id": "qr-1", "Text": "INV 2026 0043", "Confidence": 88.0, "Page": 2 }
+    ]
+  }
+]

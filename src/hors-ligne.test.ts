@@ -17,13 +17,14 @@
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync, readFileSync, readdirSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync, readFileSync, readdirSync, existsSync, linkSync, copyFileSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { spawnSync } from "node:child_process";
-import { env as envHF } from "@huggingface/transformers";
-import { armerHorsLigne, POIDS_MODELES, MODELES_EXTRACTION } from "./tiers.ts";
+import { spawn, spawnSync } from "node:child_process";
+import { env as envHF, AutoConfig } from "@huggingface/transformers";
+import { armerHorsLigne, POIDS_MODELES, MODELES_EXTRACTION, racineDesPoids, poidsEnCache, diagnosticDesPoids } from "./tiers.ts";
+import { poserSousMain, FICHIERS_SOUS_MAIN } from "./poids.ts";
 
 const M = POIDS_MODELES.small;
 
@@ -206,6 +207,213 @@ test("le tokeniseur épinglé est posé sous la clé « main », une fois, et ja
     rmSync(nu, { recursive: true, force: true });
   } finally {
     rmSync(garni, { recursive: true, force: true });
+  }
+});
+
+/*
+ * THE FIRST LOAD ON A FRESHLY IMPORTED CACHE (2026-09-29).
+ *
+ * On a Mac, after `npm ci` had wiped node_modules and `npm run poids -- --import` had put the
+ * weights back (16 files, verified), the first full `npm test` failed once, in the end-to-end
+ * audit case: measure:yours exited 1 with "`local_files_only=true` or
+ * `env.allowRemoteModels=false` and file was not found locally at
+ * .../models/Xenova/distilbert-base-cased-distilled-squad/config.json". The same file passed
+ * alone afterwards, two more full runs passed, and the integration had never seen it.
+ *
+ * Read in transformers.js 4.2.0: `pipeline(task, model, { revision })` first asks the model
+ * registry which files to expect, `get_pipeline_files(task, model, { device, dtype })`,
+ * without the revision; that goes through `get_model_files` to `get_config`, whose revision
+ * defaults to `main`, so the cache key looked up is `<repo>/config.json`, not
+ * `<repo>/<revision>/config.json`. An import carries the pinned folders only; that key is
+ * missing; offline the miss is fatal. It failed only once because a sibling test process was
+ * loading the same models with the network open at the same time: it downloaded
+ * `main/config.json` and stored it under that very key, and the offline process failed only
+ * because it looked first. The integration primes its cache online, where the library writes
+ * those keys itself, so it never looked.
+ *
+ * The cases below hold the repair, which lives in `poids.ts` (`poserSousMain`): the first
+ * reproduces the failure without weights or network, on a fake cache, through the exact call
+ * the registry makes; the next two hold the placement itself and the loader's own path to it;
+ * the fourth runs several processes posing at the same time on one fresh cache and requires
+ * complete files and no leftovers; the last, with the real weights, builds a fresh cache the
+ * way the old import left it (pinned folders, the tokenizer configuration under `main`,
+ * nothing else) and loads the extractors offline against it: red before, green after.
+ */
+function cacheImporte(): string {
+  /* As the old import left a cache: the pinned folders, valid JSON configurations, and the
+     tokenizer configuration under `main`; no `config.json` under `main`. */
+  const base = mkdtempSync(join(tmpdir(), "cascade-cache-importe-"));
+  for (const cle of MODELES_EXTRACTION) {
+    const m = POIDS_MODELES[cle];
+    const ecrire = (rel: string, contenu: string) => {
+      const p = join(base, m.depot, rel);
+      mkdirSync(dirname(p), { recursive: true });
+      writeFileSync(p, contenu);
+    };
+    ecrire(join(m.revision, "config.json"), JSON.stringify({ model_type: cle === "small" ? "distilbert" : "roberta", _synthetic: true, pad: "x".repeat(200_000) }));
+    ecrire(join(m.revision, "tokenizer_config.json"), JSON.stringify({ model: m.depot, _synthetic: true }));
+    ecrire(join(m.revision, "tokenizer.json"), "{}");
+    ecrire(join(m.revision, "onnx", "model.onnx"), "des octets qui font office de modèle");
+    ecrire("tokenizer_config.json", JSON.stringify({ model: m.depot, _synthetic: true }));
+  }
+  return base;
+}
+
+const sansProvisoire = (dossier: string): string[] => readdirSync(dossier).filter((n) => n.includes(".tmp."));
+
+test("2026-09-29: the registry's lookup of config.json at revision main fails offline on a freshly imported cache, and passes once the pinned file is posed under that key", async () => {
+  const base = cacheImporte();
+  const avant = { cacheDir: envHF.cacheDir, allowRemoteModels: envHF.allowRemoteModels };
+  try {
+    envHF.cacheDir = base;
+    envHF.allowRemoteModels = false;
+    const depot = POIDS_MODELES.small.depot;
+    /* The registry's call, verbatim: no revision, so `main`. Red before the repair. */
+    await assert.rejects(() => AutoConfig.from_pretrained(depot, {}),
+      (e: Error) => /file was not found locally at .*config\.json/.test(e.message) && !/tokenizer/.test(e.message),
+      "the failure the founder saw, on the model configuration at revision main");
+    /* The pinned lookup, as the loader itself makes it, is fine: the file is there. */
+    const epingle = await AutoConfig.from_pretrained(depot, { revision: POIDS_MODELES.small.revision });
+    assert.equal(epingle.model_type, "distilbert");
+    /* The repair, then the same call. */
+    assert.deepEqual(poserSousMain(["small"], base), [`${depot}/config.json`], "the tokenizer copy was already there; the configuration is what was missing");
+    const sousMain = await AutoConfig.from_pretrained(depot, {});
+    assert.equal(sousMain.model_type, "distilbert");
+    assert.equal(readFileSync(join(base, depot, "config.json"), "utf8"), readFileSync(join(base, depot, POIDS_MODELES.small.revision, "config.json"), "utf8"));
+  } finally {
+    envHF.cacheDir = avant.cacheDir;
+    envHF.allowRemoteModels = avant.allowRemoteModels;
+    rmSync(base, { recursive: true, force: true });
+  }
+});
+
+test("2026-09-29: the import poses both files the library asks for at main, byte for byte, once, and never invented", () => {
+  const garni = cacheGarni();
+  try {
+    const poses = poserSousMain(MODELES_EXTRACTION, garni);
+    const attendus = MODELES_EXTRACTION.flatMap((c) => FICHIERS_SOUS_MAIN.map((f) => `${POIDS_MODELES[c].depot}/${f}`));
+    assert.deepEqual(poses.sort(), attendus.sort(), "the two extraction repositories must receive their two copies each");
+    for (const cle of MODELES_EXTRACTION) {
+      const m = POIDS_MODELES[cle];
+      for (const f of FICHIERS_SOUS_MAIN) {
+        assert.equal(readFileSync(join(garni, m.depot, f), "utf8"), readFileSync(join(garni, m.depot, m.revision, f), "utf8"),
+          "the copy under main must be the pinned file, byte for byte");
+      }
+      assert.deepEqual(sansProvisoire(join(garni, m.depot)), [], "a temporary file was left behind");
+    }
+    assert.deepEqual(poserSousMain(MODELES_EXTRACTION, garni), [], "already posed: nothing to do again");
+    /* Without a pinned file, nothing is posed: no configuration is made up. */
+    const nu = mkdtempSync(join(tmpdir(), "cascade-hors-ligne-nu-"));
+    assert.deepEqual(poserSousMain(MODELES_EXTRACTION, nu), []);
+    assert.equal(readdirSync(nu).length, 0, "a cache without the pinned revision stays empty");
+    rmSync(nu, { recursive: true, force: true });
+  } finally {
+    rmSync(garni, { recursive: true, force: true });
+  }
+});
+
+test("2026-09-29: before the network is refused, the loader's own path poses the configuration under main", async () => {
+  /* `chargerAvecFilet` calls `armerHorsLigne`, which calls `exigerPoidsSurPlace`: the last call
+     before `allowRemoteModels = false`. A cache as the old import left it must come out of it
+     with `config.json` under `main`, or the first offline load asks the network for it. */
+  const base = cacheImporte();
+  try {
+    await avecEtatRendu(async () => {
+      process.env.CASCADE_OFFLINE = "1";
+      envHF.allowRemoteModels = true;
+      assert.equal(await armerHorsLigne(MODELES_EXTRACTION, base), true);
+      assert.equal(envHF.allowRemoteModels, false);
+    });
+    for (const cle of MODELES_EXTRACTION) {
+      const m = POIDS_MODELES[cle];
+      assert.ok(existsSync(join(base, m.depot, "config.json")), `${m.depot}/config.json was not posed before the network was refused`);
+      assert.equal(readFileSync(join(base, m.depot, "config.json"), "utf8"), readFileSync(join(base, m.depot, m.revision, "config.json"), "utf8"));
+      assert.deepEqual(sansProvisoire(join(base, m.depot)), []);
+    }
+  } finally {
+    rmSync(base, { recursive: true, force: true });
+  }
+});
+
+test("2026-09-29: several processes posing at the same time on one fresh cache all end with complete files, and none leaves a temporary file", async () => {
+  const base = cacheImporte();
+  try {
+    const poids = new URL("./poids.ts", import.meta.url).href;
+    const programme = `const p = await import(${JSON.stringify(poids)});\n`
+      + `const t = await import(${JSON.stringify(new URL("./tiers.ts", import.meta.url).href)});\n`
+      + `const { readFileSync } = await import("node:fs");\n`
+      + `const { join } = await import("node:path");\n`
+      + `const base = process.argv[1];\n`
+      + `for (let i = 0; i < 20; i++) {\n`
+      + `  p.poserSousMain(t.MODELES_EXTRACTION, base);\n`
+      + `  for (const cle of t.MODELES_EXTRACTION) for (const f of p.FICHIERS_SOUS_MAIN) {\n`
+      + `    const lu = JSON.parse(readFileSync(join(base, t.POIDS_MODELES[cle].depot, f), "utf8"));\n`
+      + `    if (lu._synthetic !== true) { console.error("partial or foreign file: " + f); process.exit(3); }\n`
+      + `  }\n`
+      + `}\n`;
+    /* Four at once, not one after another: the invariant is the one a parallel run needs. */
+    const enfants = Array.from({ length: 4 }, () => new Promise<{ code: number | null; sortie: string }>((resoudre) => {
+      const e = spawn(process.execPath, ["--input-type=module", "-e", programme, base], { env: process.env, stdio: ["ignore", "pipe", "pipe"] });
+      let sortie = "";
+      e.stdout.on("data", (d) => { sortie += d; });
+      e.stderr.on("data", (d) => { sortie += d; });
+      e.on("close", (code) => resoudre({ code, sortie }));
+    }));
+    for (const { code, sortie } of await Promise.all(enfants)) assert.equal(code, 0, sortie);
+    for (const cle of MODELES_EXTRACTION) {
+      const m = POIDS_MODELES[cle];
+      assert.deepEqual(sansProvisoire(join(base, m.depot)), [], "a temporary file was left behind");
+      for (const f of FICHIERS_SOUS_MAIN) {
+        assert.equal(readFileSync(join(base, m.depot, f), "utf8"), readFileSync(join(base, m.depot, m.revision, f), "utf8"));
+      }
+    }
+  } finally {
+    rmSync(base, { recursive: true, force: true });
+  }
+});
+
+test("2026-09-29: the extractors load offline on a cache exactly as the old import left it, in a process of their own", { timeout: 900_000 }, (t) => {
+  if (!poidsEnCache()) return t.skip(diagnosticDesPoids() ?? "poids d'encodeur inutilisables.");
+  const reel = racineDesPoids();
+  /* Beside the real cache, so that hard links work; a copy when the file system refuses them. */
+  const base = mkdtempSync(join(dirname(reel), "cache-fraiche-"));
+  const relier = (de: string, vers: string) => {
+    mkdirSync(dirname(vers), { recursive: true });
+    try { linkSync(de, vers); } catch { copyFileSync(de, vers); }
+  };
+  const descendre = (d: string, rel: string): void => {
+    for (const e of readdirSync(d, { withFileTypes: true })) {
+      const p = join(d, e.name), r = join(rel, e.name);
+      if (e.isDirectory()) descendre(p, r); else if (e.isFile()) relier(p, join(base, r));
+    }
+  };
+  try {
+    for (const cle of MODELES_EXTRACTION) {
+      const m = POIDS_MODELES[cle];
+      descendre(join(reel, m.depot, m.revision), join(m.depot, m.revision));
+      /* What the old import posed under `main`: the tokenizer configuration, and nothing else. */
+      copyFileSync(join(reel, m.depot, m.revision, "tokenizer_config.json"), join(base, m.depot, "tokenizer_config.json"));
+      assert.ok(!existsSync(join(base, m.depot, "config.json")), "the fresh cache must not carry config.json under main before the load");
+    }
+    /* The child points the library at the fresh cache, the way a moved cache would, and loads
+       through the loader itself: `loadExtractors`, under the real flag. */
+    const tiers = new URL("./tiers.ts", import.meta.url).href;
+    const programme = `const { env } = await import("@huggingface/transformers");\n`
+      + `env.cacheDir = process.argv[1];\n`
+      + `const m = await import(${JSON.stringify(tiers)});\n`
+      + `await m.loadExtractors();\n`
+      + `console.log("loaded");\n`;
+    const r = spawnSync(process.execPath, ["--input-type=module", "-e", programme, base],
+      { encoding: "utf8", timeout: 840_000, env: { ...process.env, CASCADE_OFFLINE: "1" } });
+    assert.equal(r.status, 0, `the offline load on a fresh cache failed:\n${(r.stderr + r.stdout).slice(-1500)}`);
+    assert.doesNotMatch(r.stderr + r.stdout, /file was not found locally/);
+    for (const cle of MODELES_EXTRACTION) {
+      const m = POIDS_MODELES[cle];
+      assert.ok(existsSync(join(base, m.depot, "config.json")), "the loader posed the configuration under main before loading");
+      assert.equal(statSync(join(base, m.depot, "config.json")).size, statSync(join(reel, m.depot, m.revision, "config.json")).size);
+    }
+  } finally {
+    rmSync(base, { recursive: true, force: true });
   }
 });
 

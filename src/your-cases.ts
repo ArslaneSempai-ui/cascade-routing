@@ -39,7 +39,7 @@ import { loadExtractors, loadClassifiers, loadGeneratifs, extract, correct, clas
 import { poidsAbsents, motifDEcart, CODE_ECART_TEMOIN, exigerPoidsSurPlace } from "./poids.ts";
 import { TIERS, ENCODEURS, GENERATIFS } from "./paliers.ts";
 import { rate, writeRate, cellulesDeTaux, CONFIANCE, ENOUGH, type Rate } from "./interval.ts";
-import { apparier, juger, phrase } from "./comparaison-appariee.ts";
+import { apparier, juger, phrase, type Bits } from "./comparaison-appariee.ts";
 import { createHash } from "node:crypto";
 import { basename } from "node:path";
 import { empreinteDuReleve } from "./measure.ts";
@@ -47,6 +47,10 @@ import { etatDuDepot } from "./arbre-propre.ts";
 import { scoreDeDoute, doutesVides, compterDoute, signauxApplicables, type Doutes } from "./doute.ts";
 import { evaluerRegles, direLesRefus, type ReglesEvaluees } from "./regles-bornees.ts";
 import { table } from "./figures.ts";
+import { splitHeader, graded, outcome as outcomeTyped, canonical, GRADER, type FieldKind } from "./grader.ts";
+import { audit as calculerAudit, auditLines, priceOf, priceWords, readListPrices, PRICE_KEYS, type Audit, type SourcePrice, type ListPrices } from "./audit.ts";
+import { readJsonFile } from "./json-file.ts";
+import { ASSUMPTIONS, symboleDe, UNITS } from "./assumptions.ts";
 
 import type { TierName } from "./paliers.ts";
 
@@ -95,6 +99,8 @@ export type Lecture = {
    * sinon un fichier de dix mille lignes se lire comme trois.
    */
   demesurees: { ligne: number; octets: number; ouvertureLigne: number }[];
+  /** The kind each field declared in its header (`total:amount`); absent means the default. */
+  kinds: Record<string, FieldKind>;
   lecture: { colTexte: number; colId: number; noms: string[] };
 };
 
@@ -157,7 +163,7 @@ export function lireEchantillon(brut: string | undefined): number | undefined {
   if (brut.trim() === "" || !Number.isFinite(n) || !Number.isInteger(n) || n < 1) {
     throw new Error(`--sample=${brut} is not a whole number of cases (1 or more).\n`
       + `  Left as it was, this flag would have been ignored without a word and the whole\n`
-      + `  corpus measured — a figure answering a different question than the one you asked.`);
+      + `  corpus measured: a figure answering a different question than the one you asked.`);
   }
   return n;
 }
@@ -221,6 +227,10 @@ export type PresenceChamp = {
   /** Cas où le client n'a rien mis : il n'y a pas de vérité à trouver. */
   vides: number;
   total: number;
+  /** F7: the kind the field was declared with, and the cases found only as that kind reads
+   *  them ("60.000" for "60000"). Absent from a count made before kinds existed. */
+  genre?: FieldKind;
+  parLeGenre?: number;
 };
 
 /**
@@ -237,20 +247,89 @@ export type PresenceChamp = {
  * cette comparaison littérale ne voit pas. Un compte qui sous-estime se nomme, sinon il
  * accuse un corpus sain.
  */
-export function presenceDeLaVerite(cas: Cas[], champs: string[]): PresenceChamp[] {
+/**
+ * AN EMPTY EXPECTED CELL IS UNKNOWN, NOT "EXPECTED BLANK". Measured on the 100 CORD receipts
+ * (2026-09-29): 35 have no subtotal label and 60 no tax label. Graded against an empty truth,
+ * a returned value scored wrong and silence scored blank, so a vendor's subtotal read 58 %
+ * over 100 cases where it was about 89 % over the 65 labelled ones, and every chain on a
+ * sparsely labelled field was dragged down the same way. A case without an expected value is
+ * not graded on that field, by any source, and is counted apart; `grade` applies the same
+ * rule, so the two sides of a comparison stand on the same cases. A document that truly has
+ * no such line has no marker yet: it stays ungraded, and the count says so.
+ */
+export function aUneVerite(c: Cas, champ: string): boolean {
+  return (c.truth[champ] ?? "").trim().length > 0;
+}
+
+/** Per field, how many cases have no expected value. */
+export function sansVerite(cas: readonly Cas[], champs: readonly string[]): Record<string, number> {
+  return Object.fromEntries(champs.map((champ) => [champ, cas.filter((c) => !aUneVerite(c, champ)).length]));
+}
+
+/** The kinds whose presence check stays literal: they have no canonical form to compare. */
+export function genreLitteral(kind: FieldKind | undefined): boolean {
+  return kind === undefined || kind === "exact" || kind === "free-text";
+}
+
+/**
+ * F7 (2026-09-29): whether the expected value is in the text AS ITS KIND READS IT. The
+ * literal check looked for the cell as written; on CORD the truth is canonical ("60000")
+ * and the receipt prints "60.000", so it reported the total found in 7 of 95 cases, the
+ * subtotal in 5 of 65, the tax in 3 of 40, while the amounts were there (84, 64 and 38), and
+ * a reader took a sound corpus for a broken one. The truth and every run of the text that
+ * could carry the value are put through the kind's own parser, and the canonical values are
+ * compared; `exact` and `free-text` have no canonical form and stay literal.
+ *
+ *   amount, amount-grouped   a token that carries a digit, alone or with the token before
+ *                            it (a currency mark, "Rp", a sign), so "TOTAL 60.000" and
+ *                            "Rp 91,000" read;
+ *   date, date-dmy           one to three tokens starting at a token with a digit or a month,
+ *                            so "3 May 1990", "May 3, 1990" and "03/05/1990" read;
+ *   currency                 one or two tokens, and each currency symbol on its own, so
+ *                            "USD", "$12.50" and "mexican pesos" read;
+ *   id                       the text and the value stripped to their letters and digits,
+ *                            upper-cased, so "FR 1856 M" holds "FR-1856-M".
+ * A window is tried as written and shorn of the punctuation that may end it.
+ */
+export function trouveSousLeGenre(texte: string, attendu: string, kind: FieldKind): boolean {
+  if (genreLitteral(kind)) return false;
+  const voulu = canonical(attendu, kind);
+  if (voulu === null) return false;
+  if (kind === "id") return (canonical(texte, "id") ?? "").includes(voulu);
+  const lit = (run: string): boolean => canonical(run, kind) === voulu
+    || canonical(run.replace(/[.,;:!?"'\u201d]+$/, "").replace(/^["'\u201c]+/, ""), kind) === voulu;
+  const jetons = texte.split(/[\s:;=]+/).filter((t) => t.length > 0);
+  const fenetres = (depart: (t: string) => boolean, largeurs: number[]): boolean =>
+    jetons.some((t, i) => depart(t) && largeurs.some((l) => i + l <= jetons.length && lit(jetons.slice(i, i + l).join(" "))));
+  switch (kind) {
+    case "amount": case "amount-grouped":
+      return fenetres((t) => /\d/.test(t), [1, 2]) || jetons.some((t, i) => i > 0 && /\d/.test(t) && lit(`${jetons[i - 1]} ${t}`));
+    case "date": case "date-dmy":
+      return fenetres((t) => /\d|^[A-Za-z]+\.?$/.test(t), [1, 2, 3]);
+    case "currency":
+      return fenetres(() => true, [1, 2]) || [...texte.matchAll(/US\$|CA\$|AU\$|MX\$|C\$|A\$|[$\u20ac\u00a3\u00a5\u20b9\u20a9\u20bd\u20ba]/g)].some((m) => lit(m[0]));
+    default:
+      return false;
+  }
+}
+
+export function presenceDeLaVerite(cas: Cas[], champs: string[], kinds: Record<string, FieldKind> = {}): PresenceChamp[] {
   const enMots = (x: string) => normaliserReponse(x).split(/[^\p{L}\p{N}]+/u).filter(Boolean);
   return champs.map((champ) => {
-    let litteral = 0, reordonne = 0, vides = 0;
+    const genre: FieldKind = kinds[champ] ?? "exact";
+    let litteral = 0, reordonne = 0, vides = 0, parLeGenre = 0;
     for (const c of cas) {
+      if (!aUneVerite(c, champ)) { vides++; continue; }
       const attendu = normaliserReponse(c.truth[champ] ?? "");
-      if (attendu.length === 0) { vides++; continue; }
       const texte = normaliserReponse(c.text);
       if (texte.includes(attendu)) { litteral++; continue; }
+      /* F7: written another way the kind reads, "60.000" for "60000" under amount-grouped. */
+      if (trouveSousLeGenre(c.text, c.truth[champ] ?? "", genre)) { parLeGenre++; continue; }
       const presents = new Set(enMots(texte));
       const mots = enMots(attendu);
       if (mots.length > 0 && mots.every((m) => presents.has(m))) reordonne++;
     }
-    return { champ, litteral, reordonne, vides, total: cas.length };
+    return { champ, litteral, reordonne, vides, total: cas.length, genre, parLeGenre };
   });
 }
 
@@ -264,30 +343,45 @@ export function presenceDeLaVerite(cas: Cas[], champs: string[]): PresenceChamp[
  */
 export function direLaPresence(p: PresenceChamp[]): string | undefined {
   const renseignes = (x: PresenceChamp) => x.total - x.vides;
+  const trouves = (x: PresenceChamp) => x.litteral + x.reordonne + (x.parLeGenre ?? 0);
   const maigres = p.filter((x) => renseignes(x) > 0
-    && (x.litteral + x.reordonne) * 2 < renseignes(x));
+    && trouves(x) * 2 < renseignes(x));
   const desordonnes = p.filter((x) => renseignes(x) > 0
     && x.reordonne * 2 >= renseignes(x));
-  if (maigres.length === 0 && desordonnes.length === 0) return undefined;
+  const sansValeur = p.filter((x) => x.vides > 0);
+  if (maigres.length === 0 && desordonnes.length === 0 && sansValeur.length === 0) return undefined;
 
   const blocs: string[] = [];
+  if (sansValeur.length) {
+    blocs.push(`⚠ ${sansValeur.length} field(s) with cases that have NO expected value:\n`
+      + sansValeur.map((x) => `    ${x.champ}: ${x.vides} of ${x.total} case(s)`).join("\n")
+      + `\n  An empty expected cell is unknown, not "expected blank": those cases are not graded on\n`
+      + `  that field, by any tier or chain, and are not in its n. A document that truly has no\n`
+      + `  such line has no marker yet; it stays ungraded.`);
+  }
   if (maigres.length) {
     blocs.push(`⚠ ${maigres.length} field(s) whose expected value is mostly NOT in the text `
       + `you supplied:\n`
-      + maigres.map((x) => `    ${x.champ}: found in ${x.litteral + x.reordonne} of the `
+      + maigres.map((x) => `    ${x.champ}: found in ${trouves(x)} of the `
         + `${renseignes(x)} case(s) that have an expected value`
+        + (genreLitteral(x.genre) ? `` : ` (looked for as ${x.genre} reads it)`)
         + (x.vides > 0 ? `, and ${x.vides} case(s) have none at all` : ``)).join("\n")
       + `\n  No tier can extract what is not there; the rate below would read as a failed\n`
-      + `  extraction and would in fact be measuring your corpus.\n`
-      + `  This count is a LOWER bound: a value written another way — "3 May 1990" for\n`
-      + `  "1990-05-03" — is present without being found this way.`);
+      + `  extraction and would in fact be measuring your corpus.`
+      /* F7: the lower-bound caveat belongs to the kinds that are still compared literally. */
+      + (maigres.some((x) => genreLitteral(x.genre))
+          ? `\n  For a field without a kind this count is a LOWER bound: a value written another way\n`
+            + `  ("3 May 1990" for "1990-05-03") is present without being found this way; declare\n`
+            + `  the kind in the header (total:amount-grouped, birth:date) and it is looked for as\n`
+            + `  that kind reads it.`
+          : ``));
   }
   if (desordonnes.length) {
     blocs.push(`⚠ ${desordonnes.length} field(s) whose expected value is in the text with its `
       + `words in a different order:\n`
       + desordonnes.map((x) => `    ${x.champ}: ${x.reordonne} of ${renseignes(x)} case(s), `
         + `against ${x.litteral} found as written`).join("\n")
-      + `\n  The value is there, written another way — "SURNAME, Given" against the natural\n`
+      + `\n  The value is there, written another way: "SURNAME, Given" against the natural\n`
       + `  order. That is your convention, and we cannot tell which one is right; but the\n`
       + `  rate below will count these as failed extractions unless you supply the expected\n`
       + `  value in the order your chain produces.`);
@@ -318,11 +412,11 @@ export function direLesDesordres(
     }
   }
   if (lignes.length === 0) return undefined;
-  return `⚠ Same words, different order — a convention disagreement, not a failed `
+  return `⚠ Same words, different order. A convention disagreement, not a failed `
     + `extraction:\n` + lignes.join("\n")
     + `\n  The words found were yours; only the order differs, as in "SURNAME, Given" against\n`
-    + `  the natural order. We cannot tell which order is right — it is your convention —\n`
-    + `  but these cases are not the tier failing to read the document.\n`
+    + `  the natural order. We cannot tell which order is right: it is your convention.\n`
+    + `  These cases are not the tier failing to read the document.\n`
     + `  Supply the expected value in the order your chain produces, or accept both.`;
 }
 
@@ -430,7 +524,7 @@ export function bornerTexte(texte: string): { texte: string; ecarte: number } {
   return { texte: texte.slice(0, PLAFOND_TEXTE), ecarte: texte.length - PLAFOND_TEXTE };
 }
 
-export function lireCsv(texte: string): Lecture {
+export function lireCsv(texte: string, options: { kinds?: boolean } = {}): Lecture {
   const lignes: string[][] = [];
   /* Le VRAI numéro de ligne du fichier, par ligne parsée. Un texte cité sur trois lignes
      décale tous les index : « line 7 » désignait la ligne 9 du fichier, et le client cherchait
@@ -522,7 +616,7 @@ export function lireCsv(texte: string): Lecture {
       `Your file has ${entete?.length ?? 0} column(s). It needs at least two: the input text, and\n`
       + `  one expected answer per field you want measured.\n\n`
       + `  The first row is read as the header. If your file has no header, the first record\n`
-      + `  was consumed as one — add a header row naming the columns.`);
+      + `  was consumed as one. Add a header row naming the columns.`);
   }
   /*
    * DEUX COLONNES DU MÊME NOM DÉCALENT TOUT, EN SILENCE.
@@ -534,17 +628,28 @@ export function lireCsv(texte: string): Lecture {
    * Un doublon d'en-tête n'a aucune lecture raisonnable : on ne peut pas savoir laquelle des
    * deux colonnes le client voulait, et deviner serait pire que refuser.
    */
+  /*
+   * A header cell may declare the KIND of its field: `total:amount`, `closing_date:date`.
+   * The kind is split off before anything else reads the name, so the duplicate check, the
+   * text/id detection and the question derivation all see the clean name. `grader.ts` says
+   * which suffixes are kinds; any other suffix stays part of the name.
+   */
+  /* `kinds: false` reads the header as a version 1 record did, `customer:id` being a name and
+     nothing else, so a baseline sealed before kinds existed still finds its columns (item 33). */
+  const decoupes = entete.map((x) => {
+    const brut = x.trim().replace(/^\uFEFF/, "");
+    return options.kinds === false ? { name: brut, kind: undefined } : splitHeader(brut);
+  });
   const vus = new Map<string, number>();
-  for (const nom of entete) {
-    const propre = nom.trim().replace(/^\uFEFF/, "");
-    vus.set(propre, (vus.get(propre) ?? 0) + 1);
+  for (const d of decoupes) {
+    vus.set(d.name, (vus.get(d.name) ?? 0) + 1);
   }
   const doublons = [...vus.entries()].filter(([, n]) => n > 1).map(([nom]) => nom);
   if (doublons.length > 0) {
     throw new Error(
       `Your header names the same column twice: ${doublons.map((d) => `"${d}"`).join(", ")}.\n\n`
       + `  There is no reasonable reading of that. The columns would shift, and this tool\n`
-      + `  would measure a different field from the one you meant — silently, and still\n`
+      + `  would measure a different field from the one you meant, silently, and still\n`
       + `  report a rate.\n\n`
       + `  Rename one of them, or remove it.`);
   }
@@ -571,7 +676,7 @@ export function lireCsv(texte: string): Lecture {
    * possible et c'est la forme des jeux publics. Trois colonnes ou plus sans `text` sont
    * REFUSÉES : il y a deux lectures et deviner est exactement le défaut.
    */
-  const noms = entete.map((x) => x.trim().replace(/^\uFEFF/, ""));
+  const noms = decoupes.map((d) => d.name);
   const iTexte = noms.findIndex((n) => n.toLowerCase() === "text");
   const iId = noms.findIndex((n) => n.toLowerCase() === "id");
 
@@ -584,7 +689,7 @@ export function lireCsv(texte: string): Lecture {
     colTexte = 0; colId = -1; colChamps = [1];
   } else {
     throw new Error(
-      `Your header names ${noms.map((n) => `"${n}"`).join(", ")} — none of them is "text".\n\n`
+      `Your header names ${noms.map((n) => `"${n}"`).join(", ")}. None of them is "text".\n\n`
       + `  With ${noms.length} columns there are two readings: the first column could be an\n`
       + `  identifier, or it could be the input text. This tool used to guess by counting\n`
       + `  columns, which meant reading your document column as a label without saying so.\n\n`
@@ -593,6 +698,9 @@ export function lireCsv(texte: string): Lecture {
   }
 
   const champs = colChamps.map((i) => noms[i]!);
+  /* Only the fields carry a kind; a kind on `text` or `id` would mean nothing and is dropped. */
+  const kinds: Record<string, FieldKind> = Object.create(null);
+  for (const i of colChamps) { const k = decoupes[i]!.kind; if (k) kinds[noms[i]!] = k; }
 
   /*
    * UNE LIGNE MALFORMÉE EST NOMMÉE ET ÉCARTÉE, PAS INCLUSE.
@@ -668,7 +776,7 @@ export function lireCsv(texte: string): Lecture {
       + `  export, or give each row its own id, and run again. Nothing was measured.`);
   }
 
-  return { champs, cas, ecartees, courtes, demesurees, lecture: { colTexte, colId, noms } };
+  return { champs, cas, ecartees, courtes, demesurees, kinds, lecture: { colTexte, colId, noms } };
 }
 
 /** Des règles fournies par le lecteur, en expressions régulières nommées par champ. */
@@ -700,11 +808,29 @@ export type SortiesFournies = {
   nom: string;
   /** `issues[champ][id du cas]` — le verdict, jamais la valeur. */
   issues: Record<string, Record<string, IssueClient>>;
-  /** Qui a noté, et avec quoi. Sans ça l'exactitude n'est plus mesurée mais crue. */
-  notePar?: { outil?: string; version?: string; correcteur?: string };
+  /** Qui a noté, et avec quoi. Sans ça l'exactitude n'est plus mesurée mais crue. `kinds` is
+      the comparison each field was graded under, as `grade` writes it (item 21). */
+  notePar?: { outil?: string; version?: string; correcteur?: string; kinds?: Record<string, string> };
   /** Déclarés par lui, jamais mesurés ici. */
-  declares?: { coutParMilleDocuments?: number; msParDocument?: number };
+  declares?: DeclaresClient;
+  /** The file the outcomes answer, as `grade` writes it: its name and its sha256 (item 21). */
+  source?: { cases?: string; sha256?: string };
 };
+
+/**
+ * What a client may declare about a chain, and nothing else.
+ *
+ * The two French keys are the original ones and stay. The three English ones came with the
+ * extraction audit: a vendor bills per page (or per document), once, whatever the number of
+ * fields taken from it, so the price is per thousand PAGES and the unit is named. `vendor`
+ * is a key of the default price table, for a chain whose price the client did not declare.
+ */
+export type DeclaresClient = {
+  coutParMilleDocuments?: number; msParDocument?: number;
+  pricePerThousandPages?: number; pricePerThousandDocuments?: number; billing?: "page" | "document"; vendor?: string;
+};
+
+export const DECLARES_NUMERIQUES = ["coutParMilleDocuments", "msParDocument", "pricePerThousandPages", "pricePerThousandDocuments"] as const;
 
 /**
  * La provenance d'un chiffre déclaré par le client, dans le vocabulaire existant.
@@ -760,7 +886,24 @@ export function ecrireMs(ms: number, declaree: boolean): string {
 export const DRAPEAUX_CONNUS: readonly string[] = [
   "cases", "rules", "sorties", "questions", "task", "sample", "margin",
   "llm", "journal", "trace", "show-questions", "yes-run-it",
+  /* The audit's declared inputs: none is measured, each is printed with its provenance. */
+  "pages-per-document", "pages-per-year", "current", "machine-hourly-cost",
 ];
+
+/**
+ * A declared quantity that must be a positive number, read like `--sample`: an unreadable
+ * value refuses instead of falling back to a default the client never declared.
+ */
+export function lirePositif(brut: string | undefined, drapeau: string): number | undefined {
+  if (brut === undefined) return undefined;
+  const n = Number(brut);
+  if (brut.trim() === "" || !Number.isFinite(n) || n <= 0) {
+    throw new Error(`${drapeau}=${brut} is not a positive number.\n`
+      + `  Left as it was, this flag would have been dropped without a word and the audit costed\n`
+      + `  at a default you did not declare.`);
+  }
+  return n;
+}
 
 /**
  * LA MARGE DE NON-INFÉRIORITÉ, EN POINTS, ET SEULEMENT SI LE CLIENT L'A ÉCRITE.
@@ -828,14 +971,17 @@ export function nomDeChaine(brut: unknown, chemin: string): string {
   const MAX = 40;
   if (propre.length > MAX) {
     throw new Error(`${chemin}: \`nom\` is ${propre.length} characters. `
-      + `${MAX} at most — it is a column in the table you are handed.`);
+      + `${MAX} at most: it is a column in the table you are handed.`);
   }
   return propre;
 }
 
 export function chargerSorties(chemin: string): SortiesFournies {
-  const brut = JSON.parse(readFileSync(chemin, "utf8")) as Partial<SortiesFournies>
-    & { valeurs?: unknown };
+  /* Through the shared reader: a byte-order mark reads, UTF-16 is refused by name (item 24). */
+  const brut = readJsonFile(chemin) as Partial<SortiesFournies> & { valeurs?: unknown };
+  if (!brut || typeof brut !== "object" || Array.isArray(brut)) {
+    throw new Error(`${chemin}: expected an object { "nom": …, "issues": { … } }. Nothing was measured.`);
+  }
 
   /*
    * L'ancienne forme est refusée avec sa raison, pas ignorée.
@@ -862,7 +1008,7 @@ export function chargerSorties(chemin: string): SortiesFournies {
     throw new Error(`${chemin}: "nom" is "${brut.nom}", which is one of our tier names.\n`
       + `  The results table indexes rows by name: your pipeline's row would be OVERWRITTEN by\n`
       + `  the "${brut.nom}" tier's measurements, and disappear without a word. Name it after\n`
-      + `  your system — "my-chain", "prod-v2" — and run again. Nothing was measured.`);
+      + `  your system, "my-chain" or "prod-v2", and run again. Nothing was measured.`);
   }
   /*
    * LES CHIFFRES DÉCLARÉS SONT VALIDÉS À L'ENTRÉE, PAS DÉCOUVERTS À L'AFFICHAGE. Un
@@ -871,10 +1017,33 @@ export function chargerSorties(chemin: string): SortiesFournies {
    * duration » : deux lecteurs du même champ, deux verdicts. Audit du 27 août 2026.
    */
   if (brut.declares !== undefined) {
+    if (brut.declares === null || typeof brut.declares !== "object" || Array.isArray(brut.declares)) {
+      throw new Error(`${chemin}: \`declares\` must be an object. Nothing was measured.`);
+    }
     for (const [cle, v] of Object.entries(brut.declares)) {
-      if (v !== undefined && (typeof v !== "number" || !Number.isFinite(v))) {
-        throw new Error(`${chemin}: declares.${cle} is ${JSON.stringify(v)}, not a finite number.\n`
-          + `  JSON numbers carry no quotes: write ${cle}: 45, not "${String(v)}". Nothing was measured.`);
+      if (v === undefined) continue;
+      if ((DECLARES_NUMERIQUES as readonly string[]).includes(cle)) {
+        if (typeof v !== "number" || !Number.isFinite(v)) {
+          throw new Error(`${chemin}: declares.${cle} is ${JSON.stringify(v)}, not a finite number.\n`
+            + `  JSON numbers carry no quotes: write ${cle}: 45, not "${String(v)}". Nothing was measured.`);
+        }
+        /* A negative price entered the audit as a negative cost and inflated the saving (item 20). */
+        if (v < 0) {
+          throw new Error(`${chemin}: declares.${cle} is ${v}, below zero: a price or a duration is zero or more. Nothing was measured.`);
+        }
+      } else if (cle === "billing") {
+        if (v !== "page" && v !== "document") {
+          throw new Error(`${chemin}: declares.billing is ${JSON.stringify(v)}; it is "page" or "document". Nothing was measured.`);
+        }
+      } else if (cle === "vendor") {
+        if (typeof v !== "string" || v.trim().length === 0) {
+          throw new Error(`${chemin}: declares.vendor must be a key of the default price table, as a string. Nothing was measured.`);
+        }
+      } else {
+        /* A key nobody reads is a declaration nobody hears: a mistyped price would enter the
+           audit as "not declared" and the chain would be costed at a list price instead. */
+        throw new Error(`${chemin}: declares.${cle} is not something this tool reads.\n`
+          + `  Accepted: ${[...DECLARES_NUMERIQUES, "billing", "vendor"].join(", ")}. Nothing was measured.`);
       }
     }
   }
@@ -895,8 +1064,66 @@ export function chargerSorties(chemin: string): SortiesFournies {
       }
     }
   }
+  /* What `grade` wrote about the grading itself travels with the outcomes: the kinds each
+     field was compared under, and the file they answer. Both are checked against the file
+     being measured before anything runs (`verifierSorties`, item 21). */
+  let notePar = brut.notePar;
+  if (notePar !== undefined) {
+    if (!notePar || typeof notePar !== "object" || Array.isArray(notePar)) {
+      throw new Error(`${chemin}: \`notePar\` must be an object. Nothing was measured.`);
+    }
+    if (notePar.kinds !== undefined) {
+      if (!notePar.kinds || typeof notePar.kinds !== "object" || Array.isArray(notePar.kinds)
+        || Object.values(notePar.kinds).some((k) => typeof k !== "string")) {
+        throw new Error(`${chemin}: notePar.kinds must map each field to the name of a kind. Nothing was measured.`);
+      }
+      notePar = { ...notePar, kinds: { ...notePar.kinds } };
+    }
+  }
+  let source: SortiesFournies["source"];
+  if (brut.source !== undefined) {
+    if (!brut.source || typeof brut.source !== "object" || Array.isArray(brut.source)) {
+      throw new Error(`${chemin}: \`source\` must be an object. Nothing was measured.`);
+    }
+    const sha = (brut.source as { sha256?: unknown }).sha256, cases = (brut.source as { cases?: unknown }).cases;
+    if (sha !== undefined && typeof sha !== "string") throw new Error(`${chemin}: source.sha256 must be a string. Nothing was measured.`);
+    if (cases !== undefined && typeof cases !== "string") throw new Error(`${chemin}: source.cases must be a string. Nothing was measured.`);
+    source = { ...(cases !== undefined ? { cases } : {}), ...(sha !== undefined ? { sha256: sha } : {}) };
+  }
   return { nom: nomDeChaine(brut.nom, chemin), issues: brut.issues,
-    notePar: brut.notePar, declares: brut.declares };
+    notePar, declares: brut.declares, ...(source !== undefined ? { source } : {}) };
+}
+
+/**
+ * A `--sorties` file answers ONE file under ONE set of kinds, and says which (item 21).
+ *
+ * `grade` writes the sha256 of the CSV it graded against and the kind each field was compared
+ * under. Measured against another file, its outcomes answer other cases; measured under
+ * other kinds, its accuracy and the local tiers' are not the same measurement, and the gap
+ * belongs to the grader, not to the chain. A file that carries neither (written by hand) is
+ * taken as it is: nothing here can check it, and the report already says who graded it.
+ */
+export function verifierSorties(chaines: readonly SortiesFournies[], fichier: string, sha256: string,
+  kinds: Record<string, FieldKind>, champs: readonly string[]): void {
+  for (const s of chaines) {
+    if (s.source?.sha256 !== undefined && s.source.sha256 !== sha256) {
+      throw new Error(`the chain "${s.nom}" was graded against ${s.source.cases ?? "another file"} (sha256 ${s.source.sha256.slice(0, 12)}…), `
+        + `not against ${basename(fichier)} (sha256 ${sha256.slice(0, 12)}…).\n`
+        + `  Its outcomes answer another file's cases. Grade it against this file (npm run grade), or measure\n`
+        + `  the file it was graded against. Nothing was measured.`);
+    }
+    if (s.notePar?.kinds) {
+      for (const champ of champs) {
+        if (!(champ in s.issues)) continue;
+        const sien = s.notePar.kinds[champ] ?? "exact", notre = kinds[champ] ?? "exact";
+        if (sien !== notre) {
+          throw new Error(`the chain "${s.nom}" was graded with "${champ}" compared as ${sien}; this file's header declares ${notre}.\n`
+            + `  The two are not the same measurement: the gap would belong to the grader, not to the chain.\n`
+            + `  Grade again under this header (npm run grade), or change the header. Nothing was measured.`);
+        }
+      }
+    }
+  }
 }
 
 /**
@@ -912,7 +1139,8 @@ export function correspondance(cas: Cas[], champs: string[], s: SortiesFournies)
   const inconnus: Record<string, string[]> = {};
   for (const champ of champs) {
     const siens = s.issues[champ] ?? {};
-    manquants[champ] = cas.filter((c) => !(c.id in siens)).map((c) => c.id);
+    /* A case without an expected value is graded by nobody: his file has no reason to carry it. */
+    manquants[champ] = cas.filter((c) => aUneVerite(c, champ) && !(c.id in siens)).map((c) => c.id);
     inconnus[champ] = Object.keys(siens).filter((id) => !nos.has(id));
   }
   const total = champs.reduce((a, c) => a + manquants[c]!.length + inconnus[c]!.length, 0);
@@ -945,14 +1173,14 @@ export function chargerRegles(chemin: string, champs: readonly string[]): Record
   try {
     brut = JSON.parse(readFileSync(chemin, "utf8"));
   } catch (e) {
-    throw new Error(`${chemin}: not readable as JSON — ${(e as Error).message}\n`
+    throw new Error(`${chemin}: not readable as JSON: ${(e as Error).message}\n`
       + `  Expected { "your column": "a regular expression" }.`);
   }
   if (brut === null || typeof brut !== "object" || Array.isArray(brut)) {
     const quoi = brut === null ? "null" : Array.isArray(brut) ? "an array" : typeof brut;
     throw new Error(`${chemin}: expected an object { "your column": "a regular expression" }, `
       + `got ${quoi}.\n`
-      + `  An array would be read as rules for columns named "0", "1", … — none of which\n`
+      + `  An array would be read as rules for columns named "0", "1", and so on, none of which\n`
       + `  exist, so nothing would be measured and the report would not say so.`);
   }
 
@@ -964,7 +1192,7 @@ export function chargerRegles(chemin: string, champs: readonly string[]): Record
   for (const [champ, motif] of Object.entries(brut as Record<string, unknown>)) {
     if (typeof motif !== "string") {
       throw new Error(`${chemin}: the rule for "${champ}" is ${typeof motif}, not a string.\n`
-        + `  A number would become the pattern /${String(motif)}/ — a rule you did not write.`);
+        + `  A number would become the pattern /${String(motif)}/, a rule you did not write.`);
     }
     try {
       regles[champ] = new RegExp(motif);
@@ -1047,7 +1275,13 @@ export type CelluleClient = {
  * des taux, des bits, et le nom nu du fichier — un chemin porterait le nom d'utilisateur.
  */
 export type ReleveClient = {
-  kind: "cascade-client-record"; version: 1;
+  kind: "cascade-client-record";
+  /**
+   * 1: the original record. 2: the extraction audit, since 2026-09-29: `kinds`, `grader`,
+   * `audit`, and price keys under `declared`. Everything a version 1 reader looks for is
+   * still there under the same names, so `diff`, `sceller` and `recertify` read both.
+   */
+  version: 1 | 2;
   measuredAt: string;
   code: { commit: string; sale: boolean } | null;
   source: { file: string; sha256: string; cases: number; casesInFile: number };
@@ -1055,9 +1289,23 @@ export type ReleveClient = {
   questions: Record<string, { texte: string; provenance: string }>;
   margin: number | null;
   tiers: string[];
-  declared: Record<string, { costPerThousandDocuments?: number; msPerDocument?: number }>;
+  declared: Record<string, {
+    costPerThousandDocuments?: number; msPerDocument?: number;
+    pricePerThousandPages?: number; pricePerThousandDocuments?: number; billing?: "page" | "document"; vendor?: string;
+  }>;
+  /** Version 2: per chain, who graded it, under which kinds, against which file (sha256). null
+      where the outcomes file did not say. */
+  graded?: Record<string, { by: string | null; kinds: Record<string, string> | null; casesSha256: string | null }>;
   extraction: Record<string, Record<string, CelluleClient>>;
   recommendation: Record<string, string[]>;
+  /** Version 2: the kind each field was graded as; a field absent here was graded `exact`. */
+  kinds?: Record<string, FieldKind>;
+  /** Version 2: which grader gave the verdicts, and the conventions its kinds rest on. */
+  grader?: { version: number; conventions: Record<string, string> };
+  /** Version 2: per vendor and field, accuracy with its bounds and n, cost per thousand pages
+      at the declared volume, the recommended routing, the annual saving against the current
+      chain, and every pair the sample cannot separate. */
+  audit?: Audit | null;
   empreinte?: string;
 };
 
@@ -1066,11 +1314,16 @@ export function releveClient(o: {
   questions: Record<string, { texte: string; provenance: string }>;
   releve: Record<string, Record<TierName, EntreeDuReleve>>;
   verdicts: { champ: string; lignes: string[] }[];
-  marge?: number; sorties?: SortiesFournies; measuredAt: string;
+  marge?: number; sorties?: SortiesFournies | SortiesFournies[]; measuredAt: string;
   code: { commit: string; sale: boolean } | null;
+  /** The kind each field was graded as; absent, every field was graded `exact`. */
+  kinds?: Record<string, FieldKind>;
+  /** The extraction audit, when one was computed. */
+  audit?: Audit | null;
 }): ReleveClient {
   const extraction: Record<string, Record<string, CelluleClient>> = {};
   const tiers = new Set<string>();
+  const chaines = o.sorties === undefined ? [] : Array.isArray(o.sorties) ? o.sorties : [o.sorties];
   for (const champ of o.champs) {
     for (const [palier, e] of Object.entries(o.releve[champ] ?? {})) {
       tiers.add(palier);
@@ -1084,21 +1337,40 @@ export function releveClient(o: {
       };
     }
   }
-  const declared: ReleveClient["declared"] = o.sorties
-    ? { [o.sorties.nom]: {
-        costPerThousandDocuments: o.sorties.declares?.coutParMilleDocuments,
-        msPerDocument: o.sorties.declares?.msParDocument } }
-    : {};
+  const declared: ReleveClient["declared"] = {};
+  for (const s of chaines) {
+    /* The two original keys are always written, as before; the price keys only when declared,
+       so a record without prices reads exactly as a version 1 reader expects. */
+    declared[s.nom] = {
+      costPerThousandDocuments: s.declares?.coutParMilleDocuments,
+      msPerDocument: s.declares?.msParDocument,
+      ...(s.declares?.pricePerThousandPages !== undefined ? { pricePerThousandPages: s.declares.pricePerThousandPages } : {}),
+      ...(s.declares?.pricePerThousandDocuments !== undefined ? { pricePerThousandDocuments: s.declares.pricePerThousandDocuments } : {}),
+      ...(s.declares?.billing !== undefined ? { billing: s.declares.billing } : {}),
+      ...(s.declares?.vendor !== undefined ? { vendor: s.declares.vendor } : {}),
+    };
+  }
+  const graded: NonNullable<ReleveClient["graded"]> = {};
+  for (const s of chaines) {
+    graded[s.nom] = {
+      by: s.notePar?.correcteur ?? null,
+      kinds: s.notePar?.kinds ? Object.fromEntries(Object.entries(s.notePar.kinds).filter(([c]) => c in s.issues)) : null,
+      casesSha256: s.source?.sha256 ?? null,
+    };
+  }
   return {
-    kind: "cascade-client-record", version: 1, measuredAt: o.measuredAt, code: o.code,
+    kind: "cascade-client-record", version: 2, measuredAt: o.measuredAt, code: o.code,
     source: {
       file: basename(o.fichier),
       sha256: createHash("sha256").update(o.octets).digest("hex"),
       cases: o.cas, casesInFile: o.casDansLeFichier,
     },
     fields: [...o.champs], questions: o.questions, margin: o.marge ?? null,
-    tiers: [...tiers], declared, extraction,
+    tiers: [...tiers], declared, graded, extraction,
     recommendation: Object.fromEntries(o.verdicts.map((v) => [v.champ, v.lignes])),
+    kinds: { ...(o.kinds ?? {}) },
+    grader: { version: GRADER.version, conventions: { ...GRADER.conventions } },
+    audit: o.audit ?? null,
   };
 }
 
@@ -1111,11 +1383,45 @@ export function releveClient(o: {
  * moins cher des non-inférieurs — ce qui demande une marge déclarée ; sans elle il n'y en a
  * aucun, et chaque phrase dit ce que l'échantillon sépare ou ne sépare pas.
  */
+/** How many cases carry a verdict ("1" or "0") on both sides. */
+export function casCommuns(a: Bits, b: Bits): number {
+  let n = 0;
+  for (let i = 0; i < Math.min(a.length, b.length); i++) {
+    if ((a[i] === "1" || a[i] === "0") && (b[i] === "1" || b[i] === "0")) n++;
+  }
+  return n;
+}
+
+/**
+ * F8 (2026-09-29): what the per-field lines say when the audit has spoken. The per-field
+ * comparison asks ONE question: can a source cheaper than the best one on this field (in
+ * measured time; a declared chain, whose time is unknown, is always a candidate) stand in
+ * for it within the margin? In the founder's run the current chain was that candidate, so the
+ * line tested whether keeping it is supported, then closed with "No recommendation for
+ * total", and the audit two screens down routed total to the best source and stated a
+ * saving: a buyer read a contradiction. The closing line now follows the audit's routing
+ * when there is one, and a candidate that is the current chain is named as such.
+ */
+export type ContexteDeRecommandation = {
+  /** The chain the client runs today, when one was named or taken as the first given. */
+  actuelle?: string;
+  /** The audit's decision on this field: what it routes to, and its head. Absent when no
+   *  audit is printed (no chain was given). */
+  audit?: { chosen: string | null; head: string | null };
+};
+
+/* The shared formatters of comparaison-appariee.ts are not exported and that file is not
+   edited here; these three write the same forms. */
+const pointsDe = (x: number): string => (100 * x).toFixed(1);
+const pDe = (p: number | null): string => (p === null ? "no disagreement" : p < 0.001 ? "p < 0.001" : `p = ${p.toFixed(3)}`);
+const margeDe = (m: number): string => `${(100 * m) % 1 === 0 ? (100 * m).toFixed(0) : (100 * m).toFixed(1)}-point`;
+
 export function recommander(
   champ: string,
   rangs: { palier: string; r: Rate; ms: number }[],
   releve: Record<string, Record<TierName, EntreeDuReleve>>,
   marge?: number,
+  contexte: ContexteDeRecommandation = {},
 ): string[] {
   const tete = rangs[0]!;
   const bitsDe = (p: string) => releve[champ]?.[p as TierName]?.reussites;
@@ -1123,8 +1429,21 @@ export function recommander(
   const candidats = rangs.slice(1)
     .filter((x) => !Number.isFinite(x.ms) || x.ms < tete.ms)
     .sort((a, b) => cout(a.ms) - cout(b.ms));
+  /* F8: the audit's routing for this field, when an audit is printed. */
+  const route = contexte.audit?.chosen ?? null;
+  const teteDeLAudit = contexte.audit?.head ?? tete.palier;
+  const suitLAudit = (retenu: string | undefined): string | undefined => {
+    if (route === null) return undefined;
+    if (route === teteDeLAudit) {
+      return `${route} stays the source for ${champ}: nothing cheaper is supported within your margin on this sample, and the audit below routes ${champ} to it.`;
+    }
+    if (retenu === route) return undefined;   /* the sentence written for `retenu` says the same */
+    return `Recommendation for ${champ}: ${route}, the cheapest costed source this sample cannot show to be worse than ${teteDeLAudit} within your margin (the audit below).`;
+  };
   if (candidats.length === 0) {
-    return [`${tete.palier} wins outright on this sample: nothing cheaper to compare it with.`];
+    const seul = `${tete.palier} wins outright on this sample: nothing cheaper to compare it with.`;
+    const suite = suitLAudit(undefined);
+    return suite && route !== teteDeLAudit ? [seul, suite] : [seul];
   }
   const lignes: string[] = [];
   let retenu: string | undefined;
@@ -1136,14 +1455,36 @@ export function recommander(
       lignes.push(`${x.palier}: no case-by-case verdicts, so it cannot be compared with ${tete.palier} case for case.`);
       continue;
     }
+    /* Two chains graded on disjoint cases share nothing to pair: said, not thrown (item 10). */
+    if (casCommuns(bt, bx) === 0) {
+      tousPires = false;
+      lignes.push(`${x.palier}: no case was graded on both ${tete.palier} and ${x.palier}, so the two cannot be compared case for case.`);
+      continue;
+    }
     const a = apparier(bt, bx);
     const v = juger(a, marge);
-    lignes.push(phrase({ tete: tete.palier, candidat: x.palier, a, v, msTete: tete.ms, msCandidat: x.ms }));
+    if (v.genre === "indecis" && v.marge !== undefined) {
+      /* F8: say what was tested. "X may be up to 6.2 points worse ...: no recommendation" read
+         as a verdict on the field; it is a verdict on taking X in place of the best source. */
+      const qui = x.palier === contexte.actuelle
+        ? `Keeping ${x.palier}, your current chain, is not supported by this sample`
+        : `Taking ${x.palier} instead of ${tete.palier} is not supported by this sample`;
+      lignes.push(`${qui}: it may be up to ${pointsDe(a.bornes[1])} points worse than ${tete.palier}, above your `
+        + `${margeDe(v.marge)} margin (${a.discordants} disagreement${a.discordants === 1 ? "" : "s"}, ${pDe(a.p)}). `
+        + (v.casEstimes === null
+          ? `The observed gap, ${pointsDe(a.ecart)} points, is itself above the margin: no sample size would show non-inferiority.`
+          : `About ${v.casEstimes.toLocaleString("en-GB")} cases would settle it at this rate of disagreement, an estimate, not a measurement.`));
+    } else {
+      lignes.push(phrase({ tete: tete.palier, candidat: x.palier, a, v, msTete: tete.ms, msCandidat: x.ms }));
+    }
     if (v.genre === "non-inferieur" && retenu === undefined) retenu = x.palier;
     if (!(v.genre === "separable" && v.sens === "tete")) tousPires = false;
   }
-  if (retenu !== undefined) {
-    lignes.push(`Recommendation for ${champ}: ${retenu} — the cheapest tier non-inferior to ${tete.palier} within your margin.`);
+  const suite = suitLAudit(retenu);
+  if (suite !== undefined) {
+    lignes.push(suite);
+  } else if (retenu !== undefined) {
+    lignes.push(`Recommendation for ${champ}: ${retenu}, the cheapest tier non-inferior to ${tete.palier} within your margin.`);
   } else if (tousPires) {
     lignes.push(`${tete.palier} wins outright on this sample.`);
   } else {
@@ -1161,6 +1502,12 @@ export function rapportPourLeClient(o: {
   verdicts: { champ: string; lignes: string[] }[];
   /** La marge déclarée, en proportion ; absente, aucun palier n'est recommandé. */
   marge?: number;
+  /** The kind each field was graded as; only the declared ones are listed. */
+  kinds?: Record<string, FieldKind>;
+  /** The audit, the SAME lines as the console (`auditLines`), when chains were given. */
+  audit?: string[];
+  /** Per field, the cases with no expected value: not graded on it, by any source. */
+  sansVerite?: Record<string, number>;
 }): string {
   const deduites = o.champs.filter((c) => o.questions[c]!.provenance === "deduite");
   const entete = [
@@ -1175,7 +1522,7 @@ export function rapportPourLeClient(o: {
       const q = o.questions[c]!;
       return [cellule(c), cellule(q.texte),
         { fournie: "**yours**",
-          mesuree: "measured — our own field, published rates were measured under it",
+          mesuree: "measured: our own field, published rates were measured under it",
           deduite: "**derived from your column name**" }[q.provenance]];
     })),
   ];
@@ -1185,9 +1532,16 @@ export function rapportPourLeClient(o: {
       + `choice made on your behalf, not a measurement. **The rates below are not comparable `
       + `to the ones in cascade's README**, which were measured under the questions marked `
       + `"measured" above. On a sample of client cases, the same field scored 0 % under a `
-      + `derived question and 100 % under the client's own — the question is worth a hundred `
+      + `derived question and 100 % under the client's own: the question is worth a hundred `
       + `points. Supply yours with \`--questions=file.json\` and measure again before `
       + `concluding anything about a tier.`);
+  }
+  const nonNotes = Object.entries(o.sansVerite ?? {}).filter(([, n]) => n > 0);
+  if (nonNotes.length) {
+    entete.push(``,
+      `> **${nonNotes.map(([c, n]) => `${n} case(s) have no expected value for \`${c}\``).join("; ")}.** `
+      + `An empty expected cell is unknown, not "expected blank": those cases are not graded on that `
+      + `field, by any tier or chain, and are not in its n below.`);
   }
   /* Un blanc avant et après chaque tableau : un lecteur markdown strict colle sinon le titre
      au tableau, et la section entière se rend en un seul paragraphe. */
@@ -1203,20 +1557,40 @@ export function rapportPourLeClient(o: {
   const recommandation = [``, ``, `## Recommendation per field`, ``,
     `Two tiers on the same cases are compared case for case (McNemar, exact). A cheaper tier `
     + `is recommended only when its worst case at 95 % stays inside the margin declared with `
-    + "`--margin` — non-inferiority. \"Not significantly different\" is not \"equivalent\".",
+    + "`--margin`: non-inferiority. \"Not significantly different\" is not \"equivalent\".",
     ``,
     o.marge === undefined
       ? `**No margin was declared, so no cheaper tier is recommended.** The lines below say what `
         + `these cases can and cannot separate.`
-      : `Margin declared: **${(100 * o.marge).toString()} point(s)** — your declaration, not a measurement.`,
+      : `Margin declared: **${(100 * o.marge).toString()} point(s)**. Your declaration, not a measurement.`,
     ``,
     ...o.verdicts.map((v) => `- **${cellule(v.champ)}**\n${v.lignes.map((l) => `  - ${l}`).join("\n")}`),
   ];
 
+  const declares = o.champs.filter((c) => o.kinds?.[c] && o.kinds[c] !== "exact");
+  const kinds = declares.length === 0 ? [] : [``, ``, `## How each field was compared`, ``,
+    `A field's header may declare its kind (\`total:amount\`); the comparison then follows the kind, `
+    + `and it can only add matches to the default comparison, never remove one. Fields not listed `
+    + `here were compared as written, separators and case set aside.`, ``,
+    table(["Field", "Kind", "Convention"], declares.map((c) => {
+      const k = o.kinds![c]!;
+      return [cellule(c), cellule(k), GRADER.conventions[k === "date-dmy" ? "date" : k]];
+    })), ``];
+
+  const auditSection = o.audit === undefined ? [] : [``, ``, `## Extraction audit`, ``,
+    `Per field, the cheapest source this sample cannot show to be worse than the best one; what it `
+    + `costs per thousand pages; and what that saves against the chain you run today, within the margin `
+    + `declared with \`--margin\`. Without a margin nothing is recommended and no saving is stated: the `
+    + `options the sample cannot separate from the best are listed. A vendor is paid per page, once, `
+    + `whatever the number of fields taken from it, and a routing that reads two vendors pays both. The `
+    + `dollars rest on declared or list prices, the rates are measured.`, ``,
+    "```", ...o.audit, "```", ``];
+
   const pied = [``, ``, `## What this does not establish`, ``,
     `- That these rates hold on documents other than the ${o.cas} you supplied.`,
+    ...(o.audit !== undefined ? [`- That the prices are what you pay: declared by you or read from a public page on a date, never measured here.`] : []),
     `- ${o.avecRegles ? "That your regexes generalise beyond these cases."
-      : "What a free tier would carry: no rule of yours was measured — see `--rules`."}`,
+      : "What a free tier would carry: no rule of yours was measured: see `--rules`."}`,
     `- That the tiers here are the ones you should run: they are the ones this repository has.`,
     `- ${o.marge === undefined
       ? "Which tier suffices: without a declared margin, only separation was tested, never sufficiency."
@@ -1224,7 +1598,9 @@ export function rapportPourLeClient(o: {
   ];
   return entete.join("\n")
     + table(["Field", "Tier", "Accuracy", "Interval", "n", "Median ms"], o.lignes)
+    + kinds.join("\n")
     + recommandation.join("\n")
+    + auditSection.join("\n")
     + pied.join("\n") + "\n";
 }
 
@@ -1233,7 +1609,7 @@ export type Traceur = (caseId: string, palier: string, champ: string, issue: "cl
 
 export async function mesurerVosCas(
   cas: Cas[], champs: string[], paliers: TierName[], regles?: ReglesEvaluees,
-  journaliser = false, sorties?: SortiesFournies,
+  journaliser = false, sorties?: SortiesFournies | SortiesFournies[],
   /* Les questions posées aux modèles, une par champ. Absentes, elles se déduisent du nom de
      colonne — et ce choix s'affiche, parce qu'un taux obtenu sous une question déduite n'est
      pas comparable à celui du README. */
@@ -1241,15 +1617,21 @@ export async function mesurerVosCas(
   /* Le rejeu d'incident : une décision par cas, par palier et par champ — issue et score,
      jamais la valeur. Absent, rien n'est tracé. */
   tracer?: Traceur,
+  /* The kind each field is graded as (`grader.ts`). A field without one keeps the default
+     comparison, so a file that declares no kind measures exactly as it did before. */
+  kinds?: Record<string, FieldKind>,
 ): Promise<Record<string, Record<TierName, EntreeDuReleve>>> {
   const releve: Record<string, Record<TierName, EntreeDuReleve>> = {};
+  /* One chain or several: each is graded on the cases its file names, under its own name. */
+  const chaines = sorties === undefined ? [] : Array.isArray(sorties) ? sorties : [sorties];
   const journal = journaliser ? ouvrirJournal("vos-cas", {
-    quoi: "Vos cas, palier par palier — journal demandé explicitement avec --journal.",
+    quoi: "Vos cas, palier par palier : journal demandé explicitement avec --journal.",
     split: "vos-cas", cases: cas.length,
     chargeAvant: Number(loadavg()[0]!.toFixed(2)),
   }) : undefined;
   for (const champ of champs) {
     releve[champ] = {} as Record<TierName, { bons: number; sur: number; ms: number }>;
+    const kind: FieldKind = kinds?.[champ] ?? "exact";
 
     /*
      * Le palier du client : ses valeurs, notre correcteur.
@@ -1258,11 +1640,13 @@ export async function mesurerVosCas(
      * de sa déclaration, ou vaut `null` s'il n'en a pas donné : mettre zéro le ferait passer
      * pour instantané, ce qui est faux dans la seule direction qui l'avantage.
      */
-    if (sorties) {
-      const siennes = sorties.issues[champ] ?? {};
+    for (const chaine of chaines) {
+      const siennes = chaine.issues[champ] ?? {};
       let bons = 0, apparies = 0, vides = 0, faux = 0;
       const bits: string[] = [];
       for (const c of cas) {
+        /* No expected value: not graded, whatever his file says of it (`aUneVerite`). */
+        if (!aUneVerite(c, champ)) { bits.push("-"); continue; }
         if (!(c.id in siennes)) { bits.push("-"); continue; }   // absent de son fichier : compté ailleurs, pas ici
         apparies++;
         const juste = siennes[c.id] === "clean";
@@ -1271,9 +1655,9 @@ export async function mesurerVosCas(
         else faux++;
         bits.push(juste ? "1" : "0");
       }
-      releve[champ]![sorties.nom as TierName] = {
+      releve[champ]![chaine.nom as TierName] = {
         bons, sur: apparies,
-        ms: sorties.declares?.msParDocument ?? Number.NaN,
+        ms: chaine.declares?.msParDocument ?? Number.NaN,
         reussites: bits.join(""), vides, faux,
       };
     }
@@ -1286,9 +1670,12 @@ export async function mesurerVosCas(
       let bons = 0, vides = 0, faux = 0;
       const bits: string[] = [];
       const doutes = doutesVides();
+      let notes = 0;
       for (let i = 0; i < cas.length; i++) {
+        if (!aUneVerite(cas[i]!, champ)) { bits.push("-"); continue; }
+        notes++;
         const valeur = valeursRegle[i] ?? "";
-        const sort = issue(valeur, cas[i]!.truth[champ]!);
+        const sort = outcomeTyped(valeur, cas[i]!.truth[champ]!, kind);
         const juste = sort === "clean";
         if (juste) bons++;
         else if (sort === "blank") vides++;
@@ -1299,7 +1686,7 @@ export async function mesurerVosCas(
         tracer?.(cas[i]!.id, "rules", champ, sort, score);
       }
       releve[champ]!["rules" as TierName] = {
-        bons, sur: cas.length, ms: regles!.ms[champ] ?? 0, reussites: bits.join(""), vides, faux, doutes,
+        bons, sur: notes, ms: regles!.ms[champ] ?? 0, reussites: bits.join(""), vides, faux, doutes,
       };
     }
 
@@ -1321,12 +1708,16 @@ export async function mesurerVosCas(
        * ailleurs de publier un chiffre qu'il n'a pas mesuré.
        */
       const pas = cas.length >= 1000 ? Math.ceil(cas.length / 20) : 0;
-      let faits = 0;
+      let faits = 0, notes = 0;
       for (const c of cas) {
         if (pas > 0 && faits > 0 && faits % pas === 0) {
           process.stderr.write(`  ${champ} · ${palier} · ${faits}/${cas.length}\n`);
         }
         faits++;
+        /* No expected value: nothing to grade against, so no call is made and the case is
+           out of this field's n, as it is for the rules and for every chain. */
+        if (!aUneVerite(c, champ)) { bits.push("-"); continue; }
+        notes++;
         const t0 = performance.now();
         /* `extract` attend un ClientFile et un Field ; les cas du lecteur ont les mêmes deux
            propriétés utiles, et le champ n'est qu'une clé. Le typage local est plus étroit
@@ -1342,18 +1733,21 @@ export async function mesurerVosCas(
         durees.push(ms);
         journal?.ligne({
           tier: palier, field: champ, caseId: c.id, phrasing: "reference", split: "vos-cas",
-          outcome: issue(got, c.truth[champ]!), ms: Number(ms.toFixed(3)),
+          outcome: outcomeTyped(got, c.truth[champ]!, kind), ms: Number(ms.toFixed(3)),
           value: got, expected: c.truth[champ]!,
         });
         /* La forme est notée EN MÊME TEMPS que la justesse, sur le même appel : deux
-           parcours séparés diraient un jour deux choses différentes du même corpus. */
-        const juste = noter(palier, champ, got, c.truth[champ]!, borne.texte) === "juste";
+           parcours séparés diraient un jour deux choses différentes du même corpus. The
+           shape counter judges with the default comparison; correctness is the typed
+           grader's, which agrees with it on every field without a declared kind. */
+        noter(palier, champ, got, c.truth[champ]!, borne.texte);
+        const juste = graded(got, c.truth[champ]!, kind);
         if (juste) bons++;
         /* Noté faux, mais avec exactement les mêmes mots : c'est un désaccord de convention.
            On compte, on ne garde rien — le compte reste chez le client comme le reste. */
         else if (memesMots(got, c.truth[champ]!)) desordre++;
         /* Vide ou faux : la partition que l'exposition lit. La même règle que le journal. */
-        const sort = issue(got, c.truth[champ]!);
+        const sort = outcomeTyped(got, c.truth[champ]!, kind);
         if (!juste) { if (sort === "blank") vides++; else faux++; }
         bits.push(juste ? "1" : "0");
         /* Le score de doute, compté au moment de la notation — la courbe du point de
@@ -1364,7 +1758,7 @@ export async function mesurerVosCas(
       }
       durees.sort((a, b) => a - b);
       releve[champ]![palier] = {
-        bons, sur: cas.length, ms: durees[Math.floor(durees.length / 2)] ?? 0,
+        bons, sur: notes, ms: durees[Math.floor(durees.length / 2)] ?? 0,
         reussites: bits.join(""), vides, faux, doutes,
         ...(desordre > 0 ? { desordre } : {}),
       };
@@ -1452,33 +1846,52 @@ async function principal(): Promise<void> {
     console.log(`
 Measure your own cases, not mine.
 
-  npm run measure:yours -- --cases=your-file.csv [--rules=rules.json] [--sorties=yours.json] [--llm]
+  npm run measure:yours -- --cases=your-file.csv [--rules=rules.json] [--sorties=a.json --sorties=b.json] [--llm]
 
 The CSV wants an id, the input text, then one column per field to extract:
 
   id,text,name,birth
-  1,"Anna Petrova — dob 3 May 1990",Anna Petrova,3 May 1990
+  1,"Anna Petrova, dob 3 May 1990",Anna Petrova,3 May 1990
+
+An empty expected cell means UNKNOWN: the case is not graded on that field, by any tier or
+chain, and is not in its n. There is no marker for "this document has no such line" yet.
+A header may declare a field's kind, and the comparison follows it: total:amount,
+closing_date:date (month first; date-dmy for day first), currency:currency, tax_id:id,
+vendor_name:free-text, total:amount-grouped where a point or comma before three digits groups
+thousands, as Indonesian receipts print them (60.000 is sixty thousand). Without a kind, a
+value is compared as written, separators aside.
 
 --rules  a JSON of { "field": "regular expression" }, so your own free tier is measured too.
 --sorties  a JSON of the OUTCOMES your own chain was graded to, never the values it
-         produced — grade on your side, send only issues: { "nom": "…", "issues": { "<field>":
-         { "<case id>": "clean" | "wrong" | "blank" } }, "notePar": { "outil": …, "version": … }, "declares": { "coutParMilleDocuments":
-         …, "msParDocument": … } }. Your chain runs on your machine; we never see its code, and
+         produced. Grade on your side, send only issues: { "nom": "…", "issues": { "<field>":
+         { "<case id>": "clean" | "wrong" | "blank" } }, "notePar": { "outil": …, "version": … }, "declares":
+         { "pricePerThousandPages": … or "pricePerThousandDocuments": …, "msParDocument": … } }.
+         Your chain runs on your machine; we never see its code, and
          nothing here executes anything you supply. We score its accuracy against your own
-         answers — that is measured. Its cost and latency are the ones you give us: assumed,
+         answers: that is measured. Its cost and latency are the ones you give us: assumed,
          never measured here, and marked so everywhere they travel.
          Without it the routing is over models only, and will overstate what you need to pay.
+         Give it several times, one file per vendor: \`npm run grade\` writes these files from
+         a vendor's exports. Each may declare its price per thousand pages (or documents);
+         the audit then costs every routing per page (a vendor is paid once per page, whatever
+         the number of fields taken from it) and, WITHIN THE MARGIN YOU DECLARE with --margin,
+         states the saving against your current chain. Without a margin it lists, per field,
+         the options this sample cannot separate from the best, and recommends nothing.
+--current  which --sorties chain you run today (default: the first one given).
+--pages-per-document, --pages-per-year  your volume, declared; without the year the audit
+         gives dollars per thousand pages only.
+--machine-hourly-cost  what an hour of this machine costs you, for the local tiers' time.
 --questions  a JSON of { "your column": "What is …?" }. Without it, the question is derived
-         from the column name — a choice made for you, printed before anything loads. On a
+         from the column name, a choice made for you, printed before anything loads. On a
          sample of client cases the same field scored 0 % under a derived question and 100 %
          under the client's own: supply these before concluding anything about a tier.
 --llm    add the local generative tiers (needs Ollama and the models pulled).
 --margin  the loss, in percentage points, you would accept to take a cheaper tier (e.g.
          --margin=2). Two tiers on the same cases are compared case for case (McNemar,
          exact); a cheaper tier is recommended only when its worst case at 95 % stays
-         inside this margin — non-inferiority, not "no significant difference". Without
+         inside this margin: non-inferiority, not "no significant difference". Without
          it the command says what these cases can separate, and recommends nothing.
---trace  also write <file>-trace.json, sealed: one line per case, tier and field — the case id,
+--trace  also write <file>-trace.json, sealed. One line per case, tier and field: the case id,
          the outcome (clean, wrong, blank) and the doubt score. What the system saw and
          decided, replayable months later; never a value, never the text.
 --show-questions  print the derived question for every field, however many there are.
@@ -1514,7 +1927,8 @@ Nothing leaves your machine: the models are local and this path makes no network
   const echantillonBrut = arg("sample");
   const echantillon = lireEchantillon(echantillonBrut);
   const marge = lireMarge(arg("margin"));
-  let { champs, cas, ecartees, courtes, demesurees, lecture } = lireCsv(readFileSync(fichier, "utf8"));
+  const octets = readFileSync(fichier);
+  let { champs, cas, ecartees, courtes, demesurees, kinds, lecture } = lireCsv(octets.toString("utf8"));
 
   /*
    * UN CORPUS VIDE NE PRODUIT PAS UN DOCUMENT QUI RESSEMBLE À UN AUDIT.
@@ -1530,7 +1944,7 @@ Nothing leaves your machine: the models are local and this path makes no network
     throw new Error(`${fichier} has a header line and no cases under it.\n`
       + `  Columns read: ${apercu(champs, MONTRES)}\n`
       + (ecartees.length > 0
-        ? `  ${ecartees.length} row(s) were set aside as malformed — that may be where they went.\n`
+        ? `  ${ecartees.length} row(s) were set aside as malformed: that may be where they went.\n`
         : ``)
       + `  Nothing was measured, so nothing was written: a report over zero cases reads like\n`
       + `  one that measured something.`);
@@ -1557,7 +1971,41 @@ Nothing leaves your machine: the models are local and this path makes no network
     cas = melange.slice(0, echantillon);
   }
   const reglesBrutes = arg("rules") ? chargerRegles(arg("rules")!, champs) : undefined;
-  const sorties = arg("sorties") ? chargerSorties(arg("sorties")!) : undefined;
+  /*
+   * Several chains, one file each: `--sorties=a.json --sorties=b.json`. That is the audit's
+   * whole point, the client's vendors side by side. Names must differ: rows are indexed by
+   * name, and a second "textract" would overwrite the first exactly as a tier name would.
+   */
+  const cheminsSorties = process.argv.slice(2)
+    .filter((a) => a.startsWith("--sorties="))
+    .map((a) => a.slice("--sorties=".length));
+  const chaines = cheminsSorties.map((c) => chargerSorties(c));
+  const nomsChaines = new Set<string>();
+  for (const [i, s] of chaines.entries()) {
+    if (nomsChaines.has(s.nom)) {
+      throw new Error(`two --sorties files carry the same name "${s.nom}" (the second is ${cheminsSorties[i]}).\n`
+        + `  Rows are indexed by name: the second would overwrite the first without a word.\n`
+        + `  Name each chain after its system and run again. Nothing was measured.`);
+    }
+    nomsChaines.add(s.nom);
+  }
+  /* The audit's declared inputs, read before anything loads so a bad one refuses early. */
+  const pagesParDocument = lirePositif(arg("pages-per-document"), "--pages-per-document") ?? 1;
+  const pagesParAn = lirePositif(arg("pages-per-year"), "--pages-per-year") ?? null;
+  const coutHoraireDeclare = lirePositif(arg("machine-hourly-cost"), "--machine-hourly-cost");
+  const coutHoraire = coutHoraireDeclare ?? ASSUMPTIONS.machineHourlyCost;
+  const chaineCourante = arg("current");
+  if (chaineCourante !== undefined && !nomsChaines.has(chaineCourante)) {
+    throw new Error(`--current=${chaineCourante} names no --sorties chain.\n`
+      + `  Chains given: ${[...nomsChaines].join(", ") || "none"}. Nothing was measured.`);
+  }
+  /* Prices: declared in the file, else the list-price table when the file names a vendor
+     key, else unpriced. The table is only opened when a chain asks for it. */
+  let listePrix: ListPrices | null = null;
+  if (chaines.some((s) => s.declares?.vendor !== undefined && !PRICE_KEYS.some((k) => s.declares?.[k] !== undefined))) listePrix = readListPrices();
+  const prix: SourcePrice[] = chaines.map((s) => priceOf(s.nom, s.declares, listePrix));
+  /* Each outcomes file answers this file under these kinds, or it is refused now (item 21). */
+  verifierSorties(chaines, fichier, createHash("sha256").update(octets).digest("hex"), kinds, champs);
   /* Les questions du client, s'il en fournit. Un fichier illisible se refuse en le disant :
      partir sur des questions déduites alors qu'il en a écrit serait pire que de s'arrêter. */
   const questionsFournies = (() => {
@@ -1575,7 +2023,7 @@ Nothing leaves your machine: the models are local and this path makes no network
       }
       return propre;
     } catch (e) {
-      console.error(`--questions: cannot read ${chemin} — ${(e as Error).message}`);
+      console.error(`--questions: cannot read ${chemin} (${(e as Error).message})`);
       process.exit(1);
     }
   })();
@@ -1655,7 +2103,7 @@ Nothing leaves your machine: the models are local and this path makes no network
      * données valides — mais un silence ici coûterait au client une mesure entière.
      */
     const d = demesurees[0]!;
-    console.log(`  ${demesurees.length} cell(s) are over 1 MB — the largest is ${(d.octets / 1e6).toFixed(1)} MB, `
+    console.log(`  ${demesurees.length} cell(s) are over 1 MB. The largest is ${(d.octets / 1e6).toFixed(1)} MB, `
       + `ending at line ${d.ligne}.`);
     console.log(`  A field value is not a megabyte. The usual cause is a quote opened at line `
       + `${d.ouvertureLigne} and closed much later, which swallows every line in between into one `
@@ -1663,7 +2111,7 @@ Nothing leaves your machine: the models are local and this path makes no network
   }
   if (courtes.length > 0) {
     console.log(`  ${courtes.length} row(s) have fewer cells than the ${lecture.noms.length} `
-      + `columns named in the header — line ${courtes.slice(0, 5).map((c) => c.ligne).join(", ")}`
+      + `columns named in the header: line ${courtes.slice(0, 5).map((c) => c.ligne).join(", ")}`
       + `${courtes.length > 5 ? `, and ${courtes.length - 5} more` : ""}.`);
     console.log(`  Their missing answers are read as empty, which counts as a miss against `
       + `every tier. Your rates carry that.`);
@@ -1672,7 +2120,7 @@ Nothing leaves your machine: the models are local and this path makes no network
     const apercu = ecartees.slice(0, 5)
       .map((e) => `line ${e.ligne} has ${e.champs}`).join(", ");
     console.log(`  ${ecartees.length} row(s) set aside: the header names `
-      + `${lecture.noms.length} columns and these do not match — ${apercu}`
+      + `${lecture.noms.length} columns and these do not match: ${apercu}`
       + `${ecartees.length > 5 ? `, and ${ecartees.length - 5} more` : ""}.`);
     console.log(`  They are NOT counted in the rates below, in either direction.`);
   }
@@ -1687,7 +2135,7 @@ Nothing leaves your machine: the models are local and this path makes no network
   if (cas.length === 0) {
     console.error(
       `\nNo records were read from your file.\n\n`
-      + `  A rate over zero records is not a wide interval — it does not exist. Nothing will\n`
+      + `  A rate over zero records is not a wide interval. It does not exist. Nothing will\n`
       + `  be measured, so nothing is run.\n\n`
       + `  The most common cause is a file holding only a header row. The second is a header\n`
       + `  that names your columns differently from the rows below it.`);
@@ -1736,7 +2184,7 @@ Nothing leaves your machine: the models are local and this path makes no network
       + `Pass --show-questions to see them all.`);
   }
   if (deduites.length) {
-    console.log(`\n⚠ ${deduites.length} question(s) derived from your column names — a choice we`);
+    console.log(`\n⚠ ${deduites.length} question(s) derived from your column names: a choice we`);
     console.log(`  made for you, not a measurement. Rates obtained under a derived question are`);
     console.log(`  NOT comparable to the ones in this repository's README, which were measured`);
     console.log(`  under the questions above marked "measured".`);
@@ -1751,7 +2199,7 @@ Nothing leaves your machine: the models are local and this path makes no network
    */
   /* Ce qui se sait sans modèle se dit avant de charger quoi que ce soit : un champ dont la
      réponse n'est pas dans le texte ne mesure pas le palier, il mesure le corpus. */
-  const presence = direLaPresence(presenceDeLaVerite(cas, champs));
+  const presence = direLaPresence(presenceDeLaVerite(cas, champs, kinds));
   if (presence) console.log(`\n${presence}\n`);
 
   const regles = reglesBrutes
@@ -1784,7 +2232,7 @@ Nothing leaves your machine: the models are local and this path makes no network
         : x.r.high < majoritaire.taux ? "WORSE than always guessing the commonest label"
         : "indistinguishable from the majority baseline";
       console.log(`  ${x.palier.padEnd(10)} ${writeRate(x.r).padEnd(28)} `
-        + `${ecrireMs(x.ms, x.palier === sorties?.nom).padEnd(20)} ${bat}`);
+        + `${ecrireMs(x.ms, nomsChaines.has(x.palier)).padEnd(20)} ${bat}`);
     }
     console.log("");
     /*
@@ -1805,9 +2253,18 @@ Nothing leaves your machine: the models are local and this path makes no network
    * et ce qui reste s'est choisi tout seul. Annoncé ici, avant le tableau, pour qu'on ne le
    * lise pas comme une note.
    */
-  if (sorties) {
+  for (const [k, sorties] of chaines.entries()) {
     const corr = correspondance(cas, champs, sorties);
     console.log(`\nYour chain: "${sorties.nom}".`);
+    const p = prix[k]!;
+    if (p.provenance === "declared") {
+      console.log(`  price: ${priceWords(p)}: declared by you, never measured here.`);
+    } else if (p.provenance === "list-price") {
+      console.log(`  price: ${priceWords(p)}: the LIST price of `
+        + `${p.listPrice.key} read on ${p.listPrice.readOn}${p.listPrice.verified ? "" : ", not re-read since"}; declare yours to replace it.`);
+    } else {
+      console.log(`  price: not declared, so this chain enters no costed routing; its accuracy is still measured.`);
+    }
     /*
      * Qui a noté, et avec quoi — sans quoi l'exactitude n'est plus mesurée mais crue.
      *
@@ -1827,12 +2284,12 @@ Nothing leaves your machine: the models are local and this path makes no network
     }
     console.log(`  no extracted value is received: outcomes only, per case.`);
     console.log(`  cost and latency: ${sorties.declares ? "declared by you" : "not declared"}`
-      + ` — ${PROVENANCE_DES_DECLARES.provenance}, never measured here.`);
+      + ` (${PROVENANCE_DES_DECLARES.provenance}, never measured here).`);
     if (corr.champsSansAucuneValeur.length) {
       console.log(`  ⚠ no result supplied for: ${corr.champsSansAucuneValeur.join(", ")}`);
     }
     if (corr.total > 0) {
-      console.log(`  ⚠ ${corr.total} identifier(s) with no match — the rate below therefore `
+      console.log(`  ⚠ ${corr.total} identifier(s) with no match: the rate below therefore `
         + `covers the matched cases only:`);
       for (const champ of champs) {
         const m = corr.manquants[champ]!.length, i = corr.inconnus[champ]!.length;
@@ -1856,8 +2313,22 @@ Nothing leaves your machine: the models are local and this path makes no network
     ? (id, palier, champ, sort, score) => { (((trace[id] ??= {})[palier] ??= {})[champ] = { outcome: sort, score }); }
     : undefined;
   const releve = await mesurerVosCas(cas, champs, paliers, regles,
-    process.argv.includes("--journal"), sorties,
-    Object.fromEntries(Object.entries(questions).map(([k, v]) => [k, v.texte])), traceur);
+    process.argv.includes("--journal"), chaines,
+    Object.fromEntries(Object.entries(questions).map(([k, v]) => [k, v.texte])), traceur, kinds);
+
+  /*
+   * THE AUDIT: per field, the cheapest source the sample cannot show to be worse, costed per
+   * page. Computed always (it is cheap and it goes into the record), printed after the
+   * per-field lines when at least one chain was given: without a vendor there is nothing to
+   * save against. F8: computed BEFORE the per-field lines, whose closing sentence follows its
+   * routing, so the two never contradict each other.
+   */
+  const chaineActuelle = chaineCourante ?? (chaines.length ? chaines[0]!.nom : null);
+  const resultatAudit = calculerAudit({
+    fields: champs, kinds, releve: releve as Record<string, Record<string, { bons: number; sur: number; ms: number; reussites?: string }>>,
+    chains: prix, current: chaineActuelle,
+    pagesPerDocument: pagesParDocument, pagesPerYear: pagesParAn, machineHourlyCost: coutHoraire, margin: marge,
+  });
 
   console.log("\nACCURACY PER FIELD, with the interval at "
     + `${(CONFIANCE.niveau * 100).toFixed(0)} %\n`);
@@ -1869,7 +2340,7 @@ Nothing leaves your machine: the models are local and this path makes no network
     console.log(`  ${champ}`);
     for (const x of rangs) {
       console.log(`    ${x.palier.padEnd(10)} ${writeRate(x.r).padEnd(28)} `
-        + `${ecrireMs(x.ms, x.palier === sorties?.nom)}`);
+        + `${ecrireMs(x.ms, nomsChaines.has(x.palier))}`);
     }
     /*
      * La phrase qui compte — et le refus de la prononcer sans échantillon.
@@ -1893,7 +2364,10 @@ Nothing leaves your machine: the models are local and this path makes no network
       verdicts.push({ champ, lignes: [ligne] });
       continue;
     }
-    const lignes = recommander(champ, rangs, releve, marge);
+    const lignes = recommander(champ, rangs, releve, marge, {
+      actuelle: chaineActuelle ?? undefined,
+      audit: chaines.length > 0 ? { chosen: resultatAudit.routing[champ] ?? null, head: resultatAudit.fields[champ]?.head ?? null } : undefined,
+    });
     for (const l of lignes) console.log(`    → ${l}`);
     console.log("");
     verdicts.push({ champ, lignes });
@@ -1901,6 +2375,16 @@ Nothing leaves your machine: the models are local and this path makes no network
 
   const desordres = direLesDesordres(releve);
   if (desordres) console.log(`\n${desordres}\n`);
+
+  const lignesAudit = auditLines(resultatAudit);
+  if (chaines.length > 0) {
+    console.log("");
+    for (const l of lignesAudit) console.log(l);
+    console.log(`  machine time for local tiers at ${symboleDe(UNITS.budget)}${coutHoraire} an hour`
+      + (coutHoraireDeclare === undefined ? " (assumed; declare yours with --machine-hourly-cost)" : " (declared by you)")
+      + `; ${pagesParDocument} page(s) per document` + (arg("pages-per-document") === undefined ? " (assumed; --pages-per-document)" : " (declared)")
+      + (chaineCourante === undefined ? `; current chain taken as the first --sorties given, "${chaines[0]!.nom}" (--current to name another)` : "") + `.\n`);
+  }
 
   /* « Un fichier a-t-il été donné ? » et « une règle a-t-elle été mesurée ? » ne sont pas la
      même question, et c'est la seconde que le rapport prétend répondre. */
@@ -1920,7 +2404,7 @@ Nothing leaves your machine: the models are local and this path makes no network
   const bornes = bornesPosees();
   if (bornes.cas > 0) {
     console.log(`\n  ${bornes.cas} case(s) had their text cut to the first ${PLAFOND_TEXTE} characters`
-      + ` — ${bornes.caracteres.toLocaleString("en-GB")} character(s) set aside in total.`);
+      + `: ${bornes.caracteres.toLocaleString("en-GB")} character(s) set aside in total.`);
     console.log(`  The extractors read at most ${FENETRE_JETONS} tokens, so they never saw that text:`);
     console.log(`  cutting it changes no rate above, and stops one long cell from costing gigabytes.`);
     console.log(`  If your documents are genuinely longer than that, the fields you need must appear`);
@@ -1929,7 +2413,9 @@ Nothing leaves your machine: the models are local and this path makes no network
 
   writeFileSync(sortie, rapportPourLeClient({
     cas: cas.length, champs, date: new Date().toISOString().slice(0, 10),
-    questions, avecRegles: reglesMesurees, verdicts, marge,
+    questions, avecRegles: reglesMesurees, verdicts, marge, kinds,
+    audit: chaines.length > 0 ? lignesAudit : undefined,
+    sansVerite: sansVerite(cas, champs),
     lignes: champs.flatMap((champ) => Object.entries(releve[champ]!).map(([palier, r]) => {
       const q = rate(r.bons, r.sur);
       /* Le fichier passe par le MÊME formateur que la console : c'est lui qui porte le
@@ -1941,7 +2427,7 @@ Nothing leaves your machine: the models are local and this path makes no network
          deux et décalait toute la ligne sous les mauvais en-têtes. Le même échappement que
          pour les noms de colonne, un colonne plus loin. */
       return [cellule(champ), cellule(palier), c.taux, c.intervalle, q.n,
-        ecrireMs(r.ms, palier === sorties?.nom)];
+        ecrireMs(r.ms, nomsChaines.has(palier))];
     })),
   }));
   console.log(`Written to ${sortie}`);
@@ -1954,13 +2440,14 @@ Nothing leaves your machine: the models are local and this path makes no network
   const releveJson = fichier.replace(/\.csv$/i, "") + "-measured.json";
   const etat = etatAuDepart;
   const enregistrement = releveClient({
-    fichier, octets: readFileSync(fichier), cas: cas.length, casDansLeFichier, champs, questions,
-    releve, verdicts, marge, sorties, measuredAt: new Date().toISOString(),
+    fichier, octets, cas: cas.length, casDansLeFichier, champs, questions,
+    releve, verdicts, marge, sorties: chaines, measuredAt: new Date().toISOString(),
     code: etat ? { commit: etat.commit, sale: etat.sale.length > 0 } : null,
+    kinds, audit: resultatAudit,
   });
   enregistrement.empreinte = empreinteDuReleve(enregistrement);
   writeFileSync(releveJson, JSON.stringify(enregistrement, null, 2));
-  console.log(`Sealed record written to ${releveJson} — seal ${enregistrement.empreinte}.`);
+  console.log(`Sealed record written to ${releveJson}, seal ${enregistrement.empreinte}.`);
   if (tracer) {
     const traceJson = fichier.replace(/\.csv$/i, "") + "-trace.json";
     const t: Record<string, unknown> = {
@@ -1970,7 +2457,7 @@ Nothing leaves your machine: the models are local and this path makes no network
     };
     t.empreinte = empreinteDuReleve(t);
     writeFileSync(traceJson, JSON.stringify(t, null, 2));
-    console.log(`Trace written to ${traceJson} — seal ${t.empreinte}: one decision per case, tier and field; no value.`);
+    console.log(`Trace written to ${traceJson}, seal ${t.empreinte}: one decision per case, tier and field; no value.`);
   }
   console.log(`  Counts, rates and per-case verdicts, never a value. \`npm run diff -- <before> <after>\``);
   console.log(`  compares two of them case by case; \`npm run sceller -- <file>\` recomputes the seal.\n`);
@@ -1978,7 +2465,7 @@ Nothing leaves your machine: the models are local and this path makes no network
     console.log(reglesBrutes
       ? "Your --rules file was read, but no rule was measured on any field. The report says so."
       : "No --rules given, so no free tier was measured. On my own corpus free regexes");
-    console.log("carried three fields of five — a routing without them overstates what you pay.\n");
+    console.log("carried three fields of five: a routing without them overstates what you pay.\n");
   }
   if (avecLlm) {
     console.log("Generative tiers measured: "

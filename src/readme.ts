@@ -750,6 +750,7 @@ const commandes = (() => {
     ["sonde", "the generative probe, regenerated from the frozen profile; it was hand-typed and eleven of its figures had gone stale"],
     ["start", "the screen, on localhost:4670"],
     ["measure:yours", "your own cases, from a CSV; nothing leaves your machine. Writes a report beside the file, and a sealed record `<file>-measured.json` (counts and per-case verdicts, never a value) that `diff` compares and `sceller` re-verifies"],
+    ["grade", "grade one vendor's extracted values against your labelled CSV and write the `--sorties` file `measure:yours` reads: clean, wrong or blank per case and field, the grader's version and each field's declared kind (`total:amount`, `closing_date:date`), never a value. Reads a folder of Textract, Document AI or Azure Document Intelligence exports offline through a small mapping file, or a plain JSON of values your chain wrote; carries the price per thousand pages you declare"],
     ["measure:humans", "the human tier, on cases your reviewers already worked: the one figure every page here calls assumed. Accuracy, agreement and seconds per case, aggregated (no per-person output), written beside your CSV as a report and a sealed record of verdicts, never a value; `optimise -- --humans=<record>` then uses the measurement and says so"],
     ["recertify", "does the spring measurement still hold? Re-measures a new CSV under the sealed baseline record's own protocol (same fields, same questions, same tiers) and says per field: holds, or MOVED (exit code 1), naming the cases that used to pass and no longer do. Measures input drift against its own noise floor when the spring CSV is still beside the record. Writes `<file>-recertified.md` and a sealed `<file>-recertified.json`, which serves as the next baseline"],
     ["benchmark", "the same measurement on a public labelled dataset; the one command that downloads: the dataset comes down, nothing of yours goes up"],
@@ -1112,6 +1113,25 @@ const lecture = (() => {
     + `Vision OCR, and put through the same extractors. Nothing else changed, so the difference `
     + `is the reading stage and nothing else.\n\n`
     + `Transcription fidelity: **${writeRate(fid)}** of words recovered.\n\n`
+    /* F5 (2026-09-29): the line fidelity is printed once a run has measured it. The record
+       on disk predates the measure until `npm run ocr` is run again on a Mac; a block that
+       invented the figure from nothing would publish a number no command produced. */
+    + (r.fideliteDesLignes
+        ? `Line fidelity: **${writeRate(rate(Math.round(r.fideliteDesLignes.intactes.taux * r.fideliteDesLignes.intactes.n), r.fideliteDesLignes.intactes.n))}** `
+          + `of printed lines recovered whole on one line, `
+          + `**${writeRate(rate(Math.round(r.fideliteDesLignes.enOrdre.taux * r.fideliteDesLignes.enOrdre.n), r.fideliteDesLignes.enOrdre.n))}** `
+          + `in their printed order.`
+          /* F6: the ceiling the page sets, so the figure above is read for what it is. */
+          + (r.fideliteDesLignes.plafond
+              ? ` ${r.fideliteDesLignes.plafond.lignesPlusLargesQueLaPage} of ${r.fideliteDesLignes.plafond.sur} expected lines are `
+                + `wider than the rendered page (${r.fideliteDesLignes.plafond.largeurEnCaracteres} characters) and wrap, so whole `
+                + `lines cannot exceed ${r.fideliteDesLignes.plafond.sur - r.fideliteDesLignes.plafond.lignesPlusLargesQueLaPage} of `
+                + `${r.fideliteDesLignes.plafond.sur}; among the lines that fit, `
+                + `**${writeRate(rate(Math.round(r.fideliteDesLignes.intactesParmiCellesQuiTiennent.taux * r.fideliteDesLignes.intactesParmiCellesQuiTiennent.n), r.fideliteDesLignes.intactesParmiCellesQuiTiennent.n))}** `
+                + `come back whole.`
+              : "")
+          + `\n\n`
+        : "")
     + table(["Tier", "From text", "From the image", "Gap", "Beyond noise"], lignes)
     + `\n\n${verdictLecture}\n\n`
     + `**What this does not measure.** The images are rendered, not photographed (clean, `
@@ -1528,6 +1548,7 @@ const documents = (() => {
     "sbom.json": "the dependency inventory, CycloneDX, for a procurement team",
     "cle-publique.pem": "the key that signs reports; verify one with `node src/verifier-rapport.mjs`",
     "rules-example.json": "an example `--rules` file for `measure:yours`: one regular expression per column of your CSV, the whole match is the value; copy it, keep the columns you have",
+    "vendor-prices.json": "the list prices per thousand pages the extraction audit falls back on when a chain declares none: read on a date, from the vendors' public pages, marked verified or not; a declared price always wins over them",
     "rapport-exemple.html": "an example of the signed report, issued on cascade's own held-out corpus with the repository's key; verify it before buying anything: `node src/verifier-rapport.mjs rapport-exemple.html`",
   };
   const presents = readdirSync(racine).filter((n) => n in decrit).sort();

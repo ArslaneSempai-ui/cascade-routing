@@ -1,0 +1,4 @@
+{
+  "_synthetic": "Hand-written against the Azure error response body: what the service returns when the request itself is refused. No real document.",
+  "error": { "code": "InvalidImageSize", "message": "Image size is too small or too large." }
+}

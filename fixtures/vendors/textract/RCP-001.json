@@ -1,0 +1,18 @@
+{
+  "_synthetic": "Hand-written against the AnalyzeExpense response schema. No real receipt, no real merchant.",
+  "DocumentMetadata": { "Pages": 1 },
+  "ExpenseDocuments": [
+    {
+      "ExpenseIndex": 1,
+      "SummaryFields": [
+        { "Type": { "Text": "VENDOR_NAME", "Confidence": 99.0 }, "ValueDetection": { "Text": "Sample Cafe (synthetic)", "Confidence": 98.0 }, "PageNumber": 1 },
+        { "Type": { "Text": "INVOICE_RECEIPT_DATE", "Confidence": 98.0 }, "LabelDetection": { "Text": "Date:" }, "ValueDetection": { "Text": "29 Sep 2026", "Confidence": 97.0 }, "PageNumber": 1 },
+        { "Type": { "Text": "TOTAL", "Confidence": 99.0 }, "LabelDetection": { "Text": "TOTAL" }, "ValueDetection": { "Text": "12,50", "Confidence": 96.0 }, "PageNumber": 1, "Currency": { "Code": "EUR" } },
+        { "Type": { "Text": "TAX", "Confidence": 95.0 }, "LabelDetection": { "Text": "VAT 8%" }, "ValueDetection": { "Text": "1,00", "Confidence": 94.0 }, "PageNumber": 1 },
+        { "Type": { "Text": "OTHER", "Confidence": 70.0 }, "LabelDetection": { "Text": "Amount Due:" }, "ValueDetection": { "Text": "12,50", "Confidence": 90.0 }, "PageNumber": 1 },
+        { "Type": { "Text": "INVOICE_RECEIPT_ID", "Confidence": 80.0 }, "ValueDetection": { "Text": "", "Confidence": 10.0 }, "PageNumber": 1 }
+      ],
+      "LineItemGroups": []
+    }
+  ]
+}

@@ -10,7 +10,7 @@
     "measure": "node src/measure.ts",
     "optimise": "node src/optimise.ts",
     "typage": "tsc --noEmit",
-    "test": "tsc --noEmit && node src/readme.ts --check && node src/landing.ts --check && node src/dossier.ts --check && node src/sonde.ts --check && node src/licences.ts --check && node src/menace.ts --check && node --test src/*.test.ts src/*.test.mjs",
+    "test": "tsc --noEmit && node src/readme.ts --check && node src/landing.ts --check && node src/dossier.ts --check && node src/sonde.ts --check && node src/licences.ts --check && node src/menace.ts --check && node src/suite.ts node --test --test-timeout=1200000 src/*.test.ts src/*.test.mjs",
     "failures": "node src/failures.ts",
     "figures": "node src/readme.ts && node src/landing.ts",
     "landing": "node src/landing.ts",
@@ -31,6 +31,7 @@
     "captures": "node src/capturer.mjs .",
     "dossier": "node src/dossier.ts",
     "measure:yours": "node src/your-cases.ts",
+    "grade": "node src/grade.ts",
     "measure:humans": "node src/humans.ts",
     "recertify": "node src/recertify.ts",
     "fuite": "node src/fuite.ts",
@@ -60,8 +61,8 @@
     "typescript": "^5.9.0"
   },
   "overrides": {
-    "sharp": "^0.35.3",
-    "adm-zip": "^0.6.0"
+    "sharp": "0.35.5",
+    "adm-zip": "0.6.1"
   },
   "license": "PolyForm-Noncommercial-1.0.0"
 }

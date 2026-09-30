@@ -1,0 +1,61 @@
+id,text,total:amount,receipt_date:date,receipt_id:id,currency:currency
+R-0001,"PLACEHOLDER CAFE (synthetic receipt, no real shop) 06/27/2026 Receipt No. PL815827 Tea 31.83 Milk 21.20 Tape 37.84 TOTAL GBP 90.87 paid in GBP thank you",90.87,2026-06-27,PL815827,GBP
+R-0002,"DEMO GROCERS (synthetic receipt, no real shop) 2026-12-23 Receipt No. DE-586563 Tape 12.03 Bread 24.70 TOTAL EUR 36.73 paid in EUR thank you",36.73,2026-12-23,DE586563,EUR
+R-0003,"EXAMPLE PHARMACY (synthetic receipt, no real shop) 11/26/2026 Receipt No. EX-319891 Soap 43.22 TOTAL $43.22 paid in USD thank you",43.22,2026-11-26,EX319891,USD
+R-0004,"PLACEHOLDER CAFE (synthetic receipt, no real shop) 12/08/2026 Receipt No. PL434339 Soap 13.65 Milk 4.83 Soap 37.07 Milk 17.62 TOTAL $73.17 paid in USD thank you",73.17,2026-12-08,PL434339,USD
+R-0005,"SAMPLE MART (synthetic receipt, no real shop) 1/16/2026 Receipt No. SA783066 Rice 23.20 TOTAL GBP 23.20 paid in GBP thank you",23.20,2026-01-16,SA783066,GBP
+R-0006,"FICTIONAL FUELS (synthetic receipt, no real shop) 2026-01-11 Receipt No. FI 137 871 Apples 35.83 TOTAL $35.83 paid in USD thank you",35.83,2026-01-11,FI137871,USD
+R-0007,"EXAMPLE PHARMACY (synthetic receipt, no real shop) 2026-04-19 Receipt No. EX348614 Rice 4.05 Bread 7.33 Rice 22.65 TOTAL EUR 34.03 paid in EUR thank you",34.03,2026-04-19,EX348614,EUR
+R-0008,"SAMPLE MART (synthetic receipt, no real shop) 10/18/2026 Receipt No. SA 298 814 Tape 6.22 Bread 32.59 Milk 19.41 TOTAL $58.22 paid in USD thank you",58.22,2026-10-18,SA298814,USD
+R-0009,"TEST HARDWARE (synthetic receipt, no real shop) 10/18/2026 Receipt No. TE 314 737 Soap 44.61 Tape 23.36 Batteries 17.07 TOTAL GBP 85.04 paid in GBP thank you",85.04,2026-10-18,TE314737,GBP
+R-0010,"FICTIONAL FUELS (synthetic receipt, no real shop) 9/8/2026 Receipt No. FI900102 Tape 2.17 Milk 10.28 TOTAL EUR 12.45 paid in EUR thank you",12.45,2026-09-08,FI900102,EUR
+R-0011,"FICTIONAL FUELS (synthetic receipt, no real shop) 8/24/2026 Receipt No. FI 845 342 Bread 31.75 Soap 39.18 Bread 30.33 Paper 45.25 TOTAL $146.51 paid in USD thank you",146.51,2026-08-24,FI845342,USD
+R-0012,"EXAMPLE PHARMACY (synthetic receipt, no real shop) 2026-04-18 Receipt No. EX 206 169 Tape 36.60 Apples 32.78 TOTAL $69.38 paid in USD thank you",69.38,2026-04-18,EX206169,USD
+R-0013,"FICTIONAL FUELS (synthetic receipt, no real shop) 2026-02-24 Receipt No. FI397621 Rice 49.92 TOTAL GBP 49.92 paid in GBP thank you",49.92,2026-02-24,FI397621,GBP
+R-0014,"DEMO GROCERS (synthetic receipt, no real shop) 01/15/2026 Receipt No. DE-501711 Batteries 35.99 Apples 15.55 TOTAL EUR 51.54 paid in EUR thank you",51.54,2026-01-15,DE501711,EUR
+R-0015,"PLACEHOLDER CAFE (synthetic receipt, no real shop) 12/15/2026 Receipt No. PL887815 Apples 17.78 Tape 29.48 Apples 19.12 TOTAL GBP 66.38 paid in GBP thank you",66.38,2026-12-15,PL887815,GBP
+R-0016,"DEMO GROCERS (synthetic receipt, no real shop) 2026-03-21 Receipt No. DE729926 Milk 7.24 Tea 46.46 Milk 13.26 TOTAL $66.96 paid in USD thank you",66.96,2026-03-21,DE729926,USD
+R-0017,"EXAMPLE PHARMACY (synthetic receipt, no real shop) 11/13/2026 Receipt No. EX-803307 Tape 14.92 Coffee 42.85 TOTAL $57.77 paid in USD thank you",57.77,2026-11-13,EX803307,USD
+R-0018,"DEMO GROCERS (synthetic receipt, no real shop) 10/20/2026 Receipt No. DE166830 Batteries 11.41 Coffee 31.15 Tape 10.05 Tea 48.36 TOTAL $100.97 paid in USD thank you",100.97,2026-10-20,DE166830,USD
+R-0019,"EXAMPLE PHARMACY (synthetic receipt, no real shop) 2026-02-23 Receipt No. EX868328 Paper 17.14 TOTAL GBP 17.14 paid in GBP thank you",17.14,2026-02-23,EX868328,GBP
+R-0020,"EXAMPLE PHARMACY (synthetic receipt, no real shop) 2026-04-26 Receipt No. EX 113 783 Paper 7.16 Rice 31.93 TOTAL $39.09 paid in USD thank you",39.09,2026-04-26,EX113783,USD
+R-0021,"EXAMPLE PHARMACY (synthetic receipt, no real shop) 03/16/2026 Receipt No. EX 810 771 Soap 29.81 Soap 9.27 Tape 49.07 Soap 13.41 TOTAL $101.56 paid in USD thank you",101.56,2026-03-16,EX810771,USD
+R-0022,"TEST HARDWARE (synthetic receipt, no real shop) 12/11/2026 Receipt No. TE967617 Paper 41.27 TOTAL EUR 41.27 paid in EUR thank you",41.27,2026-12-11,TE967617,EUR
+R-0023,"TEST HARDWARE (synthetic receipt, no real shop) 6/9/2026 Receipt No. TE 709 865 Tape 12.33 Apples 29.23 Bread 44.63 TOTAL $86.19 paid in USD thank you",86.19,2026-06-09,TE709865,USD
+R-0024,"FICTIONAL FUELS (synthetic receipt, no real shop) 2026-05-20 Receipt No. FI 216 880 Bread 45.99 Coffee 38.92 TOTAL $84.91 paid in USD thank you",84.91,2026-05-20,FI216880,USD
+R-0025,"SAMPLE MART (synthetic receipt, no real shop) 6/20/2026 Receipt No. SA 802 489 Paper 1.18 Bread 17.58 Tea 34.63 Batteries 47.40 TOTAL $100.79 paid in USD thank you",100.79,2026-06-20,SA802489,USD
+R-0026,"SAMPLE MART (synthetic receipt, no real shop) 2026-10-10 Receipt No. SA660066 Bread 16.08 Bread 21.54 Soap 27.61 TOTAL $65.23 paid in USD thank you",65.23,2026-10-10,SA660066,USD
+R-0027,"EXAMPLE PHARMACY (synthetic receipt, no real shop) 06/12/2026 Receipt No. EX-124840 Tea 41.05 Tape 33.40 Coffee 7.51 Soap 16.27 TOTAL $98.23 paid in USD thank you",98.23,2026-06-12,EX124840,USD
+R-0028,"TEST HARDWARE (synthetic receipt, no real shop) 2026-06-06 Receipt No. TE-717463 Tape 46.75 Batteries 32.57 TOTAL EUR 79.32 paid in EUR thank you",79.32,2026-06-06,TE717463,EUR
+R-0029,"EXAMPLE PHARMACY (synthetic receipt, no real shop) 05/15/2026 Receipt No. EX833363 Coffee 10.17 Soap 47.48 Milk 19.12 Apples 5.99 TOTAL $82.76 paid in USD thank you",82.76,2026-05-15,EX833363,USD
+R-0030,"SAMPLE MART (synthetic receipt, no real shop) 09/23/2026 Receipt No. SA-427872 Paper 3.28 TOTAL $3.28 paid in USD thank you",3.28,2026-09-23,SA427872,USD
+R-0031,"TEST HARDWARE (synthetic receipt, no real shop) 12/20/2026 Receipt No. TE-169312 Milk 31.80 Bread 47.71 TOTAL GBP 79.51 paid in GBP thank you",79.51,2026-12-20,TE169312,GBP
+R-0032,"FICTIONAL FUELS (synthetic receipt, no real shop) 09/01/2026 Receipt No. FI-335876 Tape 21.32 TOTAL $21.32 paid in USD thank you",21.32,2026-09-01,FI335876,USD
+R-0033,"FICTIONAL FUELS (synthetic receipt, no real shop) 03/26/2026 Receipt No. FI532383 Tea 40.34 Rice 44.50 Coffee 48.57 Paper 18.69 TOTAL $152.10 paid in USD thank you",152.10,2026-03-26,FI532383,USD
+R-0034,"DEMO GROCERS (synthetic receipt, no real shop) 7/12/2026 Receipt No. DE194067 Milk 14.73 TOTAL $14.73 paid in USD thank you",14.73,2026-07-12,DE194067,USD
+R-0035,"PLACEHOLDER CAFE (synthetic receipt, no real shop) 10/07/2026 Receipt No. PL 656 059 Tea 37.76 Tape 12.44 Rice 30.31 TOTAL $80.51 paid in USD thank you",80.51,2026-10-07,PL656059,USD
+R-0036,"SAMPLE MART (synthetic receipt, no real shop) 2026-04-22 Receipt No. SA 518 288 Tape 11.88 TOTAL EUR 11.88 paid in EUR thank you",11.88,2026-04-22,SA518288,EUR
+R-0037,"PLACEHOLDER CAFE (synthetic receipt, no real shop) 9/7/2026 Receipt No. PL891583 Soap 46.73 TOTAL $46.73 paid in USD thank you",46.73,2026-09-07,PL891583,USD
+R-0038,"EXAMPLE PHARMACY (synthetic receipt, no real shop) 11/6/2026 Receipt No. EX343900 Batteries 38.48 TOTAL EUR 38.48 paid in EUR thank you",38.48,2026-11-06,EX343900,EUR
+R-0039,"FICTIONAL FUELS (synthetic receipt, no real shop) 9/8/2026 Receipt No. FI379279 Bread 3.90 Bread 46.31 TOTAL GBP 50.21 paid in GBP thank you",50.21,2026-09-08,FI379279,GBP
+R-0040,"SAMPLE MART (synthetic receipt, no real shop) 09/03/2026 Receipt No. SA 595 828 Apples 19.66 Apples 37.86 TOTAL $57.52 paid in USD thank you",57.52,2026-09-03,SA595828,USD
+R-0041,"EXAMPLE PHARMACY (synthetic receipt, no real shop) 2026-08-22 Receipt No. EX-135674 Milk 40.98 Bread 20.75 TOTAL EUR 61.73 paid in EUR thank you",61.73,2026-08-22,EX135674,EUR
+R-0042,"SAMPLE MART (synthetic receipt, no real shop) 10/5/2026 Receipt No. SA-201579 Milk 16.58 Soap 5.53 Tea 16.36 Tea 36.63 TOTAL $75.10 paid in USD thank you",75.10,2026-10-05,SA201579,USD
+R-0043,"DEMO GROCERS (synthetic receipt, no real shop) 12/28/2026 Receipt No. DE-996573 Batteries 35.92 Tape 13.51 Rice 19.55 TOTAL GBP 68.98 paid in GBP thank you",68.98,2026-12-28,DE996573,GBP
+R-0044,"TEST HARDWARE (synthetic receipt, no real shop) 3/17/2026 Receipt No. TE-815358 Tape 36.39 Coffee 13.72 TOTAL EUR 50.11 paid in EUR thank you",50.11,2026-03-17,TE815358,EUR
+R-0045,"TEST HARDWARE (synthetic receipt, no real shop) 2026-10-18 Receipt No. TE 227 281 Milk 37.16 Tape 17.25 TOTAL $54.41 paid in USD thank you",54.41,2026-10-18,TE227281,USD
+R-0046,"SAMPLE MART (synthetic receipt, no real shop) 09/22/2026 Receipt No. SA 184 255 Rice 37.46 Rice 25.13 Paper 24.38 TOTAL $86.97 paid in USD thank you",86.97,2026-09-22,SA184255,USD
+R-0047,"EXAMPLE PHARMACY (synthetic receipt, no real shop) 05/01/2026 Receipt No. EX900711 Soap 37.18 Soap 25.68 Paper 34.40 TOTAL EUR 97.26 paid in EUR thank you",97.26,2026-05-01,EX900711,EUR
+R-0048,"PLACEHOLDER CAFE (synthetic receipt, no real shop) 5/6/2026 Receipt No. PL867827 Apples 11.83 Tea 27.60 Apples 43.37 TOTAL EUR 82.80 paid in EUR thank you",82.80,2026-05-06,PL867827,EUR
+R-0049,"EXAMPLE PHARMACY (synthetic receipt, no real shop) 06/22/2026 Receipt No. EX-374819 Rice 28.27 Tea 36.58 Paper 6.94 TOTAL $71.79 paid in USD thank you",71.79,2026-06-22,EX374819,USD
+R-0050,"FICTIONAL FUELS (synthetic receipt, no real shop) 12/13/2026 Receipt No. FI 705 345 Soap 5.25 TOTAL $5.25 paid in USD thank you",5.25,2026-12-13,FI705345,USD
+R-0051,"EXAMPLE PHARMACY (synthetic receipt, no real shop) 08/10/2026 Receipt No. EX 590 141 Apples 19.08 TOTAL GBP 19.08 paid in GBP thank you",19.08,2026-08-10,EX590141,GBP
+R-0052,"SAMPLE MART (synthetic receipt, no real shop) 12/22/2026 Receipt No. SA 983 749 Tape 8.63 TOTAL $8.63 paid in USD thank you",8.63,2026-12-22,SA983749,USD
+R-0053,"PLACEHOLDER CAFE (synthetic receipt, no real shop) 2026-02-22 Receipt No. PL-628628 Tea 9.78 TOTAL $9.78 paid in USD thank you",9.78,2026-02-22,PL628628,USD
+R-0054,"EXAMPLE PHARMACY (synthetic receipt, no real shop) 8/19/2026 Receipt No. EX-463467 Tea 22.85 Paper 38.19 Milk 6.06 TOTAL GBP 67.10 paid in GBP thank you",67.10,2026-08-19,EX463467,GBP
+R-0055,"FICTIONAL FUELS (synthetic receipt, no real shop) 2026-10-05 Receipt No. FI-668879 Apples 45.20 Paper 35.55 Rice 36.00 Bread 34.82 TOTAL $151.57 paid in USD thank you",151.57,2026-10-05,FI668879,USD
+R-0056,"EXAMPLE PHARMACY (synthetic receipt, no real shop) 09/16/2026 Receipt No. EX161020 Apples 10.37 Apples 49.81 TOTAL $60.18 paid in USD thank you",60.18,2026-09-16,EX161020,USD
+R-0057,"SAMPLE MART (synthetic receipt, no real shop) 2026-08-28 Receipt No. SA 195 844 Tape 26.90 Soap 45.32 Apples 10.97 TOTAL GBP 83.19 paid in GBP thank you",83.19,2026-08-28,SA195844,GBP
+R-0058,"FICTIONAL FUELS (synthetic receipt, no real shop) 1/15/2026 Receipt No. FI104957 Rice 40.94 Paper 25.88 TOTAL $66.82 paid in USD thank you",66.82,2026-01-15,FI104957,USD
+R-0059,"FICTIONAL FUELS (synthetic receipt, no real shop) 2026-01-05 Receipt No. FI-742355 Tea 11.67 TOTAL $11.67 paid in USD thank you",11.67,2026-01-05,FI742355,USD
+R-0060,"EXAMPLE PHARMACY (synthetic receipt, no real shop) 7/2/2026 Receipt No. EX-626589 Rice 10.35 Milk 20.42 TOTAL GBP 30.77 paid in GBP thank you",30.77,2026-07-02,EX626589,GBP
