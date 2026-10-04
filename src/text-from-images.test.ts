@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { mkdtempSync, writeFileSync, existsSync, readFileSync, rmSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, basename } from "node:path";
 import { fileURLToPath } from "node:url";
 import { imageDe, lireLesImages, EXTENSIONS, ouvrirTesseract } from "./text-from-images.ts";
 import { etatDesLangues } from "./tessdata.ts";
@@ -34,7 +34,9 @@ test("given a reader, every case with an image gets its text, the others keep th
     writeFileSync(join(d, "A.png"), "x"); writeFileSync(join(d, "B.png"), "x");
     const lus: string[] = [];
     const r = await lireLesImages(CSV, d, async (p) => { lus.push(p); return p.endsWith("B.png") ? "   \n" : "TOTAL 5.00\nread by the engine"; });
-    assert.deepEqual(lus.map((p) => p.split("/").pop()), ["A.png", "B.png"], "the reader runs on the cases that have an image, once each");
+    /* The reader receives full paths (the code is right to pass them); the names are compared with
+       path.basename, never by splitting on "/": on the Windows runner the separator is "\\". */
+    assert.deepEqual(lus.map((p) => basename(p)), ["A.png", "B.png"], "the reader runs on the cases that have an image, once each");
     assert.deepEqual(r.lus, ["A"]); assert.deepEqual(r.vides, ["B"]); assert.deepEqual(r.sansImage, ["C"]);
     const apres = lireCsv(r.csv);
     assert.equal(apres.cas[0]!.text, "TOTAL 5.00\nread by the engine");

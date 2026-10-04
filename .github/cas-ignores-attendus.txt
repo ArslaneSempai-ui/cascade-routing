@@ -61,3 +61,7 @@ les couches partagées sont bien celles d'identite (dépôt exclu : recopie à l
 # The OCR language files (tessdata_fast, fetched by `npm run tessdata -- --prime` only) live on no
 # public runner: the one case that reads an image with tesseract.js stands aside there, and says so.
 tesseract reads a rendered line of text offline, and fills the text column
+
+# Same cause: with no language file on the runner, the case that compares the files present with
+# their pins has nothing to compare, and says so.
+the files on this machine, when present, match their pins to the byte
