@@ -535,7 +535,7 @@ export function auditLines(a: Audit): string[] {
   const out: string[] = [];
   const ppd = a.assumptions.pagesPerDocument;
   const pagesWords = `${ppd} page${ppd === 1 ? "" : "s"}`;
-  out.push(`AUDIT: per field, the cheapest source this sample cannot show to be worse than the best`);
+  out.push(`AUDIT: per field, the cheapest source within your declared margin of the best, case for case`);
   out.push(a.margin === null ? `  (no margin declared: nothing is recommended, the options are listed)` : `  (margin: ${marginWords(a.margin)}, your declaration)`);
   out.push(``);
   for (const [field, fa] of Object.entries(a.fields)) {

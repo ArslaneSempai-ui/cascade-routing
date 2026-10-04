@@ -130,7 +130,10 @@ single outbound request; the suite holds it.
 
 ## Requirements
 
-Node 24 or newer. The suite runs in continuous integration on Linux and macOS runners, and
+Node 24 or newer. The first run of `measure`, `optimise` or `measure:yours` writes one local
+marker, `~/.cascade/premiere-utilisation.json`: the date of first use, which the thirty-day
+clause of `LICENCES.md` reads, and which is never transmitted. The suite runs in continuous
+integration on Linux and macOS runners, and
 on Windows minus two shared test files, the screenshot driver's and the em-dash scan's, named
 with their reasons in `.github/fichiers-exclus-windows.txt` and printed at the top of the
 suite's output there;
@@ -143,8 +146,9 @@ under `cmd.exe`.
 
 The same harness, pointed at a buyer who already pays a document extraction vendor. The
 question the audit answers is narrower than routing and easier to act on: for each field,
-which extractor, the vendor's or a local tier, is the cheapest one that this sample cannot
-show to be worse; what it costs per thousand pages at the declared volume; and what that
+which extractor, the vendor's or a local tier, is the cheapest one that stays within the
+margin the client declares of the best (non-inferiority, case for case: "not separable" is
+not "not worse"); what it costs per thousand pages at the declared volume; and what that
 saves a year against the chain in use. Everything runs on the client's machine, offline.
 What leaves is the sealed record and nothing else: counts, a right, wrong or blank verdict
 per case and field, the CSV's file name and SHA-256, and the prices and volume the client
