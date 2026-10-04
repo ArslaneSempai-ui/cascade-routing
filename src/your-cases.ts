@@ -2303,7 +2303,10 @@ Nothing leaves your machine: the models are local and this path makes no network
     return;
   }
 
-  await loadExtractors();
+  /* No encoder tier asked for: no extractor is loaded. Loading them here even for a vendor-only
+     run was invisible on a machine with the weights cached and reached for the network on a
+     fresh clone (the --no-encoders witness hung there, 4 October 2026). */
+  if (!sansEncodeurs) await loadExtractors();
   /*
    * Ce qui ne correspond pas, dit avant les taux et non après.
    *
