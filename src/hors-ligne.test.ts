@@ -24,7 +24,7 @@ import { fileURLToPath } from "node:url";
 import { spawn, spawnSync } from "node:child_process";
 import { env as envHF, AutoConfig } from "@huggingface/transformers";
 import { armerHorsLigne, POIDS_MODELES, MODELES_EXTRACTION, racineDesPoids, poidsEnCache, diagnosticDesPoids } from "./tiers.ts";
-import { poserSousMain, FICHIERS_SOUS_MAIN } from "./poids.ts";
+import { poserSousMain, FICHIERS_SOUS_MAIN, CODE_ECART_TEMOIN, raisonPoidsAbsents } from "./poids.ts";
 
 const M = POIDS_MODELES.small;
 
@@ -426,7 +426,7 @@ test("hors ligne, la vraie commande MESURE — elle ne charge plus un modèle mu
       `--cases=${csv}`, "--sample=1"], { encoding: "utf8", timeout: 280_000, env: { ...process.env, CASCADE_OFFLINE: "1" } });
     const sortie = (r.stdout ?? "") + (r.stderr ?? "");
     /* Poids absents : la commande s'écarte sous le lanceur de tests ; ce cas se déclare ignoré. */
-    if (r.status === 75) { t.skip(sortie.trim()); return; }
+    if (r.status === CODE_ECART_TEMOIN) { t.skip(raisonPoidsAbsents(sortie)); return; }
     assert.equal(r.status, 0, `hors ligne, la commande sort en ${r.status} :\n${sortie.slice(-900)}`);
     assert.doesNotMatch(sortie, /loaded without a tokenizer/,
       "le modèle est chargé sans tokeniseur : la copie sous « main » n'a pas été posée, ou pas lue.");
