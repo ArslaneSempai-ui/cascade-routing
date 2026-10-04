@@ -47,6 +47,9 @@ function lire(nom) {
    machine, et cette sortie doit être la même partout. */
 const nombre = (n) => Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 const pct = (x) => (x * 100).toFixed(1);
+/* The period is a phrase the reading carries ("100000 documents"); its leading integer is
+   grouped like every other figure printed here, and the words are kept as written. */
+const grouperLaPeriode = (s) => String(s).replace(/^(\d+)(?=\s|$)/, (d) => nombre(Number(d)));
 
 /**
  * La sortie est en ANGLAIS, comme le reste de la façade publique — README, écran, rapport.
@@ -108,8 +111,8 @@ export function reponse(exposition, doc) {
     "  still counts as nearly good.",
     "",
     `  That routing costs ${nombre(publie.traitement)} ${DEVISE} per ${denominateur} to run.`,
-    `  What it lets through costs ${nombre(publie.exposition)}.`,
-    `  A ${denominateur} is ${exposition.periode}. No calendar year is measured here.`,
+    `  What it lets through costs ${nombre(publie.exposition)} ${DEVISE}.`,
+    `  A ${denominateur} is ${grouperLaPeriode(exposition.periode)}. No calendar year is measured here.`,
     "",
     `  ${nombre(rapport)} times more.`,
     "",
@@ -121,9 +124,10 @@ export function reponse(exposition, doc) {
     "",
     "  THESE ARE OUR NUMBERS, ON OUR CORPUS, not yours.",
     "",
-    "  You can reproduce them: everything is here, and `npm test` recomputes them.",
-    "  That is stronger evidence than a number taken on your own data, which",
-    "  nobody else could ever check.",
+    "  The per-record figures recompute from the shipped profile, and `npm test` holds",
+    "  them. The two cost figures are read from exposition.json, which a component",
+    "  outside this repository produces from that same profile; commits-reecrits.json",
+    "  says where the commits those files name went.",
     "",
     "  Your numbers need your records. That is what the audit is for.",
     "",

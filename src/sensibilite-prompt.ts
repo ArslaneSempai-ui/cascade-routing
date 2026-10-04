@@ -27,7 +27,7 @@ import { loadavg, cpus } from "node:os";
 import { isMain, refuserDrapeauxInconnus } from "./cli.ts";
 import { ouvrirJournal, issue } from "./journal.ts";
 import { FIELDS, generateRecords } from "./corpus.ts";
-import { loadGeneratifs, extract, correct, PROMPTS, type NomPrompt } from "./tiers.ts";
+import { loadGeneratifs, extract, correct, PROMPTS, type NomPrompt, exigerOllama } from "./tiers.ts";
 import { readProfiles } from "./measure.ts";
 
 import type { Field } from "./corpus.ts";
@@ -38,7 +38,7 @@ import { exigerArbrePropre, DRAPEAUX_ARBRE } from "./arbre-propre.ts";
 const SORTIE = fileURLToPath(new URL("../prompts-2026-08-20.json", import.meta.url));
 const PALIER = "gen-4b" as const;
 
-if (isMain(import.meta)) {
+if (isMain(import.meta)) { try {
   const cas = casDemandes(120);
   const dossiers = generateRecords(cas, "heldout");
   const noms = Object.keys(PROMPTS) as NomPrompt[];
@@ -51,6 +51,8 @@ if (isMain(import.meta)) {
 
   console.log(`\n${noms.length} prompts × ${FIELDS.length} fields × ${cas} cases on ${PALIER}.`);
   console.log(`Load before starting: ${loadavg()[0]!.toFixed(2)} on ${cpus().length} cores.\n`);
+  /* Ollama is asked for after the flags and the tree are checked, and before a journal is opened. */
+  await exigerOllama();
   await loadGeneratifs();
 
   const resultats: Record<string, Record<Field, number>> = {};
@@ -121,4 +123,8 @@ if (isMain(import.meta)) {
     console.log(`  ${c.padEnd(10)} ${parFormulation[c].toFixed(1).padStart(8)} pts ${(entrePaliers[c] ?? 0).toFixed(1).padStart(11)} pts`);
   }
   console.log(`\nWritten to ${SORTIE.split("/").pop()}\n`);
-}
+} catch (e) {
+  /* A refusal meant for a reader prints its sentence, never a stack (audit, 2026-10-04). */
+  console.error(`\n${e instanceof Error ? e.message : String(e)}\n`);
+  process.exit(1);
+} }

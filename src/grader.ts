@@ -172,6 +172,9 @@ export function parseAmountGrouped(raw: string): string | null {
   if (s.length === 0) return null;
   let markers = 0;
   if (/^\(.*\)$/.test(s)) { markers++; s = strip(s.slice(1, -1)); }
+  /* A blank or an apostrophe between digit groups is a thousands separator in some locales
+     ("1 234,56", "1'234.56"): read as grouping, like `amount` does (audit, 2026-10-04). */
+  s = s.replace(/(?<=\d)[ '\u2019](?=\d{3}\b)/g, "");
   if (/-\s*$/.test(s)) { markers++; s = s.replace(/-\s*$/, "").trim(); }
   if (s.startsWith("-")) { markers++; s = s.slice(1).trim(); }
   else if (s.startsWith("+")) s = s.slice(1).trim();
@@ -314,13 +317,28 @@ export function canonical(raw: string, kind: FieldKind): string | null {
 }
 
 /**
+ * THE ABSENT MARKER: an expected cell that holds exactly "-" says "this document has no such
+ * line". A source that returns nothing is then right (clean) and a source that returns a
+ * value has invented one (wrong). Before it, a receipt without a tax line was left ungraded,
+ * so a vendor that invents a tax was never penalised (audit of 4 October 2026: in CORD, both
+ * vendors returned a tax on 1 of the 60 receipts with no tax label). An empty cell still
+ * means unknown and is still graded by nobody; only the marker carries the claim.
+ */
+export const MARQUEUR_ABSENT = "-";
+export function attenduAbsent(expected: string): boolean {
+  return expected.trim() === MARQUEUR_ABSENT;
+}
+
+/**
  * Is `got` right for `expected` under this kind?
  *
  * The default comparison first, so nothing that scored right yesterday scores wrong today;
  * then, only if both sides parse, equality of the parsed values. An empty answer is never
- * right: it is a blank, and blanks are counted apart.
+ * right: it is a blank, and blanks are counted apart; except against the absent marker,
+ * where an empty answer is the right one.
  */
 export function graded(got: string, expected: string, kind: FieldKind = "exact"): boolean {
+  if (attenduAbsent(expected)) return normaliserReponse(got).length === 0;
   if (correct(got, expected)) return true;
   if (kind === "exact") return false;
   const a = canonical(got, kind), b = canonical(expected, kind);
@@ -333,6 +351,14 @@ export type Outcome = "clean" | "wrong" | "blank";
 export function outcome(got: string, expected: string, kind: FieldKind = "exact"): Outcome {
   if (graded(got, expected, kind)) return "clean";
   return normaliserReponse(got).length === 0 ? "blank" : "wrong";
+}
+
+/** Can the declared kind read this expected value at all? An unreadable one grades every
+    answer wrong, so the command flags it before anything is measured (audit, 2026-10-04). */
+export function attenduLisible(expected: string, kind: FieldKind): boolean {
+  if (attenduAbsent(expected) || expected.trim() === "") return true;
+  if (kind === "exact" || kind === "free-text") return true;
+  return canonical(expected, kind) !== null;
 }
 
 /**
@@ -349,5 +375,6 @@ export const GRADER = {
     id: "only letters and digits count, case does not",
     "free-text": "case, punctuation, diacritics and spacing do not count; word order does",
     exact: "the default comparison of this repository, separators and case set aside",
+    absent: "an expected cell that holds exactly \"-\" means the document has no such line: a blank answer is clean and any value is wrong; an empty expected cell means unknown and is graded by nobody",
   },
 } as const;

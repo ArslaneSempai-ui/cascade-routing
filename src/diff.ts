@@ -31,6 +31,7 @@ import { fileURLToPath } from "node:url";
 import { isMain } from "./cli.ts";
 import { pairedVerdict } from "./interval.ts";
 import { estNomDeReleve } from "./nom-de-releve.ts";
+import { empreinteDuReleve } from "./empreinte.ts";
 
 type Cellule = { reussites?: string; accuracy: number; items: number };
 /** Un relevé du banc, ou un relevé CLIENT (`<file>-measured.json`) : la même forme, plus la
@@ -125,12 +126,12 @@ export function comparer(a: Releve, b: Releve): Comparaison {
            PORTEUR celui qui manquait. Un diagnostic inversé envoie chercher dans le bon
            fichier la chose qui est dans l'autre — et il a l'air juste, ce qui coûte plus cher
            qu'un silence. Attrapé en lisant la sortie, pas en relisant le code. */
-        ecartees.push({ cellule: nom, pourquoi: !ba && !bb ? "aucun des deux ne porte de réussites par cas"
-          : `seul le relevé ${ba ? "d'avant" : "d'après"} porte ses réussites par cas` });
+        ecartees.push({ cellule: nom, pourquoi: !ba && !bb ? "neither record carries per-case verdicts"
+          : `only the ${ba ? "earlier" : "later"} record carries per-case verdicts` });
         continue;
       }
       if (ba.length !== bb.length) {
-        ecartees.push({ cellule: nom, pourquoi: `échantillons différents — ${ba.length} contre ${bb.length} cas` });
+        ecartees.push({ cellule: nom, pourquoi: `different sample sizes: ${ba.length} against ${bb.length} cases` });
         continue;
       }
       cellules++; cas += ba.length;
@@ -179,7 +180,26 @@ export function comparer(a: Releve, b: Releve): Comparaison {
 function lire(f: string): Releve {
   const c = existsSync(f) ? f : join(RACINE, f);
   if (!existsSync(c)) throw new Error(`${f} does not exist. Records available: ${relevesDisponibles().join(", ")}`);
-  return JSON.parse(readFileSync(c, "utf8")) as Releve;
+  const r = JSON.parse(readFileSync(c, "utf8")) as Releve & { empreinte?: unknown };
+  /*
+   * LE SCELLÉ SE LIT AVANT DE COMPARER.
+   *
+   * Un relevé dont le scellé ne correspond plus à son contenu a été édité après coup, et le
+   * comparer rendait « No case changed outcome. » en 0 (audit du 4 octobre 2026) : le diff
+   * tenait pour mesure un fichier que rien ne garantissait plus. Il refuse. Un relevé qui ne
+   * porte AUCUN scellé (les quatre profils historiques livrés) se compare, et la ligne le dit.
+   */
+  if (typeof r.empreinte === "string") {
+    const recalculee = empreinteDuReleve(r);
+    if (recalculee !== r.empreinte) {
+      throw new Error(`${f}: its seal no longer matches its content (carried ${r.empreinte}, recomputed ${recalculee}).\n`
+        + `  It was edited after it was sealed, so nothing in it is a measurement any more. Not compared.\n`
+        + `  \`npm run sceller -- ${f} --check\` says the same without writing; resealing it declares the edit.`);
+    }
+  } else {
+    console.error(`  note: ${f} carries no seal; it is compared as it is, and nothing proves it did not move.`);
+  }
+  return r;
 }
 
 /**

@@ -135,7 +135,7 @@ if (isMain(import.meta)) {
       + `  it, and the pass dies after working for nothing.\n\n`
       + `  Wait for the machine to go quiet, or force it by saying WHY and with what:\n`
       + `  npm run dur -- --allow-load="what else is running"\n`
-      + `  La raison est écrite dans le relevé, pour que personne n'ait à la deviner plus tard.`);
+      + `  The reason is written in the record, so that nobody has to guess it later.`);
     process.exit(1);
   }
   await loadExtractors();

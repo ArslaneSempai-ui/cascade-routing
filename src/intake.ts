@@ -39,6 +39,27 @@ export const CLES_DE_PROSE = [
 ] as const;
 export const CLES_DE_FORME = ["paliersDisponibles", "aUnJeuAnnote"] as const;
 
+/*
+ * THE CLIENT-FACING KEYS ARE ENGLISH (audit of 4 October 2026); the French ones, one of them
+ * misspelled, stay accepted as aliases so that a questionnaire filled in before that day
+ * still reads. The template ships with the English keys.
+ */
+export const ALIAS_ANGLAIS: Record<string, (typeof CLES_DE_PROSE)[number] | (typeof CLES_DE_FORME)[number]> = {
+  chain: "chaine", availableTiers: "paliersDisponibles", fallbackIfTierUnavailable: "replisiPalierIndisponible",
+  hasLabelledSet: "aUnJeuAnnote", signatory: "quiSigne",
+};
+
+/** Null means "left empty": the shipped template carries null where a figure of yours goes,
+    so that a repository default never passes for a client's figure. */
+export function normaliser(r: Record<string, unknown>): Reponses {
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(r)) {
+    if (v === null) continue;
+    out[ALIAS_ANGLAIS[k] ?? k] = v;
+  }
+  return out as Reponses;
+}
+
 /** Ce qu'un prospect peut renseigner. Tout est facultatif : un vide reste un vide. */
 export type Reponses = Partial<Record<keyof Assumptions, number>>
   & Partial<Record<(typeof CLES_DE_PROSE)[number], string>>
@@ -52,7 +73,8 @@ export type Lecture = {
   bloquant: string[];
 };
 
-export function lire(r: Reponses): Lecture {
+export function lire(brutes: Reponses): Lecture {
+  const r = normaliser(brutes as Record<string, unknown>);
   const hypotheses = { ...ASSUMPTIONS };
   const fournies: (keyof Assumptions)[] = [];
   const refus: string[] = [];
@@ -85,7 +107,7 @@ export function lire(r: Reponses): Lecture {
    * laisse le lecteur relire son fichier ligne à ligne.
    */
   const connues = new Set<string>([
-    ...Object.keys(ASSUMPTIONS), ...CLES_DE_FORME, ...CLES_DE_PROSE,
+    ...Object.keys(ASSUMPTIONS), ...CLES_DE_FORME, ...CLES_DE_PROSE, ...Object.keys(ALIAS_ANGLAIS),
   ]);
   const proche = (k: string) => [...connues].find((c) =>
     c.toLowerCase().startsWith(k.toLowerCase().slice(0, Math.max(3, k.length - 2)))
@@ -132,6 +154,29 @@ export function lire(r: Reponses): Lecture {
   return { hypotheses, fournies, defauts, refus, bloquant };
 }
 
+/**
+ * The template as shipped: the prose keys with their examples, and null where a figure of the
+ * client goes. It used to ship with this repository's own defaults filled in, and a bare run
+ * printed them under SUPPLIED BY THE CLIENT (audit of 4 October 2026).
+ */
+export function gabaritVide(): Record<string, unknown> {
+  return {
+    chain: "extract five fields from onboarding documents",
+    availableTiers: ["rules", "small hosted model", "large hosted model", "human review"],
+    residence: "must stay in the EU",
+    fallbackIfTierUnavailable: "not decided",
+    hasLabelledSet: true,
+    signatory: "VP Engineering",
+    volume: null,
+    budget: null,
+    latencyBudgetMs: null,
+    pricePerThousandSmall: null,
+    pricePerThousandLarge: null,
+    analystAnnualCost: null,
+    humanSeconds: null,
+  };
+}
+
 if (isMain(import.meta)) {
 
   refuserDrapeauxInconnus(["--file"]);
@@ -161,27 +206,24 @@ if (isMain(import.meta)) {
   }
 
   if (!fichier) {
-    const gabarit: Reponses = {
-      chaine: "extract five fields from onboarding documents",
-      paliersDisponibles: ["rules", "small hosted model", "large hosted model", "human review"],
-      residence: "must stay in the EU",
-      replisiPalierIndisponible: "not decided",
-      aUnJeuAnnote: true,
-      quiSigne: "VP Engineering",
-      volume: 100_000,
-      budget: 4_000,
-      latencyBudgetMs: 2_000,
-      pricePerThousandSmall: 0.2,
-      pricePerThousandLarge: 1.6,
-      analystAnnualCost: 62_000,
-      humanSeconds: 45,
-    };
     const sortie = "intake-template.json";
-    writeFileSync(sortie, JSON.stringify(gabarit, null, 2) + "\n");
+    /*
+     * A FILLED-IN TEMPLATE IS NEVER OVERWRITTEN. A bare `npm run intake` replaced a client's
+     * answers with the blank template and announced a success (audit of 4 October 2026).
+     * The template is written only where none exists; otherwise the command says where the
+     * existing one is and how to get a fresh one.
+     */
+    if (existsSync(sortie)) {
+      console.error(`\n  ${sortie} already exists here, and this command does not overwrite it: it may hold your answers.\n\n`
+        + `  To read it:            npm run intake -- --file=${sortie}\n`
+        + `  For a fresh template:  move or rename the existing file, then run npm run intake again.\n`);
+      process.exit(2);
+    }
+    writeFileSync(sortie, JSON.stringify(gabaritVide(), null, 2) + "\n");
     console.log(`\nTemplate written to ${sortie}. Fill it in, then:\n`);
     console.log(`  npm run intake -- --file=${sortie}\n`);
-    console.log(`Everything is optional. What stays empty keeps this repository's default, and the report`);
-    console.log(`says so — a missing figure never becomes an invented one.\n`);
+    console.log(`Everything is optional. A figure left null keeps this repository's default, and the report`);
+    console.log(`says so: a missing figure never becomes an invented one.\n`);
     process.exit(0);
   }
 

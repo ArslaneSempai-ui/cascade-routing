@@ -44,9 +44,26 @@ test("the price of a chain: declared first, else the list price with its date an
   assert.equal(list.readOn, "2026-09-29");
   assert.ok(Object.keys(list.vendors).length >= 5);
   for (const [k, v] of Object.entries(list.vendors)) {
-    assert.equal(v.verified, false, "no entry was re-read from this environment; the table must say so");
-    assert.ok(v.tierPagesPerMonth! > 0, `${k}: a list price is a first-tier price, and the tier must be carried as a number`);
+    /* An entry is verified only by a re-reading dated on or after the table, with its URL:
+       the 2026-09-29 entries were not re-read and say so; the Expense Parser entry was. */
+    if (v.verified) {
+      assert.ok(v.readOn >= list.readOn && /^https:\/\//.test(v.url), `${k}: a verified entry carries the date of its re-reading and its source`);
+    } else {
+      assert.equal(v.verified, false, `${k}: an entry not re-read must say so`);
+    }
+    /* A list price is a first-tier price. An entry that carries no monthly tier must say so
+       in words, so that the audit's over-tier check knows it has nothing to compare. */
+    if (v.tierPagesPerMonth === undefined) {
+      assert.match(v.tier ?? "", /no monthly tier/, `${k}: an entry without a numeric tier must say in words that it carries none`);
+    } else {
+      assert.ok(v.tierPagesPerMonth > 0, `${k}: a tier is a positive number of pages a month`);
+    }
   }
+  const expense = list.vendors["google-document-ai-expense-parser"]!;
+  assert.equal(expense.pricePerThousandPages, 100);
+  assert.equal(expense.billing, "document");
+  assert.equal(expense.verified, true);
+  assert.equal(expense.readOn, "2026-10-04");
   const declared = priceOf("mine", { pricePerThousandPages: 12, vendor: "aws-textract-forms" }, list);
   assert.equal(declared.provenance, "declared");
   assert.equal(declared.pricePerThousand, 12, "the contract wins over the list");

@@ -36,7 +36,7 @@ import { writeFileSync, existsSync, readFileSync, rmSync, renameSync } from "nod
 import { execFileSync } from "node:child_process";
 import { loadavg, cpus } from "node:os";
 import { isMain, refuserDrapeauxInconnus } from "./cli.ts";
-import { PROMPTS, OLLAMA, MODELES_LOCAUX, correct, normaliserReponse, exigerHoteLocal } from "./tiers.ts";
+import { PROMPTS, OLLAMA, MODELES_LOCAUX, correct, normaliserReponse, exigerHoteLocal, exigerOllama } from "./tiers.ts";
 import { FIELDS, generateRecords } from "./corpus.ts";
 
 import type { Field } from "./corpus.ts";
@@ -183,7 +183,7 @@ async function appeler(tag: string, invite: string, avecSchema: boolean) {
   };
 }
 
-if (isMain(import.meta)) {
+if (isMain(import.meta)) { try {
 
   refuserDrapeauxInconnus(["--cases", "--passes"]);
   const cas = casDemandes(4);
@@ -191,6 +191,8 @@ if (isMain(import.meta)) {
   const dossiers = generateRecords(cas, "dev");
   const paliers = ["gen-0.6b", "gen-4b", "gen-8b"] as const;
 
+  /* Ollama is asked for after the flags and the tree are checked, and before a journal is opened. */
+  await exigerOllama();
   const depart = etatMachine();
   console.log(`\nOutput constraint — ${paliers.length} tiers × 2 arms × ${passes} passes `
     + `× ${cas} cases × ${FIELDS.length} fields.`);
@@ -315,4 +317,8 @@ if (isMain(import.meta)) {
     cas, passes, lignes,
   }, null, 2) + "\n");
   console.log(`\nWritten to ${SORTIE.split("/").pop()}\n`);
-}
+} catch (e) {
+  /* A refusal meant for a reader prints its sentence, never a stack (audit, 2026-10-04). */
+  console.error(`\n${e instanceof Error ? e.message : String(e)}\n`);
+  process.exit(1);
+} }

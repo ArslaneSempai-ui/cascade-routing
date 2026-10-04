@@ -37,10 +37,40 @@ test("le gabarit livré passe l'outil livré", () => {
     `le gabarit de ce dépôt est refusé par sa propre commande :\n${r.stdout}${r.stderr}`);
   assert.doesNotMatch(r.stdout, /REFUSED/,
     "aucune clé du gabarit ne doit être annoncée inconnue");
-  /* Le témoin de non-vacuité : un gabarit vide passerait le cas ci-dessus. */
-  assert.match(r.stdout, /SUPPLIED BY THE CLIENT \((\d+)\)/);
-  const n = Number(/SUPPLIED BY THE CLIENT \((\d+)\)/.exec(r.stdout)?.[1]);
-  assert.ok(n >= 5, `seulement ${n} valeur(s) lue(s) du gabarit`);
+  /*
+   * LE GABARIT LIVRÉ NE FOURNIT AUCUN CHIFFRE : il porte null là où un chiffre du client va.
+   * Avant le 4 octobre 2026 il livrait les défauts du dépôt, et une passe à vide les imprimait
+   * sous « SUPPLIED BY THE CLIENT (7) », ce que l'outil lui-même interdit une ligne plus bas.
+   */
+  assert.match(r.stdout, /SUPPLIED BY THE CLIENT \(0\)/, "un gabarit vide ne fournit rien");
+  assert.match(r.stdout, /LEFT AT THIS REPOSITORY'S DEFAULT \(13\)/, "les treize chiffres restent des défauts, et c'est dit");
+  /* Le témoin de non-vacuité : le même gabarit, rempli, fournit les sept. */
+  const d = mkdtempSync(join(tmpdir(), "intake-rempli-"));
+  const rempli = JSON.parse(readFileSync(join(RACINE, "intake-template.json"), "utf8")) as Record<string, unknown>;
+  Object.assign(rempli, { volume: 2_500_000, budget: 9_000, latencyBudgetMs: 1_500, pricePerThousandSmall: 0.3,
+    pricePerThousandLarge: 2.1, analystAnnualCost: 70_000, humanSeconds: 50 });
+  writeFileSync(join(d, "rempli.json"), JSON.stringify(rempli));
+  const r2 = lancer(join(d, "rempli.json"));
+  assert.equal(r2.status, 0, r2.stdout + r2.stderr);
+  assert.match(r2.stdout, /SUPPLIED BY THE CLIENT \(7\)/, "le gabarit rempli fournit ses sept chiffres");
+  assert.match(r2.stdout, /volume\s+2500000/, "la valeur lue est celle du client, pas le défaut");
+});
+
+test("un gabarit déjà présent n'est pas écrasé par un lancement à vide", () => {
+  const d = mkdtempSync(join(tmpdir(), "intake-garde-"));
+  const avant = JSON.stringify({ volume: 2_500_000 });
+  writeFileSync(join(d, "intake-template.json"), avant);
+  const r = spawnSync("node", [join(ICI, "intake.ts")], { encoding: "utf8", cwd: d, timeout: 60_000 });
+  assert.equal(r.status, 2, `un lancement à vide sur un gabarit existant doit refuser :\n${r.stdout}${r.stderr}`);
+  assert.match(r.stderr, /already exists here/);
+  assert.equal(readFileSync(join(d, "intake-template.json"), "utf8"), avant, "LE GABARIT REMPLI A ÉTÉ ÉCRASÉ");
+  /* Et là où il n'existe pas, le gabarit s'écrit, avec ses valeurs vides. */
+  const d2 = mkdtempSync(join(tmpdir(), "intake-neuf-"));
+  const r2 = spawnSync("node", [join(ICI, "intake.ts")], { encoding: "utf8", cwd: d2, timeout: 60_000 });
+  assert.equal(r2.status, 0, r2.stdout + r2.stderr);
+  const ecrit = JSON.parse(readFileSync(join(d2, "intake-template.json"), "utf8")) as Record<string, unknown>;
+  assert.equal(ecrit.volume, null, "le gabarit neuf ne porte aucun chiffre du dépôt");
+  assert.ok("chain" in ecrit && !("chaine" in ecrit), "les clés livrées sont anglaises");
 });
 
 test("toute clé du gabarit est une clé que l'outil connaît", () => {

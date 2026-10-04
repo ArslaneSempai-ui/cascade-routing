@@ -37,6 +37,8 @@ import { normaliserReponse } from "./tiers.ts";
 import { loadExtractors, loadClassifiers, loadGeneratifs, extract, correct, classerParmi, MODELES_LOCAUX, questionPour,
   MODELES_EXTRACTION, MODELES_CLASSEMENT, type CleModele } from "./tiers.ts";
 import { poidsAbsents, motifDEcart, CODE_ECART_TEMOIN, exigerPoidsSurPlace } from "./poids.ts";
+import { attenduAbsent, attenduLisible, MARQUEUR_ABSENT } from "./grader.ts";
+import { lignesEvaluation } from "./evaluation.ts";
 import { TIERS, ENCODEURS, GENERATIFS } from "./paliers.ts";
 import { rate, writeRate, cellulesDeTaux, CONFIANCE, ENOUGH, type Rate } from "./interval.ts";
 import { apparier, juger, phrase, type Bits } from "./comparaison-appariee.ts";
@@ -255,10 +257,16 @@ export type PresenceChamp = {
  * sparsely labelled field was dragged down the same way. A case without an expected value is
  * not graded on that field, by any source, and is counted apart; `grade` applies the same
  * rule, so the two sides of a comparison stand on the same cases. A document that truly has
- * no such line has no marker yet: it stays ungraded, and the count says so.
+ * no such line is written "-" (`MARQUEUR_ABSENT`, grader.ts): that cell IS a truth, a blank
+ * answer is clean against it and any value is wrong (audit of 4 October 2026).
  */
 export function aUneVerite(c: Cas, champ: string): boolean {
   return (c.truth[champ] ?? "").trim().length > 0;
+}
+
+/** The cases that declare "no such line" on a field, counted apart so the report can say so. */
+export function casDeclaresAbsents(cas: readonly Cas[], champ: string): number {
+  return cas.filter((c) => attenduAbsent(c.truth[champ] ?? "")).length;
 }
 
 /** Per field, how many cases have no expected value. */
@@ -356,8 +364,8 @@ export function direLaPresence(p: PresenceChamp[]): string | undefined {
     blocs.push(`⚠ ${sansValeur.length} field(s) with cases that have NO expected value:\n`
       + sansValeur.map((x) => `    ${x.champ}: ${x.vides} of ${x.total} case(s)`).join("\n")
       + `\n  An empty expected cell is unknown, not "expected blank": those cases are not graded on\n`
-      + `  that field, by any tier or chain, and are not in its n. A document that truly has no\n`
-      + `  such line has no marker yet; it stays ungraded.`);
+      + `  that field, by any tier or chain, and are not in its n. For a document that truly has\n`
+      + `  no such line, write "${MARQUEUR_ABSENT}" in the cell: a blank answer is then clean and a value is wrong.`);
   }
   if (maigres.length) {
     blocs.push(`⚠ ${maigres.length} field(s) whose expected value is mostly NOT in the text `
@@ -885,9 +893,12 @@ export function ecrireMs(ms: number, declaree: boolean): string {
  */
 export const DRAPEAUX_CONNUS: readonly string[] = [
   "cases", "rules", "sorties", "questions", "task", "sample", "margin",
-  "llm", "journal", "trace", "show-questions", "yes-run-it",
+  "llm", "journal", "trace", "show-questions", "yes-run-it", "help",
+  /* `--no-encoders`: a vendor-only audit (your chains, your rules) that loads no model and
+     downloads nothing; `--tiers=rules` is the same request under the name the audit used. */
+  "no-encoders", "tiers",
   /* The audit's declared inputs: none is measured, each is printed with its provenance. */
-  "pages-per-document", "pages-per-year", "current", "machine-hourly-cost",
+  "pages-per-document", "pages-per-year", "current", "machine-hourly-cost", "ocr-price-per-thousand-pages",
 ];
 
 /**
@@ -1842,7 +1853,8 @@ async function principal(): Promise<void> {
   const arg = (nom: string) => process.argv.find((a) => a.startsWith(`--${nom}=`))?.split("=").slice(1).join("=");
   exigerDrapeauxConnus(process.argv.slice(2));
   const fichier = arg("cases");
-  if (!fichier) {
+  const aide = process.argv.includes("--help");
+  if (!fichier || aide) {
     console.log(`
 Measure your own cases, not mine.
 
@@ -1854,7 +1866,8 @@ The CSV wants an id, the input text, then one column per field to extract:
   1,"Anna Petrova, dob 3 May 1990",Anna Petrova,3 May 1990
 
 An empty expected cell means UNKNOWN: the case is not graded on that field, by any tier or
-chain, and is not in its n. There is no marker for "this document has no such line" yet.
+chain, and is not in its n. A cell that holds exactly "-" means "this document has no such
+line": a blank answer is clean against it, and any value is wrong (an invented tax).
 A header may declare a field's kind, and the comparison follows it: total:amount,
 closing_date:date (month first; date-dmy for day first), currency:currency, tax_id:id,
 vendor_name:free-text, total:amount-grouped where a point or comma before three digits groups
@@ -1881,6 +1894,12 @@ value is compared as written, separators aside.
 --pages-per-document, --pages-per-year  your volume, declared; without the year the audit
          gives dollars per thousand pages only.
 --machine-hourly-cost  what an hour of this machine costs you, for the local tiers' time.
+--ocr-price-per-thousand-pages  what the OCR a local tier reads costs you, per thousand pages,
+         declared. Without it the audit counts it at zero and says so: a local tier reads
+         OCR'd text (the text column), and production has to pay for that text.
+--no-encoders  measure no encoder tier: your chains (--sorties) and your rules only. Loads
+         no model and downloads nothing; the audit then compares vendors with each other.
+         --tiers=rules asks for the same thing.
 --questions  a JSON of { "your column": "What is …?" }. Without it, the question is derived
          from the column name, a choice made for you, printed before anything loads. On a
          sample of client cases the same field scored 0 % under a derived question and 100 %
@@ -1896,13 +1915,14 @@ value is compared as written, separators aside.
          decided, replayable months later; never a value, never the text.
 --show-questions  print the derived question for every field, however many there are.
          Without it the list is cut after the first few and the rest are counted.
+--help   print this and exit.
 --yes-run-it  run even when the number of model calls is above the printed ceiling. The
          count is cases × fields × tiers and is printed before anything loads; nothing is
          predicted about how long it takes, since that depends on your machine.
 
 Nothing leaves your machine: the models are local and this path makes no network call.
 `);
-    process.exit(fichier ? 0 : 1);
+    process.exit(aide ? 0 : 1);
   }
   if (!existsSync(fichier)) { console.error(`no such file: ${fichier}`); process.exit(1); }
 
@@ -1992,6 +2012,15 @@ Nothing leaves your machine: the models are local and this path makes no network
   /* The audit's declared inputs, read before anything loads so a bad one refuses early. */
   const pagesParDocument = lirePositif(arg("pages-per-document"), "--pages-per-document") ?? 1;
   const pagesParAn = lirePositif(arg("pages-per-year"), "--pages-per-year") ?? null;
+  const prixOcr = (() => {
+    const brut = arg("ocr-price-per-thousand-pages");
+    if (brut === undefined) return undefined;
+    const n = Number(brut);
+    if (brut.trim() === "" || !Number.isFinite(n) || n < 0) {
+      throw new Error(`--ocr-price-per-thousand-pages=${brut} is not a price (dollars per thousand pages, zero or more).`);
+    }
+    return n;
+  })();
   const coutHoraireDeclare = lirePositif(arg("machine-hourly-cost"), "--machine-hourly-cost");
   const coutHoraire = coutHoraireDeclare ?? ASSUMPTIONS.machineHourlyCost;
   const chaineCourante = arg("current");
@@ -2028,10 +2057,15 @@ Nothing leaves your machine: the models are local and this path makes no network
     }
   })();
   const avecLlm = process.argv.includes("--llm");
+  const sansEncodeurs = process.argv.includes("--no-encoders") || arg("tiers") === "rules";
+  if (arg("tiers") !== undefined && arg("tiers") !== "rules") {
+    throw new Error(`--tiers=${arg("tiers")} is not a selection this command knows. Accepted: --tiers=rules (the same as --no-encoders).`);
+  }
   const paliers = [
-    ...ENCODEURS.filter((t) => t !== "rules" && t !== "human"),
+    ...(sansEncodeurs ? [] : ENCODEURS.filter((t) => t !== "rules" && t !== "human")),
     ...(avecLlm ? GENERATIFS : []),
   ];
+  if (sansEncodeurs) console.log(`\n  --no-encoders: no encoder tier is measured and no model is loaded; your chains and rules only.`);
 
   /* Une énumération sans borne n'informe personne : 9 999 noms de colonne font plus de dix
      mille lignes de console avant la première mesure. On en montre quelques-uns et on dit
@@ -2113,8 +2147,8 @@ Nothing leaves your machine: the models are local and this path makes no network
     console.log(`  ${courtes.length} row(s) have fewer cells than the ${lecture.noms.length} `
       + `columns named in the header: line ${courtes.slice(0, 5).map((c) => c.ligne).join(", ")}`
       + `${courtes.length > 5 ? `, and ${courtes.length - 5} more` : ""}.`);
-    console.log(`  Their missing answers are read as empty, which counts as a miss against `
-      + `every tier. Your rates carry that.`);
+    console.log(`  Their missing cells are read as empty expected values: unknown, so those cases are `
+      + `not graded on those fields and are not in their n.`);
   }
   if (ecartees.length > 0) {
     const apercu = ecartees.slice(0, 5)
@@ -2202,6 +2236,29 @@ Nothing leaves your machine: the models are local and this path makes no network
   const presence = direLaPresence(presenceDeLaVerite(cas, champs, kinds));
   if (presence) console.log(`\n${presence}\n`);
 
+  /*
+   * UNE VALEUR ATTENDUE QUE LE GENRE DÉCLARÉ NE LIT PAS note toutes les réponses fausses
+   * ("12.5" sous amount-grouped, audit du 4 octobre 2026) : dit avant de mesurer, par champ,
+   * avec son compte. Et les cellules "-" (pas de telle ligne) sont comptées à part.
+   */
+  const illisibles = champs.map((champ) => ({ champ, kind: kinds[champ] ?? "exact",
+    n: cas.filter((c) => aUneVerite(c, champ) && !attenduLisible(c.truth[champ]!, kinds[champ] ?? "exact")).length }))
+    .filter((x) => x.n > 0);
+  if (illisibles.length) {
+    console.log(`\n⚠ expected values the declared kind cannot read; every answer against them grades wrong:`);
+    for (const x of illisibles) console.log(`    ${x.champ} (${x.kind}): ${x.n} of ${cas.length} case(s)`);
+    console.log(`  Fix the cell, or declare the kind that reads it (an amount-grouped cell wants two decimals or none).\n`);
+  }
+  const absentsDeclares = champs.map((champ) => ({ champ, n: casDeclaresAbsents(cas, champ) })).filter((x) => x.n > 0);
+  if (absentsDeclares.length) {
+    console.log(`\n  "${MARQUEUR_ABSENT}" cells, no such line on the document: `
+      + absentsDeclares.map((x) => `${x.champ} ${x.n}`).join(", ")
+      + `. A blank answer is clean there, and any value is wrong.\n`);
+  }
+  /* The evaluation clock, as `measure` and `optimise` print it: a client who runs only on their
+     own data saw no clock at all (audit, 2026-10-04). One local date, never transmitted. */
+  for (const l of lignesEvaluation()) console.log(`  ${l}`);
+
   const regles = reglesBrutes
     ? await evaluerRegles(reglesBrutes, cas.map((c) => c.text))
     : undefined;
@@ -2212,7 +2269,8 @@ Nothing leaves your machine: the models are local and this path makes no network
 
   /* Avant tout chargement : sous `node --test`, des poids absents font s'écarter la commande
      au lieu de la faire télécharger — voir `sEcarterSiPoidsAbsents`. */
-  sEcarterSiPoidsAbsents(tache === "classify" ? MODELES_CLASSEMENT : MODELES_EXTRACTION);
+  /* No encoder tier to measure: nothing to download, nothing to stand aside for. */
+  if (!sansEncodeurs || tache === "classify") sEcarterSiPoidsAbsents(tache === "classify" ? MODELES_CLASSEMENT : MODELES_EXTRACTION);
 
   if (avecLlm) await loadGeneratifs();
 
@@ -2328,6 +2386,7 @@ Nothing leaves your machine: the models are local and this path makes no network
     fields: champs, kinds, releve: releve as Record<string, Record<string, { bons: number; sur: number; ms: number; reussites?: string }>>,
     chains: prix, current: chaineActuelle,
     pagesPerDocument: pagesParDocument, pagesPerYear: pagesParAn, machineHourlyCost: coutHoraire, margin: marge,
+    ocrPricePerThousandPages: prixOcr,
   });
 
   console.log("\nACCURACY PER FIELD, with the interval at "
@@ -2383,6 +2442,7 @@ Nothing leaves your machine: the models are local and this path makes no network
     console.log(`  machine time for local tiers at ${symboleDe(UNITS.budget)}${coutHoraire} an hour`
       + (coutHoraireDeclare === undefined ? " (assumed; declare yours with --machine-hourly-cost)" : " (declared by you)")
       + `; ${pagesParDocument} page(s) per document` + (arg("pages-per-document") === undefined ? " (assumed; --pages-per-document)" : " (declared)")
+      + `; OCR for local tiers at ${symboleDe(UNITS.budget)}${prixOcr ?? 0} per 1,000 pages` + (prixOcr === undefined ? " (assumed; --ocr-price-per-thousand-pages)" : " (declared)")
       + (chaineCourante === undefined ? `; current chain taken as the first --sorties given, "${chaines[0]!.nom}" (--current to name another)` : "") + `.\n`);
   }
 

@@ -20,7 +20,7 @@ import { loadavg } from "node:os";
 import { isMain, refuserDrapeauxInconnus } from "./cli.ts";
 import { ouvrirJournal, issue } from "./journal.ts";
 import { generateRecords, FIELDS } from "./corpus.ts";
-import { loadGeneratifs, extract, correct } from "./tiers.ts";
+import { loadGeneratifs, extract, correct, exigerOllama } from "./tiers.ts";
 
 import type { TierName } from "./paliers.ts";
 import type { Field } from "./corpus.ts";
@@ -62,7 +62,7 @@ export async function mesurerFuite(palier: TierName, combien = 120) {
 }
 
 
-if (isMain(import.meta)) {
+if (isMain(import.meta)) { try {
 
   refuserDrapeauxInconnus(["--tier", "--cases"]);
   const palier = (process.argv.find((a) => a.startsWith("--tier="))?.split("=")[1] ?? "gen-4b") as TierName;
@@ -72,6 +72,8 @@ if (isMain(import.meta)) {
   console.log("`heldout` is the half the prompt was tuned against.");
   console.log("`dev` is a half it has never seen.\n");
 
+  /* Ollama is asked for after the flags and the tree are checked, and before a journal is opened. */
+  await exigerOllama();
   await loadGeneratifs();
   const d = await mesurerFuite(palier, combien);
 
@@ -92,4 +94,8 @@ if (isMain(import.meta)) {
     ? "The prompt transports: tuning on the test set borrowed almost nothing."
     : "The prompt does not transport: part of the published figure had been fitted to the test set.");
   console.log(`\nWritten to data/fuite.json — \`npm run figures\` puts it in the README.\n`);
-}
+} catch (e) {
+  /* A refusal meant for a reader prints its sentence, never a stack (audit, 2026-10-04). */
+  console.error(`\n${e instanceof Error ? e.message : String(e)}\n`);
+  process.exit(1);
+} }

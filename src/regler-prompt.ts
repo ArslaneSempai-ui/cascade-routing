@@ -26,7 +26,7 @@ import { loadavg, cpus } from "node:os";
 import { isMain, refuserDrapeauxInconnus } from "./cli.ts";
 import { ouvrirJournal, issue } from "./journal.ts";
 import { FIELDS, generateRecords } from "./corpus.ts";
-import { loadGeneratifs, extract, correct, PROMPTS, GENERATIFS_PUBLICS, type NomPrompt } from "./tiers.ts";
+import { loadGeneratifs, extract, correct, PROMPTS, GENERATIFS_PUBLICS, type NomPrompt, exigerOllama } from "./tiers.ts";
 
 import { pairedVerdict } from "./interval.ts";
 
@@ -69,7 +69,7 @@ export function departager(bits: Record<NomPrompt, Record<Field, string>>, noms:
 }
 
 
-if (isMain(import.meta)) {
+if (isMain(import.meta)) { try {
   const cas = casDemandes(120);
   /* Sur `dev`. Le mettre en dur plutôt qu'en option : un réglage sur `heldout` ne doit pas
      être à une faute de frappe près. */
@@ -85,6 +85,8 @@ if (isMain(import.meta)) {
 
   console.log(`\n${noms.length} phrasings × ${paliers.length} tiers × ${FIELDS.length} fields × ${cas} cases — on \`dev\`.`);
   console.log(`Load before starting: ${loadavg()[0]!.toFixed(2)} on ${cpus().length} cores.\n`);
+  /* Ollama is asked for after the flags and the tree are checked, and before a journal is opened. */
+  await exigerOllama();
   const journal = ouvrirJournal("regler", {
     quoi: "Cinq formulations par palier, sur le découpage de réglage.", split: "dev", cases: cas,
     commit: version?.commit, sale: (version?.sale.length ?? 0) > 0,
@@ -152,4 +154,8 @@ if (isMain(import.meta)) {
   const j = journal.fermer();
   console.log(`${j.lignes} attempts in ${j.chemin.split("/").slice(-2).join("/")}`);
   console.log(`\nWritten to ${SORTIE.split("/").pop()} — to be measured next on \`heldout\`.\n`);
-}
+} catch (e) {
+  /* A refusal meant for a reader prints its sentence, never a stack (audit, 2026-10-04). */
+  console.error(`\n${e instanceof Error ? e.message : String(e)}\n`);
+  process.exit(1);
+} }

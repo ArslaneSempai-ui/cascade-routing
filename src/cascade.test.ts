@@ -2533,9 +2533,9 @@ test("le diff voit les cas perdus sous un taux qui monte, et refuse ce qui ne s'
 
   /* LES DEUX REFUS, NOMMÉS. Un écart silencieux serait pire qu'un faux positif. */
   const raisons = Object.fromEntries(r.cellulesEcartees.map((e) => [e.cellule, e.pourquoi]));
-  assert.match(raisons["t/tailleDiff"] ?? "", /échantillons différents/,
+  assert.match(raisons["t/tailleDiff"] ?? "", /different sample sizes/,
     "deux échantillons de tailles différentes ont été appariés cas par cas.");
-  assert.match(raisons["t/sansBits"] ?? "", /réussites par cas/,
+  assert.match(raisons["t/sansBits"] ?? "", /per-case verdicts/,
     "une cellule sans réussites par cas a été comptée comme comparée.");
 });
 

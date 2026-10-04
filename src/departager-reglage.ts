@@ -25,7 +25,7 @@ import { loadavg, cpus } from "node:os";
 import { isMain, refuserDrapeauxInconnus } from "./cli.ts";
 import { ouvrirJournal, issue } from "./journal.ts";
 import { FIELDS, generateRecords } from "./corpus.ts";
-import { loadGeneratifs, extract, correct, GENERATIFS_PUBLICS } from "./tiers.ts";
+import { loadGeneratifs, extract, correct, GENERATIFS_PUBLICS, exigerOllama } from "./tiers.ts";
 import { departager } from "./regler-prompt.ts";
 
 import type { NomPrompt } from "./tiers.ts";
@@ -53,7 +53,7 @@ export function pairesADepartager(surDev: Record<string, Record<string, number>>
   });
 }
 
-if (isMain(import.meta)) {
+if (isMain(import.meta)) { try {
   const cas = casDemandes(120);
   const dossiers = generateRecords(cas, "dev");
 
@@ -71,6 +71,8 @@ if (isMain(import.meta)) {
   for (const x of paires) console.log(`  ${x.palier.padEnd(10)} ${x.vainqueur} against ${x.second}  (${x.ecartPoints} pt on dev)`);
   console.log(`\nThis pass can refute a choice, never confirm one — indistinguishability is not transitive.`);
   console.log(`Load before starting: ${loadavg()[0]!.toFixed(2)} on ${cpus().length} cores.\n`);
+  /* Ollama is asked for after the flags and the tree are checked, and before a journal is opened. */
+  await exigerOllama();
   const journal = ouvrirJournal("departager", {
     quoi: "Le vainqueur du réglage est-il séparable de son second ?", split: "dev", cases: cas,
     commit: version?.commit, sale: (version?.sale.length ?? 0) > 0,
@@ -120,4 +122,8 @@ if (isMain(import.meta)) {
     resultats, reussites: tousLesBits,
   }, null, 2) + "\n");
   console.log(`Written to ${SORTIE.split("/").pop()}\n`);
-}
+} catch (e) {
+  /* A refusal meant for a reader prints its sentence, never a stack (audit, 2026-10-04). */
+  console.error(`\n${e instanceof Error ? e.message : String(e)}\n`);
+  process.exit(1);
+} }

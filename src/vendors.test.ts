@@ -767,7 +767,10 @@ test("F2: a case in the values file that says nothing for a field is a blank; on
     writeFileSync(csv, "id,text,total:amount,date:date\n1,x,5,2026-01-01\n2,x,7,\n3,x,9,2026-01-03\n");
     const r = spawnSync(process.execPath, [GRADE, `--cases=${csv}`, "--name=mine", `--values=${join(d, "case.json")}`, `--out=${join(d, "o.json")}`], { encoding: "utf8" });
     assert.equal(r.status, 0, r.stderr);
-    assert.match(r.stdout, /1 value\(s\) counted BLANK: the case is in the file \(2 case\(s\) are\) and says nothing for the field/);
+    /* The silence of case 2 falls on a field with no expected value, so it is not a graded BLANK
+       (audit, 2026-10-04: the note once counted 96 silences on a file whose table showed 6 blanks). */
+    assert.doesNotMatch(r.stdout, /counted BLANK/, "no graded cell is blank here, so no BLANK is counted");
+    assert.match(r.stdout, /1 further empty cell\(s\) fall on cases with no expected value, which nobody grades/);
     assert.match(r.stdout, /date\s+date\s+.*absent 1, no truth 1 \(not graded\)/, r.stdout);
     const o = JSON.parse(readFileSync(join(d, "o.json"), "utf8"));
     assert.equal(o.issues.date["2"], undefined, "case 2 has no expected date: no verdict, whatever the chain said");

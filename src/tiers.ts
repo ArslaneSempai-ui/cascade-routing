@@ -689,11 +689,7 @@ async function ollama(tier: TierName, prompt: string, schema: unknown): Promise<
           + `douze fois le temps de génération mesuré. Le serveur est bloqué ou le modèle a été `
           + `évincé : vérifier \`ollama ps\`. Les paliers déjà mesurés gardent leurs chiffres.`);
     }
-    throw new Error(
-      `Ollama unreachable at ${OLLAMA}. The generative scale is optional: ` +
-      `\`npm run measure\` without \`--llm\` measures the encoders and needs nothing. ` +
-      `For this one: \`brew install ollama\`, \`ollama serve\`, then ` +
-      `${Object.values(MODELES_LOCAUX).map((x) => `\`ollama pull ${x.tag}\``).join(", ")}.`);
+    throw new Error(messageOllamaInjoignable());
   }
   if (!r.ok) throw new Error(`Ollama answered ${r.status} for ${m.tag}`);
   const j: any = await r.json();
@@ -816,6 +812,31 @@ export function digestsQuiDivergent(
  * c'est précisément pourquoi la résidence est **vérifiée** ici plutôt que déduite de l'ordre.
  * La fonction rend ce qu'elle a constaté ; l'appelant décide si ça lui suffit.
  */
+/**
+ * THE ONE SENTENCE EVERY COMMAND PRINTS WHEN OLLAMA IS DOWN, and the check that prints it
+ * before anything else happens. Five commands threw it from inside their loop with a stack
+ * trace, after opening a journal that stayed empty; `contrainte` died on a raw `fetch failed`
+ * (audit of 4 October 2026). The sentence used to say `npm run measure` "needs nothing": it
+ * needs the encoder weights on its first run, and says so now.
+ */
+export function messageOllamaInjoignable(): string {
+  return `Ollama unreachable at ${OLLAMA}. The generative scale is optional: `
+    + `\`MESURE_VOULUE=1 npm run measure\` without \`--llm\` measures the encoders and needs no Ollama `
+    + `(it downloads the encoder weights once, on its first run). For this one: \`brew install ollama\`, `
+    + `\`ollama serve\`, then ${Object.values(MODELES_LOCAUX).map((x) => `\`ollama pull ${x.tag}\``).join(", ")}.`;
+}
+
+/** Refuse, with that sentence and no stack, before a journal is opened or a model is asked for. */
+export async function exigerOllama(): Promise<void> {
+  exigerHoteLocal();
+  try {
+    const r = await fetch(`${OLLAMA}/api/tags`, { signal: AbortSignal.timeout(3_000) });
+    if (!r.ok) throw new Error(`status ${r.status}`);
+  } catch {
+    throw new Error(messageOllamaInjoignable());
+  }
+}
+
 export async function loadGeneratifs(): Promise<{ demandes: string[]; residents: string[]; totalOctets: number }> {
   const t = await tailles();
   const tiers = Object.keys(MODELES_LOCAUX) as TierName[];

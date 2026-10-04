@@ -294,8 +294,10 @@ if (isMain(import.meta)) {
     console.error(`\n  This check watches the network DURING a command, and you have to tell it`);
     console.error(`  which one. It does not choose: the obvious command — a measurement — rewrites`);
     console.error(`  the frozen record, and a confidentiality check must rewrite nothing.\n`);
-    console.error(`      npm run egress -- src/measure.ts        watches a real measurement`);
-    console.error(`      npm run egress -- src/optimise.ts       watches a pass that measures nothing\n`);
+    console.error(`      npm run egress -- src/measure.ts                          watches a real measurement`);
+    console.error(`      npm run egress -- src/your-cases.ts --cases=your-file.csv  watches the client path\n`);
+    console.error(`  The command has to run long enough for ${ASSEZ_DE_RELEVES} samples: an instant command (optimise,`);
+    console.error(`  a help screen) refuses, and that refusal does not touch the committed egress.json.\n`);
     process.exit(1);
   }
   const commande = args;
@@ -437,16 +439,25 @@ const enfant = spawn("node", commande, { stdio: ["ignore", "ignore", "ignore"] }
      */
     console.error(`\n${releves} samples only — too short to establish anything,`);
     console.error(`${liste.length ? `including that the ${liste.length} host(s) seen are the only ones.` : `in either direction.`}`);
-    console.error(`At least ${ASSEZ} are needed: watch a real measurement, not an instant command.\n`);
-    process.exitCode = 1;
-    writeFileSync(FICHIER, JSON.stringify({
+    console.error(`At least ${ASSEZ} are needed: watch a real measurement, not an instant command.`);
+    /*
+     * UN VERDICT NON CONCLUANT NE REMPLACE PAS LA PREUVE PUBLIÉE.
+     *
+     * Cette branche écrivait `egress.json` : la passe commitée (21 relevés, « no connection
+     * observed for the whole pass ») devenait « inconclusive: 4 samples » dès qu'on lançait
+     * l'exemple de l'usage sur une commande courte (audit du 4 octobre 2026). Ce qui n'établit
+     * rien s'écrit à côté, sous `data/`, que git ignore ; le fichier versionné ne bouge que
+     * sur une passe qui conclut.
+     */
+    const aCote = fileURLToPath(new URL("../data/egress-inconclusive.json", import.meta.url));
+    mkdirSync(dirname(aCote), { recursive: true });
+    writeFileSync(aCote, JSON.stringify({
       mesureLe: new Date().toISOString(), commande: commandePubliable(commande),
-    /* LE COMMIT, COMME TOUT RELEVÉ DE CE DÉPÔT. Sans lui, un lecteur ne peut pas extraire le
-       code qui a produit ce verdict — et c'est la seule raison d'enregistrer un commit. */
-    code: { commit: commitCourant() },
+      code: { commit: commitCourant() },
       releves, intervalleMs: intervalle, codeSortie: code, connexions: [],
       verdict: `inconclusive: ${releves} samples, ${ASSEZ} are needed`,
     }, null, 2));
+    console.error(`${FICHIER.split("/").pop()} was not touched; this pass is written to data/egress-inconclusive.json.\n`);
     process.exit(1);
   }
   /* LA BOUCLE LOCALE À PART. Elle ne fait rien sortir, et la compter empêchait le verdict

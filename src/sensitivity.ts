@@ -220,7 +220,8 @@ if (isMain(import.meta)) {
   const p = readProfiles();
   if (!p) { console.error("No profile measured. Start with: npm run measure"); process.exit(1); }
 
-  console.log("\nWhich assumptions actually decide the answer?\n");
+  console.log("\nWhich assumptions actually decide the answer?");
+  console.log("(each assumption is swept across its range before its row prints; nothing is wrong while the screen is quiet)\n");
   console.log("assumption                 in use    same answer from ... to     verdict");
   console.log("─".repeat(88));
 
@@ -238,9 +239,8 @@ if (isMain(import.meta)) {
     "\ncosts more than the whole budget at this volume, so its quality never enters the" +
     "\ncalculation — that is exclusion by price. The small model is affordable and simply" +
     "\nnever chosen — that is exclusion on merit. Neither is a reason to stop looking.\n" +
-    "\n\"Priced out\" is not the same as \"does not matter\". The human tier costs more than" +
-    "\nthe whole budget at this volume, so its quality never enters the calculation — and it" +
-    "\nwould dominate it at a smaller volume. Reporting those two the same way would send a" +
+    "\n\"Priced out\" is not the same as \"does not matter\": the human tier, priced out here, would" +
+    "\ndominate the calculation at a smaller volume. Reporting those two the same way would send a" +
     "\nreader away from exactly the number they should go and find.\n",
   );
 }

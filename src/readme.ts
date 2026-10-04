@@ -137,14 +137,16 @@ const ouCaTourne = (() => {
     + `because the declared assumption is that you would call them at a provider in production. `
     + `The other column prices the same measured time as machine time.\n\n`
     + table(["Tier", "At a provider", "On your machine", "Ratio", "Accuracy"], lignes)
-    + `\n\n*Per thousand documents of five fields each, from the same frozen profile. Neither `
-    + `column is an estimate: it is the same measured latency billed under two regimes.*`
+    + `\n\n*Per thousand documents of five fields each, from the same frozen profile. The provider `
+    + `column prices \`small\` and \`large\` at an assumed per-call price (${D}${H.pricePerThousandSmall.toFixed(2)} and `
+    + `${D}${H.pricePerThousandLarge.toFixed(2)} per 1,000 calls) and the generative tiers at machine time; the machine column `
+    + `prices every tier's measured latency at an assumed ${D}${H.machineHourlyCost.toFixed(2)} an hour.*`
     + (renverse
         ? `\n\n**This reverses the table.** \`${local.t}\` running locally costs `
           + `${D}${local.cout.toFixed(2)} at ${(local.acc * 100).toFixed(1)} %, cheaper AND more `
           + `accurate than calling \`large\` at a provider for ${D}${heberge.cout.toFixed(2)} at `
-          + `${(heberge.acc * 100).toFixed(1)} %. If you are asking whether you need a paid API, `
-          + `that is the measured answer on this corpus.`
+          + `${(heberge.acc * 100).toFixed(1)} %. The accuracies are measured on this corpus; the `
+          + `${D}${heberge.cout.toFixed(2)} is the assumed per-call price above.`
         : "");
 })();
 
@@ -317,7 +319,8 @@ const gallery = (() => {
         ? `Not here at all, ${absents.map((t) => `\`${t}\``).join(", ")}: the generative ladder is `
           + `measured only with \`npm run measure -- --llm\`. `
         : "")
-    + `\`npm run failures\` prints every case of the tiers it runs.\n\n${commentaire}\n\n${examples}`;
+    + `\`npm run failures\` prints the ${Math.min(12, genres)} most common kinds and one example per tier-and-field pair; `
+    + `\`npm run failures -- --all\` prints every case with its input and output.\n\n${commentaire}\n\n${examples}`;
 })();
 
 /*
@@ -690,7 +693,7 @@ const commandes = (() => {
      * pas. La ligne est engendrée comme les autres, donc elle ne peut pas se perdre à la
      * prochaine régénération.
      */
-    ["test", "types, figures and the suite. Start here. Downloads nothing: the two cases that need the model weights stand aside, by name, until `npm run poids -- --prime` has fetched them; everything else runs on what git carries"],
+    ["test", `types, figures and the suite. Start here. Downloads nothing: the ${casQuiAttendentLesPoids()} cases that need the model weights stand aside, each with its reason, until \`npm run poids -- --prime\` has fetched them; the hooks case stands aside outside continuous integration when \`core.hooksPath\` is unset; everything else runs on what git carries`],
     /*
      * CE CHIFFRE ÉTAIT TAPÉ À LA MAIN, ET IL SE CACHAIT DE LA GARDE QUI L'INTERDIT.
      *
@@ -722,11 +725,11 @@ const commandes = (() => {
     ["measure", `measure the encoder tiers and freeze the profile (at least ${
       (Object.values(POIDS_MODELES).reduce((s, m) => s + m.octets, 0) / 1e9).toFixed(1)
     } GB downloaded on the first run; \`npm run poids\` lists each one)`],
-    ["sceller", "seal a profile: the content hash that makes a silently edited measurement fail loudly"],
-    ["diff", "compare two sealed runs case by case; a rising rate can still have lost cases"],
+    ["sceller", "seal a profile: a content hash, not a signature. It shows an edit made after sealing; it does not say who issued the file (the Ed25519 signature beside a shipped record does). `--check` verifies and writes nothing; without it, the command re-declares the seal on an edited file"],
+    ["diff", "compare two sealed runs case by case; a record whose seal no longer matches its content is refused, and a rising rate can still have lost cases"],
     ["entree", "population drift on the documents alone, no labels, read against its own noise floor"],
     ["optimise", "the routing, and what the next improvement would cost"],
-    ["failures", "every case it gets wrong, with its input and its output"],
+    ["failures", "what the encoder tiers get wrong, by kind, with one example per tier and field; `--all` prints every failing case with its input and its output"],
     ["sensitivity", "which assumptions decide the answer, and which do not"],
     ["prompt", "what rewording the prompt moves, against what changing tier moves"],
     ["regler", "pick each generative tier's formulation on the dev split, never on held-out"],
@@ -739,22 +742,23 @@ const commandes = (() => {
        un chiffre recopié dans une phrase de présentation rouille sans que rien ne le dise. */
     ["poids", "report the model weights on this machine; --export/--import carry them across an air gap"],
     ["contrainte", "what the output constraint buys, at a token cap shown not to bind"],
-    ["mur", "how far the exhaustive solver goes, in fields and tiers, measured"],
+    ["mur", "how far the exhaustive solver goes, in fields and tiers, measured; written under `data/`, and `--out=mur.json` is the gesture that publishes"],
     ["signal", "which key-free signals predict a wrong value, against a random control"],
     ["escalade", "does a guided cascade beat a fixed tier at the same budget?"],
     ["abstention", "silence instead of a doubtful value: wrong ones removed per correct one lost"],
     ["figures", "regenerate every table on this page from the frozen profile"],
     ["landing", "regenerate landing.json: the figures a published page reads, with their provenance"],
-    ["derivees", "refreeze the three landing figures drawn from the journals git does not carry"],
+    ["derivees", "refreeze the three landing figures drawn from the journals git does not carry; without a journal it refuses and names `npm run dur`, and the frozen file stays"],
     ["dossier", "the validation file a reviewer signs"],
     ["sonde", "the generative probe, regenerated from the frozen profile; it was hand-typed and eleven of its figures had gone stale"],
     ["start", "the screen, on localhost:4670"],
-    ["measure:yours", "your own cases, from a CSV; nothing leaves your machine. Writes a report beside the file, and a sealed record `<file>-measured.json` (counts and per-case verdicts, never a value) that `diff` compares and `sceller` re-verifies"],
+    ["measure:yours", "your own cases, from a CSV; nothing leaves your machine. Writes a report beside the file, and a sealed record `<file>-measured.json` (counts, per-case right/wrong/blank verdicts, the CSV's name and SHA-256, the prices you declared; never a document, never a value) that `diff` compares, `recertify` refuses when its seal no longer matches, and `sceller -- --check` verifies. `--no-encoders` compares your vendors and rules without loading a model; `--ocr-price-per-thousand-pages` declares what a local tier's OCR costs"],
     ["grade", "grade one vendor's extracted values against your labelled CSV and write the `--sorties` file `measure:yours` reads: clean, wrong or blank per case and field, the grader's version and each field's declared kind (`total:amount`, `closing_date:date`), never a value. Reads a folder of Textract, Document AI or Azure Document Intelligence exports offline through a small mapping file, or a plain JSON of values your chain wrote; carries the price per thousand pages you declare"],
     ["measure:humans", "the human tier, on cases your reviewers already worked: the one figure every page here calls assumed. Accuracy, agreement and seconds per case, aggregated (no per-person output), written beside your CSV as a report and a sealed record of verdicts, never a value; `optimise -- --humans=<record>` then uses the measurement and says so"],
     ["recertify", "does the spring measurement still hold? Re-measures a new CSV under the sealed baseline record's own protocol (same fields, same questions, same tiers) and says per field: holds, or MOVED (exit code 1), naming the cases that used to pass and no longer do. Measures input drift against its own noise floor when the spring CSV is still beside the record. Writes `<file>-recertified.md` and a sealed `<file>-recertified.json`, which serves as the next baseline"],
-    ["benchmark", "the same measurement on a public labelled dataset; the one command that downloads: the dataset comes down, nothing of yours goes up"],
-    ["intake", "turn a filled-in questionnaire into the assumptions a run uses"],
+    ["benchmark", "the same measurement on a public labelled dataset; it downloads that dataset, and nothing of yours goes up"],
+    ["intake", "turn a filled-in questionnaire into the assumptions a run uses; `npm run intake` alone writes the blank template, and never over an existing one"],
+    ["text-from-exports", "fill the `text` column of your labelled CSV from the full text your current vendor's exports already carry (Textract lines, Document AI text, Azure content), so the local tiers read without an OCR step of ours"],
     ["egress", "watch the network while a measurement runs, and record what it sees"],
     ["fuite", "what the prompt owes to the half it was tuned against (needs Ollama)"],
     ["pages", "build docs/ and verify the published screen; required before publishing: docs/ carries a compiled copy of the code and goes stale silently"],
@@ -812,9 +816,11 @@ const commandes = (() => {
    */
   const lignes = [
     ["`npm ci --ignore-scripts`", "install exactly the versions the lockfile pins, and run no "
-      + "install script from any dependency; nothing below runs without it, and it is the only "
-      + "command here that needs the network. It also skips this repository's own `prepare`, so "
-      + "run `git config core.hooksPath .githooks` yourself if you intend to commit"] as [string, string],
+      + "install script from any dependency; nothing below runs without it. What reaches the network: "
+      + "this command; the first run of `measure`, `measure:yours`, `ocr`, `recertify` and `poids -- --prime` "
+      + "(the model weights, from huggingface.co, once); and `benchmark` (its dataset). Nothing else does. "
+      + "It also skips this repository's own `prepare`, so run `git config core.hooksPath .githooks` "
+      + "yourself if you intend to commit; until then the hooks case of the suite stands aside and says so"] as [string, string],
     ...ordre.filter(([n]) => n in pkg.scripts).map(([n, quoi]) => [`\`npm run ${n}\``, quoi] as [string, string]),
   ];
   const manquantes = ordre.filter(([n]) => !(n in pkg.scripts)).map(([n]) => n);
@@ -1036,9 +1042,10 @@ const finding = (() => {
       + `${FIELDS.length} fields right: ${writeRate(rate(doc.publie.complets, doc.publie.n))}, `
       + `where the mean per field reads ${(s2.accuracy * 100).toFixed(1)} %.`
       + (doc.identiques ? ``
-        : ` Aiming at the record instead delivers ${doc.vise.complets} of ${doc.vise.n} for `
-          + `${D}${Math.round(doc.vise.cost)} rather than ${D}${Math.round(doc.publie.cost)}, worse on `
-          + `no record in the sample.`)
+        : ` Aiming at the record instead delivers ${doc.vise.complets} of ${doc.vise.n} `
+          + `(${doc.vise.complets - doc.publie.complets} gained, 0 lost in this sample: too few to separate the two rates) for `
+          + `${D}${Math.round(doc.vise.cost)} instead of ${D}${Math.round(doc.publie.cost)}, when \`large\` is billed at `
+          + `the assumed ${D}${ASSUMPTIONS.pricePerThousandLarge.toFixed(2)} per 1,000 calls.`)
     : ` Total: **${(s2.accuracy * 100).toFixed(1)} % for ${D}${Math.round(s2.cost)}**.`;
 
   const levier = lev
@@ -1162,11 +1169,43 @@ const lecture = (() => {
  * Le meme defaut vivait a trois endroits de l'ecran, dont les deux etiquettes
  * d'accessibilite, que personne ne relit puisque personne ne les voit.
  */
+/**
+ * LE COÛT AU TEMPS MACHINE D'UN ROUTAGE : chaque palier à sa latence mesurée, tarifée à
+ * `machineHourlyCost`, pour `volume` documents. C'est le régime sous lequel le dépôt tarife
+ * déjà les paliers locaux ; appliqué à `small` et `large`, il dit ce que le « 3,5× » doit à
+ * l'hypothèse du prix à l'appel (audit du 4 octobre 2026 : 190,66 $ contre 32,26 $).
+ */
+function coutMachine(routage: Record<string, string>): number {
+  const H = ASSUMPTIONS;
+  return FIELDS.reduce((s, f) => {
+    const t = routage[f] as TierName | undefined;
+    const lat = t ? p!.extraction[t]?.[f]?.latency : undefined;
+    if (t === undefined || t === "rules" || lat === undefined) return s;
+    return s + (lat / 3_600_000) * H.machineHourlyCost * H.volume;
+  }, 0);
+}
+
+/**
+ * COMBIEN DE CAS ATTENDENT LES POIDS : compté dans les sources des tests, jamais tapé. Un cas
+ * s'écarte pour poids absents par l'un des deux gestes de ce dépôt : `diagnosticDesPoids()`
+ * dans un `t.skip`, ou `raisonPoidsAbsents(` après un `CODE_ECART_TEMOIN`. Le README disait
+ * « the two cases » quand onze s'écartaient (audit du 4 octobre 2026).
+ */
+function casQuiAttendentLesPoids(): number {
+  const dossier = fileURLToPath(new URL(".", import.meta.url));
+  let n = 0;
+  for (const f of readdirSync(dossier).filter((x) => /\.test\.(ts|mjs)$/.test(x))) {
+    n += (readFileSync(join(dossier, f), "utf8").match(/t\.skip\((?:diagnosticDesPoids\(\)|raisonPoidsAbsents\()/g) ?? []).length;
+  }
+  if (n < 1) throw new Error("no test stands aside for absent weights: the count is read from the sources, and it found none.");
+  return n;
+}
+
 const chapeau = (() => {
-  const n = mesures.length + 1;   // les paliers mesures, plus `human` qui n'est pas mesure
-  return `**${n} tiers**, from a regular expression to a human, measured on held-out data and `
-    + `then routed under a budget. The answer is rarely "buy the bigger model", and this says `
-    + `why.`;
+  const n = mesures.length;   // les paliers MESURÉS ; `human` est une hypothèse, et le chapeau le dit (audit, 4/10)
+  return `**${n} tiers measured on held-out data**, from a regular expression to a local generative `
+    + `model, plus a human tier at an assumed ${(ASSUMPTIONS.humanAccuracy * 100).toFixed(0)} %, `
+    + `then routed under a budget. The answer is rarely "buy the bigger model", and this says why.`;
 })();
 
 /**
@@ -1292,9 +1331,13 @@ const documentBloc = (() => {
     + `different samples cannot, and this report refuses to invent one.*`
     + (d.identiques
         ? `\n\nAiming at the file changes nothing here: both objectives pick the same routing.`
-        : `\n\n**Aiming at the file changes the routing, and it is never worse on any file in `
-          + `the sample**: ${d.apparie.gains} gained, ${d.apparie.regressions} lost, for `
-          + `**${moinsCher.toFixed(1)}x less**. But ${d.apparie.discordant} discordant pairs `
+        : `\n\n**Aiming at the file changes the routing. No file is lost in this ${d.publie.n}-record `
+          + `sample**: ${d.apparie.gains} gained, ${d.apparie.regressions} lost, too few to separate the two rates. `
+          + `The cost falls ${moinsCher.toFixed(1)}x, from ${D}${Math.round(d.publie.cost)} to ${D}${Math.round(d.vise.cost)}, `
+          + `**if \`large\` is billed at the assumed ${D}${ASSUMPTIONS.pricePerThousandLarge.toFixed(2)} per 1,000 calls**; `
+          + `priced at machine time like every local tier, the published routing costs ${D}${coutMachine(d.publie.routing).toFixed(0)} and `
+          + `the file-aimed one ${D}${coutMachine(d.vise.routing).toFixed(0)}: the dearer of the two. `
+          + `${d.apparie.discordant} discordant pairs `
           + `cannot separate two rates: what the sample establishes is the cost, not the `
           /* document.json stores the verdict as WORDED on 24/08 (`note`) beside the figures ; the
              wording is presentation and the figures are the reading, so the sentence is composed
@@ -1382,7 +1425,8 @@ const leviers = (() => {
     + `${abst.documents} deliberately difficult documents, ${abst.valuesMeasured} values), not `
     + `on the main sample. That is where abstention is worth measuring, and it is also why the `
     + `baseline precision there is ${abst.baselinePrecisionPct} % rather than the headline. The `
-    + `ratio itself carries no unit and does not depend on that choice.*`;
+    + `re-routing break-even is measured on the main sample: two different corpora. The ratio `
+    + `carries no unit; its value depends on the corpus each lever was measured on.*`;
 
   function ecert(n: number | null) {
     return n === null
@@ -1549,7 +1593,7 @@ const documents = (() => {
     "cle-publique.pem": "the key that signs reports; verify one with `node src/verifier-rapport.mjs`",
     "rules-example.json": "an example `--rules` file for `measure:yours`: one regular expression per column of your CSV, the whole match is the value; copy it, keep the columns you have",
     "vendor-prices.json": "the list prices per thousand pages the extraction audit falls back on when a chain declares none: read on a date, from the vendors' public pages, marked verified or not; a declared price always wins over them",
-    "rapport-exemple.html": "an example of the signed report, issued on cascade's own held-out corpus with the repository's key; verify it before buying anything: `node src/verifier-rapport.mjs rapport-exemple.html`",
+    "rapport-exemple.html": "an example of the signed report, issued on 2026-09-03 at commit b55dcae on a 120-record corpus whose hash it carries (544d99d9bf24d304); its figures are those of that issue and are not the ones on this page, which come from the profile sealed on 2026-08-20. The check proves origin and integrity, not that the figures match this page: `node src/verifier-rapport.mjs rapport-exemple.html`",
   };
   const presents = readdirSync(racine).filter((n) => n in decrit).sort();
   if (presents.length === 0) {

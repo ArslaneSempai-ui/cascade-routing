@@ -39,8 +39,11 @@ $100,000. Those prices and that volume are declared, not measured.
   commit named above. The local tiers see only that text.
 
 **`cord-google-outcomes.json`** and **`cord-google-values.json`**: Google Document AI, Expense Parser, region `us`, one
-request per receipt image on 2026-09-29. The list price read that day is $0.10 per document, declared here as $100
-per 1,000. The raw responses weigh 311 MB and are not in the repository. The values file holds what the adapter reads
+request per receipt image on 2026-09-29. The list price is $0.10 per count, and one count is a document of up to 10
+pages; a receipt is one page, so it is declared here as $100 per 1,000 receipts. The source is the vendor's pricing
+page, re-read on 2026-10-04 and carried as `google-document-ai-expense-parser` in `vendor-prices.json` (list price;
+$0.09 and $0.08 per count under the 1-year and 3-year savings plans, which this run does not apply). The raw
+responses weigh 311 MB and are not in the repository. The values file holds what the adapter reads
 from each response: the first `total_amount`, `net_amount` and `total_tax_amount`. Grading the raw responses with
 `--vendor=documentai --mapping=cord-mapping-docai.json`, or this values file with `--values`, gives the same verdict
 on every case; that was checked.
@@ -53,26 +56,43 @@ output tokens. The prompt was:
 
 CORD-TEST-056 hit the output ceiling and returned no usable answer, so it counts as blank on all three fields. The
 cost, read from the usage metadata at the list price of that day, was $0.43 for the 100 receipts, declared here as
-$4.29 per 1,000.
+$4.29 per 1,000. The per-request token counts are not in the repository, so that figure cannot be recomputed from
+it: it is declared, and the record marks it so.
 
 **`cord-rules.json`**: the rules tier, one regular expression per field (the last amount on the line of its label).
 Written once before the run and not tuned on its results.
 
 ## Run it again
 
+The two grading commands write beside the CSV by default; `--out` points them at the committed files, which the
+third command reads. `grade` refuses to overwrite a file that exists unless `--overwrite` is given.
+
 ```
 npm run grade -- --cases=examples/cord-receipts/cord-labels-grouped.csv --name=google-expense \
-    --values=examples/cord-receipts/cord-google-values.json --price-per-thousand-documents=100
+    --values=examples/cord-receipts/cord-google-values.json --price-per-thousand-documents=100 \
+    --out=examples/cord-receipts/cord-google-outcomes.json --overwrite
 npm run grade -- --cases=examples/cord-receipts/cord-labels-grouped.csv --name=gemini-flash \
-    --values=examples/cord-receipts/cord-gemini-values.json --price-per-thousand-documents=4.29
+    --values=examples/cord-receipts/cord-gemini-values.json --price-per-thousand-documents=4.29 \
+    --out=examples/cord-receipts/cord-gemini-outcomes.json --overwrite
 npm run measure:yours -- --cases=examples/cord-receipts/cord-labels-grouped.csv \
     --sorties=examples/cord-receipts/cord-google-outcomes.json --sorties=examples/cord-receipts/cord-gemini-outcomes.json \
     --rules=examples/cord-receipts/cord-rules.json --llm --current=google-expense --margin=2 \
     --pages-per-document=1 --pages-per-year=1000000
 ```
 
-The generative tiers need Ollama with qwen3 0.6b, 4b and 8b. Their accuracies on the same commit should match the
-record; their timings depend on the machine.
+The per-case verdicts come back identical to the committed files; only the grading date and the tool version in
+the metadata move. The generative tiers need Ollama with qwen3 0.6b, 4b and 8b. Their accuracies on the same
+commit should match the record; their timings depend on the machine. A vendor-only comparison needs no model
+weights: add `--no-encoders` and drop `--llm`.
+
+## What this sample cannot do
+
+The 100 receipts separate the two vendors on tax (12 of 13 disagreements) and not on total (5 against 2, p = 0.45)
+or subtotal (6 against 2, p = 0.29): two vendors three points apart on a field are not told apart by 100 pages.
+CORD's test split has been public since 2022, so the vendors' models may have seen these receipts; the rates above
+are what each vendor returns on them, not a guarantee on unseen pages. The local tiers read a text that this
+repository's OCR (macOS Vision) produced from the images, so their rates include that OCR's errors; the two
+vendors read the images themselves.
 
 ## Licence of this folder
 

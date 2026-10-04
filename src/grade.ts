@@ -33,7 +33,7 @@ import { readListPrices } from "./audit.ts";
 import { symboleDe, UNITS } from "./assumptions.ts";
 
 export const FLAGS = ["--cases", "--name", "--values", "--vendor", "--exports", "--mapping",
-  "--price-per-thousand-pages", "--price-per-thousand-documents", "--list-price", "--out"] as const;
+  "--price-per-thousand-pages", "--price-per-thousand-documents", "--list-price", "--out", "--overwrite", "--help"] as const;
 
 /** The file `measure:yours` reads under `--sorties`, in the shape it already accepts. */
 export type OutcomesFile = {
@@ -170,7 +170,8 @@ async function principal(): Promise<void> {
   refuserDrapeauxInconnus(FLAGS);
   const arg = (nom: string) => process.argv.find((a) => a.startsWith(`--${nom}=`))?.split("=").slice(1).join("=");
   const fichier = arg("cases");
-  if (!fichier) {
+  const aide = process.argv.includes("--help");
+  if (!fichier || aide) {
     console.log(`
 Grade one vendor's extracted values against your labelled CSV, and write only outcomes.
 
@@ -183,6 +184,8 @@ Grade one vendor's extracted values against your labelled CSV, and write only ou
 --cases     the labelled CSV measure:yours reads: id, text, then one column per field. An
             empty expected cell means UNKNOWN: the case is not graded on that field, and is
             counted apart ("no truth"); measure:yours applies the same rule to every tier. A
+            cell that holds exactly "-" means the document has no such line: a blank answer
+            is clean there and any value is wrong. A
             header may declare the field's kind: total:amount, invoice_date:date, tax_id:id,
             currency:currency, vendor_name:free-text, or total:amount-grouped where a point or
             comma before three digits groups thousands, as Indonesian receipts print them
@@ -199,11 +202,14 @@ Grade one vendor's extracted values against your labelled CSV, and write only ou
 --list-price  a key of vendor-prices.json, when you have not declared a price: the audit then
             uses that list price and says so, with the date it was read.
 --out       where to write; by default <cases>-<name>-outcomes.json beside the CSV.
+--overwrite replace an outcomes file that already exists; without it, an existing file is
+            refused, so a committed or shared file is never rewritten in silence.
+--help      print this and exit.
 
 Written: one outcome per case and field (clean, wrong, blank), the grader's version and each
 field's kind. Never a value. Feed it to: npm run measure:yours -- --cases=... --sorties=<file>
 `);
-    process.exit(1);
+    process.exit(aide ? 0 : 1);
   }
   if (!existsSync(fichier)) throw new Error(`no such file: ${fichier}`);
   if (arg("name") === undefined) throw new Error(`--name is required: it is what this chain is called in every table.`);
@@ -230,12 +236,25 @@ field's kind. Never a value. Feed it to: npm run measure:yours -- --cases=... --
     if (price !== undefined) console.log(`\n  ⚠ both a declared price and a list-price key were given: the declared price wins in the audit.`);
   }
   const octets = readFileSync(fichier);
-  const { champs, cas, kinds } = lireCsv(octets.toString("utf8"));
+  const { champs, cas, kinds, ecartees, courtes, lecture } = lireCsv(octets.toString("utf8"));
   if (cas.length === 0) throw new Error(`${fichier} has a header line and no cases under it. Nothing was graded.`);
+  /* The rows the reader set aside, said the way measure:yours says them: a 4-cell row under a
+     3-column header was dropped without a word here (audit, 2026-10-04). */
+  if (courtes.length > 0) {
+    console.log(`\n  ${courtes.length} row(s) have fewer cells than the ${lecture.noms.length} columns named in the header: line `
+      + `${courtes.slice(0, 5).map((c) => c.ligne).join(", ")}${courtes.length > 5 ? `, and ${courtes.length - 5} more` : ""}.`);
+    console.log(`  Their missing cells are read as empty expected values: unknown, not graded on those fields.`);
+  }
+  if (ecartees.length > 0) {
+    console.log(`\n  ${ecartees.length} row(s) set aside: the header names ${lecture.noms.length} columns and these do not match: `
+      + `${ecartees.slice(0, 5).map((e) => `line ${e.ligne} has ${e.champs}`).join(", ")}${ecartees.length > 5 ? `, and ${ecartees.length - 5} more` : ""}.`);
+    console.log(`  They are NOT graded, in either direction.`);
+  }
 
   const source: OutcomesFile["source"] = { cases: basename(fichier), sha256: createHash("sha256").update(octets).digest("hex") };
   let values: Record<string, Record<string, string>>;
   const notes: string[] = [];
+  let silencesDuFichier: { silences: number; cases: number } | null = null;
   if (arg("values") !== undefined) {
     if (arg("vendor") !== undefined || arg("exports") !== undefined || arg("mapping") !== undefined) {
       throw new Error(`--values and --vendor/--exports/--mapping are two ways to the same file: give one.`);
@@ -245,10 +264,7 @@ field's kind. Never a value. Feed it to: npm run measure:yours -- --cases=... --
     const lu = readValues(chemin, champs);
     values = lu.values;
     source.values = basename(chemin);
-    if (lu.silences > 0) {
-      notes.push(`${lu.silences} value(s) counted BLANK: the case is in the file (${lu.cases} case(s) are) and says nothing for the field, `
-        + `so the chain ran on it and returned nothing. Only a case absent from the whole file is absent.`);
-    }
+    silencesDuFichier = { silences: lu.silences, cases: lu.cases };
   } else {
     const vendor = arg("vendor"), exports = arg("exports"), mapping = arg("mapping");
     if (!vendor || !exports || !mapping) {
@@ -303,6 +319,20 @@ field's kind. Never a value. Feed it to: npm run measure:yours -- --cases=... --
 
   const { issues, coverage } = gradeValues(cas, champs, kinds, values);
   const graded = Object.values(coverage).reduce((s, c) => s + c.graded, 0);
+  /* The BLANK note counts graded cells only: it said "96 value(s) counted BLANK" on a file whose
+     table showed 2/3/1 blanks, because it counted the silences on cases nobody grades (audit,
+     2026-10-04). The silences that fall on ungraded cases are named apart. */
+  if (silencesDuFichier) {
+    const blancs = Object.values(coverage).reduce((s, c) => s + c.blank, 0);
+    if (blancs > 0) {
+      notes.push(`${blancs} value(s) counted BLANK: the case is in the file (${silencesDuFichier.cases} case(s) are) and says nothing for the field, `
+        + `so the chain ran on it and returned nothing. Only a case absent from the whole file is absent.`);
+    }
+    const horsNotation = silencesDuFichier.silences - blancs;
+    if (horsNotation > 0) {
+      notes.push(`${horsNotation} further empty cell(s) fall on cases with no expected value, which nobody grades.`);
+    }
+  }
   if (graded === 0) {
     /* The notes first: when every export was unreadable or of another shape, the identifiers
        are not the problem, and blaming them hid the note that named the files (item 24). */
@@ -331,6 +361,12 @@ field's kind. Never a value. Feed it to: npm run measure:yours -- --cases=... --
   };
   const chemin = arg("out") ?? fichier.replace(/\.csv$/i, "") + `-${slug(name)}-outcomes.json`;
   if (existsSync(chemin) && statSync(chemin).isDirectory()) throw new Error(`${chemin} is a directory.`);
+  /* AN EXISTING OUTCOMES FILE IS NOT REWRITTEN IN SILENCE: the documented commands of the
+     synthetic example rewrote the committed files, metadata included (audit, 2026-10-04). */
+  if (existsSync(chemin) && !process.argv.includes("--overwrite")) {
+    throw new Error(`${chemin} already exists, and this command does not overwrite it without being told to.\n`
+      + `  Write elsewhere with --out=<file>, or pass --overwrite to replace it. Nothing was written.`);
+  }
   writeFileSync(chemin, JSON.stringify(out, null, 2));
 
   console.log(`\n"${name}", graded against ${basename(fichier)}: ${cas.length} case(s), ${Object.keys(coverage).length} field(s) with values.\n`);

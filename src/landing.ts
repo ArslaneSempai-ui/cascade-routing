@@ -1248,7 +1248,7 @@ if (isMain(import.meta)) {
   const p = readProfiles();
 
   if (!p) {
-    console.error("no reading in data/profiles.json — run `npm run measure` d'abord.");
+    console.error("no reading in data/profiles.json: run `npm run measure` first.");
     process.exit(1);
   }
 
@@ -1262,6 +1262,22 @@ if (isMain(import.meta)) {
     const optimum0 = optimiseExtraction(p, ASSUMPTIONS);
     const js = journaux().filter((x) => x.includes("-dur.jsonl"));
     const dernier = js[js.length - 1] ?? null;
+    /*
+     * SANS JOURNAL, RIEN À GELER, ET SURTOUT PAS PAR-DESSUS LE GEL LIVRÉ.
+     *
+     * Sur un clone neuf, `data/` est vide : cette branche écrivait quand même, remplaçait les
+     * trois blocs `measured: true` du fichier commité par des `measured: false`, sortait en 0,
+     * puis `landing --check` rougissait et `npm run landing` propageait le trou dans
+     * landing.json (audit du 4 octobre 2026). Un gel sans source refuse, nomme la commande
+     * qui produit la source, et ne touche pas au fichier qui existe.
+     */
+    if (dernier === null) {
+      console.error(`no hard-corpus journal (data/tentatives/*-dur.jsonl) on this machine: nothing to freeze.\n\n`
+        + `  ${FIGE.split("/").pop()} is left as it is. It was frozen from a journal git does not carry,\n`
+        + `  and a clone has no newer one. To refreeze it, measure the hard corpus first:\n\n`
+        + `    npm run dur\n`);
+      process.exit(1);
+    }
     writeFileSync(FIGE, JSON.stringify({
       quoi: "Les blocs de landing.json calculés depuis les journaux de tentatives, figés parce "
         + "que `data/` n'est pas versionné et qu'un clone frais doit pouvoir vérifier landing.json.",

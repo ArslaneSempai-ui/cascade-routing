@@ -321,27 +321,31 @@ export function shape(failures: Failure[]) {
 
 if (isMain(import.meta)) {
 
-  refuserDrapeauxInconnus(["--check", "--llm"]);
+  refuserDrapeauxInconnus(["--check", "--llm", "--all"]);
   const avecLlm = process.argv.includes("--llm");
+  /* `--all`: every failure, with its input and output. The default is a digest (the twelve
+     most common kinds, one example per tier-and-field pair), and the README says so. */
+  const tout = process.argv.includes("--all");
   const paliers = avecLlm ? [...ENCODEURS, ...GENERATIFS] : ENCODEURS;
   const failures = await collect(120, paliers);
   console.log(`\n${failures.length} failures across ${paliers.filter((x) => x !== "human").length} tiers`
     + `${avecLlm ? "" : " — add --llm for the generative ladder (needs Ollama)"}\n`);
 
-  console.log("WHAT KIND OF WRONG\n");
-  for (const [key, n] of shape(failures).slice(0, 12)) {
+  const genres = shape(failures);
+  console.log(tout ? "WHAT KIND OF WRONG\n" : `WHAT KIND OF WRONG (the ${Math.min(12, genres.length)} most common of ${genres.length} kinds; --all prints every failure)\n`);
+  for (const [key, n] of (tout ? genres : genres.slice(0, 12))) {
     console.log(`  ${String(n).padStart(4)}  ${key}`);
   }
 
-  console.log("\n\nSIX OF THEM, IN FULL\n");
-  // One per tier-and-field pair, so the gallery is not six copies of one problem.
+  // One per tier-and-field pair, so the gallery is not six copies of one problem; --all shows them all.
   const seen = new Set<string>();
-  const gallery = failures.filter((f) => {
+  const gallery = tout ? failures : failures.filter((f) => {
     const k = `${f.tier}:${f.field}`;
     if (seen.has(k)) return false;
     seen.add(k);
     return true;
   }).slice(0, 6);
+  console.log(tout ? `\n\nALL ${gallery.length} OF THEM, IN FULL\n` : `\n\n${gallery.length} OF THEM, IN FULL (one per tier and field; --all prints every one)\n`);
 
   for (const f of gallery) {
     console.log(`  ${f.tier} · ${f.field} · ${f.mode}   [${f.recordId}]`);

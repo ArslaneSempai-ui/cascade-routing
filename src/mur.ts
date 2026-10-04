@@ -10,10 +10,12 @@
  * qui prévient au lieu de tuer : une passe qui prend une minute se voit, une passe qui plante
  * à quatre gigaoctets ne dit rien de ce qu'il aurait fallu réduire.
  *
- *     npm run mur                  la grille F × T, avec le temps de chacune
+ *     npm run mur                  la grille F × T, avec le temps de chacune, écrite sous data/
+ *     npm run mur -- --out=mur.json   réécrit le relevé commité, sur décision explicite
  */
 
-import { writeFileSync } from "node:fs";
+import { writeFileSync, mkdirSync } from "node:fs";
+import { dirname } from "node:path";
 import { isMain, refuserDrapeauxInconnus } from "./cli.ts";
 import { readProfiles } from "./measure.ts";
 import { ASSUMPTIONS } from "./assumptions.ts";
@@ -26,7 +28,14 @@ import type { Field } from "./corpus.ts";
 import type { TierName } from "./paliers.ts";
 import { fileURLToPath } from "node:url";
 
-const SORTIE = fileURLToPath(new URL("../mur.json", import.meta.url));
+/*
+ * LE RELEVÉ COMMITÉ NE SE RÉÉCRIT PAS PAR DÉFAUT.
+ *
+ * `npm run mur` écrivait mur.json à la racine : lancer la commande pour voir remplaçait les
+ * durées publiées par celles de la machine du jour (audit du 4 octobre 2026). Par défaut la
+ * grille s'écrit sous `data/`, que git ignore ; `--out=mur.json` est le geste qui publie.
+ */
+const SORTIE_DEFAUT = fileURLToPath(new URL("../data/mur.json", import.meta.url));
 
 /**
  * Un profil synthétique à F champs et T paliers, bâti par recopie du profil réel.
@@ -62,7 +71,9 @@ export function profilSynthetique(reel: Profiles, champs: readonly Field[], nbPa
 
 if (isMain(import.meta)) {
 
-  refuserDrapeauxInconnus(["--plafond"]);
+  refuserDrapeauxInconnus(["--plafond", "--out"]);
+  const sortieArg = process.argv.find((a) => a.startsWith("--out="))?.split("=")[1];
+  const SORTIE = sortieArg ? (sortieArg.startsWith("/") ? sortieArg : fileURLToPath(new URL("../" + sortieArg, import.meta.url))) : SORTIE_DEFAUT;
   const reel = readProfiles();
   if (!reel) { console.error("no measurement record"); process.exit(1); }
   const plafondMs = Number(process.argv.find((a) => a.startsWith("--plafond="))?.split("=")[1] ?? 60_000);
@@ -71,6 +82,9 @@ if (isMain(import.meta)) {
   console.log("   T\\F " + [4, 5, 6, 7, 8].map((f) => String(f).padStart(11)).join(""));
 
   const grille: { paliers: number; champs: number; affectations: number; ms: number | null }[] = [];
+  /* Un point MESURÉ au-dessus du plafond arrête les suivants : l'estimation ne suffit pas,
+     la grille commitée avait lancé le point 9×8 à 60,3 s sous un plafond de 60 (audit, 4/10). */
+  let plafondDepasse = false;
   for (const T of [4, 5, 6, 7, 8, 9]) {
     const ligne: string[] = [];
     for (const F of [4, 5, 6, 7, 8]) {
@@ -90,10 +104,11 @@ if (isMain(import.meta)) {
          rien de plus que le point précédent, et immobilise la machine. */
       const precedent = grille.filter((g) => g.ms !== null).sort((a, b) => b.affectations - a.affectations)[0];
       const estime = precedent ? precedent.ms! * (affectations / precedent.affectations) : 0;
-      if (estime > plafondMs) { ligne.push("—".padStart(11)); grille.push({ paliers: T, champs: F, affectations, ms: null }); continue; }
+      if (plafondDepasse || estime > plafondMs) { ligne.push("—".padStart(11)); grille.push({ paliers: T, champs: F, affectations, ms: null }); continue; }
       const t0 = performance.now();
       optimiseExtraction(p, large, champs, paliers);
       const ms = performance.now() - t0;
+      if (ms > plafondMs) plafondDepasse = true;
       grille.push({ paliers: T, champs: F, affectations, ms: Number(ms.toFixed(1)) });
       ligne.push(`${ms < 1000 ? `${ms.toFixed(0)} ms` : `${(ms / 1000).toFixed(1)} s`}`.padStart(11));
     }
@@ -102,6 +117,7 @@ if (isMain(import.meta)) {
 
   const mesures = grille.filter((g) => g.ms !== null);
   const plusGrand = mesures.sort((a, b) => b.affectations - a.affectations)[0]!;
+  mkdirSync(dirname(SORTIE), { recursive: true });
   writeFileSync(SORTIE, JSON.stringify({
     quoi: "Jusqu'où le solveur exhaustif va, en champs et en paliers.",
     solveur: "deux énumérations, mémoire constante",
@@ -112,10 +128,10 @@ if (isMain(import.meta)) {
     limite: "Le temps, pas la mémoire. Le solveur énumère deux fois sans rien retenir, donc il "
       + "ralentit au lieu de s'arrêter — un point qui prend une minute se voit et se réduit, "
       + "un tas épuisé ne dit pas quoi réduire. Les points marqués `—` n'ont pas été lancés : "
-      + "leur durée estimée depuis le point précédent dépassait le plafond.",
+      + "leur durée estimée depuis le point précédent dépassait le plafond, ou un point mesuré avant eux l'avait dépassé.",
     avantLaCorrection: "Le solveur retenait chaque solution admissible en mémoire pour la "
       + "refiltrer. À sept paliers et huit champs, tas de quatre gigaoctets épuisé : arrêt, pas "
       + "ralentissement.",
   }, null, 2) + "\n");
-  console.log(`\nWritten to ${SORTIE.split("/").pop()}\n`);
+  console.log(`\nWritten to ${sortieArg ?? "data/mur.json"}${sortieArg ? "" : " (the committed mur.json is untouched; --out=mur.json publishes)"}\n`);
 }

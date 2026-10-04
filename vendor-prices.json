@@ -4,11 +4,11 @@
   "readOn": "2026-09-29",
   "assembledAt": { "commit": "ee18170", "why": "the state of this repository when the table was written; not a measurement, a date on a reading" },
   "currency": "USD",
-  "unit": "per 1,000 pages, US regions, first pricing tier",
+  "unit": "per 1,000 pages, US regions, first pricing tier; an entry billed per document says so, and what a document is",
   "whatThisIs": [
     "LIST PRICES, READ ON A DATE. Nothing here is measured, and every figure moves: vendors change tiers, regions differ, negotiated contracts differ more.",
     "The audit uses one of these only when a chain declares no price of its own. Declare yours with: npm run grade -- --price-per-thousand-pages=<dollars>. A declared price is marked declared in the record; a price taken from here is marked list-price, with this file's date.",
-    "These figures were read by the founder on the vendors' public pricing pages on 2026-09-29. The environment that assembled this file could not re-read those pages (its network policy denies aws.amazon.com, azure.microsoft.com and cloud.google.com), so each entry says verified: false until someone re-reads it and flips it, with the date.",
+    "The 2026-09-29 entries were read by the founder on the vendors' public pricing pages. The environment that assembled this file could not re-read those pages (its network policy denies aws.amazon.com, azure.microsoft.com and cloud.google.com), so each of them says verified: false until someone re-reads it and flips it, with the date. The Google Document AI Expense Parser entry was re-read on 2026-10-04 and says verified: true, with that date.",
     "A vendor bills per page (or per document), once, whatever the number of fields you take from it. That is why the unit is pages and not fields, and why a routing that reads two vendors pays both."
   ],
   "vendors": {
@@ -47,7 +47,16 @@
       "tier": "first 1,000,000 pages per month", "tierPagesPerMonth": 1000000,
       "url": "https://cloud.google.com/document-ai/pricing",
       "readBy": "founder", "readOn": "2026-09-29", "verified": false
+    },
+    "google-document-ai-expense-parser": {
+      "vendor": "Google Document AI", "product": "Expense parser (formerly receipt parser)",
+      "pricePerThousandPages": 100, "billing": "document",
+      "perCount": "the page bills 0.10 USD per count at list price, and one count is a document of up to 10 pages; a receipt is one page, so one receipt is one count and 1,000 receipts are 100 USD",
+      "tier": "list price; no monthly tier is carried here. The same page lists 0.09 USD per count under a 1-year savings plan and 0.08 USD under a 3-year plan, neither of which this table applies",
+      "savingsPlans": { "oneYearPerCount": 0.09, "threeYearPerCount": 0.08 },
+      "url": "https://cloud.google.com/document-ai/pricing",
+      "readBy": "Cascade, re-reading the public page", "readOn": "2026-10-04", "verified": true
     }
   },
-  "notListed": "Products not in this table (Textract Queries, Tables, Layout; Azure Read, Layout, custom; Document AI OCR, Invoice and Expense parsers, custom extractors) were not read on that date and are therefore not priced here. Declare their price rather than guess it."
+  "notListed": "Products not in this table (Textract Queries, Tables, Layout; Azure Read, Layout, custom; Document AI OCR and Invoice parsers, custom extractors) were not read and are therefore not priced here. Declare their price rather than guess it."
 }

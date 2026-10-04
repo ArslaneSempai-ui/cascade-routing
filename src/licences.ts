@@ -428,7 +428,7 @@ function principal() {
   writeFileSync("LICENCES.md", md);
   writeFileSync("sbom.json", bom);
   const bloquantes = paquets.filter((p) => p.classe === "bloquante").length;
-  console.log(`${paquets.length} paquets · ${bloquantes} bloquante(s) · ${paquets.filter((p) => p.classe === "à tenir").length} à tenir · LICENCES.md + sbom.json écrits.`);
+  console.log(`${paquets.length} packages · ${bloquantes} blocking · ${paquets.filter((p) => p.classe === "à tenir").length} with obligations · LICENCES.md and sbom.json written.`);
 }
 
 /*

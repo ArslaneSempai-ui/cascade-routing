@@ -797,10 +797,12 @@ if (isMain(import.meta)) {
    */
   if (!process.env.MESURE_VOULUE && !process.argv.includes("--je-veux-mesurer")) {
     console.error(
-      "this pass downloads up to 1.26 GB and takes about an hour.\n\n"
-      + "  It re-measures everything, generative ladder included. The reading shipped with the\n"
-      + "  repository is enough to read the published figures, and `npm run measure:yours`\n"
-      + "  measures YOUR data without downloading any of it.\n\n"
+      "this pass downloads the encoder weights on its first run (`npm run poids` gives the sizes)\n"
+      + "  and re-measures the encoder tiers; `--llm` adds the generative ladder (Ollama). The README\n"
+      + "  states what the published pass took, read from the profile. The reading shipped with the\n"
+      + "  repository is enough to read the published figures. The published profile was measured\n"
+      + "  with `--cases=1000 --cases-gen=120 --llm`; `npm run measure:yours` measures YOUR data,\n"
+      + "  and downloads the same encoder weights once if they are not on this machine.\n\n"
       + "  → if that is what you want:  MESURE_VOULUE=1 npm run measure\n"
       + "  → or:                        npm run measure -- --je-veux-mesurer");
     process.exit(2);

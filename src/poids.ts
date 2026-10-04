@@ -338,6 +338,21 @@ export function motifDEcart(manquants: readonly CleModele[]): string {
 }
 
 /**
+ * THE REASON A TEST PRINTS WHEN THE COMMAND IT RAN STOOD ASIDE.
+ *
+ * Three tests spawn `your-cases.ts` and read `CODE_ECART_TEMOIN`. They printed the command's
+ * whole output as the skip reason, and the first line of that output is whatever the command
+ * said before standing aside ("--sample=1 is at least the 1 case(s) you supplied"), so the
+ * suite's summary named a reason that was not one (audit of 4 October 2026). The reason is
+ * the line that says which weights are absent, found in the output; when it is not there,
+ * the generic sentence, never the output's first line.
+ */
+export function raisonPoidsAbsents(sortie: string): string {
+  const ligne = sortie.split("\n").map((l) => l.trim()).find((l) => /model weight\(s\) are not on this machine/.test(l));
+  return ligne ?? "model weights absent on this machine: the command stood aside. `npm run poids -- --prime` fetches them once.";
+}
+
+/**
  * Weights on site means two things: the pinned files present, and the copies the library asks
  * for at revision `main` in place. The second is made here because this is the loader's last
  * call before the network is refused (2026-09-29, see `poserSousMain`).

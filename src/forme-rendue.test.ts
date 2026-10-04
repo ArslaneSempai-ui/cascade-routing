@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { classer, noter, oublierLesFormes, direLesFormes, formesVues, estCitation } from "./forme-rendue.ts";
 import { FORME } from "./signal.ts";
 import { FIELDS } from "./corpus.ts";
-import { CODE_ECART_TEMOIN } from "./poids.ts";
+import { CODE_ECART_TEMOIN, raisonPoidsAbsents } from "./poids.ts";
 
 /*
  * CE QUI EST ÉPROUVÉ ICI, ET CE QUI NE PEUT PAS L'ÊTRE PAR CES CAS.
@@ -130,7 +130,7 @@ test("la commande ANNONCE les formes aberrantes qu'elle a vues", { timeout: 300_
   /* Poids absents : la commande s'est écartée sous le lanceur de tests (`sEcarterSiPoidsAbsents`,
      clone neuf du 3 septembre 2026) ; ce cas se déclare ignoré avec son motif plutôt que de
      laisser un téléchargement de 1,3 Go tourner dans un spawnSync muet. */
-  if (r.status === CODE_ECART_TEMOIN) { t.skip(sortie.trim()); return; }
+  if (r.status === CODE_ECART_TEMOIN) { t.skip(raisonPoidsAbsents(sortie)); return; }
 
   assert.match(sortie, /answer\(s\) did not hold up to a shape check/,
     `la commande n'annonce pas les formes aberrantes. Sortie :\n${sortie.slice(-700)}`);

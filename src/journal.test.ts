@@ -1554,8 +1554,29 @@ test("le détecteur de devise se déclenche, et se tait sur le français", () =>
  * Ils sont versionnés maintenant, et `core.hooksPath` les désigne. Ce cas vérifie les deux :
  * le réglage ET le contenu. Le réglage seul laisserait passer un dossier vide.
  */
-test("les crochets qui refusent sont versionnés, et installés", () => {
+test("les crochets qui refusent sont versionnés, et installés", (t) => {
   const racine = fileURLToPath(new URL("..", import.meta.url));
+
+  /*
+   * LE CHEMIN DE L'ACHETEUR : `npm ci --ignore-scripts` puis `npm test`, sur un clone neuf.
+   *
+   * `--ignore-scripts` saute le `prepare` de ce dépôt, donc `core.hooksPath` est vide, et ce
+   * cas rougissait la première suite d'un inconnu (audit du 4 octobre 2026 : 801 cas, 1 rouge,
+   * celui-ci). Les crochets protègent un COMMIT ; qui ne commite pas n'a rien à installer. Hors
+   * de l'intégration continue, un `hooksPath` vide est donc un écart nommé, pas un rouge ; sur
+   * le coureur (`CI` posé), il reste exigé, et le coureur le pose avant la suite.
+   */
+  const lu = (() => {
+    try {
+      return execFileSync("git", ["config", "core.hooksPath"],
+        { cwd: racine, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
+    } catch { return ""; }
+  })();
+  if (lu === "" && !process.env.CI) {
+    return t.skip("core.hooksPath is unset on this clone: the hooks guard a commit, and `npm ci --ignore-scripts` "
+      + "skips the `prepare` that wires them. Run `git config core.hooksPath .githooks` before committing; "
+      + "the continuous-integration runner sets it and requires it.");
+  }
 
   /*
    * `git config <clé>` SORT EN ERREUR quand la clé n'existe pas — il ne rend pas une chaîne
@@ -1566,12 +1587,7 @@ test("les crochets qui refusent sont versionnés, et installés", () => {
    * refus. Le contrôle détectait bien ; c'est sa façon de le dire qui était cassée, et ce cas
    * de figure — la garde juste au message inutilisable — est le troisième en deux jours.
    */
-  const chemin = (() => {
-    try {
-      return execFileSync("git", ["config", "core.hooksPath"],
-        { cwd: racine, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
-    } catch { return ""; }
-  })();
+  const chemin = lu;
   assert.equal(chemin, ".githooks",
     `core.hooksPath vaut « ${chemin} » : les crochets de ce dépôt ne sont pas ceux qui tournent.\n`
     + "  → git config core.hooksPath .githooks");

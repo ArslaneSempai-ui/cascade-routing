@@ -36,13 +36,15 @@ CORD's test split, with Google Document AI and Gemini outputs, under CC BY 4.0.
 
 ## The run
 
-The first two commands were run to produce the outcomes files committed here:
+The first two commands were run to produce the outcomes files committed here. Run again, they
+write to the same names, so `grade` refuses unless `--overwrite` is given; the per-case verdicts
+come back identical, and only the grading date and tool version in the metadata move:
 
 ```
 npm run grade -- --cases=examples/extraction-audit/receipts.csv --name=vendor-a \
-    --values=examples/extraction-audit/vendor-a-values.json --price-per-thousand-pages=50
+    --values=examples/extraction-audit/vendor-a-values.json --price-per-thousand-pages=50 --overwrite
 npm run grade -- --cases=examples/extraction-audit/receipts.csv --name=vendor-b \
-    --values=examples/extraction-audit/vendor-b-values.json --price-per-thousand-pages=10
+    --values=examples/extraction-audit/vendor-b-values.json --price-per-thousand-pages=10 --overwrite
 ```
 
 Their output, as printed: vendor A graded `total` clean on 56 of 60 (4 wrong), `receipt_date`

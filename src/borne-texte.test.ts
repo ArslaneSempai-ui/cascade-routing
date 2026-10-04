@@ -75,8 +75,8 @@ test("la commande ANNONCE ce qu'elle a borné, et le compte est juste", { timeou
   /* Poids absents : la commande s'est écartée sous le lanceur de tests (`sEcarterSiPoidsAbsents`,
      clone neuf du 3 septembre 2026) ; ce cas se déclare ignoré avec son motif plutôt que de
      laisser un téléchargement de 1,3 Go tourner dans un spawnSync muet. */
-  const { CODE_ECART_TEMOIN } = await import("./poids.ts");
-  if (r.status === CODE_ECART_TEMOIN) { t.skip(sortie.trim()); return; }
+  const { CODE_ECART_TEMOIN, raisonPoidsAbsents } = await import("./poids.ts");
+  if (r.status === CODE_ECART_TEMOIN) { t.skip(raisonPoidsAbsents(sortie)); return; }
 
   assert.match(sortie, /1 case\(s\) had their text cut/,
     `la troncature n'est pas annoncée. Sortie :\n${sortie.slice(-600)}`);

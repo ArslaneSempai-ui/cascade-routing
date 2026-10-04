@@ -7,32 +7,35 @@
 # Where should the next dollar go?
 
 <!-- figures:chapeau -->
-**7 tiers**, from a regular expression to a human, measured on held-out data and then routed under a budget. The answer is rarely "buy the bigger model", and this says why.
+**6 tiers measured on held-out data**, from a regular expression to a local generative model, plus a human tier at an assumed 85 %, then routed under a budget. The answer is rarely "buy the bigger model", and this says why.
 <!-- /figures:chapeau -->
 
 <!-- figures:finding -->
-**The finding.** Routing every field to the same tier is the default and it is wrong. Measured per field, 3 of the 5 fields are carried by regexes at **zero cost and up to 100 % accuracy**, and the money is worth spending on exactly the ones that need it. **But the unit that gets filed is the record, and it is not the headline:** 92 of 120 records come out with all 5 fields right: 76.7 % [68–83], n=120, where the mean per field reads 94.4 %. Aiming at the record instead delivers 95 of 120 for $54 rather than $191, worse on no record in the sample. **And the larger lever is not routing at all:** abstaining (returning nothing when a signal says the value is doubtful) pays off about 26 times sooner than moving a field to another tier. Measured on 1000 and 120 held-out cases depending on the tier; the tables carry each figure's own `n`.
+**The finding.** Routing every field to the same tier is the default and it is wrong. Measured per field, 3 of the 5 fields are carried by regexes at **zero cost and up to 100 % accuracy**, and the money is worth spending on exactly the ones that need it. **But the unit that gets filed is the record, and it is not the headline:** 92 of 120 records come out with all 5 fields right: 76.7 % [68–83], n=120, where the mean per field reads 94.4 %. Aiming at the record instead delivers 95 of 120 (3 gained, 0 lost in this sample: too few to separate the two rates) for $54 instead of $191, when `large` is billed at the assumed $1.60 per 1,000 calls. **And the larger lever is not routing at all:** abstaining (returning nothing when a signal says the value is doubtful) pays off about 26 times sooner than moving a field to another tier. Measured on 1000 and 120 held-out cases depending on the tier; the tables carry each figure's own `n`.
 <!-- /figures:finding -->
 
 **[Try it in your browser →](https://arslanesempai-ui.github.io/cascade-routing/)**. Take a
 cell to send a field to another tier and read what your routing costs. No model is called:
 the accuracy of each tier was measured once on held-out records and frozen, and the page
-replays the arithmetic on those measurements. Measuring them yourself is `npm run measure`;
-what that pass actually cost is stated below, read from the relevé rather than rounded.
+replays the arithmetic on those measurements. Measuring them yourself is
+`MESURE_VOULUE=1 npm run measure -- --cases=1000 --cases-gen=120 --llm`, the command the
+published profile was measured with (the encoders on 1,000 held-out cases, the generative
+tiers on 120, which need Ollama; without `--llm` the pass measures the encoders only). What
+that pass actually cost is stated below, read from the relevé rather than rounded.
 
 ![Taking cells to move a field from one tier to another](images/routage.gif)
 
 <!-- figures:commandes -->
 | Command | What it does, in the order that makes sense |
 |---|---|
-| `npm ci --ignore-scripts` | install exactly the versions the lockfile pins, and run no install script from any dependency; nothing below runs without it, and it is the only command here that needs the network. It also skips this repository's own `prepare`, so run `git config core.hooksPath .githooks` yourself if you intend to commit |
-| `npm run test` | types, figures and the suite. Start here. Downloads nothing: the two cases that need the model weights stand aside, by name, until `npm run poids -- --prime` has fetched them; everything else runs on what git carries |
+| `npm ci --ignore-scripts` | install exactly the versions the lockfile pins, and run no install script from any dependency; nothing below runs without it. What reaches the network: this command; the first run of `measure`, `measure:yours`, `ocr`, `recertify` and `poids -- --prime` (the model weights, from huggingface.co, once); and `benchmark` (its dataset). Nothing else does. It also skips this repository's own `prepare`, so run `git config core.hooksPath .githooks` yourself if you intend to commit; until then the hooks case of the suite stands aside and says so |
+| `npm run test` | types, figures and the suite. Start here. Downloads nothing: the 10 cases that need the model weights stand aside, each with its reason, until `npm run poids -- --prime` has fetched them; the hooks case stands aside outside continuous integration when `core.hooksPath` is unset; everything else runs on what git carries |
 | `npm run measure` | measure the encoder tiers and freeze the profile (at least 1.3 GB downloaded on the first run; `npm run poids` lists each one) |
-| `npm run sceller` | seal a profile: the content hash that makes a silently edited measurement fail loudly |
-| `npm run diff` | compare two sealed runs case by case; a rising rate can still have lost cases |
+| `npm run sceller` | seal a profile: a content hash, not a signature. It shows an edit made after sealing; it does not say who issued the file (the Ed25519 signature beside a shipped record does). `--check` verifies and writes nothing; without it, the command re-declares the seal on an edited file |
+| `npm run diff` | compare two sealed runs case by case; a record whose seal no longer matches its content is refused, and a rising rate can still have lost cases |
 | `npm run entree` | population drift on the documents alone, no labels, read against its own noise floor |
 | `npm run optimise` | the routing, and what the next improvement would cost |
-| `npm run failures` | every case it gets wrong, with its input and its output |
+| `npm run failures` | what the encoder tiers get wrong, by kind, with one example per tier and field; `--all` prints every failing case with its input and its output |
 | `npm run sensitivity` | which assumptions decide the answer, and which do not |
 | `npm run prompt` | what rewording the prompt moves, against what changing tier moves |
 | `npm run regler` | pick each generative tier's formulation on the dev split, never on held-out |
@@ -43,22 +46,23 @@ what that pass actually cost is stated below, read from the relevé rather than 
 | `npm run clone-neuf` | clone from HEAD, install fresh, run the suite: the buyer's first action |
 | `npm run poids` | report the model weights on this machine; --export/--import carry them across an air gap |
 | `npm run contrainte` | what the output constraint buys, at a token cap shown not to bind |
-| `npm run mur` | how far the exhaustive solver goes, in fields and tiers, measured |
+| `npm run mur` | how far the exhaustive solver goes, in fields and tiers, measured; written under `data/`, and `--out=mur.json` is the gesture that publishes |
 | `npm run signal` | which key-free signals predict a wrong value, against a random control |
 | `npm run escalade` | does a guided cascade beat a fixed tier at the same budget? |
 | `npm run abstention` | silence instead of a doubtful value: wrong ones removed per correct one lost |
 | `npm run figures` | regenerate every table on this page from the frozen profile |
 | `npm run landing` | regenerate landing.json: the figures a published page reads, with their provenance |
-| `npm run derivees` | refreeze the three landing figures drawn from the journals git does not carry |
+| `npm run derivees` | refreeze the three landing figures drawn from the journals git does not carry; without a journal it refuses and names `npm run dur`, and the frozen file stays |
 | `npm run dossier` | the validation file a reviewer signs |
 | `npm run sonde` | the generative probe, regenerated from the frozen profile; it was hand-typed and eleven of its figures had gone stale |
 | `npm run start` | the screen, on localhost:4670 |
-| `npm run measure:yours` | your own cases, from a CSV; nothing leaves your machine. Writes a report beside the file, and a sealed record `<file>-measured.json` (counts and per-case verdicts, never a value) that `diff` compares and `sceller` re-verifies |
+| `npm run measure:yours` | your own cases, from a CSV; nothing leaves your machine. Writes a report beside the file, and a sealed record `<file>-measured.json` (counts, per-case right/wrong/blank verdicts, the CSV's name and SHA-256, the prices you declared; never a document, never a value) that `diff` compares, `recertify` refuses when its seal no longer matches, and `sceller -- --check` verifies. `--no-encoders` compares your vendors and rules without loading a model; `--ocr-price-per-thousand-pages` declares what a local tier's OCR costs |
 | `npm run grade` | grade one vendor's extracted values against your labelled CSV and write the `--sorties` file `measure:yours` reads: clean, wrong or blank per case and field, the grader's version and each field's declared kind (`total:amount`, `closing_date:date`), never a value. Reads a folder of Textract, Document AI or Azure Document Intelligence exports offline through a small mapping file, or a plain JSON of values your chain wrote; carries the price per thousand pages you declare |
 | `npm run measure:humans` | the human tier, on cases your reviewers already worked: the one figure every page here calls assumed. Accuracy, agreement and seconds per case, aggregated (no per-person output), written beside your CSV as a report and a sealed record of verdicts, never a value; `optimise -- --humans=<record>` then uses the measurement and says so |
 | `npm run recertify` | does the spring measurement still hold? Re-measures a new CSV under the sealed baseline record's own protocol (same fields, same questions, same tiers) and says per field: holds, or MOVED (exit code 1), naming the cases that used to pass and no longer do. Measures input drift against its own noise floor when the spring CSV is still beside the record. Writes `<file>-recertified.md` and a sealed `<file>-recertified.json`, which serves as the next baseline |
-| `npm run benchmark` | the same measurement on a public labelled dataset; the one command that downloads: the dataset comes down, nothing of yours goes up |
-| `npm run intake` | turn a filled-in questionnaire into the assumptions a run uses |
+| `npm run benchmark` | the same measurement on a public labelled dataset; it downloads that dataset, and nothing of yours goes up |
+| `npm run intake` | turn a filled-in questionnaire into the assumptions a run uses; `npm run intake` alone writes the blank template, and never over an existing one |
+| `npm run text-from-exports` | fill the `text` column of your labelled CSV from the full text your current vendor's exports already carry (Textract lines, Document AI text, Azure content), so the local tiers read without an OCR step of ours |
 | `npm run egress` | watch the network while a measurement runs, and record what it sees |
 | `npm run fuite` | what the prompt owes to the half it was tuned against (needs Ollama) |
 | `npm run pages` | build docs/ and verify the published screen; required before publishing: docs/ carries a compiled copy of the code and goes stale silently |
@@ -142,7 +146,25 @@ question the audit answers is narrower than routing and easier to act on: for ea
 which extractor, the vendor's or a local tier, is the cheapest one that this sample cannot
 show to be worse; what it costs per thousand pages at the declared volume; and what that
 saves a year against the chain in use. Everything runs on the client's machine, offline.
-Only an aggregate record leaves, never a value.
+What leaves is the sealed record and nothing else: counts, a right, wrong or blank verdict
+per case and field, the CSV's file name and SHA-256, and the prices and volume the client
+declared. Never a document, never a value read from one. A declared price is in that
+record, so a client under a vendor NDA replaces it with a list price before sending.
+
+For receipts, the public run is [`examples/cord-receipts`](examples/cord-receipts/): 100 real
+receipts, two vendors' real outputs, the local tiers, and the sealed record. The first command
+to run, with nothing downloaded:
+
+```
+npm run grade -- --cases=examples/cord-receipts/cord-labels-grouped.csv --name=google-expense \
+    --values=examples/cord-receipts/cord-google-values.json --price-per-thousand-documents=100 --out=/tmp/google.json
+```
+
+The local tiers read the `text` column, an OCR'd text of each page. `npm run text-from-exports`
+fills it from the full text your current vendor's exports already carry; `npm run ocr` reads
+images on macOS only. An all-local routing therefore still pays for OCR in production, and the
+audit carries that price as a declared term (`--ocr-price-per-thousand-pages`), assumed at
+zero and said so when you do not declare it.
 
 Three commands, in this order:
 
@@ -197,7 +219,7 @@ is declared.
 | [`SONDE.md`](SONDE.md) | real generative models on the same corpus, judged by the same grader |
 | [`VALIDATION.md`](VALIDATION.md) | what was measured, on which corpus, and what the numbers do not establish |
 | [`cle-publique.pem`](cle-publique.pem) | the key that signs reports; verify one with `node src/verifier-rapport.mjs` |
-| [`rapport-exemple.html`](rapport-exemple.html) | an example of the signed report, issued on cascade's own held-out corpus with the repository's key; verify it before buying anything: `node src/verifier-rapport.mjs rapport-exemple.html` |
+| [`rapport-exemple.html`](rapport-exemple.html) | an example of the signed report, issued on 2026-09-03 at commit b55dcae on a 120-record corpus whose hash it carries (544d99d9bf24d304); its figures are those of that issue and are not the ones on this page, which come from the profile sealed on 2026-08-20. The check proves origin and integrity, not that the figures match this page: `node src/verifier-rapport.mjs rapport-exemple.html` |
 | [`retractations.json`](retractations.json) | every conclusion published here that turned out to be wrong |
 | [`rules-example.json`](rules-example.json) | an example `--rules` file for `measure:yours`: one regular expression per column of your CSV, the whole match is the value; copy it, keep the columns you have |
 | [`sbom.json`](sbom.json) | the dependency inventory, CycloneDX, for a procurement team |
@@ -205,7 +227,7 @@ is declared.
 <!-- /figures:documents -->
 
 <!-- figures:tests -->
-**801 tests** across 90 files, counted from the sources rather than typed here.
+**814 tests** across 92 files, counted from the sources rather than typed here.
 <!-- /figures:tests -->
 
 Everything runs locally, and that is enforced rather than promised. The one call that could
@@ -262,9 +284,9 @@ on another they never saw. Measured that way, they collapse.
 | `gen-4b` | $1.31 | $1.31 | n/a | 92.7 % |
 | `gen-8b` | $1.99 | $1.99 | n/a | 91.5 % |
 
-*Per thousand documents of five fields each, from the same frozen profile. Neither column is an estimate: it is the same measured latency billed under two regimes.*
+*Per thousand documents of five fields each, from the same frozen profile. The provider column prices `small` and `large` at an assumed per-call price ($0.20 and $1.60 per 1,000 calls) and the generative tiers at machine time; the machine column prices every tier's measured latency at an assumed $1.20 an hour.*
 
-**This reverses the table.** `gen-4b` running locally costs $1.31 at 92.7 %, cheaper AND more accurate than calling `large` at a provider for $8.00 at 78.8 %. If you are asking whether you need a paid API, that is the measured answer on this corpus.
+**This reverses the table.** `gen-4b` running locally costs $1.31 at 92.7 %, cheaper AND more accurate than calling `large` at a provider for $8.00 at 78.8 %. The accuracies are measured on this corpus; the $8.00 is the assumed per-call price above.
 <!-- /figures:ouCaTourne -->
 
 ### Reading the document, not the transcript
@@ -515,7 +537,7 @@ No budget buys better: the ceiling is in the tiers available.
 
 *Unlike the headline, this one is a true proportion (a file is complete or it is not), so it carries a Wilson interval. The mean of five rates measured on five different samples cannot, and this report refuses to invent one.*
 
-**Aiming at the file changes the routing, and it is never worse on any file in the sample**: 3 gained, 0 lost, for **3.5x less**. But 3 discordant pairs cannot separate two rates: what the sample establishes is the cost, not the accuracy. The set cannot distinguish these versions by rate, so judge the broken cases instead.
+**Aiming at the file changes the routing. No file is lost in this 120-record sample**: 3 gained, 0 lost, too few to separate the two rates. The cost falls 3.5x, from $191 to $54, **if `large` is billed at the assumed $1.60 per 1,000 calls**; priced at machine time like every local tier, the published routing costs $32 and the file-aimed one $54: the dearer of the two. 3 discordant pairs cannot separate two rates: what the sample establishes is the cost, not the accuracy. The set cannot distinguish these versions by rate, so judge the broken cases instead.
 <!-- /figures:document -->
 
 <!-- figures:leviers -->
@@ -528,7 +550,7 @@ No budget buys better: the ceiling is in the tiers available.
 
 **Abstention pays roughly 26 times sooner than re-routing.** For almost any client, the lever is refusing to answer, not moving fields between tiers. That is the opposite of where attention usually goes.
 
-*The abstention figures are measured on the **hard corpus** (30 deliberately difficult documents, 150 values), not on the main sample. That is where abstention is worth measuring, and it is also why the baseline precision there is 30 % rather than the headline. The ratio itself carries no unit and does not depend on that choice.*
+*The abstention figures are measured on the **hard corpus** (30 deliberately difficult documents, 150 values), not on the main sample. That is where abstention is worth measuring, and it is also why the baseline precision there is 30 % rather than the headline. The re-routing break-even is measured on the main sample: two different corpora. The ratio carries no unit; its value depends on the corpus each lever was measured on.*
 <!-- /figures:leviers -->
 
 <!-- figures:frontiere -->
@@ -580,7 +602,7 @@ model's actual output beside the expected one is something you can check.
 | 38 | small · address · wrong span |
 | 27 | large · document · over-long |
 
-Shown above: the 6 most common of 20 kinds. Below: 5 of the 9 tier-and-field pairs that have a failure, with their input and output. Not here at all, `gen-0.6b`, `gen-4b`, `gen-8b`: the generative ladder is measured only with `npm run measure -- --llm`. `npm run failures` prints every case of the tiers it runs.
+Shown above: the 6 most common of 20 kinds. Below: 5 of the 9 tier-and-field pairs that have a failure, with their input and output. Not here at all, `gen-0.6b`, `gen-4b`, `gen-8b`: the generative ladder is measured only with `npm run measure -- --llm`. `npm run failures` prints the 12 most common kinds and one example per tier-and-field pair; `npm run failures -- --all` prints every case with its input and output.
 
 Nothing here is curated for flattery. The gallery takes the FIRST failure of a tier-and-field pair, in order, and shows what came back: 5 of the 9 pairs that have one, not a chosen sample.
 
@@ -688,9 +710,12 @@ anything. A validator can audit a history; they cannot audit a promise.
 <!-- /figures:retractations -->
 
 Each line names what caught it, because that is the part worth copying. Two were caught by a
-person re-reading, and the rest by a check that runs in continuous integration on every push,
-not on every commit: there is no local hook, so a commit stays unverified until it leaves
-the machine. Turning a lesson into a test rather than a note is still the whole argument.
+person re-reading, and the rest by a check that runs in continuous integration on every push.
+The repository also ships its hooks under `.githooks/` (`pre-commit` checks the generated
+documents against the index, `pre-push` refuses a push that carries licensed code); they run
+once `core.hooksPath` points at them, which `npm ci` does through `prepare` and
+`npm ci --ignore-scripts` leaves to you. Turning a lesson into a test rather than a note is
+still the whole argument.
 
 ## Where every number comes from
 
@@ -734,6 +759,14 @@ tool runs on is missing from it.
 | chosen | `FIELDS` | the 5 fields extracted from each document | a real onboarding form has more, and more of them ambiguous |
 | chosen | `TIERS` | the 7 tiers a field may be routed to | more tiers make the routing finer and the optimisation no harder |
 <!-- /figures:provenance -->
+
+Two files the figures above are read from are produced outside this repository: `exposition.json`
+(the cost of being wrong, its threshold) and `document.json` (the per-record rate) come from the
+licensed component, and `npm run premiere-reponse` reads them. The per-record figures recompute
+from the shipped profile and a test holds them; the exposure figures do not recompute here. And
+several shipped records name a commit that no longer exists: the history was rewritten once to
+purge raw outputs, and [`commits-reecrits.json`](commits-reecrits.json) says, for each such
+commit, where its content went and how that was established.
 
 The load-bearing chosen thing is the corpus. The accuracies above are real measurements:
 real models, pinned by revision, scored on a held-out split, taken on documents I wrote.
@@ -861,7 +894,7 @@ proves nothing until a decision reads it.
 | The split | A test fails if training and held-out phrasings share a shape |
 | Every assumption | The values we guessed are declared in the inventory and swept, with "priced out" told apart from "irrelevant". The three inputs *you* set (volume, budget, latency ceiling) are not in that sweep: the ceiling has its own table above and the budget has the shadow price, and a test fails if a fourth ever joins them unannounced |
 | The routing | Exhaustive over every combination of the measured tiers, no heuristic, nothing tuned |
-| Every failure | Counted by kind rather than summarised into a rate, with the examples shown alongside their input and output. The gallery states which tiers it covers and which it does not; `npm run failures` prints every case of the tiers it runs |
+| Every failure | Counted by kind rather than summarised into a rate, with the examples shown alongside their input and output. The gallery states which tiers it covers and which it does not; `npm run failures` prints the most common kinds and one example per tier and field, and `npm run failures -- --all` prints every case |
 
 ---
 

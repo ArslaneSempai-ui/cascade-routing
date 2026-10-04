@@ -32,7 +32,9 @@ test("aucun chiffre n'est écrit dans le texte d'accueil : il vient des relevés
    * Il lit l'unité du relevé maintenant, comme le texte qu'il éprouve.
    */
   assert.match(s, /1,000 USD per period/);
-  assert.match(s, /A period is 100000 documents/);
+  assert.match(s, /A period is 100,000 documents/, "the period's count is grouped like every other figure printed");
+  assert.match(s, /costs 7,000 USD\./, "the exposure figure carries its currency, like the processing figure");
+  assert.doesNotMatch(s, /stronger evidence/, "the text does not rank its own numbers above the buyer's");
   assert.doesNotMatch(s, /\bEUR\b|€/, "la devise ne se réinvente pas.");
   assert.match(s, /7,000/);
   assert.match(s, /\b7 times more/, "le rapport est calculé, pas recopié.");

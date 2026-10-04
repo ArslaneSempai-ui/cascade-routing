@@ -87,6 +87,9 @@ export type AuditInputs = {
   pagesPerDocument: number;
   /** Annual volume in pages; null when not declared, and then no annual figure is given. */
   pagesPerYear: number | null;
+  /** Dollars per 1,000 pages of OCR that a local tier needs before it reads anything: declared,
+      or 0 when not declared, and then the record says it is assumed (audit, 2026-10-04). */
+  ocrPricePerThousandPages?: number;
   /** Dollars per hour of the machine running a local tier. */
   machineHourlyCost: number;
   /** The loss the client accepts, as a proportion; without it nothing is recommended. */
@@ -163,6 +166,8 @@ export type Audit = {
   uncompared: { field: string; source: string; against: string; n: number }[];
   assumptions: {
     pagesPerDocument: number; pagesPerYear: number | null; machineHourlyCost: number; margin: number | null;
+    /** The OCR a local tier needs, per 1,000 pages: declared, or assumed at 0 and said so. */
+    ocrPricePerThousandPages?: { value: number; provenance: "declared" | "assumed" };
     prices: SourcePrice[];
     note: string;
   };
@@ -286,6 +291,8 @@ const ahead = (rb: Rate, b: string, ra: Rate, a: string, current: string | null)
 
 export function audit(inputs: AuditInputs): Audit {
   const { fields, releve, pagesPerDocument, machineHourlyCost, margin } = inputs;
+  const ocr = inputs.ocrPricePerThousandPages ?? 0;
+  if (!(Number.isFinite(ocr) && ocr >= 0)) throw new Error(`audit(): an OCR price of ${String(inputs.ocrPricePerThousandPages)} is not a number of dollars, zero or more.`);
   if (margin !== undefined && !(margin > 0 && margin < 1)) {
     throw new Error(`audit(): a margin of ${margin} is not a proportion strictly between 0 and 1.`);
   }
@@ -400,6 +407,10 @@ export function audit(inputs: AuditInputs): Audit {
         if (!pick) { plan.routing[field] = null; if (fa.head) plan.complete = false; continue; }
         plan.routing[field] = pick.name; plan.local += pick.marginal; accSum += pick.accuracy; decided++;
       }
+      /* OCR is paid once per page when at least one field reads a local tier, like a vendor's
+         page: a local tier reads OCR'd text, and production has to produce it. */
+      const litLocal = fields.some((f) => plan.routing[f] !== null && !chainByName.has(plan.routing[f]!));
+      if (litLocal) plan.local += ocr;
       plan.total = chosenVendors.reduce((s, c) => s + (vendorCostPerThousandPages(c, pagesPerDocument) ?? 0), 0) + plan.local;
       plan.meanAccuracy = decided ? accSum / decided : 0;
       const better = !best
@@ -488,8 +499,9 @@ export function audit(inputs: AuditInputs): Audit {
     ...flags,
     assumptions: {
       pagesPerDocument, pagesPerYear: inputs.pagesPerYear, machineHourlyCost, margin: margin ?? null,
+      ocrPricePerThousandPages: { value: ocr, provenance: inputs.ocrPricePerThousandPages === undefined ? "assumed" : "declared" },
       prices: inputs.chains,
-      note: "Every dollar here rests on a declared price or a list price read on a date, on the declared pages per document and per year, and on the declared hourly cost of the machine for local tiers. Accuracies and the separation verdicts are measured; the money is not.",
+      note: "Every dollar here rests on a declared price or a list price read on a date, on the declared pages per document and per year, on the declared hourly cost of the machine for local tiers, and on the OCR price per thousand pages a local tier needs (declared, or assumed at zero and marked so). Accuracies and the separation verdicts are measured; the money is not.",
     },
     omitted,
   };
@@ -570,10 +582,16 @@ export function auditLines(a: Audit): string[] {
     };
     const mixed = r.unit === "page" && r.vendors.some((v) => a.assumptions.prices.find((x) => x.name === v)?.billing === "document");
     const factor = r.unit === "document" ? ppd : 1;
+    const o = a.assumptions.ocrPricePerThousandPages;
+    const litLocal = Object.values(a.routing).some((s) => s !== null && !a.assumptions.prices.some((p) => p.name === s));
     out.push(`  Cost: ${money(r.perThousandPages * factor)} per 1,000 ${r.unit}s`
       + (r.vendors.length ? ` (vendor prices: ${r.vendors.map(priced).join(" + ")}` : " (no vendor pages")
-      + `, local machine time ${money(r.localPerThousandPages * factor)}`
+      + `, local machine time${litLocal && o ? ` and OCR at ${money(o.value)} per 1,000 pages (${o.provenance})` : ""} ${money(r.localPerThousandPages * factor)}`
       + (mixed ? `; per-document prices counted at ${pagesWords} a document` : "") + `).`);
+    if (litLocal && o && o.provenance === "assumed") {
+      out.push(`  ⚠ a local tier is routed to and no OCR price was declared: its cost counts machine time only.`);
+      out.push(`    In production a local tier reads OCR'd text; declare what that costs you with --ocr-price-per-thousand-pages.`);
+    }
   } else {
     out.push(`  No routing: no field has an admissible costed source within your margin.`);
   }

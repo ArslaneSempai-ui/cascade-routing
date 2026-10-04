@@ -135,7 +135,9 @@ export const controle = ({
   cloner = (dest) => clonerNeuf(depot, dest, ref),
   historique = (dest) => { execFileSync("git", ["-C", dest, "rev-parse", "HEAD"], { stdio: "pipe", env: envSansGit() }); },
   installer = (dest) => {
-    execFileSync("npm", ["ci", "--prefer-offline", "--no-audit", "--no-fund", "--silent"],
+    /* `--ignore-scripts`, as the README and the security page tell the buyer: the control walks
+       the buyer's own path, install scripts included in what it does not run (audit, 2026-10-04). */
+    execFileSync("npm", ["ci", "--ignore-scripts", "--prefer-offline", "--no-audit", "--no-fund", "--silent"],
       { cwd: dest, stdio: "pipe", env: envSansGit() });
   },
   tester = (dest) => execFileSync("npm", ["test"], { cwd: dest, encoding: "utf8", stdio: "pipe", env: envSansGit() }),

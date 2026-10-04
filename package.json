@@ -32,6 +32,7 @@
     "dossier": "node src/dossier.ts",
     "measure:yours": "node src/your-cases.ts",
     "grade": "node src/grade.ts",
+    "text-from-exports": "node src/text-from-exports.ts",
     "measure:humans": "node src/humans.ts",
     "recertify": "node src/recertify.ts",
     "fuite": "node src/fuite.ts",

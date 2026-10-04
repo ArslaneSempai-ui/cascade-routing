@@ -3,6 +3,7 @@
  *
  *   npm run sceller             — data/profiles.json
  *   npm run sceller -- <fichier>
+ *   npm run sceller -- <fichier> --check     vérifie, n'écrit jamais (0 tient, 1 manque ou ne tient plus)
  *
  * `readProfiles()` refuse un relevé dont l'empreinte ne correspond pas à son contenu, et
  * refuse aussi un relevé qui n'en porte pas. Ce refus doit avoir une issue : sans elle, la
@@ -16,7 +17,7 @@
  * mesure est `npm run measure`.
  */
 import { readFileSync, writeFileSync, existsSync, statSync } from "node:fs";
-import { isMain } from "./cli.ts";
+import { isMain, refuserDrapeauxInconnus } from "./cli.ts";
 import { empreinteDuReleve } from "./measure.ts";
 import { fileURLToPath } from "node:url";
 
@@ -31,7 +32,18 @@ import { fileURLToPath } from "node:url";
  * son échec est un silence à code 0, ce qui se lit comme un succès.
  */
 if (isMain(import.meta)) {
-  const cible = process.argv[2] ?? fileURLToPath(new URL("../data/profiles.json", import.meta.url));
+  /*
+   * `--check` : VÉRIFIER SANS ÉCRIRE.
+   *
+   * Sans lui, « vérifier un scellé » et « déclarer un nouveau scellé » étaient le même geste :
+   * passer un relevé édité, ou l'un des quatre profils livrés sans scellé, RÉÉCRIVAIT le
+   * fichier commité et sortait en 0 (audit du 4 octobre 2026). Un relecteur qui veut savoir
+   * si un relevé a bougé n'a pas à le modifier pour le savoir. Avec `--check` : 0 quand le
+   * scellé tient, 1 quand il manque ou ne correspond plus, et rien n'est écrit.
+   */
+  refuserDrapeauxInconnus(["--check"]);
+  const check = process.argv.includes("--check");
+  const cible = process.argv.slice(2).find((a) => !a.startsWith("--")) ?? fileURLToPath(new URL("../data/profiles.json", import.meta.url));
   if (!existsSync(cible)) {
     console.error(`  ${cible} does not exist. There is nothing to seal.`);
     process.exit(2);
@@ -57,6 +69,13 @@ if (isMain(import.meta)) {
   if (avant === apres) {
     console.log(`  ${cible}\n  already sealed, and the seal matches: ${apres}. Nothing to do.`);
     process.exit(0);
+  }
+  if (check) {
+    console.error(`  ${cible}`);
+    console.error(avant
+      ? `  SEAL DOES NOT MATCH: the file carries ${avant}, its content hashes to ${apres}.\n  It was edited after it was sealed. Nothing was written (--check).`
+      : `  NOT SEALED: the file carries no seal. Nothing was written (--check).\n  \`npm run sceller -- ${cible}\` would declare the current content as the one that stands.`);
+    process.exit(1);
   }
 
   brut.empreinte = apres;
