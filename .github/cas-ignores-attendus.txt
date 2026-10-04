@@ -57,3 +57,7 @@ un palier qui lit vraiment traverse la sélection, et la passe va jusqu'au bout
 une compilation qui échoue ne se fait pas passer pour un swiftc absent
 la couche de famille est identique dans les dépôts présents
 les couches partagées sont bien celles d'identite (dépôt exclu : recopie à la main)
+
+# The OCR language files (tessdata_fast, fetched by `npm run tessdata -- --prime` only) live on no
+# public runner: the one case that reads an image with tesseract.js stands aside there, and says so.
+tesseract reads a rendered line of text offline, and fills the text column

@@ -233,6 +233,19 @@
     },
     {
       "type": "library",
+      "name": "bmp-js",
+      "version": "0.1.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "purl": "pkg:npm/bmp-js@0.1.0"
+    },
+    {
+      "type": "library",
       "name": "boolean",
       "version": "3.2.0",
       "licenses": [
@@ -428,6 +441,32 @@
     },
     {
       "type": "library",
+      "name": "idb-keyval",
+      "version": "6.3.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "purl": "pkg:npm/idb-keyval@6.3.0"
+    },
+    {
+      "type": "library",
+      "name": "is-url",
+      "version": "1.2.4",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "purl": "pkg:npm/is-url@1.2.4"
+    },
+    {
+      "type": "library",
       "name": "json-stringify-safe",
       "version": "5.0.1",
       "licenses": [
@@ -464,6 +503,19 @@
         }
       ],
       "purl": "pkg:npm/matcher@3.0.0"
+    },
+    {
+      "type": "library",
+      "name": "node-fetch",
+      "version": "2.7.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "purl": "pkg:npm/node-fetch@2.7.0"
     },
     {
       "type": "library",
@@ -532,6 +584,19 @@
     },
     {
       "type": "library",
+      "name": "opencollective-postinstall",
+      "version": "2.0.3",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "purl": "pkg:npm/opencollective-postinstall@2.0.3"
+    },
+    {
+      "type": "library",
       "name": "platform",
       "version": "1.3.6",
       "licenses": [
@@ -555,6 +620,19 @@
         }
       ],
       "purl": "pkg:npm/protobufjs@7.6.6"
+    },
+    {
+      "type": "library",
+      "name": "regenerator-runtime",
+      "version": "0.13.11",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "purl": "pkg:npm/regenerator-runtime@0.13.11"
     },
     {
       "type": "library",
@@ -636,6 +714,45 @@
     },
     {
       "type": "library",
+      "name": "tesseract.js",
+      "version": "7.0.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "purl": "pkg:npm/tesseract.js@7.0.0"
+    },
+    {
+      "type": "library",
+      "name": "tesseract.js-core",
+      "version": "7.0.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "purl": "pkg:npm/tesseract.js-core@7.0.0"
+    },
+    {
+      "type": "library",
+      "name": "tr46",
+      "version": "0.0.3",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "purl": "pkg:npm/tr46@0.0.3"
+    },
+    {
+      "type": "library",
       "name": "type-fest",
       "version": "0.13.1",
       "licenses": [
@@ -672,6 +789,58 @@
         }
       ],
       "purl": "pkg:npm/undici-types@8.3.0"
+    },
+    {
+      "type": "library",
+      "name": "wasm-feature-detect",
+      "version": "1.9.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "purl": "pkg:npm/wasm-feature-detect@1.9.0"
+    },
+    {
+      "type": "library",
+      "name": "webidl-conversions",
+      "version": "3.0.1",
+      "licenses": [
+        {
+          "license": {
+            "id": "BSD-2-Clause"
+          }
+        }
+      ],
+      "purl": "pkg:npm/webidl-conversions@3.0.1"
+    },
+    {
+      "type": "library",
+      "name": "whatwg-url",
+      "version": "5.0.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "purl": "pkg:npm/whatwg-url@5.0.0"
+    },
+    {
+      "type": "library",
+      "name": "zlibjs",
+      "version": "0.3.1",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "purl": "pkg:npm/zlibjs@0.3.1"
     }
   ]
 }

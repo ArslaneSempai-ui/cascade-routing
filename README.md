@@ -28,7 +28,7 @@ that pass actually cost is stated below, read from the relevé rather than round
 <!-- figures:commandes -->
 | Command | What it does, in the order that makes sense |
 |---|---|
-| `npm ci --ignore-scripts` | install exactly the versions the lockfile pins, and run no install script from any dependency; nothing below runs without it. What reaches the network: this command; the first run of `measure`, `measure:yours`, `ocr`, `recertify` and `poids -- --prime` (the model weights, from huggingface.co, once); and `benchmark` (its dataset). Nothing else does. It also skips this repository's own `prepare`, so run `git config core.hooksPath .githooks` yourself if you intend to commit; until then the hooks case of the suite stands aside and says so |
+| `npm ci --ignore-scripts` | install exactly the versions the lockfile pins, and run no install script from any dependency; nothing below runs without it. What reaches the network: this command; the first run of `measure`, `measure:yours`, `ocr`, `recertify` and `poids -- --prime` (the model weights, from huggingface.co, once); `tessdata -- --prime` (two OCR language files, from github.com, once); and `benchmark` (its dataset). Nothing else does. It also skips this repository's own `prepare`, so run `git config core.hooksPath .githooks` yourself if you intend to commit; until then the hooks case of the suite stands aside and says so |
 | `npm run test` | types, figures and the suite. Start here. Downloads nothing: the 11 cases that need the model weights stand aside, each with its reason, until `npm run poids -- --prime` has fetched them; the hooks case stands aside outside continuous integration when `core.hooksPath` is unset; everything else runs on what git carries |
 | `npm run measure` | measure the encoder tiers and freeze the profile (at least 1.3 GB downloaded on the first run; `npm run poids` lists each one) |
 | `npm run sceller` | seal a profile: a content hash, not a signature. It shows an edit made after sealing; it does not say who issued the file (the Ed25519 signature beside a shipped record does). `--check` verifies and writes nothing; without it, the command re-declares the seal on an edited file |
@@ -63,6 +63,8 @@ that pass actually cost is stated below, read from the relevé rather than round
 | `npm run benchmark` | the same measurement on a public labelled dataset; it downloads that dataset, and nothing of yours goes up |
 | `npm run intake` | turn a filled-in questionnaire into the assumptions a run uses; `npm run intake` alone writes the blank template, and never over an existing one |
 | `npm run text-from-exports` | fill the `text` column of your labelled CSV from the full text your current vendor's exports already carry (Textract lines, Document AI text, Azure content), so the local tiers read without an OCR step of ours |
+| `npm run text-from-images` | fill the `text` column from a folder of images with `--ocr=tesseract` (tesseract.js, Apache-2.0: Linux, macOS, Windows), offline: the language files come from `npm run tessdata -- --prime`, and nothing is fetched at run time |
+| `npm run tessdata` | the two OCR language files (tessdata_fast 4.1.0: eng 4.1 MB, ind 1.1 MB), each pinned by SHA-256: list what is on this machine; `--prime` fetches what is missing, once; `--import <folder>` takes them from a carried folder |
 | `npm run egress` | watch the network while a measurement runs, and record what it sees |
 | `npm run fuite` | what the prompt owes to the half it was tuned against (needs Ollama) |
 | `npm run pages` | build docs/ and verify the published screen; required before publishing: docs/ carries a compiled copy of the code and goes stale silently |
@@ -156,7 +158,9 @@ declared. Never a document, never a value read from one. A declared price is in 
 record, so a client under a vendor NDA replaces it with a list price before sending.
 
 For receipts, the public run is [`examples/cord-receipts`](examples/cord-receipts/): 100 real
-receipts, two vendors' real outputs, the local tiers, and the sealed record. The first command
+receipts, two vendors' real outputs, the local tiers, and the sealed, signed record; the same
+receipts read by tesseract.js are beside it, as a second signed record, with the rates of each
+local tier on that text. The first command
 to run, with nothing downloaded:
 
 ```
@@ -164,11 +168,15 @@ npm run grade -- --cases=examples/cord-receipts/cord-labels-grouped.csv --name=g
     --values=examples/cord-receipts/cord-google-values.json --price-per-thousand-documents=100 --out=/tmp/google.json
 ```
 
-The local tiers read the `text` column, an OCR'd text of each page. `npm run text-from-exports`
-fills it from the full text your current vendor's exports already carry; `npm run ocr` reads
-images on macOS only. An all-local routing therefore still pays for OCR in production, and the
-audit carries that price as a declared term (`--ocr-price-per-thousand-pages`), assumed at
-zero and said so when you do not declare it.
+The local tiers read the `text` column, an OCR'd text of each page. Three ways to fill it:
+`npm run text-from-exports` takes the full text your current vendor's exports already carry;
+`npm run text-from-images -- --cases=labelled.csv --images=<folder> --ocr=tesseract --lang=eng+ind`
+reads a folder of images with tesseract.js (Apache-2.0) on Linux, macOS and Windows, with no
+network call, once `npm run tessdata -- --prime` has fetched the two language files (tessdata_fast
+4.1.0, eng 4.1 MB and ind 1.1 MB, each pinned by SHA-256 and checked before it is written);
+`npm run ocr` reads images through Vision, on macOS only. An all-local routing therefore still
+pays for OCR in production, and the audit carries that price as a declared term
+(`--ocr-price-per-thousand-pages`), assumed at zero and said so when you do not declare it.
 
 Three commands, in this order:
 
@@ -231,7 +239,7 @@ is declared.
 <!-- /figures:documents -->
 
 <!-- figures:tests -->
-**815 tests** across 92 files, counted from the sources rather than typed here.
+**827 tests** across 95 files, counted from the sources rather than typed here.
 <!-- /figures:tests -->
 
 Everything runs locally, and that is enforced rather than promised. The one call that could

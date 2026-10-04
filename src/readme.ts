@@ -759,6 +759,8 @@ const commandes = (() => {
     ["benchmark", "the same measurement on a public labelled dataset; it downloads that dataset, and nothing of yours goes up"],
     ["intake", "turn a filled-in questionnaire into the assumptions a run uses; `npm run intake` alone writes the blank template, and never over an existing one"],
     ["text-from-exports", "fill the `text` column of your labelled CSV from the full text your current vendor's exports already carry (Textract lines, Document AI text, Azure content), so the local tiers read without an OCR step of ours"],
+    ["text-from-images", "fill the `text` column from a folder of images with `--ocr=tesseract` (tesseract.js, Apache-2.0: Linux, macOS, Windows), offline: the language files come from `npm run tessdata -- --prime`, and nothing is fetched at run time"],
+    ["tessdata", "the two OCR language files (tessdata_fast 4.1.0: eng 4.1 MB, ind 1.1 MB), each pinned by SHA-256: list what is on this machine; `--prime` fetches what is missing, once; `--import <folder>` takes them from a carried folder"],
     ["egress", "watch the network while a measurement runs, and record what it sees"],
     ["fuite", "what the prompt owes to the half it was tuned against (needs Ollama)"],
     ["pages", "build docs/ and verify the published screen; required before publishing: docs/ carries a compiled copy of the code and goes stale silently"],
@@ -818,7 +820,7 @@ const commandes = (() => {
     ["`npm ci --ignore-scripts`", "install exactly the versions the lockfile pins, and run no "
       + "install script from any dependency; nothing below runs without it. What reaches the network: "
       + "this command; the first run of `measure`, `measure:yours`, `ocr`, `recertify` and `poids -- --prime` "
-      + "(the model weights, from huggingface.co, once); and `benchmark` (its dataset). Nothing else does. "
+      + "(the model weights, from huggingface.co, once); `tessdata -- --prime` (two OCR language files, from github.com, once); and `benchmark` (its dataset). Nothing else does. "
       + "It also skips this repository's own `prepare`, so run `git config core.hooksPath .githooks` "
       + "yourself if you intend to commit; until then the hooks case of the suite stands aside and says so"] as [string, string],
     ...ordre.filter(([n]) => n in pkg.scripts).map(([n, quoi]) => [`\`npm run ${n}\``, quoi] as [string, string]),

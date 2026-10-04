@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { mkdtempSync, mkdirSync, copyFileSync, rmSync, existsSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 // @ts-expect-error — module .mjs sans déclarations : il est sans dépendances par contrat
 import { reponse } from "./premiere-reponse.mjs";
@@ -123,7 +123,9 @@ test("LA PREMIÈRE RÉPONSE NE DEMANDE AUCUNE INSTALLATION", () => {
     /* LA MÊME DÉRIVATION QUE PLUS HAUT. Deux noms écrits à la main ici auraient dit une
        chose et la dérivation une autre : le jour où la première réponse lit un troisième
        relevé, la liste versionnée le verrait et le bac d'essai non. Une seule source. */
-    for (const f of lus) copyFileSync(join(racine, f), join(tmp, f));
+    for (const f of lus) { mkdirSync(dirname(join(tmp, f)), { recursive: true }); copyFileSync(join(racine, f), join(tmp, f)); }
+    /* The receipts record is signed, and the text verifies the signature against the public key before quoting it. */
+    copyFileSync(join(racine, "cle-publique.pem"), join(tmp, "cle-publique.pem"));
     assert.ok(!existsSync(join(tmp, "node_modules")),
       "node_modules existe dans le bac d'essai : ce cas n'éprouve pas l'absence d'installation.");
 

@@ -33,6 +33,8 @@
     "measure:yours": "node src/your-cases.ts",
     "grade": "node src/grade.ts",
     "text-from-exports": "node src/text-from-exports.ts",
+    "text-from-images": "node src/text-from-images.ts",
+    "tessdata": "node src/tessdata.ts",
     "measure:humans": "node src/humans.ts",
     "recertify": "node src/recertify.ts",
     "fuite": "node src/fuite.ts",
@@ -52,7 +54,8 @@
     "hostile": "node src/hostile.ts"
   },
   "dependencies": {
-    "@huggingface/transformers": "4.2.0"
+    "@huggingface/transformers": "4.2.0",
+    "tesseract.js": "7.0.0"
   },
   "engines": {
     "node": ">=24"

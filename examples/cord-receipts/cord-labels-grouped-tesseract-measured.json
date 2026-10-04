@@ -1,0 +1,896 @@
+{
+  "kind": "cascade-client-record",
+  "version": 2,
+  "measuredAt": "2026-10-04T15:58:43.483Z",
+  "code": {
+    "commit": "10ef1b7",
+    "sale": true
+  },
+  "source": {
+    "file": "cord-labels-grouped-tesseract.csv",
+    "sha256": "a26fa34290e80d296e09043087a5689be209e643d3ab18c915a0faa5b8cffb2d",
+    "cases": 100,
+    "casesInFile": 100
+  },
+  "fields": [
+    "total",
+    "subtotal",
+    "tax"
+  ],
+  "questions": {
+    "total": {
+      "texte": "What is the total?",
+      "provenance": "deduite"
+    },
+    "subtotal": {
+      "texte": "What is the subtotal?",
+      "provenance": "deduite"
+    },
+    "tax": {
+      "texte": "What is the tax?",
+      "provenance": "deduite"
+    }
+  },
+  "margin": 0.02,
+  "tiers": [
+    "google-expense",
+    "gemini-flash",
+    "rules",
+    "small",
+    "large"
+  ],
+  "declared": {
+    "google-expense": {
+      "pricePerThousandDocuments": 100
+    },
+    "gemini-flash": {
+      "pricePerThousandDocuments": 4.29
+    }
+  },
+  "graded": {
+    "google-expense": {
+      "by": "grader v1",
+      "kinds": {
+        "total": "amount-grouped",
+        "subtotal": "amount-grouped",
+        "tax": "amount-grouped"
+      },
+      "casesSha256": "a26fa34290e80d296e09043087a5689be209e643d3ab18c915a0faa5b8cffb2d"
+    },
+    "gemini-flash": {
+      "by": "grader v1",
+      "kinds": {
+        "total": "amount-grouped",
+        "subtotal": "amount-grouped",
+        "tax": "amount-grouped"
+      },
+      "casesSha256": "a26fa34290e80d296e09043087a5689be209e643d3ab18c915a0faa5b8cffb2d"
+    }
+  },
+  "extraction": {
+    "google-expense": {
+      "total": {
+        "accuracy": 0.9368421052631579,
+        "items": 95,
+        "low": 0.8689918917654831,
+        "high": 0.9707355104619193,
+        "latency": null,
+        "reussites": "111111111-111011111101111111111111111-1-11111111111111110-111111111111101111-11111111111111101101111",
+        "blank": 0,
+        "wrong": 6
+      },
+      "subtotal": {
+        "accuracy": 0.8923076923076924,
+        "items": 65,
+        "low": 0.7939846696853139,
+        "high": 0.9468464556807439,
+        "latency": null,
+        "reussites": "1-1111-1111--01-11-11-----111111111-1-0--111----1111111-0-1111-1-11---1-0-11-1--1-111111111--1100-01",
+        "blank": 5,
+        "wrong": 2
+      },
+      "tax": {
+        "accuracy": 0.7,
+        "items": 40,
+        "low": 0.545696893456796,
+        "high": 0.8192532908430471,
+        "latency": null,
+        "reussites": "1----1-11----10-1--11------11110-11---0---10----0-11-0--1-01------0---1-0-11-------111-1--0--001--1-",
+        "blank": 11,
+        "wrong": 1
+      }
+    },
+    "gemini-flash": {
+      "total": {
+        "accuracy": 0.968421052631579,
+        "items": 95,
+        "low": 0.9112275317602905,
+        "high": 0.9892030561702976,
+        "latency": null,
+        "reussites": "111111111-111111110111111111111111111-1-11111111111111110-111111111101111111-11111111111111111111111",
+        "blank": 2,
+        "wrong": 1
+      },
+      "subtotal": {
+        "accuracy": 0.9538461538461539,
+        "items": 65,
+        "low": 0.8728594829309505,
+        "high": 0.9841804464140967,
+        "latency": null,
+        "reussites": "1-1111-1111--11-11-11-----111111111-0-1--111----1111111-0-1111-1-11---1-1-11-1--1-111111101--1111-11",
+        "blank": 3,
+        "wrong": 0
+      },
+      "tax": {
+        "accuracy": 0.975,
+        "items": 40,
+        "low": 0.8711834051199223,
+        "high": 0.9955732825922052,
+        "latency": null,
+        "reussites": "1----1-11----11-1--11------11111-11---1---11----1-11-1--0-11------1---1-1-11-------111-1--1--111--1-",
+        "blank": 1,
+        "wrong": 0
+      }
+    },
+    "rules": {
+      "total": {
+        "accuracy": 0.35789473684210527,
+        "items": 95,
+        "low": 0.2687489341134812,
+        "high": 0.45808673022218316,
+        "latency": 0.0024999999999977263,
+        "reussites": "110001100-100000110000101001100100000-0-00000011100110110-001001000001000100-10011111000101010000101",
+        "blank": 48,
+        "wrong": 13,
+        "doubt": {
+          "byScore": [
+            47,
+            48,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "wrongByScore": [
+            13,
+            48,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "signals": [
+            "empty",
+            "not in the document",
+            "invisible characters",
+            "mixed scripts"
+          ]
+        }
+      },
+      "subtotal": {
+        "accuracy": 0.26153846153846155,
+        "items": 65,
+        "low": 0.17018055060319132,
+        "high": 0.3795103339782245,
+        "latency": 0.0013749999999959073,
+        "reussites": "0-0100-0001--01-11-01-----010000000-0-0--000----0000001-0-0010-1-00---1-0-00-0--1-101010001--0000-01",
+        "blank": 38,
+        "wrong": 10,
+        "doubt": {
+          "byScore": [
+            27,
+            38,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "wrongByScore": [
+            10,
+            38,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "signals": [
+            "empty",
+            "not in the document",
+            "invisible characters",
+            "mixed scripts"
+          ]
+        }
+      },
+      "tax": {
+        "accuracy": 0.15,
+        "items": 40,
+        "low": 0.07061091708507435,
+        "high": 0.2907262603902003,
+        "latency": 0.0016249999999899956,
+        "reussites": "0----0-00----00-0--01------10001-00---0---00----0-00-0--1-00------0---1-0-00-------010-0--0--000--0-",
+        "blank": 31,
+        "wrong": 3,
+        "doubt": {
+          "byScore": [
+            9,
+            31,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "wrongByScore": [
+            3,
+            31,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "signals": [
+            "empty",
+            "not in the document",
+            "invisible characters",
+            "mixed scripts"
+          ]
+        }
+      }
+    },
+    "small": {
+      "total": {
+        "accuracy": 0.021052631578947368,
+        "items": 95,
+        "low": 0.0057923854515239195,
+        "high": 0.07354263138349293,
+        "latency": 16.513625000000047,
+        "reussites": "000000000-000000001000000000000000000-0-00000000000000000-000000000000010000-00000000000000000000000",
+        "blank": 0,
+        "wrong": 93,
+        "doubt": {
+          "byScore": [
+            89,
+            6,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "wrongByScore": [
+            87,
+            6,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "signals": [
+            "empty",
+            "not in the document",
+            "invisible characters",
+            "mixed scripts"
+          ]
+        }
+      },
+      "subtotal": {
+        "accuracy": 0,
+        "items": 65,
+        "low": 0,
+        "high": 0.055803467670710726,
+        "latency": 17.585915999999997,
+        "reussites": "0-0000-0000--00-00-00-----000000000-0-0--000----0000000-0-0000-0-00---0-0-00-0--0-000000000--0000-00",
+        "blank": 0,
+        "wrong": 65,
+        "doubt": {
+          "byScore": [
+            59,
+            6,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "wrongByScore": [
+            59,
+            6,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "signals": [
+            "empty",
+            "not in the document",
+            "invisible characters",
+            "mixed scripts"
+          ]
+        }
+      },
+      "tax": {
+        "accuracy": 0,
+        "items": 40,
+        "low": 0,
+        "high": 0.08762453925039232,
+        "latency": 17.311541000000943,
+        "reussites": "0----0-00----00-0--00------00000-00---0---00----0-00-0--0-00------0---0-0-00-------000-0--0--000--0-",
+        "blank": 0,
+        "wrong": 40,
+        "doubt": {
+          "byScore": [
+            29,
+            11,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "wrongByScore": [
+            29,
+            11,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "signals": [
+            "empty",
+            "not in the document",
+            "invisible characters",
+            "mixed scripts"
+          ]
+        }
+      }
+    },
+    "large": {
+      "total": {
+        "accuracy": 0.3157894736842105,
+        "items": 95,
+        "low": 0.2310308812871305,
+        "high": 0.4148672021109529,
+        "latency": 29.080000000000837,
+        "reussites": "010001000-100000111000101001000100000-0-00000011100110010-001001000001010100-10101110010100000000101",
+        "blank": 0,
+        "wrong": 65,
+        "doubt": {
+          "byScore": [
+            95,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "wrongByScore": [
+            65,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "signals": [
+            "empty",
+            "not in the document",
+            "invisible characters",
+            "mixed scripts"
+          ]
+        }
+      },
+      "subtotal": {
+        "accuracy": 0.15384615384615385,
+        "items": 65,
+        "low": 0.08577002061798975,
+        "high": 0.26055545700019456,
+        "latency": 33.289084,
+        "reussites": "0-0000-0000--01-01-01-----010000000-0-0--000----0000100-0-0010-1-01---1-0-00-0--0-000010000--0000-00",
+        "blank": 0,
+        "wrong": 55,
+        "doubt": {
+          "byScore": [
+            65,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "wrongByScore": [
+            55,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "signals": [
+            "empty",
+            "not in the document",
+            "invisible characters",
+            "mixed scripts"
+          ]
+        }
+      },
+      "tax": {
+        "accuracy": 0,
+        "items": 40,
+        "low": 0,
+        "high": 0.08762453925039232,
+        "latency": 32.737583000001905,
+        "reussites": "0----0-00----00-0--00------00000-00---0---00----0-00-0--0-00------0---0-0-00-------000-0--0--000--0-",
+        "blank": 2,
+        "wrong": 38,
+        "doubt": {
+          "byScore": [
+            38,
+            2,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "wrongByScore": [
+            38,
+            2,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "signals": [
+            "empty",
+            "not in the document",
+            "invisible characters",
+            "mixed scripts"
+          ]
+        }
+      }
+    }
+  },
+  "recommendation": {
+    "total": [
+      "Keeping google-expense, your current chain, is not supported by this sample: it may be up to 6.2 points worse than gemini-flash, above your 2-point margin (7 disagreements, p = 0.453). The observed gap, 3.2 points, is itself above the margin: no sample size would show non-inferiority.",
+      "gemini-flash stays the source for total: nothing cheaper is supported within your margin on this sample, and the audit below routes total to it."
+    ],
+    "subtotal": [
+      "Keeping google-expense, your current chain, is not supported by this sample: it may be up to 10.5 points worse than gemini-flash, above your 2-point margin (8 disagreements, p = 0.289). The observed gap, 6.2 points, is itself above the margin: no sample size would show non-inferiority.",
+      "gemini-flash stays the source for subtotal: nothing cheaper is supported within your margin on this sample, and the audit below routes subtotal to it."
+    ],
+    "tax": [
+      "google-expense is separably worse than gemini-flash on these 40 cases: 12 of 13 disagreements go to gemini-flash (McNemar exact, p = 0.003).",
+      "gemini-flash stays the source for tax: nothing cheaper is supported within your margin on this sample, and the audit below routes tax to it."
+    ]
+  },
+  "kinds": {
+    "total": "amount-grouped",
+    "subtotal": "amount-grouped",
+    "tax": "amount-grouped"
+  },
+  "grader": {
+    "version": 1,
+    "conventions": {
+      "amount": "one comma followed by exactly three digits groups thousands; any other lone comma is decimal; a lone point is decimal; with both, the last one is decimal; currency symbols and codes are ignored",
+      "amount-grouped": "a point or comma followed by exactly three digits groups thousands and a final point or comma followed by exactly two digits is the decimal part, as Indonesian and German receipts print amounts (60.000 is sixty thousand); any other shape is unreadable; Rp, currency symbols and codes are ignored",
+      "date": "all-numeric dates are read month first unless the kind is date-dmy; a part above twelve is the day; two-digit years pivot at fifty",
+      "currency": "symbols and common names resolve to ISO 4217 codes; any other three letters are taken as a code",
+      "id": "only letters and digits count, case does not",
+      "free-text": "case, punctuation, diacritics and spacing do not count; word order does",
+      "exact": "the default comparison of this repository, separators and case set aside",
+      "absent": "an expected cell that holds exactly \"-\" means the document has no such line: a blank answer is clean and any value is wrong; an empty expected cell means unknown and is graded by nobody"
+    }
+  },
+  "audit": {
+    "version": 1,
+    "margin": 0.02,
+    "fields": {
+      "total": {
+        "kind": "amount-grouped",
+        "head": "gemini-flash",
+        "sources": {
+          "google-expense": {
+            "successes": 89,
+            "n": 95,
+            "accuracy": 0.9368421052631579,
+            "low": 0.8689918917654831,
+            "high": 0.9707355104619193,
+            "costPerThousandPages": 100,
+            "declaredPrice": {
+              "perThousand": 100,
+              "billing": "document"
+            },
+            "standing": "not-separable",
+            "paired": {
+              "n": 95,
+              "discordant": 7,
+              "p": 0.453125,
+              "difference": 0.03157894736842104,
+              "low": -0.028772186454765508,
+              "high": 0.09843633937006908,
+              "separable": false
+            }
+          },
+          "gemini-flash": {
+            "successes": 92,
+            "n": 95,
+            "accuracy": 0.968421052631579,
+            "low": 0.9112275317602905,
+            "high": 0.9892030561702976,
+            "costPerThousandPages": 4.29,
+            "declaredPrice": {
+              "perThousand": 4.29,
+              "billing": "document"
+            },
+            "standing": "head"
+          },
+          "rules": {
+            "successes": 34,
+            "n": 95,
+            "accuracy": 0.35789473684210527,
+            "low": 0.2687489341134812,
+            "high": 0.45808673022218316,
+            "costPerThousandPages": 8.333333333325753e-7,
+            "declaredPrice": null,
+            "standing": "separably-worse",
+            "paired": {
+              "n": 95,
+              "discordant": 58,
+              "p": 6e-18,
+              "difference": 0.6105263157894737,
+              "low": 0.5020622484383621,
+              "high": 0.6992919517527023,
+              "separable": true
+            }
+          },
+          "small": {
+            "successes": 2,
+            "n": 95,
+            "accuracy": 0.021052631578947368,
+            "low": 0.0057923854515239195,
+            "high": 0.07354263138349293,
+            "costPerThousandPages": 0.005504541666666683,
+            "declaredPrice": null,
+            "standing": "separably-worse",
+            "paired": {
+              "n": 95,
+              "discordant": 92,
+              "p": 0,
+              "difference": 0.9473684210526316,
+              "low": 0.855799976869174,
+              "high": 0.9775994496620651,
+              "separable": true
+            }
+          },
+          "large": {
+            "successes": 30,
+            "n": 95,
+            "accuracy": 0.3157894736842105,
+            "low": 0.2310308812871305,
+            "high": 0.4148672021109529,
+            "costPerThousandPages": 0.009693333333333613,
+            "declaredPrice": null,
+            "standing": "separably-worse",
+            "paired": {
+              "n": 95,
+              "discordant": 64,
+              "p": 7e-18,
+              "difference": 0.6526315789473685,
+              "low": 0.5378938926442647,
+              "high": 0.7400382208639955,
+              "separable": true
+            }
+          }
+        },
+        "inseparable": [
+          "google-expense"
+        ],
+        "admissible": [
+          "gemini-flash"
+        ],
+        "chosen": "gemini-flash"
+      },
+      "subtotal": {
+        "kind": "amount-grouped",
+        "head": "gemini-flash",
+        "sources": {
+          "google-expense": {
+            "successes": 58,
+            "n": 65,
+            "accuracy": 0.8923076923076924,
+            "low": 0.7939846696853139,
+            "high": 0.9468464556807439,
+            "costPerThousandPages": 100,
+            "declaredPrice": {
+              "perThousand": 100,
+              "billing": "document"
+            },
+            "standing": "not-separable",
+            "paired": {
+              "n": 65,
+              "discordant": 8,
+              "p": 0.2890625,
+              "difference": 0.06153846153846154,
+              "low": -0.02856639826670157,
+              "high": 0.1596836526539079,
+              "separable": false
+            }
+          },
+          "gemini-flash": {
+            "successes": 62,
+            "n": 65,
+            "accuracy": 0.9538461538461539,
+            "low": 0.8728594829309505,
+            "high": 0.9841804464140967,
+            "costPerThousandPages": 4.29,
+            "declaredPrice": {
+              "perThousand": 4.29,
+              "billing": "document"
+            },
+            "standing": "head"
+          },
+          "rules": {
+            "successes": 17,
+            "n": 65,
+            "accuracy": 0.26153846153846155,
+            "low": 0.17018055060319132,
+            "high": 0.3795103339782245,
+            "costPerThousandPages": 4.5833333333196907e-7,
+            "declaredPrice": null,
+            "standing": "separably-worse",
+            "paired": {
+              "n": 65,
+              "discordant": 45,
+              "p": 5.6843e-14,
+              "difference": 0.6923076923076923,
+              "low": 0.5582377091358484,
+              "high": 0.7847245106317492,
+              "separable": true
+            }
+          },
+          "small": {
+            "successes": 0,
+            "n": 65,
+            "accuracy": 0,
+            "low": 0,
+            "high": 0.055803467670710726,
+            "costPerThousandPages": 0.005861971999999999,
+            "declaredPrice": null,
+            "standing": "separably-worse",
+            "paired": {
+              "n": 65,
+              "discordant": 62,
+              "p": 0,
+              "difference": 0.9538461538461539,
+              "low": 0.8554954148046829,
+              "high": 0.9841804464140967,
+              "separable": true
+            }
+          },
+          "large": {
+            "successes": 10,
+            "n": 65,
+            "accuracy": 0.15384615384615385,
+            "low": 0.08577002061798975,
+            "high": 0.26055545700019456,
+            "costPerThousandPages": 0.011096361333333332,
+            "declaredPrice": null,
+            "standing": "separably-worse",
+            "paired": {
+              "n": 65,
+              "discordant": 52,
+              "p": 4.44e-16,
+              "difference": 0.8,
+              "low": 0.672232462610428,
+              "high": 0.8718828544957747,
+              "separable": true
+            }
+          }
+        },
+        "inseparable": [
+          "google-expense"
+        ],
+        "admissible": [
+          "gemini-flash"
+        ],
+        "chosen": "gemini-flash"
+      },
+      "tax": {
+        "kind": "amount-grouped",
+        "head": "gemini-flash",
+        "sources": {
+          "google-expense": {
+            "successes": 28,
+            "n": 40,
+            "accuracy": 0.7,
+            "low": 0.545696893456796,
+            "high": 0.8192532908430471,
+            "costPerThousandPages": 100,
+            "declaredPrice": {
+              "perThousand": 100,
+              "billing": "document"
+            },
+            "standing": "separably-worse",
+            "paired": {
+              "n": 40,
+              "discordant": 13,
+              "p": 0.00341796875,
+              "difference": 0.275,
+              "low": 0.10888291880051013,
+              "high": 0.4327918539668697,
+              "separable": true
+            }
+          },
+          "gemini-flash": {
+            "successes": 39,
+            "n": 40,
+            "accuracy": 0.975,
+            "low": 0.8711834051199223,
+            "high": 0.9955732825922052,
+            "costPerThousandPages": 4.29,
+            "declaredPrice": {
+              "perThousand": 4.29,
+              "billing": "document"
+            },
+            "standing": "head"
+          },
+          "rules": {
+            "successes": 6,
+            "n": 40,
+            "accuracy": 0.15,
+            "low": 0.07061091708507435,
+            "high": 0.2907262603902003,
+            "costPerThousandPages": 5.416666666633319e-7,
+            "declaredPrice": null,
+            "standing": "separably-worse",
+            "paired": {
+              "n": 40,
+              "discordant": 35,
+              "p": 2.095475792e-9,
+              "difference": 0.825,
+              "low": 0.6207460666603386,
+              "high": 0.914280728985402,
+              "separable": true
+            }
+          },
+          "small": {
+            "successes": 0,
+            "n": 40,
+            "accuracy": 0,
+            "low": 0,
+            "high": 0.08762453925039232,
+            "costPerThousandPages": 0.00577051366666698,
+            "declaredPrice": null,
+            "standing": "separably-worse",
+            "paired": {
+              "n": 40,
+              "discordant": 39,
+              "p": 3.637978e-12,
+              "difference": 0.975,
+              "low": 0.8391473399180652,
+              "high": 0.9955732825922052,
+              "separable": true
+            }
+          },
+          "large": {
+            "successes": 0,
+            "n": 40,
+            "accuracy": 0,
+            "low": 0,
+            "high": 0.08762453925039232,
+            "costPerThousandPages": 0.010912527666667301,
+            "declaredPrice": null,
+            "standing": "separably-worse",
+            "paired": {
+              "n": 40,
+              "discordant": 39,
+              "p": 3.637978e-12,
+              "difference": 0.975,
+              "low": 0.8391473399180652,
+              "high": 0.9955732825922052,
+              "separable": true
+            }
+          }
+        },
+        "inseparable": [],
+        "admissible": [
+          "gemini-flash"
+        ],
+        "chosen": "gemini-flash"
+      }
+    },
+    "routing": {
+      "total": "gemini-flash",
+      "subtotal": "gemini-flash",
+      "tax": "gemini-flash"
+    },
+    "cost": {
+      "recommended": {
+        "perThousandPages": 4.29,
+        "vendors": [
+          "gemini-flash"
+        ],
+        "localPerThousandPages": 0,
+        "complete": true,
+        "unit": "document"
+      },
+      "current": {
+        "chain": "google-expense",
+        "perThousandPages": 100,
+        "declared": {
+          "perThousand": 100,
+          "billing": "document"
+        }
+      },
+      "annual": {
+        "pagesPerYear": 1000000,
+        "current": 100000,
+        "recommended": 4290,
+        "saving": 95710
+      }
+    },
+    "inseparable": [
+      {
+        "field": "total",
+        "source": "gemini-flash",
+        "against": "google-expense",
+        "n": 95,
+        "discordant": 7,
+        "p": 0.453125
+      },
+      {
+        "field": "subtotal",
+        "source": "gemini-flash",
+        "against": "google-expense",
+        "n": 65,
+        "discordant": 8,
+        "p": 0.2890625
+      }
+    ],
+    "worse": [],
+    "uncompared": [],
+    "assumptions": {
+      "pagesPerDocument": 1,
+      "pagesPerYear": 1000000,
+      "machineHourlyCost": 1.2,
+      "margin": 0.02,
+      "ocrPricePerThousandPages": {
+        "value": 0,
+        "provenance": "assumed"
+      },
+      "prices": [
+        {
+          "kind": "vendor",
+          "name": "google-expense",
+          "pricePerThousand": 100,
+          "billing": "document",
+          "provenance": "declared"
+        },
+        {
+          "kind": "vendor",
+          "name": "gemini-flash",
+          "pricePerThousand": 4.29,
+          "billing": "document",
+          "provenance": "declared"
+        }
+      ],
+      "note": "Every dollar here rests on a declared price or a list price read on a date, on the declared pages per document and per year, on the declared hourly cost of the machine for local tiers, and on the OCR price per thousand pages a local tier needs (declared, or assumed at zero and marked so). Accuracies and the separation verdicts are measured; the money is not."
+    },
+    "omitted": []
+  },
+  "empreinte": "1817f176853fc0e9"
+}

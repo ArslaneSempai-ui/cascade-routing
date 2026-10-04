@@ -1066,6 +1066,7 @@ test("un palier mesuré porte sa propre provenance", (t) => {
 const SORTIES_AUTORISEES = [
   { motif: "OLLAMA_HOST", ou: "src/tiers.ts", pourquoi: "les modèles génératifs, sur la boucle locale par défaut" },
   { motif: "raw.githubusercontent.com", ou: "src/benchmark.ts", pourquoi: "un jeu public, téléchargé par `npm run benchmark` seulement — hors du chemin d'une mesure" },
+  { motif: "raw.githubusercontent.com/tesseract-ocr/tessdata_fast", ou: "src/tessdata.ts", pourquoi: "les deux fichiers de langue de l'OCR, par `npm run tessdata -- --prime` seulement, épinglés par sha256 ; jamais au moment d'une lecture (4 octobre 2026)" },
 ];
 
 test("une mesure ne peut contacter que cette machine", () => {
@@ -4845,6 +4846,10 @@ test("tout ce qui peut ouvrir une connexion est déclaré, et le compte n'est pa
     "contrainte.ts": "le même hôte génératif, pour mesurer ce que coûte la contrainte de sortie",
     "benchmark.ts": "le téléchargement d'un jeu public étiqueté, une fois — c'est une entrée "
       + "qui descend, jamais une donnée du client qui monte",
+    "tessdata.ts": "les deux fichiers de langue de l'OCR (tessdata_fast 4.1.0, eng et ind), par "
+      + "`npm run tessdata -- --prime` seulement, épinglés par sha256 et vérifiés avant d'être écrits ; "
+      + "une lecture d'image (`text-from-images`) ne passe jamais par là, et l'egress l'a tenu sur les "
+      + "100 reçus CORD le 4 octobre 2026 : 403 relevés, aucune connexion",
     "capturer.mjs": "un `curl` vers 127.0.0.1 uniquement, pour établir que le serveur de "
       + "capture qui répond est BIEN LE NÔTRE : il doit rendre le contenu d'un jeton tiré au "
       + "hasard et écrit dans le dossier servi. Rien ne sort de la machine, et c'est la garde "

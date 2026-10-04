@@ -76,21 +76,34 @@ export type Filled = { csv: string; filled: string[]; noExport: string[]; noText
  * comes out declares exactly what the file that went in declared.
  */
 export function fillText(csvText: string, vendor: VendorName, byId: Map<string, unknown>): Filled {
+  const noExport: string[] = [], noText: string[] = [];
+  const r = fillTextFrom(csvText, (id) => {
+    if (!byId.has(id)) { noExport.push(id); return null; }
+    const t = fullText(vendor, byId.get(id));
+    if (t === null) noText.push(id);
+    return t;
+  });
+  return { csv: r.csv, filled: r.filled, noExport, noText };
+}
+
+/**
+ * The CSV with its `text` column replaced by what `texteDe` returns for each case id, and left as
+ * it was where it returns null. Header rebuilt from what was read, kinds included. Shared by the
+ * exports path and the images path (text-from-images.ts).
+ */
+export function fillTextFrom(csvText: string, texteDe: (id: string) => string | null): { csv: string; filled: string[] } {
   const lu = lireCsv(csvText);
   const { cas, champs, kinds, lecture } = lu;
   const header = lecture.noms.map((n) => (champs.includes(n) && kinds[n] ? `${n}:${kinds[n]}` : n));
-  const filled: string[] = [], noExport: string[] = [], noText: string[] = [];
+  const filled: string[] = [];
   const rows = cas.map((c) => {
-    let text = c.text;
-    if (!byId.has(c.id)) noExport.push(c.id);
-    else {
-      const t = fullText(vendor, byId.get(c.id));
-      if (t === null) noText.push(c.id); else { text = t; filled.push(c.id); }
-    }
+    const t = texteDe(c.id);
+    const text = t === null ? c.text : t;
+    if (t !== null) filled.push(c.id);
     return lecture.noms.map((n) => n === lecture.noms[lecture.colId] ? c.id : n === lecture.noms[lecture.colTexte] ? text : (c.truth[n] ?? ""));
   });
   const csv = [header, ...rows].map((r) => r.map(cell).join(",")).join("\n") + "\n";
-  return { csv, filled, noExport, noText };
+  return { csv, filled };
 }
 
 async function principal(): Promise<void> {

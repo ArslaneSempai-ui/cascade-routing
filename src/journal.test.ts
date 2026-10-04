@@ -1696,6 +1696,10 @@ test("aucune dépendance n'exécute de code à l'installation, et toutes sont é
    * est le point : leur présence est un fait connu, pas une surprise.
    */
   const DECLARES: Record<string, string> = {
+    "node_modules/tesseract.js":
+      "postinstall `opencollective-postinstall || true` : un script de 18 lignes qui imprime un message de "
+      + "don sur le terminal quand `package.json` porte un champ `collective`, et rien d'autre ; aucun réseau, "
+      + "aucun sous-processus — lu le 4 octobre 2026, pas supposé. `npm ci --ignore-scripts` le saute.",
     "node_modules/protobufjs":
       "postinstall de 32 lignes qui réécrit un champ de son propre package.json ; aucun réseau, "
       + "aucun sous-processus — lu, pas supposé",

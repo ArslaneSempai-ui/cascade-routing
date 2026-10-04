@@ -94,11 +94,56 @@ are what each vendor returns on them, not a guarantee on unseen pages. The local
 repository's OCR (macOS Vision) produced from the images, so their rates include that OCR's errors; the two
 vendors read the images themselves.
 
+## The same receipts read by tesseract.js
+
+The Vision text above exists only on macOS. On 4 October 2026 the same 100 images were read with
+tesseract.js 7.0.0 (Apache-2.0, inside Node, on Linux, macOS and Windows), language files
+tessdata_fast 4.1.0 `eng+ind` fetched once by `npm run tessdata -- --prime` and pinned by SHA-256,
+with the network refused (`CASCADE_OFFLINE=1`) and the egress check watching: 403 samples over the
+whole pass, no connection outside this machine. The record is `cord-labels-grouped-tesseract-measured.json`,
+seal `1817f176853fc0e9`, signed (`.signature.json`, verified against `cle-publique.pem`), measured on a
+working tree ahead of commit `10ef1b7` (the record says so). The vendors read the images, so their rates
+do not move; the local tiers read the tesseract text. Cases with an expected value: total 95, subtotal 65,
+tax 40, as above.
+
+| Source | total | subtotal | tax |
+|---|---|---|---|
+| gemini-flash | 96.8 % [91-99] (pick) | 95.4 % [87-98] (pick) | 97.5 % [87-100] (pick) |
+| google-expense | 93.7 % [87-97] | 89.2 % [79-95] | 70.0 % [55-82] |
+| rules | 35.8 % [27-46] | 26.2 % [17-38] | 15.0 % [7-29] |
+| large | 31.6 % [23-41] | 15.4 % [9-26] | 0.0 % [0-9] |
+| small | 2.1 % [1-7] | 0.0 % [0-6] | 0.0 % [0-9] |
+
+Against the Vision text, the rules tier falls from 66.3 % to 35.8 % on total, from 56.9 % to 26.2 % on
+subtotal and from 67.5 % to 15.0 % on tax; `large` from 62.1 % to 31.6 %, from 32.3 % to 15.4 % and from
+10.0 % to 0.0 %; `small` does not move. The routing and the saving are the same (all three fields to
+gemini-flash, $95,710 a year at the declared prices and volume): the local tiers were not in the running on
+either text. What this run does not carry: the generative tiers (`gen-0.6b`, `gen-4b`, `gen-8b`), because
+Ollama was not running on the machine that measured; `npm run measure:yours -- --llm` on the same CSV adds
+them. The files: `cord-labels-grouped-tesseract.csv` (the same labels, the text column from tesseract),
+`cord-tesseract-google-outcomes.json` and `cord-tesseract-gemini-outcomes.json` (the vendors' values graded
+against that CSV, identical verdicts), the record and its signature.
+
+```
+npm run tessdata -- --prime
+npm run text-from-images -- --cases=examples/cord-receipts/cord-labels-grouped.csv --images=<folder of CORD-TEST-nnn.png> \
+    --ocr=tesseract --lang=eng+ind --out=examples/cord-receipts/cord-labels-grouped-tesseract.csv --overwrite
+npm run grade -- --cases=examples/cord-receipts/cord-labels-grouped-tesseract.csv --name=google-expense \
+    --values=examples/cord-receipts/cord-google-values.json --price-per-thousand-documents=100 \
+    --out=examples/cord-receipts/cord-tesseract-google-outcomes.json --overwrite
+npm run grade -- --cases=examples/cord-receipts/cord-labels-grouped-tesseract.csv --name=gemini-flash \
+    --values=examples/cord-receipts/cord-gemini-values.json --price-per-thousand-documents=4.29 \
+    --out=examples/cord-receipts/cord-tesseract-gemini-outcomes.json --overwrite
+npm run measure:yours -- --cases=examples/cord-receipts/cord-labels-grouped-tesseract.csv \
+    --sorties=examples/cord-receipts/cord-tesseract-google-outcomes.json --sorties=examples/cord-receipts/cord-tesseract-gemini-outcomes.json \
+    --rules=examples/cord-receipts/cord-rules.json --current=google-expense --margin=2 --pages-per-document=1 --pages-per-year=1000000
+```
+
 ## Licence of this folder
 
 The receipts' labels and the text read from their images come from CORD, which is released under
 [CC BY 4.0](http://creativecommons.org/licenses/by/4.0/). Every file in this folder that carries them
-(`cord-labels-grouped.csv`, both values files) stays under CC BY 4.0, with this attribution:
+(`cord-labels-grouped.csv`, `cord-labels-grouped-tesseract.csv`, both values files) stays under CC BY 4.0, with this attribution:
 
 > Park, Seunghyun, Seung Shin, Bado Lee, Junyeop Lee, Jaeheung Surh, Minjoon Seo and Hwalsuk Lee. "CORD: A
 > Consolidated Receipt Dataset for Post-OCR Parsing." Document Intelligence Workshop at Neural Information

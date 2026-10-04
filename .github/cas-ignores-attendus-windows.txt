@@ -50,3 +50,7 @@ le balayage refuse de publier quand `git log` sort en erreur
 le balayage refuse une sortie trop courte pour être l'historique
 sansChemins caviarde aussi les racines hors des sept d'origine
 la mémoire disponible se lit avec la taille de page annoncée, inactif compris
+
+# The OCR language files (tessdata_fast, fetched by `npm run tessdata -- --prime` only) live on no
+# public runner: the one case that reads an image with tesseract.js stands aside there, and says so.
+tesseract reads a rendered line of text offline, and fills the text column

@@ -28,6 +28,7 @@
 import { readFileSync, existsSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { join } from "node:path";
+import { createHash, createPublicKey, verify as verifierBrut } from "node:crypto";
 
 const RACINE = fileURLToPath(new URL("..", import.meta.url));
 
@@ -43,6 +44,54 @@ function lire(nom) {
   return JSON.parse(readFileSync(p, "utf8"));
 }
 
+/*
+ * LE SCEAU, RECALCULÉ ICI SANS RIEN IMPORTER. C'est l'algorithme d'empreinte.ts (la même
+ * fonction dans les cinq outils) : JSON canonique, clés triées, `empreinte` retirée à la
+ * racine seulement, SHA-256, seize hexadécimaux. Recopié plutôt qu'importé parce que ce fichier
+ * tourne sans node_modules et avant toute installation ; un test compare les deux sur le relevé.
+ */
+function canonique(x, racine = true) {
+  if (Array.isArray(x)) return x.map((v) => canonique(v, false));
+  if (x && typeof x === "object") {
+    return Object.keys(x).sort().reduce((a, k) => { if (!(racine && k === "empreinte")) a[k] = canonique(x[k], false); return a; }, {});
+  }
+  return x;
+}
+export function sceauDe(releve) {
+  return createHash("sha256").update(JSON.stringify(canonique(releve))).digest("hex").slice(0, 16);
+}
+
+/*
+ * LES REÇUS D'ABORD (Arslane, 4 octobre 2026) : le relevé public des 100 reçus CORD, scellé et
+ * SIGNÉ. Le sceau est recalculé, la signature détachée est vérifiée sur ses octets contre la clé
+ * publique du dépôt ; si l'un des deux ne tient pas, le texte refuse de citer un chiffre.
+ */
+export function recus(releve, signature, clePubliquePem, devise) {
+  const sceau = sceauDe(releve);
+  if (releve.empreinte !== sceau) throw new Error(`the receipts record carries seal ${releve.empreinte} and its content hashes to ${sceau}: edited after sealing, nothing is quoted from it.`);
+  let ok = false;
+  try { ok = verifierBrut(null, Buffer.from(sceau, "utf8"), createPublicKey(clePubliquePem), Buffer.from(String(signature.valeur ?? ""), "base64")); } catch { ok = false; }
+  if (!ok) throw new Error("the receipts record's signature does not verify against cle-publique.pem: nothing is quoted from it.");
+  const a = releve.audit;
+  const champs = Object.keys(a.fields);
+  const courant = a.cost.current?.chain;
+  const lignes = [`  ON ${releve.source.cases} REAL RECEIPTS (CORD v2 test split, public), what each source read right:`, ""];
+  for (const champ of champs) {
+    const s = a.fields[champ].sources;
+    const noms = Object.keys(s).filter((n) => s[n].accuracy !== null && s[n].accuracy !== undefined).sort((x, y) => s[y].accuracy - s[x].accuracy);
+    lignes.push(`  ${champ.padEnd(9)} ` + noms.slice(0, 4).map((n) => `${n} ${pct(s[n].accuracy)} %`).join("   ") + (noms.length > 4 ? `   (${noms.length - 4} more in the record)` : ""));
+  }
+  lignes.push("", `  Routing within the declared margin: ${champs.map((c) => `${c} to ${a.routing[c]}`).join(", ")}.`);
+  if (a.cost.annual) {
+    /* The currency is the one the exposure reading declares (`usd/period`), read by the caller:
+       the receipts record carries none of its own, and this text never types one. */
+    lignes.push(`  At ${nombre(a.cost.annual.pagesPerYear)} pages a year, on the prices declared for this sample: ${nombre(a.cost.annual.current)} ${devise} today`
+      + ` (${courant}), ${nombre(a.cost.annual.recommended)} ${devise} routed, ${nombre(a.cost.annual.saving)} ${devise} saved. Declared prices, not measured.`);
+  }
+  lignes.push(`  Record ${releve.empreinte}, sealed and signed; the signature verifies against cle-publique.pem.`);
+  return lignes;
+}
+
 /* Groupage et pourcentages écrits à la main : `toLocaleString` dépend de la locale de la
    machine, et cette sortie doit être la même partout. */
 const nombre = (n) => Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
@@ -56,7 +105,7 @@ const grouperLaPeriode = (s) => String(s).replace(/^(\d+)(?=\s|$)/, (d) => nombr
  * Les commentaires du dépôt sont en français, les documents que lit un acheteur ne le sont
  * pas. Un dépôt qui change de langue à mi-parcours se lit comme un dépôt abandonné.
  */
-export function reponse(exposition, doc) {
+export function reponse(exposition, doc, recusSignes = null) {
   const publie = exposition.points?.find((p) => p.identiqueAuPublie);
   if (!publie) {
     throw new Error("no exposure point matches the published routing: the reading and the code have diverged.");
@@ -98,11 +147,13 @@ export function reponse(exposition, doc) {
      lui qui a menti, et qu'un lecteur ne le reconstitue pas depuis la devise seule. */
   const [devise, denominateur] = String(u.traitement).split("/");
   const DEVISE = devise.toUpperCase();
+  const lesRecus = recusSignes ? recus(recusSignes.releve, recusSignes.signature, recusSignes.clePubliquePem, DEVISE) : null;
 
   const lignes = [
     "",
     "  CASCADE measures what a wrong value costs, field by field.",
     "",
+    ...(lesRecus ? [...lesRecus, "", "  ───────────────────────────────────────────────────────────────────────", "", "  AND ON OUR OWN KYC CORPUS:", ""] : []),
     `  On our corpus of ${t.n} records, the routing we publish returns`,
     `  ${t.successes} COMPLETE records out of ${t.n}: ${pct(t.rate)} %, 95 % CI ${pct(t.low)} % to ${pct(t.high)} %.`,
     "",
@@ -145,7 +196,10 @@ export function reponse(exposition, doc) {
 
 function principal() {
   try {
-    console.log(reponse(lire("exposition.json"), lire("document.json")));
+    const recusSignes = { releve: lire("examples/cord-receipts/cord-labels-grouped-measured.json"),
+      signature: lire("examples/cord-receipts/cord-labels-grouped-measured.signature.json"),
+      clePubliquePem: readFileSync(join(RACINE, "cle-publique.pem"), "utf8") };
+    console.log(reponse(lire("exposition.json"), lire("document.json"), recusSignes));
   } catch (e) {
     console.error(e instanceof Error ? e.message : String(e));
     process.exit(1);
