@@ -35,7 +35,7 @@ test("measure:yours with two priced chains writes the audit into the console, th
     assert.match(out, /Your chain: "vendor-a"\./);
     assert.match(out, /price: \$50 per 1,000 pages: declared by you/);
     assert.match(out, /Your chain: "vendor-b"\./);
-    assert.match(out, /AUDIT: per field, the cheapest source this sample cannot show to be worse than the best/);
+    assert.match(out, /AUDIT: per field, the cheapest source within your declared margin of the best, case for case/);
     assert.match(out, /\(margin: 5-point, your declaration\)/);
     assert.match(out, /Recommended routing: total/);
     assert.match(out, /Current chain vendor-a: \$50/);
