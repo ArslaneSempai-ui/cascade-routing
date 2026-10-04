@@ -170,3 +170,30 @@ test("derivees with no journal refuses, names npm run dur, and leaves the frozen
     rmSync(d, { recursive: true, force: true });
   }
 });
+
+test("a vendor-only audit with --no-encoders loads no model, stands aside for no weight, and states the OCR term", () => {
+  /* The CORD files, copied: measure:yours writes its record beside the CSV, and the committed
+     sealed record must never be the one it writes over. The weights are made to look absent. */
+  const d = realpathSync(mkdtempSync(join(tmpdir(), "no-encoders-")));
+  const src = join(RACINE, "examples", "cord-receipts");
+  for (const f of ["cord-labels-grouped.csv", "cord-google-outcomes.json", "cord-gemini-outcomes.json", "cord-rules.json"]) cpSync(join(src, f), join(d, f));
+  const vide = join(d, "aucun-poids"); mkdirSync(vide);
+  const r = spawnSync("node", [join(RACINE, "src", "your-cases.ts"), `--cases=${join(d, "cord-labels-grouped.csv")}`,
+    `--sorties=${join(d, "cord-google-outcomes.json")}`, `--sorties=${join(d, "cord-gemini-outcomes.json")}`, `--rules=${join(d, "cord-rules.json")}`,
+    "--current=google-expense", "--margin=2", "--pages-per-document=1", "--pages-per-year=1000000", "--no-encoders"],
+    { encoding: "utf8", cwd: RACINE, timeout: 300_000, env: { ...process.env, CASCADE_POIDS_RACINE: vide, NODE_TEST_CONTEXT: "1" } });
+  const sortie = (r.stdout ?? "") + (r.stderr ?? "");
+  assert.equal(r.status, 0, `--no-encoders must run with no weight on the machine:\n${sortie.slice(-1200)}`);
+  assert.match(sortie, /no encoder tier is measured and no model is loaded/);
+  assert.doesNotMatch(sortie, /STANDING ASIDE/, "nothing stands aside when no encoder is asked for");
+  assert.match(sortie, /0 model call\(s\) on this machine/);
+  assert.match(sortie, /OCR for local tiers at \$0 per 1,000 pages \(assumed; --ocr-price-per-thousand-pages\)/, "the OCR term is declared, assumed at zero");
+  assert.match(sortie, /AUDIT: per field, the cheapest source within your declared margin/);
+  assert.ok(existsSync(join(d, "cord-labels-grouped-measured.json")), "the record is written beside the copied CSV");
+  const rec = JSON.parse(readFileSync(join(d, "cord-labels-grouped-measured.json"), "utf8")) as { audit: { assumptions: { ocrPricePerThousandPages: { value: number; provenance: string } }; routing: Record<string, string> } };
+  assert.deepEqual(rec.audit.assumptions.ocrPricePerThousandPages, { value: 0, provenance: "assumed" });
+  assert.equal(rec.audit.routing.total, "gemini-flash", "the vendor comparison gives the record's routing without any local model");
+  /* The committed record is untouched: the run wrote in the copy. */
+  assert.equal(readFileSync(join(src, "cord-labels-grouped-measured.json"), "utf8").includes("\"empreinte\": \"ac7d0adbe4907caf\""), true);
+  rmSync(d, { recursive: true, force: true });
+});
