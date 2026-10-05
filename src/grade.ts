@@ -41,7 +41,7 @@ export type OutcomesFile = {
   nom: string;
   issues: Record<string, Record<string, Outcome>>;
   notePar: {
-    outil: "cascade"; version: string; correcteur: string; gradedAt: string;
+    outil: "crusetra"; version: string; correcteur: string; gradedAt: string;
     kinds: Record<string, FieldKind>; conventions: typeof GRADER.conventions;
   };
   /** The price in its own unit: per thousand pages OR per thousand documents, never one under
@@ -351,7 +351,7 @@ field's kind. Never a value. Feed it to: npm run measure:yours -- --cases=... --
   const out: OutcomesFile = {
     kind: "cascade-outcomes", version: 1, nom: name, issues,
     notePar: {
-      outil: "cascade", version: etat ? `${etat.commit}${etat.sale.length ? " (modified tree)" : ""}` : "unknown: not a git checkout",
+      outil: "crusetra", version: etat ? `${etat.commit}${etat.sale.length ? " (modified tree)" : ""}` : "unknown: not a git checkout",
       correcteur: `grader v${GRADER.version}`, gradedAt: new Date().toISOString(),
       kinds: Object.fromEntries(champs.filter((c) => c in coverage).map((c) => [c, kinds[c] ?? "exact"])),
       conventions: GRADER.conventions,

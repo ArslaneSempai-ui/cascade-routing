@@ -1,7 +1,7 @@
 /**
  * Quels signaux annoncent une valeur fausse — sans la clé de réponses.
  *
- * `cascade` ne cascade pas : il fixe un palier par champ pour tout le lot. Une vraie cascade
+ * Le routeur ne cascade pas : il fixe un palier par champ pour tout le lot. Une vraie cascade
  * essaie le moins cher, s'aperçoit qu'il n'est pas sûr **sur ce document-là**, et monte.
  * L'escalade, l'abstention et le routage par document sont la même idée et butent sur la même
  * chose : un signal qui dise « pas sûr ici » alors que chez le client il n'y a pas de clé.

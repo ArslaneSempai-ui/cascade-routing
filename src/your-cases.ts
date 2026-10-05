@@ -33,8 +33,8 @@ import { noter, direLesFormes, oublierLesFormes } from "./forme-rendue.ts";
 import { loadavg } from "node:os";
 import { isMain } from "./cli.ts";
 import { ouvrirJournal, issue } from "./journal.ts";
-import { normaliserReponse } from "./tiers.ts";
-import { loadExtractors, loadClassifiers, loadGeneratifs, extract, correct, classerParmi, MODELES_LOCAUX, questionPour,
+import { horsLigne, lireVariable } from "./environnement.ts";
+import { normaliserReponse, loadExtractors, loadClassifiers, loadGeneratifs, extract, correct, classerParmi, MODELES_LOCAUX, questionPour,
   MODELES_EXTRACTION, MODELES_CLASSEMENT, type CleModele } from "./tiers.ts";
 import { poidsAbsents, motifDEcart, CODE_ECART_TEMOIN, exigerPoidsSurPlace } from "./poids.ts";
 import { attenduAbsent, attenduLisible, MARQUEUR_ABSENT } from "./grader.ts";
@@ -1038,7 +1038,7 @@ export function chargerSorties(chemin: string): SortiesFournies {
       + `  Values extracted from an identity document are personal data, and this tool states\n`
       + `  that it receives none. Grade on your side and send only the outcomes:\n`
       + `  { "nom": "…", "issues": { "<champ>": { "<id>": "clean" | "wrong" | "blank" } },\n`
-      + `    "notePar": { "outil": "cascade", "version": "<commit>" } }`);
+      + `    "notePar": { "outil": "crusetra", "version": "<commit>" } }`);
   }
   /*
    * UN NOM DE CHAÎNE ÉGAL À UN NOM DE PALIER EFFACE LA COLONNE DU CLIENT. « small » est un nom
@@ -1093,7 +1093,7 @@ export function chargerSorties(chemin: string): SortiesFournies {
   if (!brut.issues || typeof brut.issues !== "object") {
     throw new Error(`${chemin}: no \`issues\` key. Expected shape:\n`
       + `  { "nom": "…", "issues": { "<champ>": { "<id du cas>": "clean" | "wrong" | "blank" } },\n`
-      + `    "notePar": { "outil": "cascade", "version": "<commit>" },\n`
+      + `    "notePar": { "outil": "crusetra", "version": "<commit>" },\n`
       + `    "declares": { "coutParMilleDocuments": …, "msParDocument": … } }`);
   }
 
@@ -1581,7 +1581,7 @@ export function rapportPourLeClient(o: {
     entete.push(``,
       `> **${deduites.length} question(s) were derived from your column names.** That is a `
       + `choice made on your behalf, not a measurement. **The rates below are not comparable `
-      + `to the ones in cascade's README**, which were measured under the questions marked `
+      + `to the ones in Crusetra Routing's README**, which were measured under the questions marked `
       + `"measured" above. On a sample of client cases, the same field scored 0 % under a `
       + `derived question and 100 % under the client's own: the question is worth a hundred `
       + `points. Supply yours with \`--questions=file.json\` and measure again before `
@@ -1869,12 +1869,12 @@ export async function classerVosCas(
  * La garde vit ICI, dans l'enfant, et non dans chaque témoin : un témoin de plus qui lance
  * la commande hérite de la règle sans avoir à la connaître. `NODE_TEST_CONTEXT` est posé par
  * `node --test` et hérité par les processus qu'un cas lance ; hors de lui, le comportement
- * de premier lancement — télécharger, en l'annonçant — ne change pas. `CASCADE_POIDS_RACINE`
- * permet à un témoin de pointer un cache factice pour éprouver cette garde sans toucher aux
- * vrais poids.
+ * de premier lancement (télécharger, en l'annonçant) ne change pas. `CRUSETRA_POIDS_RACINE`
+ * (ou son ancien nom `CASCADE_POIDS_RACINE`, toujours lu) permet à un témoin de pointer un
+ * cache factice pour éprouver cette garde sans toucher aux vrais poids.
  */
 export function sEcarterSiPoidsAbsents(cles: readonly CleModele[]): void {
-  const racine = process.env.CASCADE_POIDS_RACINE;
+  const racine = lireVariable("POIDS_RACINE");
   const absents = poidsAbsents(cles, racine);
   if (absents.length === 0) return;
   if (process.env.NODE_TEST_CONTEXT) {
@@ -1883,7 +1883,7 @@ export function sEcarterSiPoidsAbsents(cles: readonly CleModele[]): void {
   }
   /* Hors ligne, le refus est celui de `poids.ts`, contre le MÊME cache — sinon un témoin qui
      pointe un cache factice verrait la bibliothèque partir chercher les vrais poids. */
-  if (process.env.CASCADE_OFFLINE === "1") {
+  if (horsLigne()) {
     try { exigerPoidsSurPlace(cles, racine); }
     catch (e) { console.error((e as Error).message); process.exit(1); }
   }

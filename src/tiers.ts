@@ -15,7 +15,7 @@ import { join } from "node:path";
 import { existsSync, readdirSync, statSync, copyFileSync } from "node:fs";
 import { FIELDS, TYPOLOGIES } from "./corpus.ts";
 import type { Field, ClientFile, Alert, Typology } from "./corpus.ts";
-
+import { horsLigne, drapeauHorsLigne } from "./environnement.ts";
 import type { TierName } from "./paliers.ts";
 import { estGeneratif, TIERS } from "./paliers.ts";
 export type { TierName };
@@ -894,7 +894,8 @@ let qaSmall: any = null, qaLarge: any = null;
  * il ne nommait ni le modèle, ni la taille, ni le remède. **Le premier écran de l'acheteur
  * était une erreur de connexion, sur un produit vendu sur le fait qu'il ne dépend de personne.**
  *
- * Deux gestes, et il en faut deux. `CASCADE_OFFLINE=1` refuse AVANT de tenter — un refus
+ * Deux gestes, et il en faut deux. `CRUSETRA_OFFLINE=1` (ou `CASCADE_OFFLINE=1`, son ancien
+ * nom, toujours lu, voir environnement.ts) refuse AVANT de tenter : un refus
  * précoce qui nomme la commande d'import vaut mieux qu'un échec tardif qui ne nomme rien.
  * Et quand le drapeau n'est pas mis, ce qui est le cas de celui qui découvre le blocage,
  * l'échec est réénoncé avec sa cause probable et sa sortie.
@@ -902,7 +903,7 @@ let qaSmall: any = null, qaLarge: any = null;
  * L'import est DIFFÉRÉ parce que `poids.ts` importe ce fichier : au chargement il y aurait un
  * cycle, ici il n'y en a pas. `loadExtractors` est déjà asynchrone, donc ça ne coûte rien.
  */
-const HORS_LIGNE = (): boolean => process.env.CASCADE_OFFLINE === "1";
+const HORS_LIGNE = (): boolean => horsLigne();
 
 /**
  * POSER LE HORS-LIGNE : refuser ce qui manque, puis couper le réseau de la bibliothèque.
@@ -979,7 +980,7 @@ function exigerChaineEntiere(nom: string, chaine: unknown): void {
     + "  have died inside the library on `this.tokenizer is not a function`, naming neither\n"
     + "  this model nor the reason.\n\n"
     + (HORS_LIGNE()
-      ? "  CASCADE_OFFLINE=1 is set. The library asks for `tokenizer_config.json` at revision\n"
+      ? "  " + drapeauHorsLigne() + " is set. The library asks for `tokenizer_config.json` at revision\n"
         + "  `main` — not the revision this repository pins — and reads it from the cache under\n"
         + "  `<model>/tokenizer_config.json`. The loader places a copy of the pinned file there\n"
         + "  before loading; if you read this, that copy is missing or unreadable. Run\n"

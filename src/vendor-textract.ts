@@ -3,7 +3,7 @@
  *
  * The client already pays Textract; what it returned sits in their bucket or on their disk as
  * JSON. This adapter reads that JSON and hands back one value per field, as the vendor wrote
- * it. It opens no connection: `CASCADE_OFFLINE=1` changes nothing here because there is
+ * it. It opens no connection: `CRUSETRA_OFFLINE=1` changes nothing here because there is
  * nothing to cut.
  *
  * Four response shapes, told apart by their top-level key:

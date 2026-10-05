@@ -54,7 +54,7 @@ test("F10: the client report and the recommendation lines carry no em dash, marg
   sansCadratin(rapportPourLeClient({ ...base, verdicts }), "the report without a margin");
   const avec = rapportPourLeClient({ ...base, marge: 0.02, verdicts });
   assert.match(avec, /Margin declared: \*\*2 point\(s\)\*\*/, "the margin line is still written");
-  assert.match(avec, /not comparable to the ones in cascade's README/, "the derived-questions warning is still written");
+  assert.match(avec, /not comparable to the ones in Crusetra Routing's README/, "the derived-questions warning is still written");
   sansCadratin(avec, "the report with a margin and a derived question");
 
   /* The recommendation lines: a cheaper tier that is non-inferior, and one this sample cannot
@@ -119,7 +119,7 @@ test("F10: a small measure:yours, end to end, emits no em dash: console, report 
       { encoding: "utf8", timeout: 120_000 });
     assert.equal(g.status, 0, g.stdout + g.stderr);
     const r = spawnSync(process.execPath, [MESURE, `--cases=${csv}`, `--sorties=${sorties}`, "--current=vendor-a", "--margin=5", "--pages-per-document=1"],
-      { encoding: "utf8", timeout: 840_000, env: { ...process.env, CASCADE_OFFLINE: "1" } });
+      { encoding: "utf8", timeout: 840_000, env: { ...process.env, CRUSETRA_OFFLINE: "1" } });
     assert.equal(r.status, 0, `measure:yours failed:\n${(r.stdout + r.stderr).slice(-2000)}`);
     sansCadratin(r.stdout + r.stderr, "the console of measure:yours");
     for (const f of ["receipts-measured.md", "receipts-measured.json"]) {

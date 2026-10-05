@@ -40,7 +40,7 @@ import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, renameS
 import { dirname, join, relative, sep } from "node:path";
 
 import { env as envHF } from "@huggingface/transformers";
-
+import { horsLigne, drapeauHorsLigne } from "./environnement.ts";
 import { isMain } from "./cli.ts";
 import { exigerModelesEntiers, loadClassifiers, loadExtractors, modelesTronques, modelesAbsents,
   POIDS_MODELES, racineDesPoids, type CleModele, type EtatModele } from "./tiers.ts";
@@ -304,7 +304,7 @@ export function importer(dossier: string, racine?: string): { ecrits: number; oc
  * dépôt qui écrit « downloads nothing ». Ni cette machine ni le coureur CI ne l'avaient vu :
  * les deux portent le cache, et c'est exactement pour ça que `clone-neuf` existe.
  *
- * `exigerPoidsSurPlace` lève avec un message écrit pour CASCADE_OFFLINE. Un témoin n'a pas
+ * `exigerPoidsSurPlace` lève avec un message écrit pour CRUSETRA_OFFLINE. Un témoin n'a pas
  * besoin de lever : il a besoin de la liste, pour s'écarter en la nommant.
  */
 export function poidsAbsents(cles: readonly CleModele[], racine?: string): CleModele[] {
@@ -362,13 +362,13 @@ export function exigerPoidsSurPlace(cles: readonly CleModele[], racine?: string)
   if (manquants.length === 0) { poserSousMain(cles, racine); return; }
   const total = manquants.reduce((s, c) => s + POIDS_MODELES[c]!.octets, 0);
   throw new Error(
-    `CASCADE_OFFLINE=1 is set and ${manquants.length} model(s) are not on this machine.\n\n`
+    `${drapeauHorsLigne()} is set and ${manquants.length} model(s) are not on this machine.\n\n`
     + manquants.map((c) => `  ${POIDS_MODELES[c]!.depot}  ${enMo(POIDS_MODELES[c]!.octets)}`).join("\n")
     + `\n\n  ${enMo(total)} in total. Nothing will be downloaded, which is what you asked for.\n\n`
     + `  On a machine that can reach the network, from a clone of this repository:\n`
-    + `    npm run poids -- --export /media/usb/cascade-weights\n\n`
+    + `    npm run poids -- --export /media/usb/crusetra-weights\n\n`
     + `  Carry that directory here, then:\n`
-    + `    npm run poids -- --import /media/usb/cascade-weights\n\n`
+    + `    npm run poids -- --import /media/usb/crusetra-weights\n\n`
     + `  Every file is checked against its sha256 and against the revision this repository\n`
     + `  pins before anything is written.\n`);
 }
@@ -400,9 +400,9 @@ export function messageDeTelechargement(cause: unknown, cles: readonly CleModele
     + `  blocked, and that is the likeliest cause of the line above.\n\n`
     + `  Two ways out. Either open huggingface.co and cdn-lfs.huggingface.co through your\n`
     + `  proxy, or bring the weights in by hand and never touch the network again:\n\n`
-    + `    elsewhere:  npm run poids -- --export /media/usb/cascade-weights\n`
-    + `    here:       npm run poids -- --import /media/usb/cascade-weights\n`
-    + `    then:       CASCADE_OFFLINE=1 npm run <your command>\n`;
+    + `    elsewhere:  npm run poids -- --export /media/usb/crusetra-weights\n`
+    + `    here:       npm run poids -- --import /media/usb/crusetra-weights\n`
+    + `    then:       CRUSETRA_OFFLINE=1 npm run <your command>\n`;
 }
 
 /** L'état des poids sur cette machine, une ligne par modèle. */
@@ -502,9 +502,9 @@ if (isMain(import.meta)) {
        * 496,6). Amorcer hors délai de cas ferme l'œuf-et-poule ; les tours suivants ne
        * paient que la vérification.
        */
-      if (process.env.CASCADE_OFFLINE === "1") {
+      if (horsLigne()) {
         throw new Error(
-          "CASCADE_OFFLINE=1 refuses the network, and priming is a download.\n"
+          drapeauHorsLigne() + " refuses the network, and priming is a download.\n"
           + "On an isolated machine, carry the weights instead:\n"
           + "  npm run poids -- --import <directory>\n");
       }
@@ -520,7 +520,7 @@ if (isMain(import.meta)) {
     } else if (aImporter !== undefined) {
       const { ecrits, octets } = importer(aImporter);
       console.log(`\n${ecrits} file(s), ${enMo(octets)}, verified and placed in the cache.`);
-      console.log(`Nothing needs the network now. Run your commands with CASCADE_OFFLINE=1.\n`);
+      console.log(`Nothing needs the network now. Run your commands with CRUSETRA_OFFLINE=1.\n`);
     } else {
       console.log("\n" + rapport());
       console.log(`  --export <dir>   copy these weights out, with a sha256 for each file`);

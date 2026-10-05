@@ -17,6 +17,7 @@ import { existsSync, mkdirSync, readFileSync, renameSync, statSync, writeFileSyn
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { isMain, refuserDrapeauxInconnus } from "./cli.ts";
+import { horsLigne, drapeauHorsLigne, lireVariable } from "./environnement.ts";
 
 export type Langue = "eng" | "ind";
 
@@ -38,9 +39,10 @@ export const TESSDATA: Record<Langue, { url: string; sha256: string; octets: num
 };
 export const LANGUES: readonly Langue[] = ["eng", "ind"];
 
-/** Where the files live: `CASCADE_TESSDATA` for a witness or an air-gapped machine, else data/tessdata. */
+/** Where the files live: `CRUSETRA_TESSDATA` (former name `CASCADE_TESSDATA`, still read) for a witness or an
+ *  air-gapped machine, else data/tessdata. */
 export function racineTessdata(): string {
-  return process.env.CASCADE_TESSDATA ?? fileURLToPath(new URL("../data/tessdata", import.meta.url));
+  return lireVariable("TESSDATA") ?? fileURLToPath(new URL("../data/tessdata", import.meta.url));
 }
 
 export function cheminTessdata(langue: Langue, racine = racineTessdata()): string {
@@ -104,8 +106,8 @@ function poser(langue: Langue, octets: Buffer, racine: string): string {
 }
 
 export async function amorcer(racine = racineTessdata(), telecharger: (url: string) => Promise<Buffer> = parDefaut): Promise<string[]> {
-  if (process.env.CASCADE_OFFLINE === "1") {
-    throw new Error("CASCADE_OFFLINE=1 is set: nothing is downloaded. Carry the files in with npm run tessdata -- --import <folder>.");
+  if (horsLigne()) {
+    throw new Error(`${drapeauHorsLigne()} is set: nothing is downloaded. Carry the files in with npm run tessdata -- --import <folder>.`);
   }
   const faits: string[] = [];
   for (const e of etatDesLangues(racine)) {

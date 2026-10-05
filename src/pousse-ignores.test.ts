@@ -104,18 +104,26 @@ test("une branche qui porte un dossier ignoré ne part pas, et une branche propr
          pré-commit, il hériterait de `GIT_DIR` et regarderait le vrai dépôt au lieu du bac —
          il ne verrait donc aucun fichier ignoré, et le cas rougirait en accusant la garde.
          L'accord est donné, sans quoi le crochet refuse plus loin pour une autre raison. */
-      env: { ...envPropre, ACCORD_ARSLANE: "oui", CASCADE_LICENCIE: licencie, ...envSup },
+      env: { ...envPropre, ACCORD_ARSLANE: "oui", CRUSETRA_LICENCIE: licencie, ...envSup },
     });
 
     /* TÉMOIN DU REFUS D'ABORD : une machine SANS le dépôt licencié doit refuser en le disant,
        pas rendre « rien à signaler » — un contrôle qui ne sait pas ce qu'il protège ne
        conclut pas. Et ce témoin prouve du même coup que la surcharge est bien LUE : si le
        crochet l'ignorait, il trouverait le vrai dépôt ici et partirait. */
-    const sansDepot = lancer("main", avecBac, { CASCADE_LICENCIE: join(bac, "nexiste-pas") });
+    const absent = join(bac, "nexiste-pas");
+    const sansDepot = lancer("main", avecBac, { CRUSETRA_LICENCIE: absent });
     assert.equal(sansDepot.status, 1,
       "sans dépôt licencié, le crochet laisse partir : il ne sait pas ce qu'il protège.");
     assert.match(sansDepot.stderr, /LICENCI\u00c9 INTROUVABLE/,
       "le refus sans dépôt licencié ne dit pas sa cause.");
+    assert.ok(sansDepot.stderr.includes(absent), "le crochet n'a pas cherché là où CRUSETRA_LICENCIE le disait.");
+    /* L'ANCIEN NOM, CASCADE_LICENCIE, EST TOUJOURS LU quand le nouveau est vide : le chemin
+       cherché le prouve, puisque le crochet l'écrit dans son refus. */
+    const parAncienNom = lancer("main", avecBac, { CRUSETRA_LICENCIE: "", CASCADE_LICENCIE: absent });
+    assert.equal(parAncienNom.status, 1, "sous l'ancien nom, le crochet laisse partir sans dépôt licencié.");
+    assert.ok(parAncienNom.stderr.includes(absent),
+      `le crochet n'a pas lu CASCADE_LICENCIE, l'ancien nom de CRUSETRA_LICENCIE :\n${parAncienNom.stderr}`);
 
     const refuse = lancer("main", avecBac);
     assert.equal(refuse.status, 1,

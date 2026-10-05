@@ -271,7 +271,7 @@ test("review items 15 and 33: recertify reads every --sorties, refuses two of a 
   };
   const run = (...extra: string[]) => spawnSync(process.execPath, [
     fileURLToPath(new URL("./recertify.ts", import.meta.url)), `--cases=${csv}`, `--baseline=${baseline}`, ...extra,
-  ], { encoding: "utf8", env: { ...process.env, CASCADE_OFFLINE: "1" }, timeout: 120_000 });
+  ], { encoding: "utf8", env: { ...process.env, CRUSETRA_OFFLINE: "1" }, timeout: 120_000 });
 
   /* Item 15: every --sorties is read, and two of a name refuse before anything is measured. */
   const twin = run(`--sorties=${sorties("mine")}`, `--sorties=${sorties("mine")}`);

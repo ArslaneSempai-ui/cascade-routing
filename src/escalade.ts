@@ -1,5 +1,5 @@
 /**
- * `cascade` peut-il porter son nom ?
+ * Le routeur de ce dépôt mérite-t-il le mot « cascade » ?
  *
  * Aujourd'hui il ne cascade pas : il fixe un palier par champ pour tout le lot. Une cascade
  * essaie le moins cher, s'aperçoit qu'il n'est pas sûr **sur ce document-là**, et monte.

@@ -225,7 +225,7 @@ function principal() {
   const chemin = args.find((a) => !a.startsWith("--"));
   if (!chemin) {
     console.error("Usage: node src/verifier-rapport.mjs <report.html> [--cle=<public-key.pem>]\n\n"
-      + "Checks that a cascade audit report was issued by the holder of a given public key,\n"
+      + "Checks that a Crusetra audit report was issued by the holder of a given public key,\n"
       + "and that no byte has changed since. Without --cle, the key published in this\n"
       + "repository is used.");
     process.exit(2);

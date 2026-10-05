@@ -3,7 +3,8 @@
  * (Arslane, 4 October 2026). What these cases hold: the pins are well formed and name the
  * release; a file that is not the pinned one is refused before it is written, by size and by
  * hash; the run-time check refuses by name and names the command, without fetching; and
- * CASCADE_OFFLINE=1 makes --prime refuse without a network call.
+ * CRUSETRA_OFFLINE=1, or its former name CASCADE_OFFLINE=1, makes --prime refuse without a
+ * network call, and CRUSETRA_TESSDATA, or its former name CASCADE_TESSDATA, moves the folder.
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -12,7 +13,7 @@ import { mkdtempSync, readFileSync, writeFileSync, existsSync, rmSync } from "no
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { TESSDATA, LANGUES, TESSDATA_VERSION, ecartAvecLaPin, etatDesLangues, exigerTessdata, lireLangues, importer, amorcer } from "./tessdata.ts";
+import { TESSDATA, LANGUES, TESSDATA_VERSION, ecartAvecLaPin, etatDesLangues, exigerTessdata, lireLangues, importer, amorcer, racineTessdata } from "./tessdata.ts";
 
 const RACINE = fileURLToPath(new URL("..", import.meta.url));
 
@@ -58,22 +59,62 @@ test("--lang reads tesseract's eng+ind form and refuses a language the tool does
   assert.throws(() => lireLangues(""), /--lang is empty/);
 });
 
-test("CASCADE_OFFLINE=1 makes --prime refuse before any fetch, and the list command reaches nothing", async () => {
-  const d = mkdtempSync(join(tmpdir(), "tessdata-offline-"));
-  const avant = process.env.CASCADE_OFFLINE;
+/** Run `quoi` with exactly these variables among the given names, then put the environment back. */
+async function sousVariables<T>(noms: readonly string[], valeurs: Record<string, string>, quoi: () => T | Promise<T>): Promise<T> {
+  const avant = Object.fromEntries(noms.map((n) => [n, process.env[n]]));
   try {
-    process.env.CASCADE_OFFLINE = "1";
-    let appele = 0;
-    await assert.rejects(amorcer(d, async () => { appele++; return Buffer.alloc(0); }), /CASCADE_OFFLINE=1 is set: nothing is downloaded/);
-    assert.equal(appele, 0, "the downloader must not be called under the offline flag");
+    for (const n of noms) delete process.env[n];
+    Object.assign(process.env, valeurs);
+    return await quoi();
   } finally {
-    if (avant === undefined) delete process.env.CASCADE_OFFLINE; else process.env.CASCADE_OFFLINE = avant;
-    rmSync(d, { recursive: true, force: true });
+    for (const [n, v] of Object.entries(avant)) { if (v === undefined) delete process.env[n]; else process.env[n] = v; }
   }
-  /* The list command, through the CLI, against an empty folder: it prints the pins and fetches nothing. */
+}
+const DRAPEAUX = ["CRUSETRA_OFFLINE", "CASCADE_OFFLINE"] as const;
+const REFUS: Record<(typeof DRAPEAUX)[number], RegExp> = {
+  CRUSETRA_OFFLINE: /^Error: CRUSETRA_OFFLINE=1 is set: nothing is downloaded/,
+  CASCADE_OFFLINE: /^Error: CASCADE_OFFLINE=1 \(the former name of CRUSETRA_OFFLINE=1\) is set: nothing is downloaded/,
+};
+
+for (const nom of DRAPEAUX) {
+  test(`${nom}=1 alone makes --prime refuse before any fetch`, async () => {
+    const d = mkdtempSync(join(tmpdir(), "tessdata-offline-"));
+    try {
+      await sousVariables(DRAPEAUX, { [nom]: "1" }, async () => {
+        let appele = 0;
+        await assert.rejects(amorcer(d, async () => { appele++; return Buffer.alloc(0); }), REFUS[nom]);
+        assert.equal(appele, 0, `the downloader must not be called under ${nom}=1`);
+      });
+    } finally { rmSync(d, { recursive: true, force: true }); }
+  });
+}
+
+test("CASCADE_OFFLINE=1 still refuses when CRUSETRA_OFFLINE says otherwise", async () => {
+  const d = mkdtempSync(join(tmpdir(), "tessdata-offline-"));
+  try {
+    await sousVariables(DRAPEAUX, { CASCADE_OFFLINE: "1", CRUSETRA_OFFLINE: "0" }, async () => {
+      let appele = 0;
+      await assert.rejects(amorcer(d, async () => { appele++; return Buffer.alloc(0); }), /nothing is downloaded/);
+      assert.equal(appele, 0, "a client script that sets CASCADE_OFFLINE=1 must keep refusing the network");
+    });
+  } finally { rmSync(d, { recursive: true, force: true }); }
+});
+
+test("the folder is CRUSETRA_TESSDATA, else its former name CASCADE_TESSDATA, else data/tessdata", async () => {
+  const NOMS = ["CRUSETRA_TESSDATA", "CASCADE_TESSDATA"];
+  const defaut = await sousVariables(NOMS, {}, () => racineTessdata());
+  assert.match(defaut.split("\\").join("/"), /\/data\/tessdata$/);
+  assert.equal(await sousVariables(NOMS, { CRUSETRA_TESSDATA: "/nouveau" }, () => racineTessdata()), "/nouveau");
+  assert.equal(await sousVariables(NOMS, { CASCADE_TESSDATA: "/ancien" }, () => racineTessdata()), "/ancien",
+    "the former name is no longer read: a client's script that sets it would silently use another folder");
+  assert.equal(await sousVariables(NOMS, { CRUSETRA_TESSDATA: "/nouveau", CASCADE_TESSDATA: "/ancien" }, () => racineTessdata()), "/nouveau",
+    "when both are set, the new name wins");
+});
+
+test("the list command, through the CLI, against an empty folder, prints the pins and fetches nothing", () => {
   const vide = mkdtempSync(join(tmpdir(), "tessdata-liste-"));
   try {
-    const r = spawnSync("node", [join(RACINE, "src", "tessdata.ts")], { encoding: "utf8", cwd: RACINE, timeout: 60_000, env: { ...process.env, CASCADE_TESSDATA: vide, CASCADE_OFFLINE: "1" } });
+    const r = spawnSync("node", [join(RACINE, "src", "tessdata.ts")], { encoding: "utf8", cwd: RACINE, timeout: 60_000, env: { ...process.env, CRUSETRA_TESSDATA: vide, CRUSETRA_OFFLINE: "1" } });
     assert.equal(r.status, 0, r.stdout + r.stderr);
     assert.match(r.stdout, /eng {2}absent/);
     assert.match(r.stdout, /4,113,088 bytes pinned/);

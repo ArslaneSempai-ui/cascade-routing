@@ -1132,7 +1132,8 @@ test("une cellule démesurée s'évalue en OCTETS réels, pas en unités UTF-16"
  * (`sEcarterSiPoidsAbsents`) ; ce cas l'éprouve contre un cache FACTICE et vide, sans toucher
  * aux vrais poids — et tient les deux côtés : sous `node --test`, le code d'écart et aucun
  * octet écrit ; hors du lanceur, jamais ce code (le premier lancement d'un acheteur doit
- * télécharger, en l'annonçant), et sous CASCADE_OFFLINE un refus qui nomme les poids.
+ * télécharger, en l'annonçant), et sous CRUSETRA_OFFLINE (ou son ancien nom CASCADE_OFFLINE)
+ * un refus qui nomme les poids.
  */
 test("sous le lanceur de tests, poids absents = la commande s'écarte, cache intact ; hors du lanceur, jamais ce code", () => {
   const d = mkdtempSync(join(tmpdir(), "ecart-"));
@@ -1143,7 +1144,7 @@ test("sous le lanceur de tests, poids absents = la commande s'écarte, cache int
 
   const r = spawnSync(process.execPath, [CMD, `--cases=${csv}`], {
     encoding: "utf8", timeout: 120_000,
-    env: { ...process.env, CASCADE_POIDS_RACINE: vide, NODE_TEST_CONTEXT: "child-v8" },
+    env: { ...process.env, CRUSETRA_POIDS_RACINE: vide, NODE_TEST_CONTEXT: "child-v8" },
   });
   assert.equal(r.status, CODE_ECART_TEMOIN,
     `sous le lanceur de tests et sans poids, la commande doit sortir en ${CODE_ECART_TEMOIN}, `
@@ -1153,15 +1154,22 @@ test("sous le lanceur de tests, poids absents = la commande s'écarte, cache int
   assert.match(r.stdout, /not measured, not passed/, "un lecteur doit comprendre que rien n'a été prouvé.");
   assert.deepEqual(readdirSync(vide), [], "le cache factice doit rester vide : rien n'a été téléchargé.");
 
-  /* CONTRE-ÉPREUVE : hors du lanceur de tests, ce code ne sort jamais. Sous CASCADE_OFFLINE,
+  /* CONTRE-ÉPREUVE : hors du lanceur de tests, ce code ne sort jamais. Sous CRUSETRA_OFFLINE,
      le refus est celui de `poids.ts`, contre le même cache factice, et n'écrit rien non plus. */
-  const env: NodeJS.ProcessEnv = { ...process.env, CASCADE_POIDS_RACINE: vide, CASCADE_OFFLINE: "1" };
-  delete env.NODE_TEST_CONTEXT;
-  const r2 = spawnSync(process.execPath, [CMD, `--cases=${csv}`], { encoding: "utf8", timeout: 120_000, env });
-  assert.notEqual(r2.status, CODE_ECART_TEMOIN, "hors du lanceur de tests, le code d'écart ne doit jamais sortir.");
-  assert.notEqual(r2.status, 0, "sans poids et sans réseau, la commande ne peut pas avoir mesuré.");
-  assert.match(r2.stderr, /Nothing will be downloaded/, "le refus hors ligne doit nommer ce qu'il ne fera pas.");
-  assert.deepEqual(readdirSync(vide), [], "le refus hors ligne n'écrit rien dans le cache.");
+  /* LES DEUX NOMS : les nouveaux, puis les anciens seuls (CASCADE_POIDS_RACINE, CASCADE_OFFLINE),
+     qu'un script client pose peut-être déjà. Ignorés, la commande irait au vrai cache ou au
+     réseau ; lus, elle refuse pareil et n'écrit rien. */
+  for (const [nomRacine, nomDrapeau] of [["CRUSETRA_POIDS_RACINE", "CRUSETRA_OFFLINE"], ["CASCADE_POIDS_RACINE", "CASCADE_OFFLINE"]] as const) {
+    const env: NodeJS.ProcessEnv = { ...process.env };
+    for (const n of ["CRUSETRA_POIDS_RACINE", "CASCADE_POIDS_RACINE", "CRUSETRA_OFFLINE", "CASCADE_OFFLINE", "NODE_TEST_CONTEXT"]) delete env[n];
+    env[nomRacine] = vide; env[nomDrapeau] = "1";
+    const r2 = spawnSync(process.execPath, [CMD, `--cases=${csv}`], { encoding: "utf8", timeout: 120_000, env });
+    assert.notEqual(r2.status, CODE_ECART_TEMOIN, `hors du lanceur de tests (${nomDrapeau}), le code d'écart ne doit jamais sortir.`);
+    assert.notEqual(r2.status, 0, `sans poids et sans réseau (${nomRacine}, ${nomDrapeau}), la commande ne peut pas avoir mesuré.`);
+    assert.match(r2.stderr, /Nothing will be downloaded/, `le refus hors ligne (${nomDrapeau}) doit nommer ce qu'il ne fera pas.`);
+    assert.match(r2.stderr, new RegExp(`${nomDrapeau}=1`), "le refus nomme le drapeau qui l'a causé.");
+    assert.deepEqual(readdirSync(vide), [], `le refus hors ligne (${nomRacine}) n'écrit rien dans le cache.`);
+  }
 });
 
 /*
@@ -1327,7 +1335,7 @@ test("review item 21: the loader keeps the kinds and the source file the outcome
     const f = join(d, "a.json");
     writeFileSync(f, JSON.stringify({
       nom: "mine", issues: { total: { d1: "clean" }, date: { d1: "wrong" } },
-      notePar: { outil: "cascade", version: "abc", correcteur: "grader v1", kinds: { total: "amount", date: "date" } },
+      notePar: { outil: "crusetra", version: "abc", correcteur: "grader v1", kinds: { total: "amount", date: "date" } },
       source: { cases: "old.csv", sha256: "a".repeat(64) },
     }));
     const s = chargerSorties(f);

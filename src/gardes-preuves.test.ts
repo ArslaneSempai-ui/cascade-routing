@@ -183,7 +183,7 @@ test("a vendor-only audit with --no-encoders loads no model, stands aside for no
   const r = spawnSync("node", [join(RACINE, "src", "your-cases.ts"), `--cases=${join(d, "cord-labels-grouped.csv")}`,
     `--sorties=${join(d, "cord-google-outcomes.json")}`, `--sorties=${join(d, "cord-gemini-outcomes.json")}`, `--rules=${join(d, "cord-rules.json")}`,
     "--current=google-expense", "--margin=2", "--pages-per-document=1", "--pages-per-year=1000000", "--no-encoders"],
-    { encoding: "utf8", cwd: RACINE, timeout: 300_000, env: { ...process.env, CASCADE_POIDS_RACINE: vide, NODE_TEST_CONTEXT: "1" } });
+    { encoding: "utf8", cwd: RACINE, timeout: 300_000, env: { ...process.env, CRUSETRA_POIDS_RACINE: vide, NODE_TEST_CONTEXT: "1" } });
   const sortie = (r.stdout ?? "") + (r.stderr ?? "");
   assert.equal(r.status, 0, `--no-encoders must run with no weight on the machine:\n${sortie.slice(-1200)}`);
   assert.match(sortie, /no encoder tier is measured and no model is loaded/);

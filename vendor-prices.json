@@ -55,7 +55,7 @@
       "tier": "list price; no monthly tier is carried here. The same page lists 0.09 USD per count under a 1-year savings plan and 0.08 USD under a 3-year plan, neither of which this table applies",
       "savingsPlans": { "oneYearPerCount": 0.09, "threeYearPerCount": 0.08 },
       "url": "https://cloud.google.com/document-ai/pricing",
-      "readBy": "Cascade, re-reading the public page", "readOn": "2026-10-04", "verified": true
+      "readBy": "Crusetra, re-reading the public page", "readOn": "2026-10-04", "verified": true
     }
   },
   "notListed": "Products not in this table (Textract Queries, Tables, Layout; Azure Read, Layout, custom; Document AI OCR and Invoice parsers, custom extractors) were not read and are therefore not priced here. Declare their price rather than guess it."

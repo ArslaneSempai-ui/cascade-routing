@@ -129,7 +129,7 @@ test("un dossier sans manifeste dit ce qu'il faut lancer, et où", () => {
 test("hors ligne, un modèle absent est refusé AVANT tout téléchargement, avec sa sortie", () => {
   const vide = mkdtempSync(join(tmpdir(), "cascade-vide-"));
   assert.throws(() => exigerPoidsSurPlace(["small"], vide), (e: Error) => {
-    assert.match(e.message, /CASCADE_OFFLINE=1/);
+    assert.match(e.message, /CRUSETRA_OFFLINE=1/, "le refus nomme le drapeau sous son nom d'aujourd'hui");
     assert.match(e.message, new RegExp(M.depot));
     assert.match(e.message, /--export/, "le message porte le geste qui apporte les poids");
     assert.match(e.message, /--import/);
@@ -259,11 +259,23 @@ test("--prime hors ligne refuse AVANT de purger, et nomme l'issue : l'import", (
    * taille. Le refus doit donc venir en premier, et pointer le geste qui marche là-bas.
    * Témoin au point d'appel : c'est la COMMANDE qu'on éprouve, pas une réécriture de sa règle.
    */
-  const r = spawnSync(process.execPath, [CMD_POIDS, "--prime"], {
-    encoding: "utf8", timeout: 60_000,
-    env: { ...process.env, CASCADE_OFFLINE: "1" },
-  });
-  assert.equal(r.status, 1, `hors ligne, --prime doit refuser (code ${r.status}).`);
-  assert.match(r.stderr, /--import/,
-    "le refus hors-ligne ne nomme pas l'issue : sur la machine isolée, c'est l'import.");
+  /* Sous chaque nom du drapeau, et sous l'ancien contredit par le nouveau : le script d'un
+     client qui pose CASCADE_OFFLINE=1 refuse exactement comme avant le changement de nom. */
+  const cas: [Record<string, string>, RegExp][] = [
+    [{ CRUSETRA_OFFLINE: "1" }, /^CRUSETRA_OFFLINE=1 refuses the network/m],
+    [{ CASCADE_OFFLINE: "1" }, /^CASCADE_OFFLINE=1 \(the former name of CRUSETRA_OFFLINE=1\) refuses the network/m],
+    [{ CASCADE_OFFLINE: "1", CRUSETRA_OFFLINE: "0" }, /^CASCADE_OFFLINE=1 \(the former name of CRUSETRA_OFFLINE=1\) refuses the network/m],
+  ];
+  for (const [drapeaux, message] of cas) {
+    const env: NodeJS.ProcessEnv = { ...process.env };
+    delete env.CRUSETRA_OFFLINE; delete env.CASCADE_OFFLINE;
+    const r = spawnSync(process.execPath, [CMD_POIDS, "--prime"], {
+      encoding: "utf8", timeout: 60_000, env: { ...env, ...drapeaux },
+    });
+    const dit = JSON.stringify(drapeaux);
+    assert.equal(r.status, 1, `hors ligne (${dit}), --prime doit refuser (code ${r.status}).`);
+    assert.match(r.stderr, message, `le refus (${dit}) ne nomme pas le drapeau qui l'a causé :\n${r.stderr}`);
+    assert.match(r.stderr, /--import/,
+      "le refus hors-ligne ne nomme pas l'issue : sur la machine isolée, c'est l'import.");
+  }
 });

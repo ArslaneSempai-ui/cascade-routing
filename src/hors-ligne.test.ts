@@ -1,5 +1,6 @@
 /**
- * `CASCADE_OFFLINE=1`, ÉPROUVÉ — LE RÉGLAGE, PUIS LE REFUS QU'IL ACHÈTE.
+ * `CRUSETRA_OFFLINE=1`, ÉPROUVÉ, ET SON ANCIEN NOM `CASCADE_OFFLINE=1` AVEC LUI : LE RÉGLAGE,
+ * PUIS LE REFUS QU'IL ACHÈTE.
  *
  * Le README l'annonçait à un acheteur de banque et le déclarait non testé, ce qui est la pire
  * des deux positions : la phrase engage, et rien ne la tient. Le drapeau fait deux choses, et
@@ -48,57 +49,99 @@ function cacheGarni(): string {
  * `envHF` et `process.env` sont GLOBAUX : un cas qui laisse `allowRemoteModels` à faux rendrait
  * vrai le cas suivant sans que celui-ci ait rien posé. C'est la forme la plus discrète du vert
  * vide, et elle ne se voit qu'en changeant l'ordre des cas.
+ *
+ * L'ÉTAT SE REND QUAND LE CAS A FINI, PAS À SON PREMIER `await`. Rendu dans un `finally`
+ * synchrone, il l'était dès que le cas asynchrone rendait sa promesse : `armerHorsLigne`
+ * continuait ensuite sous un environnement déjà reposé, et laissait `allowRemoteModels` à faux
+ * derrière lui. Vu le 5 octobre 2026, quand le refus s'est mis à lire le drapeau pour se
+ * nommer : posé par CASCADE_OFFLINE seul, il disait CRUSETRA_OFFLINE, que personne n'avait posé.
  */
 function avecEtatRendu<T>(quoi: () => T): T {
-  const drapeau = process.env.CASCADE_OFFLINE;
+  const drapeaux = { CRUSETRA_OFFLINE: process.env.CRUSETRA_OFFLINE, CASCADE_OFFLINE: process.env.CASCADE_OFFLINE };
   const distant = envHF.allowRemoteModels;
-  try { return quoi(); }
-  finally {
-    if (drapeau === undefined) delete process.env.CASCADE_OFFLINE; else process.env.CASCADE_OFFLINE = drapeau;
+  const rendre = () => {
+    for (const [nom, valeur] of Object.entries(drapeaux)) {
+      if (valeur === undefined) delete process.env[nom]; else process.env[nom] = valeur;
+    }
     envHF.allowRemoteModels = distant;
-  }
+  };
+  let resultat: T;
+  try { resultat = quoi(); } catch (e) { rendre(); throw e; }
+  if (resultat instanceof Promise) return resultat.finally(rendre) as T;
+  rendre();
+  return resultat;
 }
+
+/** Les deux noms du drapeau : le nouveau, et l'ancien qu'un script client pose peut-être déjà. */
+const NOMS_DU_DRAPEAU = ["CRUSETRA_OFFLINE", "CASCADE_OFFLINE"] as const;
 
 test("sans le drapeau, rien n'est armé et le réseau de la bibliothèque reste ouvert", async () => {
   await avecEtatRendu(async () => {
-    delete process.env.CASCADE_OFFLINE;
+    for (const nom of NOMS_DU_DRAPEAU) delete process.env[nom];
     envHF.allowRemoteModels = true;
     /* CONTRE-ÉPREUVE DU CAS SUIVANT. Sans elle, une fonction qui couperait TOUJOURS passerait
        le cas d'à côté en prétendant obéir à un drapeau qu'elle ne lit pas. */
     assert.equal(await armerHorsLigne(MODELES_EXTRACTION), false,
-      "le hors-ligne s'est armé alors que CASCADE_OFFLINE n'est pas posé.");
+      "le hors-ligne s'est armé alors que ni CRUSETRA_OFFLINE ni CASCADE_OFFLINE n'est posé.");
     assert.equal(envHF.allowRemoteModels, true,
       "le réseau de la bibliothèque a été coupé sans que le drapeau le demande.");
   });
 });
 
-test("avec le drapeau et les poids sur place, la bibliothèque est coupée du réseau", async () => {
+for (const nom of NOMS_DU_DRAPEAU) {
+  test(`avec ${nom}=1 seul et les poids sur place, la bibliothèque est coupée du réseau`, async () => {
+    const garni = cacheGarni();
+    await avecEtatRendu(async () => {
+      for (const autre of NOMS_DU_DRAPEAU) delete process.env[autre];
+      process.env[nom] = "1";
+      envHF.allowRemoteModels = true;
+      assert.equal(await armerHorsLigne(MODELES_EXTRACTION, garni), true);
+      assert.equal(envHF.allowRemoteModels, false,
+        `\`${nom}=1\` n'a pas coupé le réseau de la bibliothèque : le refus préalable ne `
+        + "regarde que `model.onnx`, et tout ce qu'il n'énumère pas repartirait en téléchargement.");
+    });
+    rmSync(garni, { recursive: true, force: true });
+  });
+}
+
+test("CASCADE_OFFLINE=1 refuse toujours, même si CRUSETRA_OFFLINE dit autre chose", async () => {
+  /* L'ANCIEN NOM NE SE DÉSARME PAS PAR LE NOUVEAU. Un client qui pose CASCADE_OFFLINE=1 depuis
+     des mois n'a jamais entendu parler de CRUSETRA_OFFLINE : une valeur de celui-ci, quelle
+     qu'elle soit, ne doit pas rouvrir le réseau qu'il a fermé. */
   const garni = cacheGarni();
   await avecEtatRendu(async () => {
     process.env.CASCADE_OFFLINE = "1";
+    process.env.CRUSETRA_OFFLINE = "0";
     envHF.allowRemoteModels = true;
-    assert.equal(await armerHorsLigne(MODELES_EXTRACTION, garni), true);
-    assert.equal(envHF.allowRemoteModels, false,
-      "`CASCADE_OFFLINE=1` n'a pas coupé le réseau de la bibliothèque : le refus préalable ne "
-      + "regarde que `model.onnx`, et tout ce qu'il n'énumère pas repartirait en téléchargement.");
+    assert.equal(await armerHorsLigne(MODELES_EXTRACTION, garni), true,
+      "CRUSETRA_OFFLINE=0 a désarmé CASCADE_OFFLINE=1 : le script d'un client sortirait sur le réseau.");
+    assert.equal(envHF.allowRemoteModels, false);
   });
   rmSync(garni, { recursive: true, force: true });
 });
 
-test("avec le drapeau et un modèle absent, le refus vient AVANT tout téléchargement", async () => {
-  const vide = mkdtempSync(join(tmpdir(), "cascade-hors-ligne-vide-"));
-  await avecEtatRendu(async () => {
-    process.env.CASCADE_OFFLINE = "1";
-    envHF.allowRemoteModels = true;
-    await assert.rejects(() => armerHorsLigne(MODELES_EXTRACTION, vide), (e: Error) => {
-      assert.match(e.message, /CASCADE_OFFLINE=1/);
-      assert.match(e.message, /--import/, "sur une machine isolée, l'issue est l'import, et le refus doit la nommer.");
-      assert.doesNotMatch(e.message, /huggingface\.co/, "on ne renvoie pas vers un domaine qui est justement bloqué.");
-      return true;
+/* Le message nomme le nouveau nom ; posé par l'ancien seul, il dit lequel a refusé, et le nom à employer. */
+const MESSAGE_DU_DRAPEAU: Record<(typeof NOMS_DU_DRAPEAU)[number], RegExp> = {
+  CRUSETRA_OFFLINE: /^CRUSETRA_OFFLINE=1 is set and /,
+  CASCADE_OFFLINE: /^CASCADE_OFFLINE=1 \(the former name of CRUSETRA_OFFLINE=1\) is set and /,
+};
+for (const nom of NOMS_DU_DRAPEAU) {
+  test(`avec ${nom}=1 seul et un modèle absent, le refus vient AVANT tout téléchargement`, async () => {
+    const vide = mkdtempSync(join(tmpdir(), "cascade-hors-ligne-vide-"));
+    await avecEtatRendu(async () => {
+      for (const autre of NOMS_DU_DRAPEAU) delete process.env[autre];
+      process.env[nom] = "1";
+      envHF.allowRemoteModels = true;
+      await assert.rejects(() => armerHorsLigne(MODELES_EXTRACTION, vide), (e: Error) => {
+        assert.match(e.message, MESSAGE_DU_DRAPEAU[nom]);
+        assert.match(e.message, /--import/, "sur une machine isolée, l'issue est l'import, et le refus doit la nommer.");
+        assert.doesNotMatch(e.message, /huggingface\.co/, "on ne renvoie pas vers un domaine qui est justement bloqué.");
+        return true;
+      });
     });
+    rmSync(vide, { recursive: true, force: true });
   });
-  rmSync(vide, { recursive: true, force: true });
-});
+}
 
 test("coupée, la bibliothèque ne sort pas une seule fois ; ouverte, elle sort", () => {
   /*
@@ -108,7 +151,7 @@ test("coupée, la bibliothèque ne sort pas une seule fois ; ouverte, elle sort"
    * Le piège n'a rien intercepté : ZÉRO sortie des deux côtés. Le témoin positif l'a dit tout
    * de suite ; sans lui, la branche coupée rendait zéro et se lisait comme une preuve.
    *
-   * Le fils passe par le VRAI drapeau, pas par le champ : `CASCADE_OFFLINE` dans son
+   * Le fils passe par le VRAI drapeau, pas par le champ : `CRUSETRA_OFFLINE` dans son
    * environnement, `armerHorsLigne` appelée comme le chargeur l'appelle. Ce qu'on mesure est
    * donc ce que l'acheteur pose sur sa ligne de commande.
    */
@@ -117,15 +160,16 @@ test("coupée, la bibliothèque ne sort pas une seule fois ; ouverte, elle sort"
   const ENFANT = `
     globalThis.fetch = async (u) => { console.log("SORTIE " + String(u?.url ?? u)); throw new Error("piégé"); };
     const { armerHorsLigne, MODELES_EXTRACTION } = await import("./src/tiers.ts");
-    await armerHorsLigne(MODELES_EXTRACTION, process.env.CASCADE_CACHE_FACTICE);
+    await armerHorsLigne(MODELES_EXTRACTION, process.env.CRUSETRA_CACHE_FACTICE);
     const { pipeline } = await import("@huggingface/transformers");
     try { await pipeline("feature-extraction", "cascade-inexistant/aucun-modele"); } catch { /* les deux branches échouent */ }
   `;
 
-  /** Les destinations que `fetch` a vues dans un fils, drapeau posé ou non. */
-  const sortiesPour = (horsLigne: boolean): string[] => {
-    const env: NodeJS.ProcessEnv = { ...process.env, CASCADE_CACHE_FACTICE: garni };
-    if (horsLigne) env.CASCADE_OFFLINE = "1"; else delete env.CASCADE_OFFLINE;
+  /** Les destinations que `fetch` a vues dans un fils, sous les drapeaux donnés (aucun : réseau ouvert). */
+  const sortiesPour = (drapeaux: Record<string, string>): string[] => {
+    const env: NodeJS.ProcessEnv = { ...process.env, CRUSETRA_CACHE_FACTICE: garni };
+    for (const nom of NOMS_DU_DRAPEAU) delete env[nom];
+    Object.assign(env, drapeaux);
     const r = spawnSync(process.execPath, ["--input-type=module", "-e", ENFANT],
       { cwd: RACINE, env, encoding: "utf8", timeout: 60_000 });
     assert.equal(r.status, 0, `le fils est sorti en ${r.status} :\n${r.stderr}`);
@@ -135,18 +179,24 @@ test("coupée, la bibliothèque ne sort pas une seule fois ; ouverte, elle sort"
   /* LE TÉMOIN DE LA MESURE ELLE-MÊME, ET IL A DÉJÀ SERVI. Si la bibliothèque cessait de passer
      par `fetch`, les deux branches rendraient zéro et le zéro de la branche coupée ne dirait
      plus rien — il dirait seulement que le piège ne regarde plus au bon endroit. */
-  const ouvertes = sortiesPour(false);
+  const ouvertes = sortiesPour({});
   assert.ok(ouvertes.length > 0,
     "réseau ouvert, aucune sortie n'a été vue : le piège ne mesure plus rien, et le zéro de la "
     + "branche coupée ne prouverait donc plus la coupure.");
   assert.ok(ouvertes.some((u) => u.includes("huggingface.co")),
     `réseau ouvert, les sorties vues ne vont pas chez le dépôt de modèles : ${ouvertes.join(", ")}`);
 
-  const coupees = sortiesPour(true);
-  assert.deepEqual(coupees, [],
-    `\`CASCADE_OFFLINE=1\` coupe le réseau et ${coupees.length} sortie(s) sont parties quand même :\n`
-    + `  ${coupees.join("\n  ")}\n`
-    + "  → c'est la promesse que ce drapeau vend à une banque, et elle vient de devenir fausse.");
+  /* LA MÊME MESURE SOUS CHAQUE NOM, et sous l'ancien contredit par le nouveau : un script client
+     qui pose CASCADE_OFFLINE=1 doit rester coupé exactement comme avant le changement de nom. */
+  const variantes: Record<string, string>[] = [{ CRUSETRA_OFFLINE: "1" }, { CASCADE_OFFLINE: "1" }, { CASCADE_OFFLINE: "1", CRUSETRA_OFFLINE: "0" }];
+  for (const drapeaux of variantes) {
+    const coupees = sortiesPour(drapeaux);
+    const dit = Object.entries(drapeaux).map(([n, v]) => `${n}=${v}`).join(" ");
+    assert.deepEqual(coupees, [],
+      `\`${dit}\` coupe le réseau et ${coupees.length} sortie(s) sont parties quand même :\n`
+      + `  ${coupees.join("\n  ")}\n`
+      + "  → c'est la promesse que ce drapeau vend à une banque, et elle vient de devenir fausse.");
+  }
 
   rmSync(garni, { recursive: true, force: true });
 });
@@ -319,7 +369,7 @@ test("2026-09-29: before the network is refused, the loader's own path poses the
   const base = cacheImporte();
   try {
     await avecEtatRendu(async () => {
-      process.env.CASCADE_OFFLINE = "1";
+      process.env.CRUSETRA_OFFLINE = "1";
       envHF.allowRemoteModels = true;
       assert.equal(await armerHorsLigne(MODELES_EXTRACTION, base), true);
       assert.equal(envHF.allowRemoteModels, false);
@@ -404,7 +454,7 @@ test("2026-09-29: the extractors load offline on a cache exactly as the old impo
       + `await m.loadExtractors();\n`
       + `console.log("loaded");\n`;
     const r = spawnSync(process.execPath, ["--input-type=module", "-e", programme, base],
-      { encoding: "utf8", timeout: 840_000, env: { ...process.env, CASCADE_OFFLINE: "1" } });
+      { encoding: "utf8", timeout: 840_000, env: { ...process.env, CRUSETRA_OFFLINE: "1" } });
     assert.equal(r.status, 0, `the offline load on a fresh cache failed:\n${(r.stderr + r.stdout).slice(-1500)}`);
     assert.doesNotMatch(r.stderr + r.stdout, /file was not found locally/);
     for (const cle of MODELES_EXTRACTION) {
@@ -423,7 +473,7 @@ test("hors ligne, la vraie commande MESURE — elle ne charge plus un modèle mu
     const csv = join(d, "cas.csv");
     writeFileSync(csv, `id,text,name\n1,"Client: Anna Petrova — dob 3 May 1990.",Anna Petrova\n`);
     const r = spawnSync(process.execPath, [fileURLToPath(new URL("./your-cases.ts", import.meta.url)),
-      `--cases=${csv}`, "--sample=1"], { encoding: "utf8", timeout: 280_000, env: { ...process.env, CASCADE_OFFLINE: "1" } });
+      `--cases=${csv}`, "--sample=1"], { encoding: "utf8", timeout: 280_000, env: { ...process.env, CRUSETRA_OFFLINE: "1" } });
     const sortie = (r.stdout ?? "") + (r.stderr ?? "");
     /* Poids absents : la commande s'écarte sous le lanceur de tests ; ce cas se déclare ignoré. */
     if (r.status === CODE_ECART_TEMOIN) { t.skip(raisonPoidsAbsents(sortie)); return; }

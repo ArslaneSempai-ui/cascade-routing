@@ -51,7 +51,7 @@ test("the command refuses an engine it does not run, a missing folder, and an ex
   const d = mkdtempSync(join(tmpdir(), "images-cli-"));
   try {
     const csv = join(d, "c.csv"); writeFileSync(csv, CSV); mkdirSync(join(d, "img"));
-    const run = (...a: string[]) => spawnSync("node", [CMD, ...a], { encoding: "utf8", cwd: RACINE, timeout: 60_000, env: { ...process.env, CASCADE_TESSDATA: join(d, "no-tessdata") } });
+    const run = (...a: string[]) => spawnSync("node", [CMD, ...a], { encoding: "utf8", cwd: RACINE, timeout: 60_000, env: { ...process.env, CRUSETRA_TESSDATA: join(d, "no-tessdata") } });
     assert.equal(run("--help").status, 0);
     const moteur = run(`--cases=${csv}`, `--images=${join(d, "img")}`, "--ocr=vision");
     assert.equal(moteur.status, 1); assert.match(moteur.stderr, /--ocr=vision is not an engine this command runs/);
@@ -78,8 +78,8 @@ test("tesseract reads a rendered line of text offline, and fills the text column
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="900" height="200"><rect width="100%" height="100%" fill="white"/>`
       + `<text x="40" y="120" font-family="Helvetica, Arial, sans-serif" font-size="64" fill="black">TOTAL 60.000</text></svg>`;
     await sharp(Buffer.from(svg)).png().toFile(join(d, "R1.png"));
-    const avant = process.env.CASCADE_OFFLINE;
-    process.env.CASCADE_OFFLINE = "1";
+    const avant = process.env.CRUSETRA_OFFLINE;
+    process.env.CRUSETRA_OFFLINE = "1";
     let lecteur;
     try {
       lecteur = await ouvrirTesseract(["eng"]);
@@ -90,7 +90,7 @@ test("tesseract reads a rendered line of text offline, and fills the text column
       assert.match(texte, /60[.,]?000/, `the engine did not read the amount: ${JSON.stringify(texte)}`);
     } finally {
       await lecteur?.fermer();
-      if (avant === undefined) delete process.env.CASCADE_OFFLINE; else process.env.CASCADE_OFFLINE = avant;
+      if (avant === undefined) delete process.env.CRUSETRA_OFFLINE; else process.env.CRUSETRA_OFFLINE = avant;
     }
   } finally { rmSync(d, { recursive: true, force: true }); }
 });

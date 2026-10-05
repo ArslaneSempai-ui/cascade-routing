@@ -29,7 +29,7 @@ test("measure:yours with two priced chains writes the audit into the console, th
     const r = spawnSync(process.execPath, [CMD, `--cases=${join(d, "receipts.csv")}`,
       `--sorties=${join(d, "receipts-vendor-a-outcomes.json")}`, `--sorties=${join(d, "receipts-vendor-b-outcomes.json")}`,
       `--rules=${join(EXAMPLE, "rules.json")}`, "--current=vendor-a", "--pages-per-year=1000000", "--pages-per-document=1", "--margin=5"],
-      { encoding: "utf8", timeout: 600_000, env: { ...process.env, CASCADE_OFFLINE: "1" } });
+      { encoding: "utf8", timeout: 600_000, env: { ...process.env, CRUSETRA_OFFLINE: "1" } });
     assert.equal(r.status, 0, `the command failed:\n${(r.stdout + r.stderr).slice(-2000)}`);
     const out = r.stdout;
     assert.match(out, /Your chain: "vendor-a"\./);
@@ -74,7 +74,7 @@ test("measure:yours with two priced chains writes the audit into the console, th
     const twin = join(d, "twin.json");
     writeFileSync(twin, readFileSync(join(d, "receipts-vendor-a-outcomes.json")));
     const dup = spawnSync(process.execPath, [CMD, `--cases=${join(d, "receipts.csv")}`, `--sorties=${join(d, "receipts-vendor-a-outcomes.json")}`, `--sorties=${twin}`],
-      { encoding: "utf8", timeout: 120_000, env: { ...process.env, CASCADE_OFFLINE: "1" } });
+      { encoding: "utf8", timeout: 120_000, env: { ...process.env, CRUSETRA_OFFLINE: "1" } });
     assert.equal(dup.status, 1);
     assert.match(dup.stderr, /carry the same name "vendor-a"/);
     assert.ok(!existsSync(join(d, "twin-measured.json")));
@@ -93,7 +93,7 @@ test("the audit's declared inputs refuse what is not a positive number, and --cu
     copyFileSync(join(EXAMPLE, "receipts.csv"), join(d, "receipts.csv"));
     copyFileSync(join(EXAMPLE, "receipts-vendor-a-outcomes.json"), join(d, "a.json"));
     const r = spawnSync(process.execPath, [CMD, `--cases=${join(d, "receipts.csv")}`, `--sorties=${join(d, "a.json")}`, "--current=vendor-z"],
-      { encoding: "utf8", timeout: 120_000, env: { ...process.env, CASCADE_OFFLINE: "1" } });
+      { encoding: "utf8", timeout: 120_000, env: { ...process.env, CRUSETRA_OFFLINE: "1" } });
     assert.equal(r.status, 1, "a current chain nobody gave must refuse before any model loads");
     assert.match(r.stderr, /--current=vendor-z names no --sorties chain/);
     assert.match(r.stderr, /Chains given: vendor-a/);

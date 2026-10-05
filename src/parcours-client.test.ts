@@ -28,7 +28,7 @@ const GRADE = join(RACINE, "src", "grade.ts");
 const MESURE = join(RACINE, "src", "your-cases.ts");
 const CORD = join(RACINE, "examples", "cord-receipts");
 const bac = (nom: string) => realpathSync(mkdtempSync(join(tmpdir(), nom)));
-const ENV = { CASCADE_OFFLINE: "1", NODE_TEST_CONTEXT: "1" };
+const ENV = { CRUSETRA_OFFLINE: "1", NODE_TEST_CONTEXT: "1" };
 
 /* Twenty-four invented invoices: totals with a decimal part, dates with separators, a vendor name. */
 function factures(entete: string): { csv: string; valeurs: Record<string, Record<string, string>> } {

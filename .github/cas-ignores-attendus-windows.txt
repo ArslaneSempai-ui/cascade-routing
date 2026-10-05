@@ -7,7 +7,7 @@
 #
 # - swiftc and the Vision framework are macOS only: the five image-reader cases skip here, as
 #   on Linux, and say so.
-# - `identite` and the Cascade family repositories are development neighbours that live on no
+# - `identite` and the Crusetra family repositories are development neighbours that live on no
 #   public runner: the three layer-comparison cases skip here too.
 # - `lsof`, `ps` and `pgrep` do not exist on Windows: `egress` refuses to observe there by
 #   design, so its nine process cases and the positive control of `refus-de-mesurer` stand

@@ -97,13 +97,13 @@ first run only. Afterwards the weights are on disk and nothing reaches for the n
 this repository:
 
 ```
-npm run poids -- --export /media/usb/cascade-weights
+npm run poids -- --export /media/usb/crusetra-weights
 ```
 
 Carry that directory to the closed machine and place it in the cache:
 
 ```
-npm run poids -- --import /media/usb/cascade-weights
+npm run poids -- --import /media/usb/crusetra-weights
 ```
 
 Every file is checked against its SHA-256 and against the revision this repository pins,
@@ -114,12 +114,12 @@ and tells you which file disagreed.
 Then run any command with the network refused outright:
 
 ```
-CASCADE_OFFLINE=1 npm run optimise
+CRUSETRA_OFFLINE=1 npm run optimise
 ```
 
 Under that flag the library is told not to reach the network at all. If a model is missing it
 says so, names it, gives its size, and stops, instead of stalling on a download that cannot
-finish. `npm run poids` with no argument reports what is on this machine.
+finish. `npm run poids` with no argument reports what is on this machine. The flag's former name, `CASCADE_OFFLINE=1`, is still read and refuses the network the same way; it is deprecated.
 
 The encoder tiers run fully air-gapped. The model library asks for two files at revision
 `main` whatever revision is pinned, the tokenizer configuration and the model configuration,
@@ -262,7 +262,7 @@ is declared.
 <!-- /figures:documents -->
 
 <!-- figures:tests -->
-**835 tests** across 96 files, counted from the sources rather than typed here.
+**841 tests** across 97 files, counted from the sources rather than typed here.
 <!-- /figures:tests -->
 
 Everything runs locally, and that is enforced rather than promised. The one call that could
