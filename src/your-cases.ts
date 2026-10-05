@@ -49,7 +49,8 @@ import { etatDuDepot } from "./arbre-propre.ts";
 import { scoreDeDoute, doutesVides, compterDoute, signauxApplicables, type Doutes } from "./doute.ts";
 import { evaluerRegles, direLesRefus, type ReglesEvaluees } from "./regles-bornees.ts";
 import { table } from "./figures.ts";
-import { splitHeader, graded, outcome as outcomeTyped, canonical, GRADER, type FieldKind } from "./grader.ts";
+import { splitHeader, graded, outcome as outcomeTyped, canonical, GRADER, genreSuggere, type FieldKind, type GenreSuggere } from "./grader.ts";
+import { pairedDifference } from "./paired-difference.ts";
 import { audit as calculerAudit, auditLines, priceOf, priceWords, readListPrices, PRICE_KEYS, type Audit, type SourcePrice, type ListPrices } from "./audit.ts";
 import { readJsonFile } from "./json-file.ts";
 import { ASSUMPTIONS, symboleDe, UNITS } from "./assumptions.ts";
@@ -532,6 +533,34 @@ export function bornerTexte(texte: string): { texte: string; ecarte: number } {
   return { texte: texte.slice(0, PLAFOND_TEXTE), ecarte: texte.length - PLAFOND_TEXTE };
 }
 
+/**
+ * THE COLUMNS THAT LOOK LIKE AMOUNTS OR DATES AND DECLARE NO KIND (client journey audit, 2026-10-05).
+ *
+ * Said before anything is graded, by `grade` and by `measure:yours`, in the same words. Without a kind the comparison
+ * is exact text, and the rate it gives measures the formatting, not the extractor; the client who means the exact text
+ * says so with `--exact`, and the run then carries that choice as a warning instead of a refusal.
+ */
+export function controleDesGenres(cas: readonly Cas[], champs: readonly string[], kinds: Record<string, FieldKind>,
+  exact: boolean): { refusal: string | null; notice: string | null } {
+  const suspects = champs.filter((c) => kinds[c] === undefined)
+    .map((c) => ({ champ: c, g: genreSuggere(cas.map((x) => x.truth[c] ?? "")) }))
+    .filter((x): x is { champ: string; g: NonNullable<GenreSuggere> } => x.g !== null);
+  if (suspects.length === 0) return { refusal: null, notice: null };
+  const conseil = (s: typeof suspects[number]) => s.g.kind === "amount"
+    ? `write the header as \`${s.champ}:amount\` (or \`${s.champ}:amount-grouped\` when a point groups thousands, as Indonesian and German receipts print)`
+    : `write the header as \`${s.champ}:date\` (or \`${s.champ}:date-dmy\` when the day comes first)`;
+  const lignes = suspects.map((s) => `    ${s.champ}: ${Math.round(s.g.part * 100)} % of its expected values read as `
+    + `${s.g.kind === "amount" ? "an amount" : "a date"} (${s.g.exemples.map((e) => JSON.stringify(e)).join(", ")}); ${conseil(s)}`);
+  const corps = `${suspects.length} field(s) have no declared kind and look like ${[...new Set(suspects.map((s) => s.g.kind + "s"))].join(" or ")}:\n`
+    + `${lignes.join("\n")}\n`
+    + `  Without a kind the comparison is exact text, separators and case set aside: "$1,234.50" against "1234.50"\n`
+    + `  is wrong on every case, and the rate measures the formatting, not the extractor.`;
+  if (exact) {
+    return { refusal: null, notice: `⚠ --exact: ${corps}\n  You asked for the exact-text comparison on purpose; the rates below carry that choice.` };
+  }
+  return { notice: null, refusal: `${corps}\n  Declare the kind in the header and run again, or pass --exact to compare these as exact text on purpose.\n  Nothing was graded.` };
+}
+
 export function lireCsv(texte: string, options: { kinds?: boolean } = {}): Lecture {
   const lignes: string[][] = [];
   /* Le VRAI numéro de ligne du fichier, par ligne parsée. Un texte cité sur trois lignes
@@ -897,6 +926,9 @@ export const DRAPEAUX_CONNUS: readonly string[] = [
   /* `--no-encoders`: a vendor-only audit (your chains, your rules) that loads no model and
      downloads nothing; `--tiers=rules` is the same request under the name the audit used. */
   "no-encoders", "tiers",
+  /* `--exact`: a column without a kind whose expected values look like amounts or dates is refused; this says the
+     exact-text comparison is what the client means (client journey audit, 2026-10-05). */
+  "exact",
   /* The audit's declared inputs: none is measured, each is printed with its provenance. */
   "pages-per-document", "pages-per-year", "current", "machine-hourly-cost", "ocr-price-per-thousand-pages",
 ];
@@ -1472,7 +1504,12 @@ export function recommander(
       lignes.push(`${x.palier}: no case was graded on both ${tete.palier} and ${x.palier}, so the two cannot be compared case for case.`);
       continue;
     }
-    const a = apparier(bt, bx);
+    /* 05/10 (client journey audit): ONE worst-case bound per pair. The audit below bounds the same pair with Newcombe's
+       paired interval (paired-difference.ts) and printed "worst case 9.8 points behind" where this line said "may be up
+       to 6.2 points worse": two bounds for one pair in one report. The verdict here now reads the audit's bound, so the
+       sentence, the margin test and the routing agree; comparaison-appariee.ts, identite's shared file, is not edited. */
+    const pd = pairedDifference(bt, bx);
+    const a = pd ? { ...apparier(bt, bx), bornes: [pd.low, pd.high] as [number, number] } : apparier(bt, bx);
     const v = juger(a, marge);
     if (v.genre === "indecis" && v.marge !== undefined) {
       /* F8: say what was tested. "X may be up to 6.2 points worse ...: no recommendation" read
@@ -1519,8 +1556,11 @@ export function rapportPourLeClient(o: {
   audit?: string[];
   /** Per field, the cases with no expected value: not graded on it, by any source. */
   sansVerite?: Record<string, number>;
+  /** False when no tier of the run was asked a question (vendor-only): the derived-question note then describes a
+      measurement this run did not make, and is left out (client journey audit, 2026-10-05). */
+  questionsPosees?: boolean;
 }): string {
-  const deduites = o.champs.filter((c) => o.questions[c]!.provenance === "deduite");
+  const deduites = o.questionsPosees === false ? [] : o.champs.filter((c) => o.questions[c]!.provenance === "deduite");
   const entete = [
     `# Your cases, measured`,
     ``,
@@ -1996,9 +2036,11 @@ Nothing leaves your machine: the models are local and this path makes no network
    * whole point, the client's vendors side by side. Names must differ: rows are indexed by
    * name, and a second "textract" would overwrite the first exactly as a tier name would.
    */
+  /* 05/10 (client journey audit): `--sorties=a.json,b.json` opened one file named "a.json,b.json" and died on a raw
+     ENOENT. A comma separates files, as a reader writes it; one flag per file still works. */
   const cheminsSorties = process.argv.slice(2)
     .filter((a) => a.startsWith("--sorties="))
-    .map((a) => a.slice("--sorties=".length));
+    .flatMap((a) => a.slice("--sorties=".length).split(",").map((c) => c.trim()).filter((c) => c !== ""));
   const chaines = cheminsSorties.map((c) => chargerSorties(c));
   const nomsChaines = new Set<string>();
   for (const [i, s] of chaines.entries()) {
@@ -2179,6 +2221,11 @@ Nothing leaves your machine: the models are local and this path makes no network
     console.log(`\n⚠ ${cas.length} cases is below the point where a rate says anything. `
       + `The intervals below will be wider than the differences you are trying to see.`);
   }
+  /* 05/10 (client journey audit): a column of amounts or dates with no kind would be compared as exact text and
+     measure the formatting; refused here, before any chain or tier is read, unless --exact says it is meant. */
+  const kindGuard = controleDesGenres(cas, champs, kinds, process.argv.includes("--exact"));
+  if (kindGuard.refusal) { console.error(`\n${kindGuard.refusal}\n`); process.exit(1); }
+  if (kindGuard.notice) console.log(`\n${kindGuard.notice}`);
   /*
    * LES QUESTIONS, RESOLUES ET AFFICHEES AVANT DE CHARGER QUOI QUE CE SOIT.
    *
@@ -2203,26 +2250,31 @@ Nothing leaves your machine: the models are local and this path makes no network
      annonces, on dit combien sont cachées ET de quelle provenance — une sélection porte le
      compte de ce qu'elle écarte — et on donne le moyen de tout voir. Un affichage tronqué
      sans issue pousse à relancer sans lire. */
-  const montrees = process.argv.includes("--show-questions") ? champs : champs.slice(0, MONTRES);
-  console.log(`\nThe question each field is asked, and where it comes from:\n`);
-  for (const c of montrees) {
-    const q = questions[c]!;
-    const marque = { fournie: "yours   ", mesuree: "measured", deduite: "derived " }[q.provenance];
-    console.log(`  ${marque}  ${c.padEnd(18)} ${q.texte}`);
-  }
-  const caches = champs.slice(montrees.length);
-  if (caches.length) {
-    const par = (p: string) => caches.filter((c) => questions[c]!.provenance === p).length;
-    console.log(`  … and ${caches.length} more not shown `
-      + `(${par("deduite")} derived, ${par("fournie")} yours, ${par("mesuree")} measured). `
-      + `Pass --show-questions to see them all.`);
-  }
-  if (deduites.length) {
-    console.log(`\n⚠ ${deduites.length} question(s) derived from your column names: a choice we`);
-    console.log(`  made for you, not a measurement. Rates obtained under a derived question are`);
-    console.log(`  NOT comparable to the ones in this repository's README, which were measured`);
-    console.log(`  under the questions above marked "measured".`);
-    console.log(`  Supply your own with --questions=file.json : { "column": "What is …?" }`);
+  /* 05/10 (client journey audit): a vendor-only run (--no-encoders, no --llm) asks no tier a question, and it warned
+     about derived questions all the same. The questions are still resolved and written into the record; they are
+     announced only when a tier of this run will be asked them. */
+  if (paliers.length > 0) {
+    const montrees = process.argv.includes("--show-questions") ? champs : champs.slice(0, MONTRES);
+    console.log(`\nThe question each field is asked, and where it comes from:\n`);
+    for (const c of montrees) {
+      const q = questions[c]!;
+      const marque = { fournie: "yours   ", mesuree: "measured", deduite: "derived " }[q.provenance];
+      console.log(`  ${marque}  ${c.padEnd(18)} ${q.texte}`);
+    }
+    const caches = champs.slice(montrees.length);
+    if (caches.length) {
+      const par = (p: string) => caches.filter((c) => questions[c]!.provenance === p).length;
+      console.log(`  … and ${caches.length} more not shown `
+        + `(${par("deduite")} derived, ${par("fournie")} yours, ${par("mesuree")} measured). `
+        + `Pass --show-questions to see them all.`);
+    }
+    if (deduites.length) {
+      console.log(`\n⚠ ${deduites.length} question(s) derived from your column names: a choice we`);
+      console.log(`  made for you, not a measurement. Rates obtained under a derived question are`);
+      console.log(`  NOT comparable to the ones in this repository's README, which were measured`);
+      console.log(`  under the questions above marked "measured".`);
+      console.log(`  Supply your own with --questions=file.json : { "column": "What is …?" }`);
+    }
   }
 
   /*
@@ -2233,8 +2285,12 @@ Nothing leaves your machine: the models are local and this path makes no network
    */
   /* Ce qui se sait sans modèle se dit avant de charger quoi que ce soit : un champ dont la
      réponse n'est pas dans le texte ne mesure pas le palier, il mesure le corpus. */
-  const presence = direLaPresence(presenceDeLaVerite(cas, champs, kinds));
-  if (presence) console.log(`\n${presence}\n`);
+  /* The text is read by the local tiers and by the client's rules; a vendor-only run reads none of it, and a warning
+     about what the text lacks would describe a measurement this run does not make (05/10). */
+  if (paliers.length > 0 || reglesBrutes !== undefined) {
+    const presence = direLaPresence(presenceDeLaVerite(cas, champs, kinds));
+    if (presence) console.log(`\n${presence}\n`);
+  }
 
   /*
    * UNE VALEUR ATTENDUE QUE LE GENRE DÉCLARÉ NE LIT PAS note toutes les réponses fausses
@@ -2476,7 +2532,7 @@ Nothing leaves your machine: the models are local and this path makes no network
 
   writeFileSync(sortie, rapportPourLeClient({
     cas: cas.length, champs, date: new Date().toISOString().slice(0, 10),
-    questions, avecRegles: reglesMesurees, verdicts, marge, kinds,
+    questions, avecRegles: reglesMesurees, verdicts, marge, kinds, questionsPosees: paliers.length > 0,
     audit: chaines.length > 0 ? lignesAudit : undefined,
     sansVerite: sansVerite(cas, champs),
     lignes: champs.flatMap((champ) => Object.entries(releve[champ]!).map(([palier, r]) => {

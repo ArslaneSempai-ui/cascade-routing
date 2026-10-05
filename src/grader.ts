@@ -362,6 +362,33 @@ export function attenduLisible(expected: string, kind: FieldKind): boolean {
 }
 
 /**
+ * DOES A COLUMN WITHOUT A KIND LOOK LIKE AMOUNTS OR DATES? (client journey audit, 2026-10-05)
+ *
+ * A client who wrote the header as the site showed it, `id,text,total`, got the default comparison, exact text with
+ * separators and case set aside: "$1,234.50" against "1234.50" was wrong on every case, in silence. Reproduced on the
+ * CORD receipts with the kinds stripped from the header: google-expense read 4.2 % of totals instead of 93.7 %, and the
+ * report looked clean. The expected values are enough to see it coming: when more than half of them parse as an amount
+ * or as a date AND carry a mark exact text trips on (a currency sign or code, a decimal or thousands separator, a date
+ * separator or a month name), the column is named before anything is graded. Digit-only values are left alone: an id of
+ * digits, a year, a count, is not an amount, and `parseAmount` reads "INV-0042" as minus forty-two, which is why the
+ * mark is required and the parse alone is not enough.
+ */
+export type GenreSuggere = { kind: "amount" | "date"; part: number; exemples: string[] } | null;
+const MARQUE_MONTANT = /[$€£¥]|(?:^|[^A-Za-z])[A-Z]{3}(?![A-Za-z])|\d[.,]\d|\d \d{3}(?!\d)/;
+const MARQUE_DATE = /\d[\/.\-]\d|[A-Za-z]{3,}/;
+export function genreSuggere(expected: readonly string[]): GenreSuggere {
+  const vals = expected.map((v) => v.trim()).filter((v) => v !== "" && !attenduAbsent(v));
+  if (vals.length === 0) return null;
+  const montant = (v: string) => parseAmount(v) !== null && MARQUE_MONTANT.test(v);
+  const date = (v: string) => parseDate(v, "mdy") !== null && MARQUE_DATE.test(v) && /\d/.test(v);
+  for (const [kind, lit] of [["amount", montant], ["date", date]] as const) {
+    const vus = vals.filter(lit);
+    if (vus.length * 2 > vals.length) return { kind, part: vus.length / vals.length, exemples: [...new Set(vus)].slice(0, 3) };
+  }
+  return null;
+}
+
+/**
  * The conventions a grading rests on, written into every record it produces. A reader who
  * disagrees with one can re-grade; a reader who does not know it was applied cannot.
  */

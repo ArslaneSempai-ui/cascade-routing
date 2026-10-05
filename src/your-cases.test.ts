@@ -1211,13 +1211,16 @@ test("recommander : la mesure du 3 septembre ne recommande plus le palier faible
   assert.ok(indecis.some((l) => /No recommendation for name/.test(l)), indecis.join("\n"));
   assert.ok(!indecis.some((l) => /Take the cheaper one/.test(l)));
 
-  /* Avec une marge et un échantillon qui la tient : la seule branche qui recommande. */
-  const large200 = bits(200, [0, 1]), small200 = bits(200, [2, 3, 4]);
+  /* Avec une marge et un échantillon qui la tient : la seule branche qui recommande.
+     05/10 (parcours client) : la borne est désormais celle de l'audit, Newcombe (paired-difference.ts), une seule par
+     paire. Sur 200 cas, 2 désaccords contre 3 bornent l'écart à 3,4 points, au-dessus des deux points : l'échantillon
+     ne tenait la marge que sous l'ancienne borne. Sur 400 cas, les mêmes désaccords la bornent à 1,7 point. */
+  const large400 = bits(400, [0, 1]), small400 = bits(400, [2, 3, 4]);
   const serre = { name: {
-    large: { bons: 198, sur: 200, ms: 10, reussites: large200 },
-    small: { bons: 197, sur: 200, ms: 5, reussites: small200 },
+    large: { bons: 398, sur: 400, ms: 10, reussites: large400 },
+    small: { bons: 397, sur: 400, ms: 5, reussites: small400 },
   } } as never;
-  const rangs3 = [{ palier: "large", r: rate(198, 200), ms: 10 }, { palier: "small", r: rate(197, 200), ms: 5 }];
+  const rangs3 = [{ palier: "large", r: rate(398, 400), ms: 10 }, { palier: "small", r: rate(397, 400), ms: 5 }];
   const retenu = recommander("name", rangs3, serre, 0.02);
   assert.ok(retenu.some((l) => /Take the cheaper one/.test(l)), retenu.join("\n"));
   assert.ok(retenu.some((l) => /Recommendation for name: small/.test(l)), retenu.join("\n"));
@@ -1225,10 +1228,10 @@ test("recommander : la mesure du 3 septembre ne recommande plus le palier faible
   /* Une chaîne déclarée sans durée n'est pas écartée des candidats, et sa phrase n'invente
      pas de rapport de vitesse. */
   const declaree = { name: {
-    large: { bons: 198, sur: 200, ms: 10, reussites: large200 },
-    "your chain": { bons: 197, sur: 200, ms: Number.NaN, reussites: small200 },
+    large: { bons: 398, sur: 400, ms: 10, reussites: large400 },
+    "your chain": { bons: 397, sur: 400, ms: Number.NaN, reussites: small400 },
   } } as never;
-  const rangs4 = [{ palier: "large", r: rate(198, 200), ms: 10 }, { palier: "your chain", r: rate(197, 200), ms: Number.NaN }];
+  const rangs4 = [{ palier: "large", r: rate(398, 400), ms: 10 }, { palier: "your chain", r: rate(397, 400), ms: Number.NaN }];
   const chaine = recommander("name", rangs4, declaree, 0.02);
   assert.ok(chaine.some((l) => /your chain is non-inferior/.test(l)), chaine.join("\n"));
   assert.ok(!chaine.some((l) => /× faster/.test(l)), "sans durée mesurée, aucun rapport de vitesse.");

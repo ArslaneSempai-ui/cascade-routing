@@ -178,27 +178,50 @@ network call, once `npm run tessdata -- --prime` has fetched the two language fi
 pays for OCR in production, and the audit carries that price as a declared term
 (`--ocr-price-per-thousand-pages`), assumed at zero and said so when you do not declare it.
 
-Three commands, in this order:
+The free test on the site runs in five steps, and these are the same five:
 
-1. `npm run grade` reads the vendor's own exports (Amazon Textract, Google Document AI,
-   Azure AI Document Intelligence, through a small mapping file and an adapter that opens no
-   connection) or a plain JSON of values the client's chain wrote, grades them against the
-   labelled CSV, and writes an outcomes file: clean, wrong or blank per case and field, the
-   grader's version, and the kind each field was declared as. The values stay where they were.
-2. `npm run measure:yours` takes several such files at once, one per vendor, each with the
-   price per thousand pages or documents the client declares (or a list price from
-   `vendor-prices.json`, dated and marked as such), measures the local tiers on the same
-   cases, and writes the audit into the sealed record. Nothing is recommended without a
-   margin declared with `--margin`: "not separable from the best" is not "not worse", and
-   only the client can say what loss they accept. Without one the audit lists, per field,
-   the options the sample cannot separate from the best, and states no saving.
-3. The record, `cascade-client-record` version two, carries per vendor and per field the
-   accuracy with its Wilson bounds and its `n` (no rate under twenty cases, anywhere), the
-   cost per thousand pages, the recommended routing within the margin, the annual saving
-   against the current chain, and a flag on every pick the sample cannot separate, on every
-   pick measurably worse than another admissible source, and on every pair that shares too
-   few cases to be compared. The visual report is built from that JSON; it is not in this
-   repository.
+1. **Label 100 pages** of one document type in a CSV: an id, the text, then one column per
+   field, each named with its kind, as in `id,text,total:amount,date:date,vendor:free-text`.
+   Without a kind the comparison is exact text (a total written with a currency sign and a
+   thousands separator is wrong against the same total written plain), so `grade` and
+   `measure:yours` refuse such a column unless `--exact` says the exact text is what you
+   mean. Write `-` where a document has no such line; an empty cell means unknown.
+   For the text, `npm run text-from-exports -- --cases=your.csv --vendor=<textract|documentai|azure> --exports=<folder>`
+   takes what your vendor already returns, or, offline, `npm run tessdata -- --prime` once
+   (the two language files) then
+   `npm run text-from-images -- --cases=your.csv --images=<folder> --ocr=tesseract --lang=eng`
+   reads your images. Either one writes `your-with-text.csv`: use that file in steps 2 and 3.
+   Node 24 or newer.
+2. **Grade each extractor** you use or want to compare. This tool calls no vendor: you run
+   each one on your pages, then
+   `npm run grade -- --cases=your-with-text.csv --name=<vendor> --values=<its outputs> --price-per-thousand-pages=<your price> --out=<vendor>.json`
+   from a JSON of values, `{ "<id>": { "<field>": "<value>" } }`, or
+   `--vendor=<textract|documentai|azure> --exports=<folder> --mapping=mapping.json` in place
+   of `--values` for raw Textract, Document AI or Azure exports (an adapter that opens no
+   connection). The file it writes holds clean, wrong or blank per case and field, the
+   grader's version and the kind each field was declared as; the values stay where they were.
+3. **Measure, with the margin you accept**:
+   `npm run measure:yours -- --cases=your-with-text.csv --sorties=<vendor>.json,<vendor>.json --current=<the one you run today> --margin=2 --pages-per-year=<your volume>`,
+   one `--sorties` per file or a comma list, each file with the price per thousand pages or
+   documents you declared (or a list price from `vendor-prices.json`, dated and marked as
+   such). `--no-encoders` compares the vendors only and downloads nothing; without it the
+   local tiers are measured on the same cases. Nothing is recommended without a margin:
+   "not separable from the best" is not "not worse", and only you can say what loss you
+   accept. Without one the audit lists, per field, the options the sample cannot separate
+   from the best, and states no saving.
+4. **Email the record**, the file ending in `-measured.json` beside your CSV, to
+   contact@cascade-routing.com. It is `cascade-client-record` version two: per vendor and
+   per field the accuracy with its Wilson bounds and its `n` (no rate under twenty cases,
+   anywhere), the cost per thousand pages, the recommended routing within the margin, the
+   annual saving against the current chain, and a flag on every pick the sample cannot
+   separate, on every pick measurably worse than another admissible source, and on every
+   pair that shares too few cases to be compared. No document, no value read from one. A
+   price under a vendor contract is replaced with a list price before sending.
+5. **A one-page PDF comes back** by email within 48 hours, built from that record (the
+   visual report is not in this repository). The record carries a content hash; the
+   free-test report is not signed, and the free test stays an internal evaluation under the
+   thirty-day grant. The Snapshot and the Audit come back signed and include the right to
+   act on the recommendation in your own operations.
 
 A field's header declares its kind (`total:amount`, `closing_date:date`, `tax_id:id`,
 `currency:currency`, `vendor_name:free-text`) and the comparison follows: a thousands
@@ -239,7 +262,7 @@ is declared.
 <!-- /figures:documents -->
 
 <!-- figures:tests -->
-**827 tests** across 95 files, counted from the sources rather than typed here.
+**835 tests** across 96 files, counted from the sources rather than typed here.
 <!-- /figures:tests -->
 
 Everything runs locally, and that is enforced rather than promised. The one call that could

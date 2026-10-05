@@ -23,7 +23,7 @@ import { readJsonFile } from "./json-file.ts";
 import { basename } from "node:path";
 import { createHash } from "node:crypto";
 import { isMain, refuserDrapeauxInconnus } from "./cli.ts";
-import { lireCsv, nomDeChaine, aUneVerite, type Cas } from "./your-cases.ts";
+import { lireCsv, nomDeChaine, aUneVerite, controleDesGenres, type Cas } from "./your-cases.ts";
 import { outcome, GRADER, type FieldKind, type Outcome } from "./grader.ts";
 import { loadMapping, readExports, valuesFromExports, isVendorName, VENDORS, type VendorName } from "./vendors.ts";
 import { rate, writeRate } from "./interval.ts";
@@ -33,7 +33,7 @@ import { readListPrices } from "./audit.ts";
 import { symboleDe, UNITS } from "./assumptions.ts";
 
 export const FLAGS = ["--cases", "--name", "--values", "--vendor", "--exports", "--mapping",
-  "--price-per-thousand-pages", "--price-per-thousand-documents", "--list-price", "--out", "--overwrite", "--help"] as const;
+  "--price-per-thousand-pages", "--price-per-thousand-documents", "--list-price", "--out", "--overwrite", "--exact", "--help"] as const;
 
 /** The file `measure:yours` reads under `--sorties`, in the shape it already accepts. */
 export type OutcomesFile = {
@@ -250,6 +250,11 @@ field's kind. Never a value. Feed it to: npm run measure:yours -- --cases=... --
       + `${ecartees.slice(0, 5).map((e) => `line ${e.ligne} has ${e.champs}`).join(", ")}${ecartees.length > 5 ? `, and ${ecartees.length - 5} more` : ""}.`);
     console.log(`  They are NOT graded, in either direction.`);
   }
+  /* 05/10 (client journey audit): a column of amounts or dates with no kind would be graded as exact text and the
+     verdicts would measure the formatting; refused before the values are read, unless --exact says it is meant. */
+  const kindGuard = controleDesGenres(cas, champs, kinds, arg("exact") !== undefined || process.argv.includes("--exact"));
+  if (kindGuard.refusal) throw new Error(kindGuard.refusal);
+  if (kindGuard.notice) console.log(`\n${kindGuard.notice}`);
 
   const source: OutcomesFile["source"] = { cases: basename(fichier), sha256: createHash("sha256").update(octets).digest("hex") };
   let values: Record<string, Record<string, string>>;
