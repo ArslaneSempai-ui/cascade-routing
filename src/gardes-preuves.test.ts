@@ -12,8 +12,8 @@
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { spawnSync, execFileSync } from "node:child_process";
-import { readFileSync, writeFileSync, mkdtempSync, existsSync, cpSync, mkdirSync, rmSync, realpathSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { readFileSync, writeFileSync, mkdtempSync, existsSync, cpSync, mkdirSync, rmSync, realpathSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -157,9 +157,11 @@ test("derivees with no journal refuses, names npm run dur, and leaves the frozen
      of the same path, the script would do nothing, and exit 0 would pass for a refusal. */
   const d = realpathSync(mkdtempSync(join(tmpdir(), "derivees-clone-")));
   const clone = join(d, "cascade");
-  cpSync(RACINE, clone, { recursive: true, filter: (src) => !/\/(node_modules|data)(\/|$)/.test(src) });
+  /* 05/10 : both separators, or Windows copied node_modules whole and the link below found it already there */
+  cpSync(RACINE, clone, { recursive: true, filter: (src) => !/[\\/](node_modules|data)([\\/]|$)/.test(src) });
   try {
-    execFileSync("ln", ["-s", join(RACINE, "node_modules"), join(clone, "node_modules")]);
+    /* a junction needs no privilege on Windows, where `ln -s` from Git Bash cannot make the link */
+    symlinkSync(join(RACINE, "node_modules"), join(clone, "node_modules"), process.platform === "win32" ? "junction" : "dir");
     mkdirSync(join(clone, "data"), { recursive: true });
     const avant = readFileSync(join(clone, "mesures-derivees.json"), "utf8");
     const r = spawnSync("node", [join(clone, "src", "landing.ts"), "--derivees"], { encoding: "utf8", cwd: clone, timeout: 120_000 });
