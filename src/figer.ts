@@ -14,7 +14,7 @@
  * Un module qui l'oublie ne casse pas : il perd la décomposition des erreurs et les deux
  * seuils qui la tarifent, en silence. C'est exactement le genre de dégradation muette que ce
  * dépôt refuse, donc un test la refuse aussi — voir « tout appelant Node de l'optimiseur
- * pose la table figée » dans cascade.test.ts.
+ * pose la table figée » dans crusetra.test.ts.
  */
 import { lireDerivees } from "./derivees.ts";
 import { poserDecompositionFigee } from "./optimise.ts";

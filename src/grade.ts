@@ -30,6 +30,7 @@ import { rate, writeRate } from "./interval.ts";
 import { etatDuDepot } from "./arbre-propre.ts";
 import { TIERS } from "./paliers.ts";
 import { readListPrices } from "./audit.ts";
+import { GENRES } from "./genres.ts";
 import { symboleDe, UNITS } from "./assumptions.ts";
 
 export const FLAGS = ["--cases", "--name", "--values", "--vendor", "--exports", "--mapping",
@@ -37,7 +38,7 @@ export const FLAGS = ["--cases", "--name", "--values", "--vendor", "--exports", 
 
 /** The file `measure:yours` reads under `--sorties`, in the shape it already accepts. */
 export type OutcomesFile = {
-  kind: "cascade-outcomes"; version: 1;
+  kind: typeof GENRES.issues; version: 1;
   nom: string;
   issues: Record<string, Record<string, Outcome>>;
   notePar: {
@@ -349,7 +350,7 @@ field's kind. Never a value. Feed it to: npm run measure:yours -- --cases=... --
 
   const etat = etatDuDepot();
   const out: OutcomesFile = {
-    kind: "cascade-outcomes", version: 1, nom: name, issues,
+    kind: GENRES.issues, version: 1, nom: name, issues,
     notePar: {
       outil: "crusetra", version: etat ? `${etat.commit}${etat.sale.length ? " (modified tree)" : ""}` : "unknown: not a git checkout",
       correcteur: `grader v${GRADER.version}`, gradedAt: new Date().toISOString(),

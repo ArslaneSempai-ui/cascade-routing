@@ -57,6 +57,7 @@ import { pairedDifference, type PairedDifference } from "./paired-difference.ts"
 import { symboleDe, UNITS } from "./assumptions.ts";
 import { readJsonFile } from "./json-file.ts";
 import type { FieldKind } from "./grader.ts";
+import { GENRES, estDuGenre } from "./genres.ts";
 
 export type Billing = "page" | "document";
 
@@ -187,7 +188,8 @@ export const LIST_PRICES_VERSION = 1;
 
 export function readListPrices(path = fileURLToPath(new URL("../vendor-prices.json", import.meta.url))): ListPrices {
   const raw = readJsonFile(path) as Partial<ListPrices> & { kind?: string };
-  if (raw.kind !== "cascade-vendor-list-prices" || !raw.vendors || typeof raw.readOn !== "string") {
+  /* Les deux noms du genre (genres.ts) : une table copiée avant le 5/10/2026 porte « cascade-… ». */
+  if (!estDuGenre(raw.kind, GENRES.prixCatalogue) || !raw.vendors || typeof raw.readOn !== "string") {
     throw new Error(`${path} is not a vendor price table this tool reads.`);
   }
   if (raw.version !== LIST_PRICES_VERSION) {

@@ -2,7 +2,7 @@
   "quoi": "sha256 of each SOURCE at build time. A freshness check compares these to the sources on disk; a modification date would compare the machine instead.",
   "empreintes": {
     "ui.html": "b3015b1ca4394e16299d9eb9fd0bb2bc77edbd9239e043ce0e8d9113dbca4e00",
-    "pages.ts": "83ae99bf23cd3c5359d202406931515fc23e568e37d2386df00ec5d54dce1013",
+    "pages.ts": "3c7ac5b38a4a8dba194f79a9d7411cda54689a506ed1fcbe4bd5ca786937d327",
     "registre.css": "3906ec1da36f1cda9d07b96393e339a4a8016f9e310cf2ac07344e13ad492c51",
     "graphes.js": "b333003147c4f532a8a890bdf1f172cdc8da665e2049c2d41de87933685a0b80",
     "js/corpus.js": "bd1419fd6379045538b2e90ef558e6461fbb062d68e453246a85737d0752657c",

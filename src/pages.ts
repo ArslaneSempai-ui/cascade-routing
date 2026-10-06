@@ -27,6 +27,7 @@ import { createHash } from "node:crypto";
 export const PRODUISENT_LA_PAGE = ["ui.html", "gabarit.html", "pages.ts", "registre.css", "graphes.js"] as const;
 import { fileURLToPath } from "node:url";
 import { isMain } from "./cli.ts";
+import { DEPOT } from "./adresses.ts";
 import { readProfiles, RELEVE_DE_REFERENCE } from "./measure.ts";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
@@ -175,7 +176,7 @@ const BANNIERE = `<p class="renvoi" style="margin-bottom:1.5rem">
 This runs entirely in your browser; no server, nothing uploaded, and no model is called:
 the accuracy of each tier was <b>measured once on held-out records</b> and frozen.
 <b>Take a cell</b> to send a field to another tier and read what your routing costs.
-<a href="https://github.com/ArslaneSempai-ui/cascade-routing">Source and method</a>.
+<a href="${DEPOT}">Source and method</a>.
 </p>`;
 
 export function construire(): void {
@@ -184,7 +185,7 @@ export function construire(): void {
 
   let html = readFileSync(root + "src/ui.html", "utf8");
   /* Les chemins absolus valent pour un serveur à la racine ; la page publiée vit sous
-   * `/cascade-routing/`, donc tout devient relatif. */
+   * `/crusetra-routing/`, donc tout devient relatif. */
   html = html.replace('href="/registre.css"', 'href="registre.css"');
   html = html.replace('from "/graphes.js"', 'from "./graphes.js"');
   html = html.replace('<script type="module">', SHIM + '<script type="module">');

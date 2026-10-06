@@ -467,7 +467,7 @@ complet, et il ne guérit jamais tout seul. C'est le premier contact d'un client
 l'outil, et ça ressemble à un logiciel cassé.
 
 **ET QUAND LA MORT ARRIVE DANS UN SOUS-PROCESSUS, IL N'Y A MÊME PAS D'ABORT À VOIR.**
-Reproduit le 25 août 2026, même fichier tronqué, `node --test src/cascade.test.ts` :
+Reproduit le 25 août 2026, même fichier tronqué, `node --test src/cascade.test.ts` (aujourd’hui `src/crusetra.test.ts`) :
 
     ﹣ aucune valeur du client n'entre dans le fichier que l'outil lui rend (242 ms)
       # sous-processus tué par le délai

@@ -1,7 +1,7 @@
 /**
  * LES TÉMOINS DE L'INTERVALLE.
  *
- * Fichier neuf plutôt qu'un ajout à `cascade.test.ts` : trois sessions travaillent dans ce
+ * Fichier neuf plutôt qu'un ajout à `crusetra.test.ts` : trois sessions travaillent dans ce
  * dépôt et ce fichier-là appartient à quelqu'un. Un fichier neuf ne peut entrer en collision
  * avec personne.
  *
@@ -60,7 +60,7 @@ test("la comparaison normale n'a pas changé", () => {
  * ─── `precision()` PRODUIT UN CHIFFRE PUBLIÉ, ET RIEN NE PINNAIT SA VALEUR ───
  *
  * C'est le « ± N points » du README, la marge que l'acheteur lit à côté de chaque taux. Le
- * seul endroit où elle apparaissait dans les cas — `cascade.test.ts:3018` — RECOPIE le calcul
+ * seul endroit où elle apparaissait dans les cas (`crusetra.test.ts:3018`) RECOPIE le calcul
  * que `readme.ts` fait à la ligne 174 : il compare le code à lui-même, ce qui tient toujours,
  * y compris quand les deux sont faux ensemble.
  *

@@ -110,10 +110,10 @@ test("the price table refuses a table that is not one, a price that is not a num
   try {
     const p = join(d, "p.json");
     const entry = { pricePerThousandPages: 25, billing: "page", url: "u", readOn: "d" };
-    const table = (a: Record<string, unknown>) => JSON.stringify({ kind: "cascade-vendor-list-prices", version: 1, readOn: "2026-09-29", vendors: { a } });
+    const table = (a: Record<string, unknown>) => JSON.stringify({ kind: "crusetra-vendor-list-prices", version: 1, readOn: "2026-09-29", vendors: { a } });
     writeFileSync(p, JSON.stringify({ kind: "other" }));
     assert.throws(() => readListPrices(p), /not a vendor price table/);
-    writeFileSync(p, JSON.stringify({ kind: "cascade-vendor-list-prices", version: 99, readOn: "2026-09-29", vendors: {} }));
+    writeFileSync(p, JSON.stringify({ kind: "crusetra-vendor-list-prices", version: 99, readOn: "2026-09-29", vendors: {} }));
     assert.throws(() => readListPrices(p), /version 99 of the price table/, "a table written for another shape is refused, not half-read");
     writeFileSync(p, table({ ...entry, pricePerThousandPages: "25" }));
     assert.throws(() => readListPrices(p), /no readable price/);

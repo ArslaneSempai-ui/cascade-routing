@@ -10,7 +10,7 @@
  * Ce fichier n'a AUCUNE dépendance. Il lit les relevés scellés livrés avec le dépôt et rend
  * la conclusion en moins d'une seconde, sur un clone frais où `node_modules` n'existe pas.
  *
- *     git clone … && cd cascade && node src/premiere-reponse.mjs
+ *     git clone https://github.com/ArslaneSempai-ui/crusetra-routing && cd crusetra-routing && node src/premiere-reponse.mjs
  *
  * ─── AUCUN CHIFFRE N'EST ÉCRIT ICI ───
  *

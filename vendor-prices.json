@@ -1,5 +1,5 @@
 {
-  "kind": "cascade-vendor-list-prices",
+  "kind": "crusetra-vendor-list-prices",
   "version": 1,
   "readOn": "2026-09-29",
   "assembledAt": { "commit": "ee18170", "why": "the state of this repository when the table was written; not a measurement, a date on a reading" },

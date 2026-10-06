@@ -40,7 +40,7 @@ import {
  * `spawn` ET NON `spawnSync`, et ce n'est pas un détail de style : le serveur factice vit dans
  * CE processus. `spawnSync` bloque la boucle d'événements jusqu'à la fin de l'enfant, donc le
  * serveur ne répond plus à rien et l'enfant refuse pour délai dépassé — un rouge obtenu pour
- * une raison qui n'est pas celle qu'on éprouve. Le motif vient de `cascade.test.ts`, où la
+ * une raison qui n'est pas celle qu'on éprouve. Le motif vient de `crusetra.test.ts`, où la
  * même erreur a été payée une fois.
  *
  * `OLLAMA` est une `const` capturée à l'import de `tiers.ts` : elle ne peut être détournée
@@ -244,7 +244,7 @@ test("un /api/generate qui répond 500 fait refuser, il ne se lit pas comme une 
 
 /*
  * UNE COUTURE SE TRAVERSE. `digestsQuiDivergent` est déjà éprouvée en isolation dans
- * `cascade.test.ts` — carte vide, carte conforme, digest falsifié. Ce qu'aucun cas ne
+ * `crusetra.test.ts` : carte vide, carte conforme, digest falsifié. Ce qu'aucun cas ne
  * regardait, c'est le point d'appel : est-ce que l'écart ARRÊTE la passe, ou est-ce qu'il
  * remplit une liste que personne ne lit ? La fonction pure peut rester juste pendant que son
  * appelant enjambe son résultat.

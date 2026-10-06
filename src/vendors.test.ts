@@ -314,7 +314,7 @@ test("grade writes an outcomes file with verdicts and no value, for each of the 
         assert.ok(!text.includes(leaked), `${vendor}: the outcomes file carries a value: ${leaked}`);
       }
       const j = JSON.parse(text);
-      assert.equal(j.kind, "cascade-outcomes");
+      assert.equal(j.kind, "crusetra-outcomes");
       assert.equal(j.nom, `${vendor}-chain`);
       for (const [field, byId] of Object.entries(expected)) {
         for (const [id, verdict] of Object.entries(byId)) {

@@ -45,7 +45,7 @@ test("une licence bloquante est nommée, pas comptée", () => {
 });
 
 test("la nomenclature porte un identifiant de paquet exploitable", () => {
-  const b = sbom([{ nom: "@scope/x", version: "1.2.3", declaree: "MIT", classe: "permissive", fichier: "LICENSE" }], "cascade", "1.0.0");
+  const b = sbom([{ nom: "@scope/x", version: "1.2.3", declaree: "MIT", classe: "permissive", fichier: "LICENSE" }], "crusetra", "1.0.0");
   assert.equal(b.components[0].purl, "pkg:npm/%40scope/x@1.2.3");
   assert.equal(b.bomFormat, "CycloneDX");
 });

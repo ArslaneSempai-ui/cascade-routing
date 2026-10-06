@@ -1,4 +1,4 @@
-<!-- piege:ok compte-en-prose, un contrôle plus fin vit dans src/cascade.test.ts : il liste
+<!-- piege:ok compte-en-prose, un contrôle plus fin vit dans src/crusetra.test.ts : il liste
      phrase par phrase ce qu'on s'autorise à compter en toutes lettres, avec la raison pour
      laquelle ce compte-là ne bougera pas, et il tombe si une de ces exceptions cesse de
      correspondre à quoi que ce soit. L'exemption ici vaut pour le fichier entier ; elle n'est
@@ -14,7 +14,7 @@
 **The finding.** Routing every field to the same tier is the default and it is wrong. Measured per field, 3 of the 5 fields are carried by regexes at **zero cost and up to 100 % accuracy**, and the money is worth spending on exactly the ones that need it. **But the unit that gets filed is the record, and it is not the headline:** 92 of 120 records come out with all 5 fields right: 76.7 % [68–83], n=120, where the mean per field reads 94.4 %. Aiming at the record instead delivers 95 of 120 (3 gained, 0 lost in this sample: too few to separate the two rates) for $54 instead of $191, when `large` is billed at the assumed $1.60 per 1,000 calls. **And the larger lever is not routing at all:** abstaining (returning nothing when a signal says the value is doubtful) pays off about 26 times sooner than moving a field to another tier. Measured on 1000 and 120 held-out cases depending on the tier; the tables carry each figure's own `n`.
 <!-- /figures:finding -->
 
-**[Try it in your browser →](https://arslanesempai-ui.github.io/cascade-routing/)**. Take a
+**[Try it in your browser →](https://arslanesempai-ui.github.io/crusetra-routing/)**. Take a
 cell to send a field to another tier and read what your routing costs. No model is called:
 the accuracy of each tier was measured once on held-out records and frozen, and the page
 replays the arithmetic on those measurements. Measuring them yourself is
@@ -133,9 +133,9 @@ single outbound request; the suite holds it.
 ## Requirements
 
 Node 24 or newer. The first run of `measure`, `optimise` or `measure:yours` writes one local
-marker, `~/.cascade/premiere-utilisation.json`: the date of first use, which the thirty-day
-clause of `LICENCES.md` reads, and which is never transmitted. The suite runs in continuous
-integration on Linux and macOS runners, and
+marker, `~/.crusetra/premiere-utilisation.json`: the date of first use, which the thirty-day
+clause of `LICENCES.md` reads (an earlier date left under `~/.cascade/`, the former name, still
+counts), and which is never transmitted. The suite runs in continuous integration on Linux and macOS runners, and
 on Windows minus two shared test files, the screenshot driver's and the em-dash scan's, named
 with their reasons in `.github/fichiers-exclus-windows.txt` and printed at the top of the
 suite's output there;
@@ -210,7 +210,7 @@ The free test on the site runs in five steps, and these are the same five:
    accept. Without one the audit lists, per field, the options the sample cannot separate
    from the best, and states no saving.
 4. **Email the record**, the file ending in `-measured.json` beside your CSV, to
-   contact@cascade-routing.com. It is `cascade-client-record` version two: per vendor and
+   contact@crusetra.com. It is `crusetra-client-record` version two: per vendor and
    per field the accuracy with its Wilson bounds and its `n` (no rate under twenty cases,
    anywhere), the cost per thousand pages, the recommended routing within the margin, the
    annual saving against the current chain, and a flag on every pick the sample cannot
@@ -262,7 +262,7 @@ is declared.
 <!-- /figures:documents -->
 
 <!-- figures:tests -->
-**841 tests** across 97 files, counted from the sources rather than typed here.
+**859 tests** across 100 files, counted from the sources rather than typed here.
 <!-- /figures:tests -->
 
 Everything runs locally, and that is enforced rather than promised. The one call that could

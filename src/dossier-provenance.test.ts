@@ -104,7 +104,7 @@ test("une latence non dérivable porte sa provenance dans le code, et la dit au 
 /*
  * LE DOCUMENT DISPENSÉ DU CLIQUET, ET LES SIX TAUX TAPÉS QU'IL PORTAIT.
  *
- * `cascade.test.ts` refuse qu'un taux de plus soit tapé dans la prose des `.md`, et il
+ * `crusetra.test.ts` refuse qu'un taux de plus soit tapé dans la prose des `.md`, et il
  * DISPENSE `VALIDATION.md` et `SONDE.md` : « aucun n'est tapé, ils naissent du relevé à
  * chaque `npm run` ». La phrase était fausse. La table OFAC portait quatre colonnes dont
  * deux arrivaient en chaînes littérales — six taux — sous un commentaire qui affirmait
@@ -156,11 +156,11 @@ test("aucun taux ne se tape dans un générateur de document engendré", () => {
    * le jour où j'ai écrit le cas. Un document ajouté à `ENGENDRES` demain serait dispensé
    * du cliquet et jamais fouillé, et rien ne le dirait.
    *
-   * Elle se LIT dans la source de `cascade.test.ts` plutôt que de s'importer : importer un
+   * Elle se LIT dans la source de `crusetra.test.ts` plutôt que de s'importer : importer un
    * fichier de cas y enregistre tous ses cas une seconde fois, et un dépôt qui compte ses
    * cas se mettrait à en compter deux fois les mêmes.
    */
-  const tableau = readFileSync(fileURLToPath(new URL("./cascade.test.ts", import.meta.url)), "utf8")
+  const tableau = readFileSync(fileURLToPath(new URL("./crusetra.test.ts", import.meta.url)), "utf8")
     .match(/const ENGENDRES[^{]*\{([^}]*)\}/)?.[1] ?? "";
   const generateurs = [...tableau.matchAll(/src\/(\S+?\.ts)/g)].map((m) => m[1]!);
   assert.ok(generateurs.length >= 2 && generateurs.every(Boolean),
@@ -188,7 +188,7 @@ test("aucun taux ne se tape dans un générateur de document engendré", () => {
 
   assert.deepEqual(trouves, [],
     "un taux est tapé dans un générateur, et le document qu'il écrit est DISPENSÉ du cliquet\n"
-    + "  des taux tapés (voir ENGENDRES dans cascade.test.ts). `--check` ne peut pas le\n"
+    + "  des taux tapés (voir ENGENDRES dans crusetra.test.ts). `--check` ne peut pas le\n"
     + "  rattraper : il compare le fichier à la sortie du générateur, donc aux mêmes littéraux.\n"
     + "  → dérivez-le du relevé, ou inscrivez-le dans PERMIS avec la raison qui le fige.");
 });

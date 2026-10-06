@@ -12,7 +12,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, readdirSync, realpathSync, rmSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, readdirSync, realpathSync, renameSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -21,7 +21,7 @@ import { fileURLToPath } from "node:url";
    /private/var — un chemin non résolu lance un processus qui ne fait RIEN et sort en 0. */
 const CMD_POIDS = realpathSync(fileURLToPath(new URL("./poids.ts", import.meta.url)));
 import {
-  NOM_MANIFESTE, construireManifeste, verifierExport, exporter, importer, lireManifeste,
+  NOM_MANIFESTE, ANCIEN_NOM_MANIFESTE, construireManifeste, verifierExport, exporter, importer, lireManifeste,
   exigerPoidsSurPlace, messageDeTelechargement, ressembleAUnEchecReseau, rapport, fichiersSous,
   purgerTronques, type Manifeste,
 } from "./poids.ts";
@@ -278,4 +278,24 @@ test("--prime hors ligne refuse AVANT de purger, et nomme l'issue : l'import", (
     assert.match(r.stderr, /--import/,
       "le refus hors-ligne ne nomme pas l'issue : sur la machine isolée, c'est l'import.");
   }
+});
+
+test("une clé exportée sous l'ancien nom du manifeste s'importe encore, avec la même vérification", () => {
+  /* Une clé USB faite avant le 5/10/2026 porte cascade-weights.json. La machine isolée qui
+     l'attend ne peut pas en refaire une : la refuser, c'est la laisser sans poids. */
+  assert.equal(NOM_MANIFESTE, "crusetra-weights.json");
+  assert.equal(ANCIEN_NOM_MANIFESTE, "cascade-weights.json");
+  const source = cacheFactice(), dossier = mkdtempSync(join(tmpdir(), "poids-ancien-")), cible = mkdtempSync(join(tmpdir(), "poids-cible-"));
+  const m = exporter(dossier, ["small"], source, sansControleDEntiers);
+  renameSync(join(dossier, NOM_MANIFESTE), join(dossier, ANCIEN_NOM_MANIFESTE));
+  assert.deepEqual(lireManifeste(dossier), m, "le manifeste sous l'ancien nom n'est pas lu");
+  assert.equal(importer(dossier, cible).ecrits, 3);
+  /* Et la vérification est la même : un octet retourné sous l'ancien nom est refusé aussi. */
+  const e = m.entrees.find((x) => x.chemin.endsWith("config.json"))!;
+  writeFileSync(join(dossier, e.chemin), readFileSync(join(dossier, e.chemin), "utf8").replace("d", "D"));
+  assert.ok(verifierExport(lireManifeste(dossier), dossier).length > 0, "une copie abîmée passe sous l'ancien nom");
+  /* Les deux présents (une clé réutilisée) : le neuf d'abord. */
+  writeFileSync(join(dossier, NOM_MANIFESTE), JSON.stringify({ ...m, entrees: m.entrees.slice(0, 1) }));
+  assert.equal(lireManifeste(dossier).entrees.length, 1, "l'ancien manifeste a pris le pas sur le neuf");
+  nettoyer(source, dossier, cible);
 });

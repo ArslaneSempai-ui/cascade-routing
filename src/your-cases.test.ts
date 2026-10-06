@@ -1286,7 +1286,7 @@ test("releveClient : la forme du banc, des comptes et des bits, jamais une valeu
     marge: 0.02, measuredAt: "2026-09-03T12:00:00.000Z", code: { commit: "427016b", sale: false },
     sorties: { nom: "your chain", issues: {}, declares: { coutParMilleDocuments: 3.2, msParDocument: undefined } } as never,
   });
-  assert.equal(r.kind, "cascade-client-record");
+  assert.equal(r.kind, "crusetra-client-record");
   assert.deepEqual(r.source, { file: "cas.csv", sha256: r.source.sha256, cases: 24, casesInFile: 30 });
   assert.match(r.source.sha256, /^[0-9a-f]{64}$/);
   assert.deepEqual(r.tiers.sort(), ["large", "small", "your chain"]);

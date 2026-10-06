@@ -44,7 +44,7 @@ import { rate, writeRate, cellulesDeTaux, CONFIANCE, ENOUGH, type Rate } from ".
 import { apparier, juger, phrase, type Bits } from "./comparaison-appariee.ts";
 import { createHash } from "node:crypto";
 import { basename } from "node:path";
-import { empreinteDuReleve } from "./measure.ts";
+import { empreinteDuReleve } from "./measure.ts"; import { GENRES, type GenreLu } from "./genres.ts";
 import { etatDuDepot } from "./arbre-propre.ts";
 import { scoreDeDoute, doutesVides, compterDoute, signauxApplicables, type Doutes } from "./doute.ts";
 import { evaluerRegles, direLesRefus, type ReglesEvaluees } from "./regles-bornees.ts";
@@ -1318,7 +1318,7 @@ export type CelluleClient = {
  * des taux, des bits, et le nom nu du fichier — un chemin porterait le nom d'utilisateur.
  */
 export type ReleveClient = {
-  kind: "cascade-client-record";
+  kind: GenreLu<typeof GENRES.releveClient>;
   /**
    * 1: the original record. 2: the extraction audit, since 2026-09-29: `kinds`, `grader`,
    * `audit`, and price keys under `declared`. Everything a version 1 reader looks for is
@@ -1402,7 +1402,7 @@ export function releveClient(o: {
     };
   }
   return {
-    kind: "cascade-client-record", version: 2, measuredAt: o.measuredAt, code: o.code,
+    kind: GENRES.releveClient, version: 2, measuredAt: o.measuredAt, code: o.code,
     source: {
       file: basename(o.fichier),
       sha256: createHash("sha256").update(o.octets).digest("hex"),
@@ -2570,7 +2570,7 @@ Nothing leaves your machine: the models are local and this path makes no network
   if (tracer) {
     const traceJson = fichier.replace(/\.csv$/i, "") + "-trace.json";
     const t: Record<string, unknown> = {
-      kind: "cascade-client-trace", version: 1, measuredAt: enregistrement.measuredAt,
+      kind: GENRES.traceClient, version: 1, measuredAt: enregistrement.measuredAt,
       record: enregistrement.empreinte, source: enregistrement.source, fields: champs, tiers: enregistrement.tiers,
       decisions: trace,
     };

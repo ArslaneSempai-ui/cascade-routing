@@ -270,7 +270,7 @@ export const RELEVE_DE_REFERENCE = "profiles-2026-08-20-coeur-rendu.json";
  * le prouve au byte. Elle est ré-exportée ici parce que ce module est l'adresse que douze
  * fichiers de ce dépôt connaissent — déplacer le code ne doit pas déplacer les appelants.
  */
-import { empreinteDuReleve } from "./empreinte.ts";
+import { empreinteDuReleve } from "./empreinte.ts"; import { GENRES } from "./genres.ts";
 export { empreinteDuReleve };
 /* Importée ET ré-exportée : une ré-exportation seule ne fait pas entrer le nom dans la
    portée du module, et `readProfiles` l'appelle ici même. Le test l'a dit avant le commit. */
@@ -307,7 +307,7 @@ export function ecrireReleve(fichier: string, releve: Profiles): Profiles {
   // les MARQUES de la famille (8/09/2026) : le Dossier exige un relevé identifié et versionné
   // avant de le dater ; posées AVANT le sceau, elles en font partie
   const marque = releve as Record<string, unknown>;
-  if (marque.kind === undefined) marque.kind = "cascade-routing-record";
+  if (marque.kind === undefined) marque.kind = GENRES.releveRoutage;
   if (marque.version === undefined) marque.version = 1;
   marque.empreinte = empreinteDuReleve(releve);
   const provisoire = `${fichier}.tmp`;
@@ -326,7 +326,7 @@ export function readProfiles(
    * Les quatre refus de scellé de cette fonction lisaient des chemins calculés depuis
    * `import.meta.url`. Rien dans la signature exportée ne permettait de leur présenter un
    * relevé fabriqué, donc le seul déclenchement possible aurait été d'écrire un relevé
-   * corrompu à la racine du dépôt vivant — que la trentaine de cas de `cascade.test.ts` et
+   * corrompu à la racine du dépôt vivant, que la trentaine de cas de `crusetra.test.ts` et
    * `seuil.test.ts` lisent dans des processus PARALLÈLES, et qui aurait écrasé une vraie
    * mesure là où elle existe. Résultat : le balayage de mutation retirait ces quatre `throw`
    * sans qu'un seul cas bouge, et le seul témoin proche éprouvait `empreinteDuReleve()` en

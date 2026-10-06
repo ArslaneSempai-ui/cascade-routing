@@ -43,7 +43,7 @@ test("measure:yours with two priced chains writes the audit into the console, th
     assert.match(out, /machine time for local tiers at \$[\d.]+ an hour \(assumed/);
 
     const record = JSON.parse(readFileSync(join(d, "receipts-measured.json"), "utf8"));
-    assert.equal(record.kind, "cascade-client-record");
+    assert.equal(record.kind, "crusetra-client-record");
     assert.equal(record.version, 2);
     assert.ok(scelleIntact(record));
     assert.deepEqual(record.kinds, { total: "amount", receipt_date: "date", receipt_id: "id", currency: "currency" });

@@ -56,6 +56,7 @@ import { bornesDeBandes, parts, psi, SEUIL_DE_L_INDUSTRIE, OBSERVATIONS_MINIMALE
 import { GRAINES_DE_BRUIT, longueur } from "./entree.ts";
 import { draw } from "./corpus.ts";
 import { empreinteDuReleve } from "./measure.ts";
+import { GENRES, estDuGenre, type GenreLu } from "./genres.ts";
 import { etatDuDepot } from "./arbre-propre.ts";
 import { evaluerRegles } from "./regles-bornees.ts";
 import { GENERATIFS, type TierName } from "./paliers.ts";
@@ -107,7 +108,7 @@ export function prochaineEcheance(measuredAt: string, jours: number): string {
  * toute mesure — après une heure de calcul, personne ne relit le message.
  */
 export type Baseline = ReleveClient & {
-  kind: "cascade-client-record" | "cascade-recertification";
+  kind: GenreLu<typeof GENRES.releveClient> | GenreLu<typeof GENRES.recertification>;
   /** Les décisions par identifiant, quand la référence est elle-même une recertification. */
   decisions?: Record<string, Record<string, Record<string, { outcome: string }>>>;
 };
@@ -118,7 +119,9 @@ export function chargerBaselineDepuis(brut: string, nom: string): Baseline {
     throw new Error(`${nom} is not readable JSON: ${(e as Error).message}`);
   }
   const r = b as Partial<Baseline>;
-  if (r?.kind !== "cascade-client-record" && r?.kind !== "cascade-recertification") {
+  /* Les deux noms de chaque genre : une référence scellée avant le 5/10/2026 porte « cascade-… »
+     sous son empreinte, et un client la tient encore. Voir genres.ts. */
+  if (!estDuGenre(r?.kind, GENRES.releveClient) && !estDuGenre(r?.kind, GENRES.recertification)) {
     throw new Error(
       `${nom} is not a client record: its kind is ${JSON.stringify(r?.kind ?? null)}.\n`
       + `  The baseline is the <file>-measured.json that \`npm run measure:yours\` wrote, or a\n`
@@ -653,7 +656,7 @@ Nothing leaves your machine.
 
   const enregistrement: Record<string, unknown> = {
     ...enregistrementClient,
-    kind: "cascade-recertification",
+    kind: GENRES.recertification,
     baseline: { file: basename(cheminBaseline), empreinte: baseline.empreinte, measuredAt: baseline.measuredAt, sourceSha256: baseline.source.sha256 },
     decisions,
     verdicts: Object.fromEntries(champs.map((c) => [c, {

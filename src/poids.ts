@@ -45,8 +45,8 @@ import { isMain } from "./cli.ts";
 import { exigerModelesEntiers, loadClassifiers, loadExtractors, modelesTronques, modelesAbsents,
   POIDS_MODELES, racineDesPoids, type CleModele, type EtatModele } from "./tiers.ts";
 
-/** Le nom du manifeste dans le dossier d'export. Un dossier sans lui n'est pas un export. */
-export const NOM_MANIFESTE = "cascade-weights.json";
+/** Le nom du manifeste dans le dossier d'export, et celui d'avant le 5/10/2026, qui se lit encore. */
+export const NOM_MANIFESTE = "crusetra-weights.json", ANCIEN_NOM_MANIFESTE = "cascade-weights.json";
 
 export type EntreeManifeste = {
   cle: CleModele; depot: string; revision: string;
@@ -142,10 +142,14 @@ export function verifierExport(m: Manifeste, dossier: string): Grief[] {
 }
 
 export function lireManifeste(dossier: string): Manifeste {
-  const chemin = join(dossier, NOM_MANIFESTE);
-  if (!existsSync(chemin)) {
+  /* L'ANCIEN NOM SE LIT ENCORE. Une clé USB exportée avant le 5/10/2026 porte
+     cascade-weights.json, et la machine isolée qui l'attend n'a aucun moyen d'en refaire une :
+     refuser ce manifeste, c'est la laisser sans poids. Le nom neuf d'abord, l'ancien ensuite ;
+     le contenu et sa vérification sont les mêmes. Un dossier sans l'un ni l'autre n'est pas un export. */
+  const chemin = [NOM_MANIFESTE, ANCIEN_NOM_MANIFESTE].map((n) => join(dossier, n)).find((c) => existsSync(c));
+  if (chemin === undefined) {
     throw new Error(
-      `No ${NOM_MANIFESTE} in ${dossier}.\n\n`
+      `No ${NOM_MANIFESTE} in ${dossier} (nor ${ANCIEN_NOM_MANIFESTE}, its former name).\n\n`
       + `  That directory is not a weights export. On a machine that can reach the network,\n`
       + `  run:  npm run poids -- --export <directory>\n`);
   }

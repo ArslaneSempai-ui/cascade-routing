@@ -380,7 +380,7 @@ function principal() {
   const moi = JSON.parse(readFileSync("package.json", "utf8"));
   const paquets = inventaire();
   const md = document(paquets, typeof moi.license === "string" ? moi.license : null);
-  const bom = JSON.stringify(sbom(paquets, moi.name ?? "cascade", moi.version ?? "0.0.0"), null, 2) + "\n";
+  const bom = JSON.stringify(sbom(paquets, moi.name ?? "crusetra-routing", moi.version ?? "0.0.0"), null, 2) + "\n";
 
   if (controle) {
     const differe = (f: string, attendu: string) => !existsSync(f) || readFileSync(f, "utf8") !== attendu;

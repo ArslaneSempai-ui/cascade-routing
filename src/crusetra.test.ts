@@ -37,7 +37,7 @@ import { memoireDisponibleMo, memoireDisponibleMoLinux, etatMachine as etatMachi
 
 
 import { ASSUMPTIONS, UNITS, BOUNDS, pricePerThousandExtractions, accuracy } from "./assumptions.ts";
-import { LIST_PRICES_VERSION } from "./audit.ts";
+import { LIST_PRICES_VERSION } from "./audit.ts"; import { GENRES, estDuGenre } from "./genres.ts";
 import { wilson, rate, writeRate, distinguishable, precision, ENOUGH as ENOUGH_CAS } from "./interval.ts";
 import { PLAUSIBLE, bands, ETIQUETTE, advise } from "./sensitivity.ts";
 import { litLeTexte, mesurer, CHROME } from "./mesurer-ocr.ts";
@@ -1930,7 +1930,7 @@ test("le relevé livré correspond à son empreinte, et une valeur changée la f
  * personne n'avait vérifié que le programme s'arrête quand elle ne correspond plus.
  *
  * Les quatre cas qui suivent traversent la couture. Ils lisent un bac à sable, jamais le
- * dépôt : `cascade.test.ts` et `seuil.test.ts` tournent dans des PROCESSUS PARALLÈLES et
+ * dépôt : `crusetra.test.ts` et `seuil.test.ts` tournent dans des PROCESSUS PARALLÈLES et
  * lisent tous ce relevé — un témoin qui écrirait un relevé corrompu à la racine
  * empoisonnerait les autres fichiers de test pendant sa durée de vie, et écraserait une
  * vraie mesure là où elle existe.
@@ -4210,7 +4210,7 @@ test("la prose écrite à la main ne compte pas ce que la mesure détermine", ()
      grossier pour un document qui compte légitimement cinq champs. La marque dans le README
      renvoie donc ici ; si elle disparaît, le README se retrouve sous la garde grossière sans
      que personne l'ait décidé. */
-  assert.match(texte, /piege:ok compte-en-prose[\s\S]{0,200}cascade\.test\.ts/,
+  assert.match(texte, /piege:ok compte-en-prose[\s\S]{0,200}crusetra\.test\.ts/,
     "le README n'exempte plus la règle partagée en désignant ce contrôle-ci : soit l'exemption "
     + "a disparu, soit elle ne dit plus quel contrôle la remplace.");
 
@@ -4751,12 +4751,12 @@ test("un relevé publié porte les paramètres sous lesquels le code le prendrai
     if (!d || typeof d !== "object" || Array.isArray(d)) continue;
     for (const [k, v] of Object.entries(d)) {
       if (typeof v !== "number" || COMPTES.has(k) || COMPTES.has(`${f}:${k}`)) continue;
-      /* Un relevé de la FAMILLE (8/09 : `{kind: "cascade-routing-record", version: 1}`, les
+      /* Un relevé de la FAMILLE (8/09 : `{kind: "cascade-routing-record", version: 1}`, « crusetra-… » depuis le 6/10, les
          marques que les quatre autres outils portent et que le Dossier lit) : `version` y est
          la révision du FORMAT du relevé, pas un réglage de mesure. Reconnu par la marque
          `kind`, pas par le nom du fichier : le prochain relevé écrit par `ecrireReleve` porte
          la même marque sous un autre nom. */
-      if (k === "version" && d.kind === "cascade-routing-record") continue;
+      if (k === "version" && estDuGenre(d.kind, GENRES.releveRoutage)) continue;
       if (!(k in AUJOURDHUI)) { nonClasses.push(`${f}:${k}`); continue; }
       confrontes++;
       if (v !== AUJOURDHUI[k]) ecarts.push(`${f} publie ${k}=${v}, le code utiliserait ${AUJOURDHUI[k]}`);

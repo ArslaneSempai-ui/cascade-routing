@@ -54,11 +54,11 @@ test("un dossier sans manifeste fait sortir la COMMANDE en erreur, pas seulement
   assert.notEqual(r.code, 0,
     "la commande a RÉUSSI sur un dossier sans manifeste : une chaîne conclurait que les poids\n"
     + "  sont vérifiés et placés, alors que rien n'a été comparé.");
-  /* Le nom du manifeste est écrit tel qu'il existe, `cascade-weights.json`, et non deviné :
+  /* Le nom du manifeste est écrit tel qu'il existe, `crusetra-weights.json`, et non deviné :
      ma première version cherchait « manifeste » et le refus disait le vrai nom du fichier. Un
      motif de recherche est une affirmation, et celui-là affirmait un mot que le code n'emploie
      pas — le cas aurait dénoncé un refus parfaitement clair. */
-  assert.match(r.texte, /No cascade-weights\.json in/,
+  assert.match(r.texte, /No crusetra-weights\.json in/,
     `le refus ne nomme pas le fichier qui manque : ${JSON.stringify(r.texte.slice(0, 200))}`);
   assert.match(r.texte, /not a weights export/,
     "le refus ne dit pas ce que ce dossier N'EST PAS : sans ça on cherche une corruption.");
