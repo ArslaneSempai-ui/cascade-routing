@@ -76,18 +76,29 @@ const REFUS: Record<(typeof DRAPEAUX)[number], RegExp> = {
   CASCADE_OFFLINE: /^Error: CASCADE_OFFLINE=1 \(the former name of CRUSETRA_OFFLINE=1\) is set: nothing is downloaded/,
 };
 
-for (const nom of DRAPEAUX) {
-  test(`${nom}=1 alone makes --prime refuse before any fetch`, async () => {
-    const d = mkdtempSync(join(tmpdir(), "tessdata-offline-"));
-    try {
-      await sousVariables(DRAPEAUX, { [nom]: "1" }, async () => {
-        let appele = 0;
-        await assert.rejects(amorcer(d, async () => { appele++; return Buffer.alloc(0); }), REFUS[nom]);
-        assert.equal(appele, 0, `the downloader must not be called under ${nom}=1`);
-      });
-    } finally { rmSync(d, { recursive: true, force: true }); }
-  });
+/*
+ * One case per name, written out rather than looped: the README publishes the number of
+ * cases read from the sources, a `test(` at the start of a line, and a `test(` inside a loop
+ * ran twice and was never counted.
+ */
+async function refusesBeforeAnyFetch(nom: (typeof DRAPEAUX)[number]): Promise<void> {
+  const d = mkdtempSync(join(tmpdir(), "tessdata-offline-"));
+  try {
+    await sousVariables(DRAPEAUX, { [nom]: "1" }, async () => {
+      let appele = 0;
+      await assert.rejects(amorcer(d, async () => { appele++; return Buffer.alloc(0); }), REFUS[nom]);
+      assert.equal(appele, 0, `the downloader must not be called under ${nom}=1`);
+    });
+  } finally { rmSync(d, { recursive: true, force: true }); }
 }
+
+test("CRUSETRA_OFFLINE=1 alone makes --prime refuse before any fetch", async () => {
+  await refusesBeforeAnyFetch("CRUSETRA_OFFLINE");
+});
+
+test("CASCADE_OFFLINE=1 alone makes --prime refuse before any fetch", async () => {
+  await refusesBeforeAnyFetch("CASCADE_OFFLINE");
+});
 
 test("CASCADE_OFFLINE=1 still refuses when CRUSETRA_OFFLINE says otherwise", async () => {
   const d = mkdtempSync(join(tmpdir(), "tessdata-offline-"));

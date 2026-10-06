@@ -55,7 +55,7 @@ jobs:
     # The audit runs on the client's machine, and a mortgage lender's analyst runs Windows. A
     # suite green on macOS and Linux said nothing about that machine; the README said so in
     # words ("Windows has not been tested and is not claimed"). The matrix mirrors
-    # cascade-screening's: ubuntu, macOS, Windows, so the claim is measured rather than
+    # crusetra-screening's: ubuntu, macOS, Windows, so the claim is measured rather than
     # disclaimed. What a system cannot run is named in its own expected-skips file, never
     # skipped in silence.
     strategy:

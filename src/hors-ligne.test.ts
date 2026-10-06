@@ -88,21 +88,33 @@ test("sans le drapeau, rien n'est armé et le réseau de la bibliothèque reste 
   });
 });
 
-for (const nom of NOMS_DU_DRAPEAU) {
-  test(`avec ${nom}=1 seul et les poids sur place, la bibliothèque est coupée du réseau`, async () => {
-    const garni = cacheGarni();
-    await avecEtatRendu(async () => {
-      for (const autre of NOMS_DU_DRAPEAU) delete process.env[autre];
-      process.env[nom] = "1";
-      envHF.allowRemoteModels = true;
-      assert.equal(await armerHorsLigne(MODELES_EXTRACTION, garni), true);
-      assert.equal(envHF.allowRemoteModels, false,
-        `\`${nom}=1\` n'a pas coupé le réseau de la bibliothèque : le refus préalable ne `
-        + "regarde que `model.onnx`, et tout ce qu'il n'énumère pas repartirait en téléchargement.");
-    });
-    rmSync(garni, { recursive: true, force: true });
+/*
+ * UN CAS PAR NOM, ÉCRIT EN TOUTES LETTRES, ET PAS UNE BOUCLE. Le README publie le nombre de
+ * cas lu dans les sources, ligne par ligne, sur `test(` en début de ligne : un `test(` posé
+ * dans une boucle tournait deux fois et ne se comptait jamais. Le corps est partagé, les deux
+ * cas sont visibles.
+ */
+async function coupeAvecLesPoids(nom: (typeof NOMS_DU_DRAPEAU)[number]): Promise<void> {
+  const garni = cacheGarni();
+  await avecEtatRendu(async () => {
+    for (const autre of NOMS_DU_DRAPEAU) delete process.env[autre];
+    process.env[nom] = "1";
+    envHF.allowRemoteModels = true;
+    assert.equal(await armerHorsLigne(MODELES_EXTRACTION, garni), true);
+    assert.equal(envHF.allowRemoteModels, false,
+      `\`${nom}=1\` n'a pas coupé le réseau de la bibliothèque : le refus préalable ne `
+      + "regarde que `model.onnx`, et tout ce qu'il n'énumère pas repartirait en téléchargement.");
   });
+  rmSync(garni, { recursive: true, force: true });
 }
+
+test("avec CRUSETRA_OFFLINE=1 seul et les poids sur place, la bibliothèque est coupée du réseau", async () => {
+  await coupeAvecLesPoids("CRUSETRA_OFFLINE");
+});
+
+test("avec CASCADE_OFFLINE=1 seul et les poids sur place, la bibliothèque est coupée du réseau", async () => {
+  await coupeAvecLesPoids("CASCADE_OFFLINE");
+});
 
 test("CASCADE_OFFLINE=1 refuse toujours, même si CRUSETRA_OFFLINE dit autre chose", async () => {
   /* L'ANCIEN NOM NE SE DÉSARME PAS PAR LE NOUVEAU. Un client qui pose CASCADE_OFFLINE=1 depuis
@@ -125,23 +137,30 @@ const MESSAGE_DU_DRAPEAU: Record<(typeof NOMS_DU_DRAPEAU)[number], RegExp> = {
   CRUSETRA_OFFLINE: /^CRUSETRA_OFFLINE=1 is set and /,
   CASCADE_OFFLINE: /^CASCADE_OFFLINE=1 \(the former name of CRUSETRA_OFFLINE=1\) is set and /,
 };
-for (const nom of NOMS_DU_DRAPEAU) {
-  test(`avec ${nom}=1 seul et un modèle absent, le refus vient AVANT tout téléchargement`, async () => {
-    const vide = mkdtempSync(join(tmpdir(), "cascade-hors-ligne-vide-"));
-    await avecEtatRendu(async () => {
-      for (const autre of NOMS_DU_DRAPEAU) delete process.env[autre];
-      process.env[nom] = "1";
-      envHF.allowRemoteModels = true;
-      await assert.rejects(() => armerHorsLigne(MODELES_EXTRACTION, vide), (e: Error) => {
-        assert.match(e.message, MESSAGE_DU_DRAPEAU[nom]);
-        assert.match(e.message, /--import/, "sur une machine isolée, l'issue est l'import, et le refus doit la nommer.");
-        assert.doesNotMatch(e.message, /huggingface\.co/, "on ne renvoie pas vers un domaine qui est justement bloqué.");
-        return true;
-      });
+/* Un cas par nom, comme plus haut : écrits en toutes lettres, ils se comptent. */
+async function refuseAvantDeTelecharger(nom: (typeof NOMS_DU_DRAPEAU)[number]): Promise<void> {
+  const vide = mkdtempSync(join(tmpdir(), "cascade-hors-ligne-vide-"));
+  await avecEtatRendu(async () => {
+    for (const autre of NOMS_DU_DRAPEAU) delete process.env[autre];
+    process.env[nom] = "1";
+    envHF.allowRemoteModels = true;
+    await assert.rejects(() => armerHorsLigne(MODELES_EXTRACTION, vide), (e: Error) => {
+      assert.match(e.message, MESSAGE_DU_DRAPEAU[nom]);
+      assert.match(e.message, /--import/, "sur une machine isolée, l'issue est l'import, et le refus doit la nommer.");
+      assert.doesNotMatch(e.message, /huggingface\.co/, "on ne renvoie pas vers un domaine qui est justement bloqué.");
+      return true;
     });
-    rmSync(vide, { recursive: true, force: true });
   });
+  rmSync(vide, { recursive: true, force: true });
 }
+
+test("avec CRUSETRA_OFFLINE=1 seul et un modèle absent, le refus vient AVANT tout téléchargement", async () => {
+  await refuseAvantDeTelecharger("CRUSETRA_OFFLINE");
+});
+
+test("avec CASCADE_OFFLINE=1 seul et un modèle absent, le refus vient AVANT tout téléchargement", async () => {
+  await refuseAvantDeTelecharger("CASCADE_OFFLINE");
+});
 
 test("coupée, la bibliothèque ne sort pas une seule fois ; ouverte, elle sort", () => {
   /*

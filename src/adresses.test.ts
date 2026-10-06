@@ -57,3 +57,27 @@ test("le README et la page publiée disent les mêmes adresses, et plus les anci
   assert.ok(page.includes(`href="${DEPOT}"`), "la page publiée ne renvoie pas au dépôt d'adresses.ts : `npm run pages`");
   assert.doesNotMatch(page, ANCIENNE, "la page publiée renvoie encore à une ancienne adresse : `npm run pages`");
 });
+
+/*
+ * LA CI PARLE AUSSI. `.github` est public : la page d'un dépôt montre ses workflows, et une
+ * liste d'ignorés s'y lit en clair. Un dépôt de la famille nommé par son ancien nom y renvoie
+ * vers un nom qui ne sera plus le sien (verifier.yml:58 et cas-ignores-attendus.txt:15 le
+ * faisaient encore le 6 octobre 2026). Les dossiers locaux gardent leur nom ; c'est la page
+ * publique qui ne doit plus le dire.
+ */
+const ANCIEN_DEPOT = /\bcascade-(?:routing|screening|monitoring|scoring|dossier|site)\b/;
+
+test("la CI ne nomme plus un dépôt de la famille par son ancien nom", () => {
+  const fichiers = (readdirSync(join(racine, ".github"), { recursive: true }) as string[])
+    .map((n) => join(".github", n)).filter((n) => /\.(ya?ml|txt|md)$/.test(n));
+  assert.ok(fichiers.length >= 4, `${fichiers.length} fichier(s) lus sous .github : le balayage ne regarde pas la CI`);
+  const fautes: string[] = [];
+  for (const n of fichiers) {
+    lire(n).split("\n").forEach((l, i) => { if (ANCIEN_DEPOT.test(l)) fautes.push(`${n}:${i + 1}  ${l.trim()}`); });
+  }
+  assert.deepEqual(fautes, [], "la CI nomme encore un dépôt par son ancien nom");
+  /* Le témoin : le motif voit les deux lignes d'avant, et laisse passer le nom neuf. */
+  assert.ok(ANCIEN_DEPOT.test("    # cascade-screening's: ubuntu, macOS, Windows, so the claim is measured rather than"));
+  assert.ok(ANCIEN_DEPOT.test("# ─ Les dépôts de la famille Crusetra (cascade-screening, -monitoring, -scoring, -dossier)"));
+  assert.doesNotMatch("    # crusetra-screening's: ubuntu, macOS, Windows", ANCIEN_DEPOT);
+});

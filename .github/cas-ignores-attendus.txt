@@ -12,7 +12,7 @@
 # — `identite` est le dépôt de développement des couches partagées ; il ne vit pas sur un
 #   runner public, et n'a pas à y vivre.
 #
-# ─ Les dépôts de la famille Crusetra (cascade-screening, -monitoring, -scoring, -dossier)
+# ─ Les dépôts de la famille Crusetra (crusetra-screening, -monitoring, -scoring, -dossier)
 #   sont des voisins de développement, comme identite : ils ne vivent pas sur un runner
 #   public. Le gardien de la couche de famille, et le contrôle des couches partagées d'un
 #   dépôt exclu de la diffusion, se sautent donc là, en le disant (depuis 2b3866e, 12/09 ;

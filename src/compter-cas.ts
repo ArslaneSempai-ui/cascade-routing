@@ -89,9 +89,31 @@ export function fichiersQuiRessemblentADesCas(dossier: string): string[] {
   return readdirSync(dossier).filter((n: string) => /\.test\.[A-Za-z0-9]+$/.test(n)).sort();
 }
 
-export function compterLesCas(dossier: string, scriptTest: string): { n: number; fichiers: string[] } {
+/**
+ * Un appel `test(` qui n'est pas en début de ligne : indenté, ou après `)`, `{`, `;` ou `=>`.
+ *
+ * LE COMPTE NE LIT QUE `/^test\(/`, ET LE LANCEUR LIT TOUT. Le 5 octobre 2026, trois `test(`
+ * posés dans des boucles sur les deux noms d'un drapeau tournaient six fois et se comptaient
+ * zéro : le README publiait 859, la suite en exécutait 865. Le chiffre était faux sans qu'un
+ * seul cas manque, et rien ne le disait. Ce relevé nomme chaque appel que le compte ne voit
+ * pas, pour que la page refuse au lieu de publier un nombre que la suite contredit.
+ */
+const APPEL_HORS_COMPTE = /(?:^[ \t]+|[;{)][ \t]*|=>[ \t]*)test\(/;
+
+/** Les appels `test(` que le compte ne voit pas, en `fichier:ligne`. Vide quand le compte est entier. */
+export function casHorsDuCompte(dossier: string, fichiers: string[]): string[] {
+  const trouves: string[] = [];
+  for (const f of fichiers) {
+    readFileSync(join(dossier, f), "utf8").split("\n").forEach((ligne: string, i: number) => {
+      if (APPEL_HORS_COMPTE.test(ligne)) trouves.push(`${f}:${i + 1}`);
+    });
+  }
+  return trouves;
+}
+
+export function compterLesCas(dossier: string, scriptTest: string): { n: number; fichiers: string[]; horsCompte: string[] } {
   const fichiers = fichiersDeCas(dossier, scriptTest);
   const n = fichiers.reduce((a: number, f: string) =>
     a + (readFileSync(join(dossier, f), "utf8").match(/^test\(/gm) ?? []).length, 0);
-  return { n, fichiers };
+  return { n, fichiers, horsCompte: casHorsDuCompte(dossier, fichiers) };
 }

@@ -262,7 +262,7 @@ is declared.
 <!-- /figures:documents -->
 
 <!-- figures:tests -->
-**859 tests** across 100 files, counted from the sources rather than typed here.
+**867 tests** across 100 files, counted from the sources rather than typed here.
 <!-- /figures:tests -->
 
 Everything runs locally, and that is enforced rather than promised. The one call that could

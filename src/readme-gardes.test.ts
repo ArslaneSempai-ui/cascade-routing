@@ -379,3 +379,64 @@ test("un compteur qui ne reconnaît pas sa commande REFUSE, il ne rend pas zéro
     "`src/*.test.*` et la forme explicite ne sélectionnent pas les mêmes fichiers : le compteur "
     + "rendrait deux chiffres différents pour deux façons d'écrire la même commande.");
 });
+
+
+/*
+ * UN CAS QUE LE LANCEUR EXÉCUTE ET QUE LE COMPTE NE VOIT PAS : LA PAGE REFUSE.
+ *
+ * Le 5 octobre 2026, trois `test(` posés dans des boucles sur les deux noms d'un drapeau
+ * tournaient six fois et se comptaient zéro : le README publiait 859 cas, la suite en
+ * exécutait 865. Aucun cas ne manquait, le chiffre était faux quand même, et les gardes
+ * ci-dessus restaient vertes : le compte et le README s'accordaient entre eux, pas avec la
+ * suite. Ce cas tient les trois formes qui échappent au compte, ce qui n'y échappe pas, le
+ * dépôt lui-même, et le refus de `readme.ts` par le seul chemin qui y mène.
+ */
+test("un test( hors du début de ligne tourne sans se compter : le README REFUSE de publier", () => {
+  /* `T` plutôt que le mot écrit : ces lignes fabriquées sont du texte de CE fichier, et le
+     relevé, qui lit aussi ce fichier plus bas, les prendrait pour des appels. */
+  const T = "test";
+  const d = mkdtempSync(join(tmpdir(), "cascade-hors-compte-"));
+  try {
+    writeFileSync(join(d, "a.test.ts"), [
+      "test(\"en tête de ligne\", () => {});",
+      "for (const nom of [\"A\", \"B\"]) {",
+      "  test(`dans une boucle ${nom}`, () => {});",
+      "}",
+    ].join("\n"));
+    writeFileSync(join(d, "b.test.ts"), [
+      "for (const nom of [\"A\", \"B\"]) " + T + "(`sur une ligne ${nom}`, () => {});",
+      "[\"A\", \"B\"].forEach((nom) => " + T + "(`par forEach ${nom}`, () => {}));",
+      "const motif = \"  test(\";",
+      "assert.ok(/^x/.test(\"x\"));",
+      "test(\"encore en tête\", () => {});",
+    ].join("\n"));
+    const { n, horsCompte } = compterLesCas(d, "node --test src/*.test.ts");
+    assert.equal(n, 2, "le compte ne lit plus les deux cas en début de ligne.");
+    assert.deepEqual(horsCompte, ["a.test.ts:3", "b.test.ts:1", "b.test.ts:2"],
+      "le relevé manque une forme qui échappe au compte, ou prend pour un cas un texte qui n'en "
+      + "est pas (une chaîne qui contient \"  test(\", un appel de méthode `.test(`).");
+  } finally { rmSync(d, { recursive: true, force: true }); }
+
+  /* LE DÉPÔT : chaque cas que le lanceur exécute est un cas que le README compte. */
+  const scriptTest = String(JSON.parse(
+    readFileSync(join(racine, "package.json"), "utf8")).scripts?.test ?? "");
+  assert.deepEqual(compterLesCas(fileURLToPath(new URL(".", import.meta.url)), scriptTest).horsCompte, [],
+    "des test( de ce dépôt tournent sans être comptés : le README publie moins de cas que la suite "
+    + "n'en exécute. → un test( par cas, en début de ligne.");
+
+  /* LE REFUS, PAR LE SEUL CHEMIN QUI Y MÈNE : le bac rend la page, puis un cas en boucle s'ajoute. */
+  const bacd = bacQuiRend();
+  try {
+    writeFileSync(join(bacd, "src", "boucle-temoin.test.ts"), [
+      "import { test } from \"node:test\";",
+      "test(\"compté\", () => {});",
+      "for (const n of [1, 2]) {",
+      "  test(`hors du compte ${n}`, () => {});",
+      "}",
+    ].join("\n"));
+    const r = lancer(bacd);
+    assert.notEqual(r.status, 0, "un cas en boucle tourne deux fois, ne se compte pas, et le README publie quand même.");
+    assert.match(r.stderr, /1 test\( call\(s\) not at the start of a line[\s\S]*boucle-temoin\.test\.ts:4/,
+      `le refus ne nomme pas l'appel hors du compte :\n${r.stderr}`);
+  } finally { rmSync(bacd, { recursive: true, force: true }); }
+});
