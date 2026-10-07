@@ -410,11 +410,26 @@ test("un test( hors du début de ligne tourne sans se compter : le README REFUSE
       "assert.ok(/^x/.test(\"x\"));",
       "test(\"encore en tête\", () => {});",
     ].join("\n"));
+    /* Shapes the runner reports as tests at the start of a line, found by the verifier on
+       7 October 2026: the old guard listed none of them while the runner counted two more cases
+       than the README. A hook (`.after(`) and a method on another object are not cases. */
+    writeFileSync(join(d, "c.test.ts"), [
+      "await " + T + "(\"awaited\", () => {});",
+      T + ".skip(\"skipped\", () => {});",
+      T + ".only(\"only\", () => {});",
+      T + ".todo(\"todo\");",
+      T + " (\"spaced\", () => {});",
+      "  await " + T + ".skip(\"indented and awaited\", () => {});",
+      T + ".after(() => {});",
+      "foo." + T + ".skip(1);",
+    ].join("\n"));
     const { n, horsCompte } = compterLesCas(d, "node --test src/*.test.ts");
     assert.equal(n, 2, "le compte ne lit plus les deux cas en début de ligne.");
-    assert.deepEqual(horsCompte, ["a.test.ts:3", "b.test.ts:1", "b.test.ts:2"],
+    assert.deepEqual(horsCompte, ["a.test.ts:3", "b.test.ts:1", "b.test.ts:2",
+      "c.test.ts:1", "c.test.ts:2", "c.test.ts:3", "c.test.ts:4", "c.test.ts:5", "c.test.ts:6"],
       "le relevé manque une forme qui échappe au compte, ou prend pour un cas un texte qui n'en "
-      + "est pas (une chaîne qui contient \"  test(\", un appel de méthode `.test(`).");
+      + "est pas (une chaîne qui contient \"  test(\", un appel de méthode `.test(`, un hook "
+      + "`test.after(`).");
   } finally { rmSync(d, { recursive: true, force: true }); }
 
   /* LE DÉPÔT : chaque cas que le lanceur exécute est un cas que le README compte. */
@@ -436,7 +451,7 @@ test("un test( hors du début de ligne tourne sans se compter : le README REFUSE
     ].join("\n"));
     const r = lancer(bacd);
     assert.notEqual(r.status, 0, "un cas en boucle tourne deux fois, ne se compte pas, et le README publie quand même.");
-    assert.match(r.stderr, /1 test\( call\(s\) not at the start of a line[\s\S]*boucle-temoin\.test\.ts:4/,
+    assert.match(r.stderr, /1 test call\(s\) not written as test\( at the start of a line[\s\S]*boucle-temoin\.test\.ts:4/,
       `le refus ne nomme pas l'appel hors du compte :\n${r.stderr}`);
   } finally { rmSync(bacd, { recursive: true, force: true }); }
 });

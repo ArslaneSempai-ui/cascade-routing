@@ -1564,11 +1564,13 @@ const tests = (() => {
      message ci-dessus le dit mieux. Ici, quelques-uns seulement échappent au compte. */
   if (horsCompte.length > 0) {
     throw new Error(
-      `${horsCompte.length} test( call(s) not at the start of a line: the runner runs them, the `
-      + `count of ${n} does not see them, and the README would publish a number the suite contradicts.\n  `
+      `${horsCompte.length} test call(s) not written as test( at the start of a line (indented, `
+      + "after another statement, awaited, spaced, or test.skip/only/todo): the runner reports "
+      + `them as tests, the count of ${n} does not see them, and the README would publish a number `
+      + "the suite contradicts.\n  "
       + horsCompte.join("\n  ")
-      + "\n  → write each case as its own top-level test(, sharing the body through a function "
-      + "(src/hors-ligne.test.ts does this for the two names of the offline flag).");
+      + "\n  → write each case as its own top-level test(, without await, skip, only or todo, sharing "
+      + "the body through a function (src/hors-ligne.test.ts does this for the two names of the offline flag).");
   }
   return `**${n} tests** across ${fichiers.length} files, counted from the sources rather than typed here.`;
 })();

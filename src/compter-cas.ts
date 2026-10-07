@@ -97,8 +97,16 @@ export function fichiersQuiRessemblentADesCas(dossier: string): string[] {
  * zéro : le README publiait 859, la suite en exécutait 865. Le chiffre était faux sans qu'un
  * seul cas manque, et rien ne le disait. Ce relevé nomme chaque appel que le compte ne voit
  * pas, pour que la page refuse au lieu de publier un nombre que la suite contredit.
+ *
+ * Widened on 7 October 2026. The verifier appended `await test(` and `test.skip(` to a case
+ * file: the runner reported 17 tests where `^test(` counted 15, this guard listed nothing, and
+ * `readme.ts --check` said the README was up to date. The count still reads one shape only,
+ * `test(` at the start of a line; this guard now also names the shapes the runner runs (or
+ * reports as tests) beside it: an awaited call, `test.skip(`, `test.only(`, `test.todo(`, and
+ * a space before the parenthesis. Hooks such as `test.after(` are not cases and stay out.
  */
-const APPEL_HORS_COMPTE = /(?:^[ \t]+|[;{)][ \t]*|=>[ \t]*)test\(/;
+const APPEL_HORS_COMPTE =
+  /(?:^[ \t]+|[;{)][ \t]*|=>[ \t]*|\bawait[ \t]+)test[ \t]*\(|^test[ \t]+\(|(?<![\w$.])test\.(?:skip|only|todo)[ \t]*\(/;
 
 /** Les appels `test(` que le compte ne voit pas, en `fichier:ligne`. Vide quand le compte est entier. */
 export function casHorsDuCompte(dossier: string, fichiers: string[]): string[] {
