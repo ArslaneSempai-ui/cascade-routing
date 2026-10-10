@@ -93,3 +93,12 @@ chef's own document.
   for review, who works on what, and the quota spent on dev this week.
 - The `equipe` collection gains the `dev-*` and `mkt-*` documents with the same fields;
   `demandes` gain `projet` (DEV) and `campagne` (Marketing) beside `role` and `de_role`.
+
+## Amendments of 2026-10-10, second round: the bodies and the Sun
+
+Mercury (Finance), Pluto (Compliance) and the Sun (the quota, `budget`) join the hub as real
+bodies at their real scale; Clients share Jupiter with the inbox; Data and Product share
+Venus with Delivery. The `equipe` collection gains the thirteen new documents. The planets
+carry their department's state through their own phenomena (`PLANETES.md`): the rings as
+departments of section (b) become the bodies themselves, and the team overlay opens from
+any body.

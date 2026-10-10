@@ -107,3 +107,26 @@ clients than days). A "security" role apart from `controles` (same checks, same 
   Arslane's existing `executant`, `verificateur` and `lecteur` agents; a board from `idee` to
   `livre`; the suite's colour per repository and the quota spent on dev on the dashboard.
 - The budget split of the quota by department lives in `COEUR.md`.
+
+## Amendments of 2026-10-10, second round: more departments, one body each
+
+- **Finance on Mercury**: `tresorier` (cash and runway, the 1,000 USD alert), `comptable`
+  (books, the accountant pack, Form 5472, the Wyoming report, the reminders), `recouvrement`
+  (invoices and polite reminders as drafts). They replace `encaissement` and
+  `juridique-compta`, whose files are removed; the legal deadlines move to `comptable`, the
+  legal paper to `contrats`.
+- **Clients on Jupiter**, beside the inbox: `onboarding` (welcome, access, kick-off once a
+  payment lands), `compte` (renewals, re-screening subscriptions, upsell as proposals),
+  `support` (clients' questions as drafts).
+- **Compliance on Pluto**: `veille-reglementaire` (OFAC, UN, EU, UK list and rule changes
+  that matter to clients, with the unread state the planet shows), `contrats` (engagement
+  letters, terms, the licence of every data source reused), `donnees-perso` (GDPR,
+  CAN-SPAM and unsubscribe compliance of every batch, the register of data requests).
+- **Data and Product inside Delivery, on Venus**: `listes` (fetch, diff, freshness of each
+  list), `donnees-qualite` (false positives and misses on the reference set, with
+  intervals), `benchmarks` (speed and cost, sealed). They live with Delivery because their
+  output is what a delivery runs on; a separate body would split the engine from its work.
+- **The Sun stands for the week's quota**: the `budget` role lives there and runs first in
+  every pass (mode plein, sonnet, urgent).
+- `veille` (sanctions-list freshness for Infrastructure) hands its fetching to `listes`
+  and keeps the daily check that the product's copies match the publishers' dates.

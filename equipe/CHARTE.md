@@ -152,3 +152,12 @@ Two departments were added with their own files and agents: DEV (`DEV.md`,
 market watch, `veille` keeps the sanctions-list freshness for Infrastructure, `redaction`
 stays with Commercial). The rules that bind every role above bind them too; the operating
 model, the automation levels and the quota split are in `COEUR.md`.
+
+## Amendments of 2026-10-10, second round
+
+Finance (`tresorier`, `comptable`, `recouvrement`; `encaissement` and `juridique-compta`
+removed), Clients (`onboarding`, `compte`, `support`), Compliance (`veille-reglementaire`,
+`contrats`, `donnees-perso`), Data and Product inside Delivery (`listes`,
+`donnees-qualite`, `benchmarks`) and the `budget` role on the Sun: each in
+`agents/<role>.md`, each bound by the rules above; the bodies they live on and the
+phenomena that show their state are in `PLANETES.md`.

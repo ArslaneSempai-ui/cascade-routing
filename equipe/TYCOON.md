@@ -438,3 +438,18 @@ Performance
   tycoon version"), indoors because a station has no outside, with the Earth in the glazed
   roof as a real slow render; its assets are listed there.
 - The quality checklist applies to both without change.
+
+## Amendments of 2026-10-10, second round: four more bases
+
+Mercury, Finance: a counting house in a crater's shade (tresorier at the cash window with
+the figure and its date plates, comptable at the ledger wall and the deadline clocks,
+recouvrement at a desk with the tone ladder as three plates); the sun hard and low, the
+shade the only cool place. Jupiter gains the Clients wing beside the dock (onboarding's
+checklist wall, compte's renewal calendar, support's answer desk). Pluto, Compliance: a
+small far station of three modules under the thin red rim when a rule is unread
+(veille-reglementaire's reading room, contrats' archive, donnees-perso's checkpoint on the
+batch belt before it leaves). Venus gains the engine room behind the workbench (listes'
+intake with four hoppers, donnees-qualite's test bench with the reference set, benchmarks'
+timing wall). The Sun has no base: the budget robot is a single figure on Earth's tower
+roof, reading the sky. Assets: four base plates and the robots' loops (cash window, ledger,
+checklist, hopper, test bench); the checklist applies without change.

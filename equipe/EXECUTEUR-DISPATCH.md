@@ -116,3 +116,19 @@ A DEV card moves through `etape` (`idee`, `plan`, `en_cours`, `a_relire`, `atten
 `attend_oui`, `publie`, `mesure`); the chef sets `etape` from the role that returned, as
 `DEV.md` and `MARKETING.md` describe, and writes `dev/*` and `marketing/*` rows after the
 pass the way it writes `equipe/*`.
+
+## Amendments of 2026-10-10, second round
+
+Roles added: `tresorier`, `comptable`, `recouvrement`, `onboarding`, `compte`, `support`,
+`veille-reglementaire`, `contrats`, `donnees-perso`, `listes`, `donnees-qualite`,
+`benchmarks`, `budget`; removed: `encaissement`, `juridique-compta` (rows carrying them are
+re-inferred). `budget` runs first in every pass and sets the mode the chef applies.
+Inference rows, before "nothing matches": trésorerie, runway, Mercury, solde -> tresorier;
+rapprochement, livre, pack comptable, 5472, Wyoming, échéance -> comptable; facture,
+relance, impayé -> recouvrement; bienvenue, accès, kick-off, onboarding -> onboarding;
+renouvellement, abonnement, upsell, compte client -> compte; question client, support ->
+support; OFAC, ONU, UE, UK, règle, désignation -> veille-reglementaire; lettre de mission,
+conditions, licence de source, contrat -> contrats; RGPD, CAN-SPAM, désinscription,
+données personnelles -> donnees-perso; liste, fraîcheur, diff de liste -> listes; faux
+positifs, jeu de référence, manqués -> donnees-qualite; benchmark, vitesse, coût par
+millier -> benchmarks; quota, budget, mode -> budget.
