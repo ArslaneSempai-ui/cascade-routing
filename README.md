@@ -62,6 +62,7 @@ that pass actually cost is stated below, read from the relevé rather than round
 | `npm run recertify` | does the spring measurement still hold? Re-measures a new CSV under the sealed baseline record's own protocol (same fields, same questions, same tiers) and says per field: holds, or MOVED (exit code 1), naming the cases that used to pass and no longer do. Measures input drift against its own noise floor when the spring CSV is still beside the record. Writes `<file>-recertified.md` and a sealed `<file>-recertified.json`, which serves as the next baseline |
 | `npm run benchmark` | the same measurement on a public labelled dataset; it downloads that dataset, and nothing of yours goes up |
 | `npm run intake` | turn a filled-in questionnaire into the assumptions a run uses; `npm run intake` alone writes the blank template, and never over an existing one |
+| `npm run lots` | prepare a cold-email batch offline and send nothing: the bounce gate (5 %), the checks that need no network (syntax, role addresses, free-mail domains, one contact per firm, the suppression list), the warm-up cap, and a send slot per row in the prospect's US time zone on a working day; MX and catch-all are named as not checked here |
 | `npm run text-from-exports` | fill the `text` column of your labelled CSV from the full text your current vendor's exports already carry (Textract lines, Document AI text, Azure content), so the local tiers read without an OCR step of ours |
 | `npm run text-from-images` | fill the `text` column from a folder of images with `--ocr=tesseract` (tesseract.js, Apache-2.0: Linux, macOS, Windows), offline: the language files come from `npm run tessdata -- --prime`, and nothing is fetched at run time |
 | `npm run tessdata` | the two OCR language files (tessdata_fast 4.1.0: eng 4.1 MB, ind 1.1 MB), each pinned by SHA-256: list what is on this machine; `--prime` fetches what is missing, once; `--import <folder>` takes them from a carried folder |
@@ -261,8 +262,15 @@ is declared.
 | [`vendor-prices.json`](vendor-prices.json) | the list prices per thousand pages the extraction audit falls back on when a chain declares none: read on a date, from the vendors' public pages, marked verified or not; a declared price always wins over them |
 <!-- /figures:documents -->
 
+`npm run lots -- --prospects=<csv>` prepares a cold-email batch offline and sends nothing: it
+closes when the last batch's bounce rate is above the gate the code sets, sets aside bad syntax, role addresses, free-mail domains,
+second contacts of a firm and suppressed addresses, caps the day at the sending address's
+warm-up ramp, and gives each row a send slot on a Tuesday to Thursday morning in the
+prospect's US time zone, never on a federal holiday. MX and catch-all checks need the network
+and are named in the batch as not checked here.
+
 <!-- figures:tests -->
-**867 tests** across 100 files, counted from the sources rather than typed here.
+**873 tests** across 101 files, counted from the sources rather than typed here.
 <!-- /figures:tests -->
 
 Everything runs locally, and that is enforced rather than promised. The one call that could
