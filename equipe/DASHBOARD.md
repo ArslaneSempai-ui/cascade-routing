@@ -80,3 +80,16 @@ travaillées, 1 en attente de ton oui, 0 bloquée." and the KPI
 `{ "travaillees_passe": 3, "bloquees": 0 }`. A P1 incident adds the push notification
 first, then the rows. Nothing is written for a pass that found nothing due except the
 chef's own document.
+
+## Amendments of 2026-10-10: the eighth planet and the station
+
+- **Uranus, "Marketing"**, joins the seven views (`MARKETING.md`, its section "In the
+  dashboard"): rendered as it is in the hub (pale cyan, the ring edge-on, the real tilt, at
+  scale), its ring colour a muted cyan. The rings-as-departments rule of section (b) keeps
+  six rings around the core plus Marketing's; Growth's ring is gone.
+- **The station, "DEV"**, orbits the Earth as an eighth target that is not a planet
+  (`DEV.md`, "The DEV dashboard"): the hub's camera finds it on the Earth's limb at sunrise;
+  it opens on projects, the board, the suites' colour per repository, the branches waiting
+  for review, who works on what, and the quota spent on dev this week.
+- The `equipe` collection gains the `dev-*` and `mkt-*` documents with the same fields;
+  `demandes` gain `projet` (DEV) and `campagne` (Marketing) beside `role` and `de_role`.

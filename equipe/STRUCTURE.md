@@ -95,3 +95,15 @@ for outsiders, money, law, strategy. Per role: `controles` Haiku; `chef-orchestr
 **What was weighed and left out.** A separate "budget" agent (a rule, not a job). A
 "client success" role apart from `boite` (one inbox, one triage, until there are more
 clients than days). A "security" role apart from `controles` (same checks, same hour).
+
+## Amendments of 2026-10-10: Marketing and DEV
+
+- **Growth is absorbed by Marketing** (`MARKETING.md`, planet Uranus): `mkt-veille` takes
+  the market watch; `redaction` stays with Commercial for the operational texts (replies,
+  follow-ups, dunning); `veille` keeps the sanctions-list freshness only and reports to
+  Infrastructure. Seven marketing roles, one job each, Opus for the strategist, the writer
+  and the visual designer.
+- **DEV is a department** (`DEV.md`, the station in Earth orbit): eight roles built on
+  Arslane's existing `executant`, `verificateur` and `lecteur` agents; a board from `idee` to
+  `livre`; the suite's colour per repository and the quota spent on dev on the dashboard.
+- The budget split of the quota by department lives in `COEUR.md`.

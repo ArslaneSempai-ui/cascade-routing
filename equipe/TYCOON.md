@@ -428,3 +428,13 @@ Interaction and rules
 Performance
 - [ ] A planet opens under two seconds on the Mac on a warm cache; assets under 40 MB at 1x.
 - [ ] Loops at 8 frames per second cost under 5 % CPU with all robots animated.
+
+## Amendments of 2026-10-10: two more bases
+
+- **Uranus, Marketing**: the studio and the broadcast tower, specified in `MARKETING.md`
+  ("In the tycoon view"), in this file's outpost grammar; its assets are listed there and
+  belong in the asset table above.
+- **The station, DEV**: the shipyard bay aboard the station, specified in `DEV.md` ("The
+  tycoon version"), indoors because a station has no outside, with the Earth in the glazed
+  roof as a real slow render; its assets are listed there.
+- The quality checklist applies to both without change.

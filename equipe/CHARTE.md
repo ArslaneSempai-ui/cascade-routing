@@ -143,3 +143,12 @@ to livraison.
 
 Push notification texts are French, one line, no secret, no outsider's full text:
 "Crusetra : paiement refusé pour <client>, facture <ref>. À toi." The row carries the rest.
+
+## Amendments of 2026-10-10
+
+Two departments were added with their own files and agents: DEV (`DEV.md`,
+`agents/dev-*.md`, eight roles, the station in Earth orbit) and Marketing (`MARKETING.md`,
+`agents/mkt-*.md`, seven roles, planet Uranus; it absorbs Growth: `mkt-veille` takes the
+market watch, `veille` keeps the sanctions-list freshness for Infrastructure, `redaction`
+stays with Commercial). The rules that bind every role above bind them too; the operating
+model, the automation levels and the quota split are in `COEUR.md`.
