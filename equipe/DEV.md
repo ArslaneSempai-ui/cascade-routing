@@ -67,7 +67,7 @@ without a session "oui"; a card that stays `bloque` across two passes goes `a_to
 
 ## The DEV dashboard
 
-**Where.** An eighth target beside the seven planets: a space station in low Earth orbit,
+**Where.** A target beside the planets, not a planet: a space station in low Earth orbit,
 DEV. It fits the real-space theme (a real-looking station, matte hull, solar wings at
 realistic scale, the Earth below) and says what it is: the place where things are built
 before they land. The eight-planet rule of `DASHBOARD.md` holds: the station is not a

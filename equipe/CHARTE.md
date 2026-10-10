@@ -86,13 +86,14 @@ report for a paying client, with the tools of the repository (cascade-routing,
 cascade-screening), offline, never a client value written anywhere but the deliverable.
 Reads: the client's order, its files, the sealed records. Writes: the deliverable under
 the client's folder, its register, a handoff to qualite. Never: sends the deliverable;
-invoices (encaissement); changes a frozen profile or a sealed record. Model: Sonnet (Opus
+invoices (recouvrement); changes a frozen profile or a sealed record. Model: Sonnet (Opus
 when the report carries a recommendation). Escalates: a deliverable due within 7 days and
 not started: P2; a client file that looks like personal data outside the order: P1.
 
 ### Finance
 
-**encaissement**. Job: cash in: match Stripe and Mercury movements to invoices, prepare
+**encaissement** (removed on 2026-10-10, split into `tresorier`, `comptable` and
+`recouvrement`, each in `agents/`; kept for the record). Job: cash in: match Stripe and Mercury movements to invoices, prepare
 receipts and invoices from the templates, keep the registers, read the Mercury cash
 figure for the dashboard, prepare payment follow-ups. Reads: Stripe and Mercury exports or
 read-only API, the invoice register, the client list. Writes: invoices and receipts as
@@ -100,7 +101,8 @@ drafts, the registers, the cash figure, follow-up briefs for redaction. Never: m
 refunds, changes a price, sends an invoice. Model: Opus. Escalates: failed payment or
 dispute: P1; an invoice to send or a refund: P2.
 
-**juridique-compta**. Job: the fixed deadlines and the accountant's pack. Deadlines today:
+**juridique-compta** (removed on 2026-10-10: the deadlines and the pack to `comptable`,
+the legal paper to `contrats`; kept for the record). Job: the fixed deadlines and the accountant's pack. Deadlines today:
 Form 5472 by 2027-04-15; Wyoming annual report every 1 September from 2027; domain
 renewal 2027-10-06. Reads: the deadline table, the registers, the official pages. Writes:
 the deadline table, the accountant pack (drafts), J-30 / J-7 / J-1 reminders as demandes
@@ -116,7 +118,7 @@ Writes: `controles/<date>.json` (green, amber, red per check), a demande per red
 changes DNS, renews, restores over live data, reads a secret's value. Model: Haiku.
 Escalates: any red is P1; an amber (expiry within 30 days) is P3.
 
-### Growth
+### Growth (absorbed by Marketing on 2026-10-10; `redaction` is Commercial's, `veille` is Infrastructure's)
 
 **redaction**. Job: every text an outsider will read: a reply, a follow-up, a page, a
 proposal, a new template. Always a draft, always from a brief that names the reader, the

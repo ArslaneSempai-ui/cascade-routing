@@ -9,9 +9,7 @@ installed as Claude Code agents on the Mac.
 
 ## 1. The `role` field
 
-A demande may carry `role`, one of: `chef-orchestre`, `qualite`, `methode`, `prospection`,
-`boite`, `livraison`, `encaissement`, `juridique-compta`, `controles`, `redaction`,
-`veille`. It may also carry `de_role` when another role created it (a handoff). Both are
+A demande may carry `role`, one of `chef-orchestre`, `qualite`, `methode`, `budget`, `prospection`, `boite`, `redaction`, `livraison`, `listes`, `donnees-qualite`, `benchmarks`, `tresorier`, `comptable`, `recouvrement`, `onboarding`, `compte`, `support`, `controles`, `veille`, `veille-reglementaire`, `contrats`, `donnees-perso`, the eight `dev-*` and the seven `mkt-*` (37 roles, one file each in `agents/`). It may also carry `de_role` when another role created it (a handoff). Both are
 optional; existing rows have neither.
 
 ## 2. Inferring the role when absent
@@ -22,8 +20,9 @@ Read `titre`, `texte`, `dossier` and `plan[]`, lower-cased, and take the first m
 |---|---|
 | stop, désabonn, unsubscribe, litige, dispute, plainte, boîte, inbox, fil, répondre à, reply, triage | boite |
 | lot, batch, relance, prospect, bounce, rebond, suppression, cascade-portes | prospection |
-| facture, invoice, reçu, receipt, paiement, payment, Stripe, Mercury, trésorerie, cash, impayé | encaissement |
-| 5472, annual report, Wyoming, comptable, accountant, échéance, deadline, renouvellement du domaine, formulaire | juridique-compta |
+| facture, invoice, relance, impayé, reçu, receipt | recouvrement |
+| paiement, payment, Stripe, Mercury, trésorerie, cash, runway, solde | tresorier |
+| 5472, annual report, Wyoming, comptable, accountant, échéance, deadline, rapprochement, pack comptable | comptable |
 | contrôle, control, DNS, certificat, sauvegarde, backup, secret, fraîcheur des listes, list freshness | controles |
 | screening, audit de routage, routing audit, rapport client, livrable, deliverable, commande client | livraison |
 | texte, brouillon, draft, template, modèle de mail, page, proposition commerciale, article | redaction |
@@ -63,7 +62,7 @@ reached), one at a time:
    - `bloque`: `statut: bloque`, `resultat` = `raison`. A second `bloque` on the same
      demande: `pour: toi`, `statut: a_toi`.
    - `fait` from a role whose output an outsider will read, money depends on, or a client
-     receives (`redaction`, `livraison`, `encaissement` invoices, `juridique-compta`
+     receives (`redaction`, `livraison`, `recouvrement` invoices, `comptable`
      forms, `boite` drafts): create a demande for `qualite` with `de_role` = the role and
      the files; the row stays `en_cours` until qualite returns `verifie: true`, then
      `attend_oui` if it sends anything, else `fait`.

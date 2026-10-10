@@ -44,7 +44,7 @@ CORPS = [
     ("jupiter", 29.0, 250, 2.6, "jupiter", "Clients", (0.70, 0.55, 0.40, 1.0)),
     ("saturne", 36.0, 350, 2.2, "saturn", "Commercial", (0.78, 0.70, 0.52, 1.0)),
     ("uranus", 42.0, 150, 1.5, "uranus", "Marketing", (0.70, 0.84, 0.86, 1.0)),
-    ("neptune", 47.5, 60, 1.45, "neptune", "Growth", (0.15, 0.25, 0.55, 1.0)),
+    ("neptune", 47.5, 60, 1.45, "neptune", "Direction", (0.15, 0.25, 0.55, 1.0)),
     ("pluton", 52.5, 285, 0.4, "pluto", "Compliance", (0.62, 0.52, 0.42, 1.0)),
 ]
 STATION = ("station_dev", 17.5, 30 + 90, 0.35, None, "DEV", (0.70, 0.70, 0.68, 1.0))

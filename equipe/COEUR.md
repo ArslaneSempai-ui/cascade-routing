@@ -60,8 +60,8 @@ pushed to the highest level the guardrails allow.
 ## Event-driven where possible, scheduled only for rituals
 
 Events that start work the hour they happen: a reply or a stop request arrives (`boite`); a
-payment lands or fails (`encaissement`); a control turns red (`controles`); a suite turns
-red (`dev-testeur`); a deadline tier is reached (`juridique-compta`); a piece reaches J+7
+payment lands or fails (`tresorier`); a control turns red (`controles`); a suite turns
+red (`dev-testeur`); a deadline tier is reached (`comptable`); a piece reaches J+7
 (`mkt-analyste`); an order arrives (`livraison`); a list publisher moved (`veille`). The
 executor's hourly pass is the clock these events are read on until the Mac can wake on
 them; the demande carries the event's time so the delay is measured.
@@ -88,8 +88,8 @@ first is open: the watchdog reads its own open findings before writing.
 ## Cost control: the quota as a budget
 
 The weekly Claude quota is split by department, in shares Arslane sets in `quota/budget`
-(a first split: Direction 10 %, Commercial 25 %, Delivery 20 %, Finance 10 %,
-Infrastructure 5 %, DEV 20 %, Marketing 10 %). The executor records each pass's spend per
+(a first split over the nine departments: Direction 8 %, Commercial 20 %, Clients 5 %,
+Delivery 20 %, Finance 8 %, Infrastructure 5 %, Compliance 4 %, DEV 20 %, Marketing 10 %). The executor records each pass's spend per
 role (`quota/<semaine>.parRole`) and reads the total before dispatching. Model choice by
 quota: under 85 % the role's model; from 85 % Opus runs as Sonnet; from 95 % only P1
 incidents and demandes due within 48 hours. Low-value work (market watch, dependency watch,
@@ -97,28 +97,57 @@ cosmetics of the dashboard) is deferred first when a department is over its shar
 Delivery and a client's reply are deferred last. The Sunday review shows the week's spend
 per department beside its KPIs, so the split is corrected from figures.
 
-## Roadmap, a little more automatic each week
+## Roadmap: one order for everything, four weekly phases
 
-**Week 1: the heart beats.** Install the eleven roles and `EXECUTEUR-DISPATCH.md`;
-`equipe/*` written every pass; the escalation list on the hub; heartbeats written by every
-scheduled task; `npm run lots` before each batch; `npm run livrer` for the next order.
-Measures that say it works: every demande worked this week has a role and a `fil` line;
-zero passes without a heartbeat; the batch gate read before every send.
+Supersedes the four weeks above. Everything the `equipe/` files describe (the hub's
+bodies, the team of 37 roles, the eleven bases and the general view, the sixteen
+features of `FEATURES.md`) in one priority order: first what makes the company run,
+then what makes it visible, then what makes it beautiful. Each phase names its measures;
+a phase is done when its measures read true from rows, not when its files exist.
+Arslane's decisions are marked (decision).
 
-**Week 2: the exceptions only.** Inbox triage at L3; the bounce loop closed; the cash
-figure and the controls at L3; the watchdog on. Measures: stop requests handled within the
-hour; bounce rate of the last batch under the gate; no stale figure on the hub; one
+**Phase 1, week 1: the heart beats and nothing is lost.** The executor with
+`EXECUTEUR-DISPATCH.md`; `budget` first in every pass; the roles of Direction,
+Commercial, Finance and Infrastructure installed from `agents/`; `equipe/*` written
+every pass; heartbeats and the watchdog; `npm run lots` before each batch, `npm run
+livrer` for the next order; the yes queue (feature 5) as a plain list on the hub, deep
+link checked on the Mac; the vault on Mars (15) as rows and reminders; the recovery
+drill (16) scheduled for the first Monday. Decisions: merge of `equipe-agents`,
+`automatisation-livraison` and `automatisation-lots`; the quota split. Measures: every
+demande worked this week has a role and a `fil` line; zero passes without a heartbeat;
+every access has an `expire_le` or a demande to type it; the gate read before every
+send; the queue shows every `attend_oui` row.
+
+**Phase 2, week 2: the exceptions only, and the sky tells the truth.** Inbox triage,
+bounce loop, cash figure and controls at L3; Clients and Compliance roles installed;
+`prospects` kept from the wave journals (11) and forecasts (7) computed; agent levels
+(10) measured; milestones (3) checked at the end of each pass; day and night (1) on the
+hub with the night variants of `PLANETES.md`; the pocket version (13). Decisions: the
+first thresholds of `PLANETES.md` confirmed or corrected. Measures: stop requests
+handled within the hour; the bounce rate of the last batch under the gate; no stale
+figure on the hub; every prospect in a stage; a runway printed with its window; one
 escalation per finding, never two.
 
-**Week 3: the money and the law.** Reconciliation daily; invoice and dunning drafts at L1;
-deadline packs at J-30; `qualite` on everything outward. Measures: zero unmatched movement
-older than 7 days; every invoice sent within 2 days of a delivery "oui"; every outward
-text checked before Arslane sees it.
+**Phase 3, week 3: the money, the law, the memory.** Reconciliation daily; invoice and
+dunning drafts; deadline packs at J-30; `qualite` on everything outward; the company
+memory (9) with `pourquoi()`; the Sunday letter (12) and the replay (2); the client
+space (8) for the first client on a yes; the simulator (6). Decisions: the first client
+link; the letter's form after reading two. Measures: zero unmatched movement older than
+7 days; every invoice sent within 2 days of a delivery yes; every outward text checked
+before Arslane sees it; every decision of the week has a source row; the letter cites
+every figure.
 
-**Week 4: the builders and the voice.** DEV board live with the first subtool's plan;
-Marketing plan validated on Monday and measured at J+7; `methode`'s first proposals; the
-quota split corrected from the first month's figures. Measures: one slice `livre` per week
-with its witness; three marketing goals measured; the week's spend within budget.
+**Phase 4, week 4 and after: the builders, the voice, the bases.** DEV board live with
+the first subtool's plan; Marketing plan validated on Monday and measured at J+7;
+`methode`'s first proposals from the levels; the Blender look-dev run on the Mac
+(`base_terre.py --apercu` first, then the three forms of `TYCOON.md` compared), then
+the bases rendered one per day in the order Earth, Mercury, Saturn, Jupiter, Mars,
+Venus, the Moon, Uranus, Pluto, Neptune, the station, the general view; `TYCOON-PAGE.md`
+built with the minimal loop set first; sound (4) and demo mode (14) last. Decisions:
+the form after look-dev; each base's still before its loops render; demo data before a
+demo link exists. Measures: one slice `livre` per week with its witness; three marketing
+goals measured; the week's spend within budget; each rendered base passes the quality
+checklist of `TYCOON.md`; the heaviest base under 40 MB as sheets.
 
 ## Amendments of 2026-10-10: the sixteen features as processes
 

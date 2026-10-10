@@ -80,7 +80,8 @@ with pale edge rails. Crates: plywood with a stencil plate (plain), a red band (
 amber band (attend_oui); never glossy. Glass: only the small station monitors, roughness
 0.42, with the planet reflected faintly. Robots: the same warm grey hull as the modules,
 one coloured band on the shoulder for the department (Direction slate blue, Commercial
-ochre, Delivery moss green, Finance oxblood, Infrastructure rust, Growth deep teal), eyes
+ochre, Clients ochre, Delivery and Data moss green, Finance oxblood, Infrastructure rust,
+Marketing deep teal, DEV slate blue, Compliance sand, Budget gold), eyes
 as two small matte lenses with a practical behind them, no face. Ground: the planet's
 real surface material, from the hub's texture family, at the camera's scale.
 
@@ -151,9 +152,11 @@ and `equipe/<role>.pause`. Nothing else is ever written from the scene.
 
 ## Planets, storyboard by storyboard
 
-The seven views map onto the departments of `STRUCTURE.md`; Planning (the chef's
-calendar work) takes the Moon; Finance shares Neptune with Growth until an eighth view
-exists, and its cash plate also hangs on Earth's tower.
+The first seven storyboards below are the first round; the third amendment at the end of
+this file has the current table of eleven bases, one per body, and the scripts under
+`blender/` are their specification. Planning (the chef's calendar work) takes the Moon;
+Finance is on Mercury since the second round, and its cash plate also hangs on Earth's
+tower; Neptune is the archive.
 
 ### Earth, Aujourd'hui, Direction
 
@@ -239,12 +242,12 @@ crater. Light: hard sun from the side, earthshine fill, warm practicals. Materia
 palette; regolith from the hub's Moon texture.
 
 Stations: the calendar wall (chef's planner arm), seven bays under a canopy, each with a
-flat plate for the day, crates placed in the bays; the deadline desk (juridique-compta), a
+flat plate for the day, crates placed in the bays; the deadline desk (the clocks read `echeances`, kept by `comptable` on Mercury), a
 module with three wall clocks under flat plates 5472, WYOMING, DOMAINE, each clock a disc
 with a painted countdown sector; the observatory dome, decorative, its slit open toward
 the Earth.
 
-Loops: planner arm working = placing a crate in a bay; juridique-compta working = sorting
+Loops: planner arm working = placing a crate in a bay; the deadline clocks' keeper working = sorting
 papers into a binder.
 
 Events: the hourly pass places occurrence crates in their day's bay; a J-30, J-7 or J-1
@@ -289,7 +292,7 @@ Stations: the receiving bay with a flat plate COMMANDES; the workbench (livraiso
 two machines carrying plates SCREENING and AUDIT, each with a work lamp that is on while a
 run lasts; the inspection gate (qualite) at the platform's exit; the shelf of delivered
 folders, each with a small printed seal plate; a chute down to the cloud deck with a plate
-FACTURE (handoff to encaissement).
+FACTURE (handoff to recouvrement).
 
 Loops: livraison working = feeding a machine and reading its output plate; the machine
 lamps as two-frame loops; qualite as elsewhere.
@@ -303,7 +306,7 @@ Counters: "livrables dus sous 7 jours"; "jours de la commande au livrable".
 Text one click away: the Chantiers view unchanged; a folder's `note-envoi.md` from the
 shelf.
 
-### Neptune, Notes, Growth and Finance
+### Neptune, Notes, Growth and Finance (first round, superseded: Neptune is the archive, `base_neptune.py`; Finance is on Mercury; Growth is Marketing)
 
 Camera: 30 degrees, deep-blue sky with faint high cloud, the sun tiny and far; the base in
 a sheltered valley of blue ice. Light: cold blue fill, strong warm practicals so the

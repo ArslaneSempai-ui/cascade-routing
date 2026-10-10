@@ -2,14 +2,13 @@
 
 How the roles of `STRUCTURE.md` appear in the Crusetra Dashboard (private claude.ai
 artifact, one page, dark space theme, the home screen becoming a 3D hub: the robot at the
-core of light rings, seven planets for the seven views Aujourd'hui, Boîte, Pipeline,
-Semaine, Contrôles, Chantiers, Notes).
+core of light rings, the bodies of `PLANETES.md` for the views and the departments: the
+Sun, Mercury, Venus, the Earth and the Moon, Mars, Jupiter, Saturn, Uranus, Neptune,
+Pluto, and the DEV station).
 
 ## (a) Database: collection `equipe`, one document per role
 
-Document id: the role name (`chef-orchestre`, `qualite`, `methode`, `prospection`,
-`boite`, `livraison`, `encaissement`, `juridique-compta`, `controles`, `redaction`,
-`veille`). Written by the executor each time a role works, never by the role itself.
+Document id: the role name (`chef-orchestre`, `qualite`, `methode`, `budget`, `prospection`, `boite`, `redaction`, `livraison`, `listes`, `donnees-qualite`, `benchmarks`, `tresorier`, `comptable`, `recouvrement`, `onboarding`, `compte`, `support`, `controles`, `veille`, `veille-reglementaire`, `contrats`, `donnees-perso`, the eight `dev-*` and the seven `mkt-*` (37 roles, one file each in `agents/`)). Written by the executor each time a role works, never by the role itself.
 
 ```json
 {
@@ -32,12 +31,14 @@ it grey.
 
 ## (b) Where it shows: the rings are the departments, the cards open from them
 
-Recommendation: no eighth planet. The seven planets are views of the business; the team
+Recommendation of the first round, superseded by the amendments below (each department
+has its body now): no eighth planet. The seven planets were views of the business; the team
 is the mechanism that moves it, and the hub already draws that mechanism as rings around
 the robot. So:
 
 - Six rings, one per department, from the core outward: Direction, Commercial, Delivery,
-  Finance, Infrastructure, Growth. The robot at the core is the chef.
+  Finance, Infrastructure, Marketing, DEV, Clients, Compliance. The robot at the core is
+  the chef.
 - Ring colour is the worst state among its roles: red for `bloque`, amber for
   `attend_oui`, white pulse for `travaille`, dim for `libre`, grey when no document.
 - Clicking a ring opens the team panel (an overlay over the hub, not a navigation): the

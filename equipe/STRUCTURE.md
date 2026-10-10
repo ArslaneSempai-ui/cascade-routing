@@ -1,6 +1,9 @@
 # Crusetra: the structure behind the dashboard
 
-Design note, 2026-10-10. Three structures were weighed for the agents behind the Crusetra
+Design note, 2026-10-10. Current state after the amendments at the end of this file: nine
+departments (Direction, Commercial, Clients, Delivery with Data and Product, Finance,
+Infrastructure, Compliance, DEV, Marketing), 37 roles in `agents/`, the budget role on
+the Sun; `LISEZ-MOI.md` has the one-page summary. Three structures were weighed for the agents behind the Crusetra
 Dashboard. The third is recommended; the reasons follow each option, then the decisions
 that hold whatever the structure.
 
@@ -79,8 +82,8 @@ dispatches it on the next pass; nothing is called directly between roles.
 **KPIs, one or two per role, measured from files or the database, never typed.**
 `prospection`: batches sent after a "oui" this week, bounce rate of the last batch.
 `boite`: mails older than 24 h without a triage decision. `livraison`: client
-deliverables due within 7 days and their state. `encaissement`: open invoices older
-than 30 days, cash figure date. `juridique-compta`: days to the next deadline.
+deliverables due within 7 days and their state. `recouvrement`: open invoices older
+than 30 days. `tresorier`: cash figure date, runway. `comptable`: days to the next deadline.
 `controles`: red controls now, age of the last green backup. `redaction`: drafts
 awaiting a "oui". `veille`: days since the last sanctions-list update seen.
 `qualite`: returns to the doer this week. `methode`: proposals accepted of proposals
@@ -88,8 +91,8 @@ made. `chef-orchestre`: demandes worked this pass, demandes `bloque`.
 
 **Models.** Haiku for mechanical work, Sonnet by default, Opus for anything judged: texts
 for outsiders, money, law, strategy. Per role: `controles` Haiku; `chef-orchestre`,
-`prospection`, `boite`, `livraison`, `veille`, `qualite` Sonnet; `encaissement`,
-`juridique-compta`, `redaction`, `methode` Opus. The role's floor wins over a lower
+`prospection`, `boite`, `livraison`, `veille`, `qualite` Sonnet; `tresorier`,
+`comptable`, `recouvrement`, `redaction`, `methode` Opus. The role's floor wins over a lower
 `modele` on the row; the budget rule wins over both.
 
 **What was weighed and left out.** A separate "budget" agent (a rule, not a job). A
