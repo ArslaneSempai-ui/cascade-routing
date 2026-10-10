@@ -453,3 +453,100 @@ intake with four hoppers, donnees-qualite's test bench with the reference set, b
 timing wall). The Sun has no base: the budget robot is a single figure on Earth's tower
 roof, reading the sky. Assets: four base plates and the robots' loops (cash window, ledger,
 checklist, hopper, test bench); the checklist applies without change.
+
+## Amendments of 2026-10-10, third round: each planet its own base, the robots alive, the general view
+
+The outpost grammar stays the shared material language (the two greys, the decking, the
+plates, the long lens). What changes is that no two bases share a plan any more: each
+is the place its department would build on that world. The scripts under `blender/`
+are the specification now; this section is their summary. `TYCOON-PAGE.md` holds the
+page logic that replaces "Page logic" above.
+
+| Planet | Base | Robots | Script |
+|---|---|---|---|
+| Earth | command centre on a coastline: two-storey tower, console, checkpoint booth, half-buried library, six belts to six pads; the budget robot on the roof | chef-orchestre, qualite, methode, budget | `base_terre.py` |
+| Mercury | counting house in a crater's shade: vault, cash tank with gauge, cash window, ledger wall under three deadline clocks, reminders desk | tresorier, comptable, recouvrement | `base_mercure.py` |
+| Jupiter | cloud city on three floats: docking bays, sorting table, reception desk, the Clients wing | boite, onboarding, compte, support | `base_jupiter.py` |
+| Saturn | ring moonlet: three harvesting hoppers, staging hall, bounce gate, warm-up silo, amber shelf, launch rail, writing booth | prospection, redaction | `base_saturne.py` |
+| Mars | walled compound: shield emitters, radar, server bunker, seven instrument masts, dial board, the vault, radio corner | controles, veille | `base_mars.py` |
+| Venus | refinery hanging under the cloud lid: three-module column, workbench, delivered shelf, engine room with four hoppers, test bench, timing wall | livraison, listes, donnees-qualite, benchmarks | `base_venus.py` |
+| Moon | observatory and the giant calendar dial with its pointer mast and deadline discs; the Earth on the horizon | chef-orchestre (its planning self) | `base_lune.py` |
+| Uranus | studio behind glass, measuring desk and card wall, partners' board, reading corner, site bench, two lattice towers | the seven mkt-* | `base_uranus.py` |
+| Neptune | archive under the ice: five shelves, ledger tags, decisions wall, clients' and prospects' registers, reading table, porch and stair | methode visiting | `base_neptune.py` |
+| Pluto | customs watchtower: glazed cabin with four publisher lamps, contracts archive with seal press, batch checkpoint gate; Charon in the sky | veille-reglementaire, contrats, donnees-perso | `base_pluton.py` |
+| DEV station | shipyard bay: hull cradle with panel plates, drafting table, two work bays, mezzanine review desk, design studio, documentation alcove, airlock, radio corner | the eight dev-* | `base_station_dev.py` |
+| General view | the system from above: the Sun at five quota levels, orbits, textured bodies, each base a lit cluster, the cargo ship at four headings | none | `vue_generale.py` |
+
+**Robots alive.** One robot per agent, 39 in all, the same Crusetra family from Arslane's
+`robot3d` helper, told apart by one small matte accessory per role (the table
+`ACCESSOIRES` in `base_commune.py`: clipboard for the chief, stamp for qualite, spyglass
+for budget, ledger for the treasurer, headset for onboarding and support, magnifier for
+compliance and the reviewer, hard hat for the developer, camera for the two designers,
+binoculars for the watchers, and so on), a name plate at the feet the page prints, and
+the department's tint on the antenna ball and shoulder lamp. Their life is fourteen
+named loops rendered per robot (`ACTIONS`): four idles (look around with a blink, weight
+shift, glance at the neighbour, stretch), the station's task from fifteen tasks
+(`TACHES`), walking with a crate, two reactions (turn toward an arriving crate or
+comet, a small cheer on Arslane's yes), the slump under the red lamp, the amber sign
+held while waiting, the look up on click, tidying, recharging at night, waking at 8:00;
+five head-turn frames toward the viewer for hover; the blink as an emission dip on the
+eye material. Two social loops render two robots together: a handoff where one walks
+the last body length with a crate and both nod, and the chief walking to a blocked
+robot. Moods come from data only (queue length speeds the loop and adds a steam puff,
+quiet adds tidying, the quota's `economie` slows the whole base, `arret` docks it).
+The page's chaining rules, weights and pools are in `TYCOON-PAGE.md`.
+
+**Day and night.** Every script renders a second plate with the sun almost off, the sky
+dark and only the windows lit; the page shows it from 23:00 to 8:00 (`FEATURES.md`).
+
+**Asset table, superseding the one above.** Per robot 249 frames (244 in loops, 5 in
+attention), per duo 24; 39 robots and 17 duos give 10119 frames, about 177.9 MB as PNG
+at 1x and 59.3 MB as WebP sprite sheets; a minimal first ship (five loops and the
+attention frames) is 93 frames per robot, 21.3 MB as sheets. The per-base rows are in
+`TYCOON-PAGE.md`. The 40 MB budget above is therefore kept per base, not for the whole
+set: the heaviest base (the station, 12.2 MB as sheets) is under it, and a base loads
+only when opened.
+
+**Not rendered.** None of these scripts has run: the container that wrote them has no
+Blender. Each compiles, each uses the capsule stand-in when `robot3d` is absent, and
+each accepts `--apercu` (quarter size, 32 samples, 6-frame loops), `--robot <name>` and
+`--sans-boucles` (the two plates and the JSON only). The first Mac run is the test;
+the quality checklist applies to its output without change.
+
+## Amendments of 2026-10-10, fourth round: the sixteen features in the scene
+
+`FEATURES.md` specifies them; here is only what each adds to a base or to the sky.
+
+- **Day and night (1).** Every base has its `nuit.png`; the robots dock on `recharge`
+  from 23:00 and wake on `reveil` at 8:00. Night never hides a red lamp or the
+  escalations list.
+- **Sunday replay (2).** Played on the general view's plate: cargo ships for the week's
+  handoffs, comets for its events, the bases' glow by the hour, the Sun by day; then the
+  review card and the Sunday letter (12).
+- **Milestones (3).** Lasting marks, one asset each, listed in `PLANETES.md`: a small
+  moon for the Earth, a city on its night side, a gold band on Mercury's cash tank, a new
+  module on the DEV station, a steady green beacon on Mars's radar, a second lamp on
+  Uranus's tower. Unlocked by rows, never by hand.
+- **Sound (4).** One toggle beside "Liste"; a small lamp on the hub's robot while it is
+  on; nothing in the bases changes.
+- **The yes queue (5).** The text list above the scene on every level is this queue, with
+  its deep-link buttons; in the bases, the amber sign and the beacons are its picture.
+- **Simulator (6).** A card only; the scene does not react to a simulation.
+- **Forecasts (7).** Mercury's glow is the cash runway; the thickness of Saturn's ring
+  bands is the pipeline's pace; both carry their plain number and method on hover.
+- **Client space (8).** No scene; the client card in Jupiter's Clients wing shows the
+  link's state.
+- **Company memory (9).** Neptune's decisions wall, the two registers and the reading
+  table with its SOURCE plate are this feature's furniture.
+- **Agent levels (10).** A small flat level plate under each robot's name plate, one to
+  three marks from real thresholds; empty under 20 demandes.
+- **Prospects as ships (11).** Saturn's rings carry one craft per prospect in five bands
+  (client, replied, followed up, contacted, stopped), the cargo sprite tinted by stage.
+- **Sunday letter (12).** The Moon's observatory lamp lit while it is unread; the letter
+  card after the replay.
+- **Pocket version (13).** No scene at all: the queue, the alerts, the figures.
+- **Demo mode (14).** The permanent banner, the "(exemple)" suffix on every figure, a
+  sepia tint on the plates; a separate URL, a separate namespace.
+- **The vault on Mars (15).** The vault module's plate prints the nearest expiry; its
+  lamp green, amber inside J-30, red inside J-7.
+- **Recovery drill (16).** Mars's bunker door lamp carries the last drill's result.

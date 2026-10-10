@@ -102,3 +102,22 @@ Venus with Delivery. The `equipe` collection gains the thirteen new documents. T
 carry their department's state through their own phenomena (`PLANETES.md`): the rings as
 departments of section (b) become the bodies themselves, and the team overlay opens from
 any body.
+
+## Amendments of 2026-10-10, third round: the data of the sixteen features
+
+`FEATURES.md` adds collections and fields; the rules of section (a) hold for all of them
+(written by the executor or a role's pass, never by the page, except the two writes the
+scene is allowed). New collections: `jalons/<id>` (milestone, rule, `atteint_le`, proof
+row, `vu`); `replays/<semaine>` (counts shown); `decisions/<id>` (date, decision, why,
+source, role; never edited, superseded only); `prospects/<id>` (stage, `historique`);
+`previsions/<date>` (runway, clients per month, window, method); `lettres/<semaine>`
+(text, cited rows, `lu`); `acces/<id>` (name, place, `expire_le`, `source`, reminders;
+never a value); `exercices/<date>` (drill steps, times, failures); `reglages` (`fuseau`,
+the sound default stays in the browser). New fields: `equipe/<role>.niveaux` {succes,
+retouche, cout, n, fenetre}; `clients/<id>.lien` (capability token state) and
+`.historique`; `demandes.decision` (true when the result is a decision to file). The
+demo namespace `demo/` mirrors every collection with `exemple: true` on each row and is
+never joined with the real one. The yes queue is a query across `demandes`
+(`attend_oui`), `dev/*`, `marketing/pieces`, `factures`, `lots/*`, `methode`'s
+proposals and `jalons`, refreshed every 60 seconds; the pocket layout and the client
+space read the same database through the same rules.

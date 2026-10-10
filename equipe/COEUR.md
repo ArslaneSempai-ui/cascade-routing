@@ -119,3 +119,22 @@ text checked before Arslane sees it.
 Marketing plan validated on Monday and measured at J+7; `methode`'s first proposals; the
 quota split corrected from the first month's figures. Measures: one slice `livre` per week
 with its witness; three marketing goals measured; the week's spend within budget.
+
+## Amendments of 2026-10-10: the sixteen features as processes
+
+Each feature of `FEATURES.md` that is a process has a level today and a target; the
+page-only ones (day and night, sound, pocket version, demo mode, the yes queue, the
+simulator) are built once and have no level.
+
+| Feature | Process | Today | Target | What it takes |
+|---|---|---|---|---|
+| 2 Sunday replay | the week's timeline drawn from rows | L0 | L2 | the replay function; the `replays` row written each Sunday |
+| 3 Milestones | the end-of-pass milestone check | L0 | L3 | the six rules as queries; only a new milestone reported |
+| 7 Forecasts | runway and pace computed daily | L0 | L3 | 30 days of `chiffres`; only a window too short reported |
+| 8 Client space | the client page from rows | L0 | L1 | the token page; the link created on a "oui" |
+| 9 Company memory | decisions filed with their source | L0 | L2 | `demandes.decision`; `pourquoi()` in the assistant |
+| 10 Agent levels | levels measured per role | L0 | L3 | the 30-day window; `methode` reads them; only a fall under threshold reported |
+| 11 Prospects as ships | `prospects` kept from the wave journals | L0 | L3 | written after each batch and triage |
+| 12 Sunday letter | the letter drafted and checked | L0 | L1 | `methode` drafts, `qualite` checks, Arslane reads |
+| 15 Vault | access expiries read from metadata | L0 | L3 | `controles` daily; reminders at J-30 and J-7 as demandes |
+| 16 Recovery drill | monthly restore and restart check | L0 | L2 | the restore script on the Mac; reported every month |

@@ -72,3 +72,29 @@ batch's gate rate; `marketing/pieces/*` with `publieLe`; `conformite/etat.lu` an
 oldest unread item; `dev/projets/*`; the last pass's `fil` events. Refresh every 60
 seconds while the hub is open; a field missing leaves the body at rest with the tooltip
 saying so.
+
+## Amendments of 2026-10-10: milestones, forecasts and levels in the sky
+
+**Milestone marks** (`FEATURES.md`, 3), one asset each, permanent once unlocked: the
+Earth gains a small second moon in low orbit (first reply) and a city that lights on its
+night side (first client); Mercury's cash tank in its base gains a gold band (first
+1,000 USD); the DEV station gains a seventh module (first subtool shipped); Mars's radar
+mast carries a steady green beacon (a month with every control green); Uranus's tall
+tower a second lamp (first piece measured at J+7). Six small renders over the existing
+plates; the hub's bodies change, not their orbits.
+
+**Forecasts** (`FEATURES.md`, 7). Mercury's warmth above reads the runway rather than the
+raw cash: over 6 months the sunlit grey, 3 to 6 months the cooler variant, under 3 months
+the darkest; the same three variants as before, the field changes. Saturn's ring density
+reads the pipeline's pace (clients per month projected) beside the count of prospects in
+play: the thicker band is the pace. The thresholds are first values to correct from the
+first month's figures, like every other threshold in this file.
+
+**Agent levels** (`FEATURES.md`, 10). The level plate under a robot's name shows three
+marks when success is at or over 0.9 and rework at or under 0.1 in the window, two marks
+when success is at or over 0.75, one mark otherwise, none under 20 demandes. The cost is
+printed on the card, never turned into a mark (a cheap robot is not a better one).
+
+**Prospects as ships** (`FEATURES.md`, 11). The rings' three-step density stays for the
+hub; in Saturn's base the rings carry one craft per prospect in five bands. Assets: the
+cargo sprite of the general view at one heading, tinted by stage in the page.
